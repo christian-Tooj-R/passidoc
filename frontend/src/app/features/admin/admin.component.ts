@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormControl } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,9 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../../core/services/users.service';
-import { ClientsService } from '../../core/services/clients.service';
 import { User } from '../../core/models/user.model';
-import { Client } from '../../core/models/client.model';
 
 /* ── Dialog création utilisateur ── */
 @Component({
@@ -106,18 +104,21 @@ export class CreateUserDialogComponent {
   cancel() { this.dialogRef.close(null); }
 }
 
-/* ── Page Administration ── */
+/* ── Page Utilisateurs ── */
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
-    MatDialogModule, MatTooltipModule, MatFormFieldModule, MatSelectModule],
+  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
+    MatDialogModule, MatTooltipModule],
   template: `
     <div class="page">
       <div class="page-header">
-        <div>
-          <h1>Administration</h1>
-          <p class="page-subtitle">{{ users.length }} utilisateur(s) · {{ clients.length }} dossier(s)</p>
+        <div class="page-header__left">
+          <mat-icon class="page-icon">manage_accounts</mat-icon>
+          <div>
+            <h1>Utilisateurs</h1>
+            <p class="page-subtitle">{{ users.length }} compte(s) enregistré(s)</p>
+          </div>
         </div>
         <button mat-flat-button class="btn-create" (click)="openCreate()">
           <mat-icon>person_add</mat-icon> Nouvel utilisateur
@@ -144,8 +145,6 @@ export class CreateUserDialogComponent {
         </div>
       </div>
 
-      <!-- Section utilisateurs -->
-      <h2 class="section-title"><mat-icon>group</mat-icon> Utilisateurs</h2>
       <div class="table-card">
         <table class="users-table">
           <thead>
@@ -203,144 +202,16 @@ export class CreateUserDialogComponent {
           </tbody>
         </table>
       </div>
-
-      <!-- Section équipes -->
-      <h2 class="section-title" style="margin-top:36px">
-        <mat-icon>people</mat-icon> Équipes — Collaborateurs Réunion / Madagascar
-      </h2>
-      <p class="section-desc">
-        Chaque collaborateur Madagascar doit être lié à son collaborateur Réunion.
-        Seul ce collaborateur Réunion (et l'admin) pourra lui assigner des tâches.
-      </p>
-      <div class="table-card">
-        <table class="users-table">
-          <thead>
-            <tr>
-              <th>Collaborateur Madagascar</th>
-              <th>Collaborateur Réunion actuel</th>
-              <th>Modifier</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (u of madagascarCollabs; track u.id) {
-              <tr class="table-row">
-                <td>
-                  <div class="user-cell">
-                    <div class="user-avatar mg">{{ (u.firstName?.[0] || '') + (u.lastName?.[0] || '') }}</div>
-                    <div>
-                      <div class="user-name">{{ u.firstName }} {{ u.lastName }}</div>
-                      <div class="text-muted">{{ u.email }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  @if (u.referentId) {
-                    <div class="user-cell">
-                      <div class="user-avatar re">{{ getReferentInitials(u.referentId) }}</div>
-                      <span class="text-muted">{{ getReferentName(u.referentId) }}</span>
-                    </div>
-                  } @else {
-                    <span class="resp-none">Non configuré</span>
-                  }
-                </td>
-                <td>
-                  <mat-form-field appearance="outline" class="assign-field">
-                    <mat-select [value]="u.referentId || null" (selectionChange)="setReferent(u, $event.value)">
-                      <mat-option [value]="null">— Aucun —</mat-option>
-                      @for (r of reunionUsers; track r.id) {
-                        <mat-option [value]="r.id">{{ r.firstName }} {{ r.lastName }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                </td>
-              </tr>
-            }
-            @if (madagascarCollabs.length === 0) {
-              <tr>
-                <td colspan="3" class="empty-state">
-                  <mat-icon>people_outline</mat-icon>
-                  <span>Aucun collaborateur à Madagascar</span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Section dossiers -->
-      <h2 class="section-title" style="margin-top:36px"><mat-icon>folder_shared</mat-icon> Assignation des dossiers</h2>
-      <div class="table-card">
-        <table class="users-table">
-          <thead>
-            <tr>
-              <th>Dossier client</th>
-              <th>Site</th>
-              <th>Santé</th>
-              <th>Responsable actuel</th>
-              <th>Réassigner à</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of clients; track c.id) {
-              <tr class="table-row">
-                <td>
-                  <div class="user-cell">
-                    <div class="folder-avatar">{{ getInitials(c.nom) }}</div>
-                    <span class="user-name">{{ c.nom }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span [class]="c.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
-                    {{ c.site === 'REUNION' ? '🇷🇪 Réunion' : '🇲🇬 Madagascar' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="score-text" [class]="getScoreClass(c.santePassation)">{{ c.santePassation }}%</span>
-                </td>
-                <td>
-                  @if (c.responsable) {
-                    <div class="user-cell">
-                      <div class="user-avatar small">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
-                      <span class="text-muted">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                    </div>
-                  } @else {
-                    <span class="resp-none">Non assigné</span>
-                  }
-                </td>
-                <td>
-                  <mat-form-field appearance="outline" class="assign-field">
-                    <mat-select [value]="c.responsable?.id || null" (selectionChange)="reassign(c, $event.value)">
-                      <mat-option [value]="null">— Aucun —</mat-option>
-                      @for (u of users; track u.id) {
-                        <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                </td>
-              </tr>
-            }
-            @if (clients.length === 0) {
-              <tr>
-                <td colspan="5" class="empty-state">
-                  <mat-icon>folder_off</mat-icon>
-                  <span>Aucun dossier</span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
     </div>
   `,
   styles: [`
-    .page { max-width: 1280px; margin: 0 auto; }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-    .page-header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
+    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-header__left { display: flex; align-items: center; gap: 16px; }
+    .page-icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
+    .page-header h1 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; }
+    .page-subtitle { font-size: 13px; color: #94a3b8; margin: 0; }
     .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; color: white !important; }
-
-    .section-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
-    .section-title mat-icon { font-size: 20px; width: 20px; height: 20px; color: #6366f1; }
 
     /* Stats */
     .stats-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
@@ -403,19 +274,6 @@ export class CreateUserDialogComponent {
     .twofa-badge mat-icon { font-size: 15px; width: 15px; height: 15px; }
     .twofa-badge.active { color: #15803d; }
 
-    .score-text { font-size: 13px; font-weight: 700; }
-    .score-high { color: #15803d; }
-    .score-medium { color: #a16207; }
-    .score-low { color: #dc2626; }
-
-    .section-desc { font-size: 13px; color: #64748b; margin: -8px 0 16px; line-height: 1.5; }
-    .user-avatar.mg { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #15803d; }
-    .user-avatar.re { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1d4ed8; }
-
-    .assign-field { width: 200px; }
-    ::ng-deep .assign-field .mat-mdc-form-field-subscript-wrapper { display: none; }
-    ::ng-deep .assign-field .mat-mdc-text-field-wrapper { padding: 0 8px; }
-
     .action-cell { text-align: right; }
     .btn-delete { color: #cbd5e1 !important; }
     .btn-delete:hover { color: #f87171 !important; }
@@ -426,44 +284,16 @@ export class CreateUserDialogComponent {
 })
 export class AdminComponent implements OnInit {
   private usersService = inject(UsersService);
-  private clientsService = inject(ClientsService);
   private snack = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
   users: User[] = [];
-  clients: Client[] = [];
-
-  get madagascarCollabs(): User[] {
-    return this.users.filter(u => u.site === 'MADAGASCAR' && u.role !== 'ADMIN' && u.isActive);
-  }
-  get reunionUsers(): User[] {
-    return this.users.filter(u => u.site === 'REUNION' && u.isActive);
-  }
 
   ngOnInit() {
     this.loadUsers();
-    this.loadClients();
   }
 
   loadUsers() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
-  loadClients() { this.clientsService.getAll().subscribe((d) => (this.clients = d)); }
-
-  getReferentName(referentId: number): string {
-    const u = this.users.find(u => u.id === referentId);
-    return u ? `${u.firstName} ${u.lastName}` : 'Inconnu';
-  }
-
-  getReferentInitials(referentId: number): string {
-    const u = this.users.find(u => u.id === referentId);
-    return u ? `${u.firstName[0]}${u.lastName[0]}` : '?';
-  }
-
-  setReferent(user: User, referentId: number | null) {
-    this.usersService.setReferent(user.id, referentId).subscribe((updated) => {
-      user.referentId = updated.referentId;
-      this.snack.open('Équipe mise à jour', 'OK', { duration: 2000 });
-    });
-  }
 
   openCreate() {
     const ref = this.dialog.open(CreateUserDialogComponent, { panelClass: 'rounded-dialog' });
@@ -483,24 +313,6 @@ export class AdminComponent implements OnInit {
       this.loadUsers();
       this.snack.open('Utilisateur désactivé', 'OK', { duration: 2500 });
     });
-  }
-
-  reassign(client: Client, responsableId: number | null) {
-    if (!responsableId) return;
-    this.clientsService.assign(client.id, responsableId).subscribe((updated) => {
-      client.responsable = updated.responsable;
-      this.snack.open(`Dossier réassigné avec succès`, 'OK', { duration: 2500 });
-    });
-  }
-
-  getInitials(nom: string): string {
-    return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  }
-
-  getScoreClass(score: number) {
-    if (score >= 80) return 'score-text score-high';
-    if (score >= 50) return 'score-text score-medium';
-    return 'score-text score-low';
   }
 
   roleLabel(role: string) {

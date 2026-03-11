@@ -43,9 +43,21 @@ import { AuthService } from '../../core/services/auth.service';
         </li>
         @if (auth.isAdmin()) {
           <li>
+            <a routerLink="/equipes" routerLinkActive="active">
+              <span class="nav-icon"><mat-icon>people</mat-icon></span>
+              <span>Équipes</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/portefeuilles" routerLinkActive="active">
+              <span class="nav-icon"><mat-icon>folder_shared</mat-icon></span>
+              <span>Portefeuilles</span>
+            </a>
+          </li>
+          <li>
             <a routerLink="/admin" routerLinkActive="active">
               <span class="nav-icon"><mat-icon>manage_accounts</mat-icon></span>
-              <span>Administration</span>
+              <span>Utilisateurs</span>
             </a>
           </li>
         }
