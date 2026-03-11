@@ -52,6 +52,17 @@ export class FluxMensuelService {
     return this.repo.findOne({ where: { id } });
   }
 
+  async getAlertesGlobales() {
+    return this.repo.find({
+      where: [
+        { statut: StatutDepot.MANQUANT },
+        { statut: StatutDepot.EN_RETARD },
+      ],
+      relations: ['client'],
+      order: { annee: 'DESC', mois: 'DESC' },
+    });
+  }
+
   async remove(id: number, clientId: number) {
     const flux = await this.repo.findOne({ where: { id, client: { id: clientId } } });
     if (!flux) throw new NotFoundException('Flux introuvable');
