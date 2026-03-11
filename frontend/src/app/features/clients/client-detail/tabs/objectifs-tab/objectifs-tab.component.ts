@@ -1,0 +1,146 @@
+import { Component, Input, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ObjectifsService } from '../../../../../core/services/objectifs.service';
+
+@Component({
+  selector: 'app-objectifs-tab',
+  standalone: true,
+  imports: [
+    CommonModule, ReactiveFormsModule,
+    MatButtonModule, MatIconModule, MatFormFieldModule,
+    MatInputModule, MatSnackBarModule,
+  ],
+  template: `
+    <div class="tab">
+      <div class="tab-header">
+        <h2>Objectifs & Relation client</h2>
+        <button mat-flat-button color="primary" (click)="save()">
+          <mat-icon>save</mat-icon> Enregistrer
+        </button>
+      </div>
+
+      <form [formGroup]="form">
+        <!-- Objectifs -->
+        <div class="section-title"><mat-icon>flag</mat-icon> Objectifs du client</div>
+        <div class="objectives-grid">
+          <div class="objective-card">
+            <div class="objective-card__header objective-card__header--blue">
+              <mat-icon>calendar_today</mat-icon>
+              <span>Dans les 12 prochains mois</span>
+            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <textarea matInput rows="4" formControlName="objectifs12mois"
+                placeholder="Ex: Acheter les locaux commerciaux..."></textarea>
+            </mat-form-field>
+          </div>
+          <div class="objective-card">
+            <div class="objective-card__header objective-card__header--indigo">
+              <mat-icon>timeline</mat-icon>
+              <span>Dans les 3 à 5 ans</span>
+            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <textarea matInput rows="4" formControlName="objectifs3a5ans"
+                placeholder="Ex: Structurer via une holding..."></textarea>
+            </mat-form-field>
+          </div>
+          <div class="objective-card">
+            <div class="objective-card__header objective-card__header--purple">
+              <mat-icon>rocket_launch</mat-icon>
+              <span>Au-delà</span>
+            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <textarea matInput rows="4" formControlName="objectifsLongTerme"
+                placeholder="Vision long terme..."></textarea>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Mission EC -->
+        <div class="section-title"><mat-icon>handshake</mat-icon> Mission de l'expert-comptable</div>
+        <div class="ec-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Client chez AFYM depuis</mat-label>
+            <input matInput formControlName="depuisQuand" placeholder="Ex: Création en 2023" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Qualité de la relation</mat-label>
+            <input matInput formControlName="qualiteRelation" placeholder="Ex: Très bonne, le client recommande..." />
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Ce qu'attend le client de l'expert-comptable</mat-label>
+          <textarea matInput rows="4" formControlName="attentesClient"
+            placeholder="Ex: Sécurisation des obligations fiscales, accompagnement stratégique..."></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Axes d'amélioration</mat-label>
+          <textarea matInput rows="3" formControlName="axesAmelioration"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Recommandations faites</mat-label>
+          <textarea matInput rows="2" formControlName="recommandationsFaites"
+            placeholder="Ex: A recommandé nos services à son frère..."></textarea>
+        </mat-form-field>
+      </form>
+    </div>
+  `,
+  styles: [`
+    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 700; color: #1e293b;
+      margin: 24px 0 16px;
+    }
+    .section-title mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; }
+    .full-width { width: 100%; }
+    .objectives-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .objective-card { border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .objective-card__header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; font-size: 13px; font-weight: 600;
+    }
+    .objective-card__header mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .objective-card__header--blue { background: #dbeafe; color: #1d4ed8; }
+    .objective-card__header--indigo { background: #e0e7ff; color: #4338ca; }
+    .objective-card__header--purple { background: #f3e8ff; color: #7c3aed; }
+    .objective-card mat-form-field { width: 100%; }
+    .ec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .ec-grid mat-form-field { width: 100%; }
+  `],
+})
+export class ObjectifsTabComponent implements OnInit {
+  @Input() clientId!: number;
+  private fb = inject(FormBuilder);
+  private service = inject(ObjectifsService);
+  private snack = inject(MatSnackBar);
+
+  form = this.fb.group({
+    objectifs12mois: [''],
+    objectifs3a5ans: [''],
+    objectifsLongTerme: [''],
+    attentesClient: [''],
+    depuisQuand: [''],
+    qualiteRelation: [''],
+    axesAmelioration: [''],
+    recommandationsFaites: [''],
+  });
+
+  ngOnInit() {
+    this.service.get(this.clientId).subscribe(data => {
+      if (data) this.form.patchValue(data);
+    });
+  }
+
+  save() {
+    this.service.save(this.clientId, this.form.value).subscribe(() => {
+      this.snack.open('Objectifs enregistrés', 'OK', { duration: 2500 });
+    });
+  }
+}
