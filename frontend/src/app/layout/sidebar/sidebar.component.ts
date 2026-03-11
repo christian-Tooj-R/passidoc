@@ -35,6 +35,12 @@ import { AuthService } from '../../core/services/auth.service';
             <span>Dossiers clients</span>
           </a>
         </li>
+        <li>
+          <a routerLink="/tasks" routerLinkActive="active">
+            <span class="nav-icon"><mat-icon>task_alt</mat-icon></span>
+            <span>Tâches</span>
+          </a>
+        </li>
         @if (auth.isAdmin()) {
           <li>
             <a routerLink="/admin" routerLinkActive="active">

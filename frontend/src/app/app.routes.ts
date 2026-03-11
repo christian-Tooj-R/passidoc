@@ -40,6 +40,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
       },
       {
+        path: 'tasks',
+        loadComponent: () => import('./features/tasks/tasks-global.component').then((m) => m.TasksGlobalComponent),
+      },
+      {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },

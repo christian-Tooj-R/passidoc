@@ -12,6 +12,8 @@ export interface Task {
   statut: TaskStatut;
   priorite: TaskPriorite;
   dateEcheance?: string;
+  clientId: number;
+  client?: { id: number; nom: string };
   assignee?: { id: number; firstName: string; lastName: string };
   createdBy?: { id: number; firstName: string; lastName: string };
   createdAt: string;
@@ -27,6 +29,10 @@ export class TasksService {
 
   getAll(clientId: number) {
     return this.http.get<Task[]>(this.api(clientId));
+  }
+
+  getAllGlobal() {
+    return this.http.get<Task[]>(`${environment.apiUrl}/tasks`);
   }
 
   create(clientId: number, data: { titre: string; description?: string; priorite?: TaskPriorite; dateEcheance?: string; assigneeId?: number }) {

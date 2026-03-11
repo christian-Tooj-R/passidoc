@@ -1,67 +1,30 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TasksService, Task, TaskStatut } from '../../../../../core/services/tasks.service';
-import { UsersService } from '../../../../../core/services/users.service';
-import { User } from '../../../../../core/models/user.model';
 
 @Component({
   selector: 'app-taches-tab',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
-    MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
+    CommonModule, RouterLink,
+    MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule,
   ],
   template: `
     <div class="tab-content">
 
-      <!-- Formulaire création -->
-      <div class="create-card">
-        <h3><mat-icon>add_task</mat-icon> Nouvelle tâche</h3>
-        <form [formGroup]="form" (ngSubmit)="create()" class="create-form">
-          <mat-form-field appearance="outline" class="f-titre">
-            <mat-label>Titre de la tâche</mat-label>
-            <input matInput formControlName="titre" placeholder="Ex: Relancer le client pour le relevé de mars" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="f-assignee">
-            <mat-label>Assigner à</mat-label>
-            <mat-select formControlName="assigneeId">
-              <mat-option [value]="null">— Non assignée —</mat-option>
-              @for (u of users; track u.id) {
-                <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="f-priorite">
-            <mat-label>Priorité</mat-label>
-            <mat-select formControlName="priorite">
-              <mat-option value="BASSE">🟢 Basse</mat-option>
-              <mat-option value="NORMALE">🟡 Normale</mat-option>
-              <mat-option value="HAUTE">🔴 Haute</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="f-echeance">
-            <mat-label>Échéance</mat-label>
-            <input matInput type="date" formControlName="dateEcheance" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="f-desc">
-            <mat-label>Description (optionnel)</mat-label>
-            <textarea matInput formControlName="description" rows="2"></textarea>
-          </mat-form-field>
-          <div class="f-submit">
-            <button mat-flat-button class="btn-create" type="submit" [disabled]="form.invalid">
-              <mat-icon>add</mat-icon> Créer
-            </button>
-          </div>
-        </form>
+      <!-- Header -->
+      <div class="tab-header">
+        <div class="tab-header__info">
+          <span class="task-count">{{ tasks.length }} tâche{{ tasks.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <a mat-flat-button class="btn-manage" routerLink="/tasks">
+          <mat-icon>open_in_new</mat-icon> Gérer les tâches
+        </a>
       </div>
 
       <!-- Colonnes Kanban -->
@@ -80,7 +43,8 @@ import { User } from '../../../../../core/models/user.model';
                     <span class="task-titre">{{ t.titre }}</span>
                     <div class="task-actions">
                       @if (t.statut !== 'TERMINEE') {
-                        <button mat-icon-button class="btn-next" [matTooltip]="t.statut === 'A_FAIRE' ? 'Démarrer' : 'Terminer'"
+                        <button mat-icon-button class="btn-next"
+                                [matTooltip]="t.statut === 'A_FAIRE' ? 'Démarrer' : 'Terminer'"
                                 (click)="advance(t)">
                           <mat-icon>{{ t.statut === 'A_FAIRE' ? 'play_arrow' : 'check_circle' }}</mat-icon>
                         </button>
@@ -106,9 +70,6 @@ import { User } from '../../../../../core/models/user.model';
                       </span>
                     }
                   </div>
-                  @if (t.createdBy) {
-                    <div class="task-created-by">Créée par {{ t.createdBy.firstName }} {{ t.createdBy.lastName }}</div>
-                  }
                 </div>
               }
               @if (getByStatut(col.statut).length === 0) {
@@ -118,23 +79,24 @@ import { User } from '../../../../../core/models/user.model';
           </div>
         }
       </div>
+
+      @if (tasks.length === 0) {
+        <div class="empty-state">
+          <mat-icon>task_alt</mat-icon>
+          <p>Aucune tâche pour ce dossier</p>
+          <a mat-stroked-button routerLink="/tasks" class="btn-goto">
+            <mat-icon>add</mat-icon> Créer une tâche
+          </a>
+        </div>
+      }
     </div>
   `,
   styles: [`
     .tab-content { padding: 24px; }
 
-    /* Create form */
-    .create-card { background: white; border: 1px solid #e8ecf0; border-radius: 14px; padding: 20px 24px; margin-bottom: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-    .create-card h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
-    .create-card h3 mat-icon { color: #6366f1; font-size: 18px; width: 18px; height: 18px; }
-    .create-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; align-items: start; }
-    .f-titre { grid-column: 1 / 2; }
-    .f-assignee { grid-column: 2 / 3; }
-    .f-priorite { grid-column: 3 / 4; }
-    .f-echeance { grid-column: 4 / 5; }
-    .f-desc { grid-column: 1 / 4; }
-    .f-submit { grid-column: 4 / 5; padding-top: 4px; }
-    .btn-create { width: 100%; border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: white !important; }
+    .tab-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .task-count { font-size: 13px; color: #64748b; font-weight: 500; }
+    .btn-manage { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: white !important; gap: 6px; font-size: 13px; }
 
     /* Kanban */
     .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
@@ -161,7 +123,7 @@ import { User } from '../../../../../core/models/user.model';
     .btn-del:hover { color: #f87171 !important; }
     ::ng-deep .btn-next .mat-icon, ::ng-deep .btn-del .mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; }
     .task-desc { font-size: 12px; color: #64748b; margin: 0 0 8px; line-height: 1.4; }
-    .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .prio-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
     .prio-badge.prio-haute { background: #fee2e2; color: #dc2626; }
     .prio-badge.prio-normale { background: #fef3c7; color: #d97706; }
@@ -169,18 +131,20 @@ import { User } from '../../../../../core/models/user.model';
     .task-assignee, .task-date { display: flex; align-items: center; gap: 3px; font-size: 11px; color: #64748b; }
     .task-assignee mat-icon, .task-date mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .task-date.overdue { color: #dc2626; font-weight: 600; }
-    .task-created-by { font-size: 10px; color: #94a3b8; }
+
+    /* Empty state */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; gap: 12px; }
+    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; }
+    .empty-state p { font-size: 14px; color: #94a3b8; margin: 0; }
+    .btn-goto { border-radius: 10px !important; color: #6366f1; border-color: #6366f1 !important; }
   `],
 })
 export class TachesTabComponent implements OnInit {
   @Input() clientId!: number;
   private tasksService = inject(TasksService);
-  private usersService = inject(UsersService);
   private snack = inject(MatSnackBar);
-  private fb = inject(FormBuilder);
 
   tasks: Task[] = [];
-  users: User[] = [];
 
   columns = [
     { statut: 'A_FAIRE' as TaskStatut, label: 'À faire', icon: 'radio_button_unchecked' },
@@ -188,17 +152,8 @@ export class TachesTabComponent implements OnInit {
     { statut: 'TERMINEE' as TaskStatut, label: 'Terminées', icon: 'check_circle' },
   ];
 
-  form = this.fb.group({
-    titre: ['', Validators.required],
-    description: [''],
-    priorite: ['NORMALE'],
-    dateEcheance: [''],
-    assigneeId: [null as number | null],
-  });
-
   ngOnInit() {
     this.load();
-    this.usersService.getAll().subscribe(u => this.users = u);
   }
 
   load() {
@@ -207,22 +162,6 @@ export class TachesTabComponent implements OnInit {
 
   getByStatut(statut: TaskStatut): Task[] {
     return this.tasks.filter(t => t.statut === statut);
-  }
-
-  create() {
-    if (this.form.invalid) return;
-    const v = this.form.value;
-    this.tasksService.create(this.clientId, {
-      titre: v.titre!,
-      description: v.description || undefined,
-      priorite: v.priorite as any,
-      dateEcheance: v.dateEcheance || undefined,
-      assigneeId: v.assigneeId || undefined,
-    }).subscribe(() => {
-      this.load();
-      this.form.reset({ priorite: 'NORMALE', assigneeId: null });
-      this.snack.open('Tâche créée', 'OK', { duration: 2000 });
-    });
   }
 
   advance(t: Task) {

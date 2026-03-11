@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -20,6 +20,20 @@ export class TasksService {
       relations: ['assignee', 'createdBy'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  findAll(currentUser: User) {
+    const qb = this.repo.createQueryBuilder('task')
+      .leftJoinAndSelect('task.assignee', 'assignee')
+      .leftJoinAndSelect('task.createdBy', 'createdBy')
+      .leftJoinAndSelect('task.client', 'client')
+      .orderBy('task.createdAt', 'DESC');
+
+    if (currentUser.role !== UserRole.ADMIN) {
+      qb.where('client.responsableId = :userId', { userId: currentUser.id });
+    }
+
+    return qb.getMany();
   }
 
   async create(clientId: number, dto: CreateTaskDto, currentUser: User) {
