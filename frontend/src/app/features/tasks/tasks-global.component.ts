@@ -284,7 +284,7 @@ export class TasksGlobalComponent implements OnInit {
   ngOnInit() {
     this.load();
     this.clientsService.getAll().subscribe(c => this.clients = c);
-    this.usersService.getAll().subscribe(u => this.users = u);
+    this.usersService.getAssignable().subscribe(u => this.users = u);
   }
 
   load() {

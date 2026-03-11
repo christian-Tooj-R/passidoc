@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from '../entities/user.entity';
+import { User, UserRole, UserSite } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -45,6 +45,29 @@ export class UsersService {
     if (!user) throw new NotFoundException('Utilisateur introuvable');
     await this.repo.update(id, { isActive: false });
     return { message: 'Utilisateur désactivé' };
+  }
+
+  async getAssignable(currentUser: User) {
+    if (currentUser.role === UserRole.ADMIN) {
+      return this.findAll();
+    }
+    if (currentUser.site === UserSite.REUNION) {
+      // Son équipe Madagascar + lui-même
+      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      const self = await this.repo.findOne({ where: { id: currentUser.id } });
+      const result = self ? [self, ...team] : team;
+      return result.map(u => this.sanitize(u));
+    }
+    // Collaborateur Madagascar : uniquement lui-même
+    const self = await this.repo.findOne({ where: { id: currentUser.id } });
+    return self ? [this.sanitize(self)] : [];
+  }
+
+  async setReferent(userId: number, referentId: number | null) {
+    const user = await this.repo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+    await this.repo.update(userId, { referentId: referentId as any });
+    return this.findOne(userId);
   }
 
   private sanitize(user: User) {

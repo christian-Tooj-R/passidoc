@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, FormControl } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormControl } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -110,7 +110,7 @@ export class CreateUserDialogComponent {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
     MatDialogModule, MatTooltipModule, MatFormFieldModule, MatSelectModule],
   template: `
     <div class="page">
@@ -197,6 +197,69 @@ export class CreateUserDialogComponent {
                 <td colspan="6" class="empty-state">
                   <mat-icon>group_off</mat-icon>
                   <span>Aucun utilisateur</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Section équipes -->
+      <h2 class="section-title" style="margin-top:36px">
+        <mat-icon>people</mat-icon> Équipes — Collaborateurs Réunion / Madagascar
+      </h2>
+      <p class="section-desc">
+        Chaque collaborateur Madagascar doit être lié à son collaborateur Réunion.
+        Seul ce collaborateur Réunion (et l'admin) pourra lui assigner des tâches.
+      </p>
+      <div class="table-card">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Collaborateur Madagascar</th>
+              <th>Collaborateur Réunion actuel</th>
+              <th>Modifier</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of madagascarCollabs; track u.id) {
+              <tr class="table-row">
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar mg">{{ (u.firstName?.[0] || '') + (u.lastName?.[0] || '') }}</div>
+                    <div>
+                      <div class="user-name">{{ u.firstName }} {{ u.lastName }}</div>
+                      <div class="text-muted">{{ u.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (u.referentId) {
+                    <div class="user-cell">
+                      <div class="user-avatar re">{{ getReferentInitials(u.referentId) }}</div>
+                      <span class="text-muted">{{ getReferentName(u.referentId) }}</span>
+                    </div>
+                  } @else {
+                    <span class="resp-none">Non configuré</span>
+                  }
+                </td>
+                <td>
+                  <mat-form-field appearance="outline" class="assign-field">
+                    <mat-select [value]="u.referentId || null" (selectionChange)="setReferent(u, $event.value)">
+                      <mat-option [value]="null">— Aucun —</mat-option>
+                      @for (r of reunionUsers; track r.id) {
+                        <mat-option [value]="r.id">{{ r.firstName }} {{ r.lastName }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+              </tr>
+            }
+            @if (madagascarCollabs.length === 0) {
+              <tr>
+                <td colspan="3" class="empty-state">
+                  <mat-icon>people_outline</mat-icon>
+                  <span>Aucun collaborateur à Madagascar</span>
                 </td>
               </tr>
             }
@@ -345,6 +408,10 @@ export class CreateUserDialogComponent {
     .score-medium { color: #a16207; }
     .score-low { color: #dc2626; }
 
+    .section-desc { font-size: 13px; color: #64748b; margin: -8px 0 16px; line-height: 1.5; }
+    .user-avatar.mg { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #15803d; }
+    .user-avatar.re { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1d4ed8; }
+
     .assign-field { width: 200px; }
     ::ng-deep .assign-field .mat-mdc-form-field-subscript-wrapper { display: none; }
     ::ng-deep .assign-field .mat-mdc-text-field-wrapper { padding: 0 8px; }
@@ -366,6 +433,13 @@ export class AdminComponent implements OnInit {
   users: User[] = [];
   clients: Client[] = [];
 
+  get madagascarCollabs(): User[] {
+    return this.users.filter(u => u.site === 'MADAGASCAR' && u.role !== 'ADMIN' && u.isActive);
+  }
+  get reunionUsers(): User[] {
+    return this.users.filter(u => u.site === 'REUNION' && u.isActive);
+  }
+
   ngOnInit() {
     this.loadUsers();
     this.loadClients();
@@ -373,6 +447,23 @@ export class AdminComponent implements OnInit {
 
   loadUsers() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
   loadClients() { this.clientsService.getAll().subscribe((d) => (this.clients = d)); }
+
+  getReferentName(referentId: number): string {
+    const u = this.users.find(u => u.id === referentId);
+    return u ? `${u.firstName} ${u.lastName}` : 'Inconnu';
+  }
+
+  getReferentInitials(referentId: number): string {
+    const u = this.users.find(u => u.id === referentId);
+    return u ? `${u.firstName[0]}${u.lastName[0]}` : '?';
+  }
+
+  setReferent(user: User, referentId: number | null) {
+    this.usersService.setReferent(user.id, referentId).subscribe((updated) => {
+      user.referentId = updated.referentId;
+      this.snack.open('Équipe mise à jour', 'OK', { duration: 2000 });
+    });
+  }
 
   openCreate() {
     const ref = this.dialog.open(CreateUserDialogComponent, { panelClass: 'rounded-dialog' });

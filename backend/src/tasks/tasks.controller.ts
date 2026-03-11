@@ -30,8 +30,8 @@ export class TasksController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Modifier une tâche (statut, assignée, etc.)' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto) {
-    return this.service.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto, @Req() req: any) {
+    return this.service.update(id, dto, req.user);
   }
 
   @Delete(':id')

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -27,6 +27,22 @@ export class UsersController {
   @ApiOperation({ summary: 'Liste tous les utilisateurs' })
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('assignable')
+  @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })
+  getAssignable(@Req() req: any) {
+    return this.usersService.getAssignable(req.user);
+  }
+
+  @Patch(':id/referent')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Définir le collaborateur Réunion d\'un utilisateur Madagascar' })
+  setReferent(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('referentId') referentId: number | null,
+  ) {
+    return this.usersService.setReferent(id, referentId);
   }
 
   @Get(':id')
