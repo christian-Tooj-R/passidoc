@@ -9,6 +9,10 @@ import { Fournisseur } from './fournisseur.entity';
 import { SyntheseCloture } from './synthese-cloture.entity';
 import { Document } from './document.entity';
 import { ConversationIA } from './conversation-ia.entity';
+import { AnalyseStrategique } from './analyse-strategique.entity';
+import { Mission } from './mission.entity';
+import { ObjectifsClient } from './objectifs-client.entity';
+import { ControleInterne } from './controle-interne.entity';
 
 export enum ClientSite {
   REUNION = 'REUNION',
@@ -30,15 +34,15 @@ export class Client {
   site: ClientSite;
 
   @Column({ default: 0 })
-  santePassation: number; // Score de 0 à 100
+  santePassation: number;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToOne(() => FicheIdentite, (fiche) => fiche.client, { cascade: true })
+  @OneToOne(() => FicheIdentite, (f) => f.client, { cascade: true })
   ficheIdentite: FicheIdentite;
 
-  @OneToMany(() => FluxMensuel, (flux) => flux.client, { cascade: true })
+  @OneToMany(() => FluxMensuel, (f) => f.client, { cascade: true })
   fluxMensuels: FluxMensuel[];
 
   @OneToMany(() => Fournisseur, (f) => f.client, { cascade: true })
@@ -52,6 +56,18 @@ export class Client {
 
   @OneToMany(() => ConversationIA, (c) => c.client, { cascade: true })
   conversationsIA: ConversationIA[];
+
+  @OneToOne(() => AnalyseStrategique, (a) => a.client, { cascade: true })
+  analyseStrategique: AnalyseStrategique;
+
+  @OneToMany(() => Mission, (m) => m.client, { cascade: true })
+  missions: Mission[];
+
+  @OneToOne(() => ObjectifsClient, (o) => o.client, { cascade: true })
+  objectifs: ObjectifsClient;
+
+  @OneToOne(() => ControleInterne, (c) => c.client, { cascade: true })
+  controleInterne: ControleInterne;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -9,7 +9,6 @@ export class FicheIdentite {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // Identité légale
   @Column({ nullable: true })
   raisonSociale: string;
 
@@ -25,14 +24,21 @@ export class FicheIdentite {
   @Column({ nullable: true })
   adresse: string;
 
-  // Données physiques
+  @Column({ nullable: true })
+  dateCreation: string;
+
+  @Column({ type: 'float', nullable: true })
+  capital: number;
+
   @Column({ type: 'float', nullable: true })
   surfaceCommerciale: number;
 
   @Column({ nullable: true })
   activite: string;
 
-  // Structure humaine (gérants)
+  @Column({ nullable: true })
+  entrepriseFamiliale: string;
+
   @Column({ type: 'json', nullable: true })
   gerants: {
     nom: string;
@@ -40,15 +46,22 @@ export class FicheIdentite {
     situationFamiliale: string;
     contratMariage: string;
     nbEnfants: number;
+    agesEnfants: string;
+    parts: number;
+    proprietaireLogement: boolean;
   }[];
 
-  // Organigramme salariés
   @Column({ type: 'json', nullable: true })
   salaries: {
     nom: string;
     poste: string;
     typeContrat: string;
+    age: number;
+    anciennete: string;
   }[];
+
+  @Column({ type: 'json', nullable: true })
+  reglementations: string[];
 
   @OneToOne(() => Client, (client) => client.ficheIdentite)
   @JoinColumn()
