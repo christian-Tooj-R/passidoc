@@ -15,6 +15,7 @@ export interface Client {
   santePassation: number;
   isActive: boolean;
   responsable?: Responsable;
+  collaborateurMg?: Responsable;
   ficheIdentite?: FicheIdentite;
   fluxMensuels?: FluxMensuel[];
   fournisseurs?: Fournisseur[];

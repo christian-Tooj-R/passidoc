@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from '../entities/client.entity';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
-import { User, UserRole } from '../entities/user.entity';
+import { User, UserRole, UserSite } from '../entities/user.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 
@@ -48,10 +48,16 @@ export class ClientsService {
     const query = this.repo.createQueryBuilder('client')
       .leftJoinAndSelect('client.ficheIdentite', 'fiche')
       .leftJoinAndSelect('client.responsable', 'responsable')
+      .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
       .where('client.isActive = :active', { active: true });
 
     if (currentUser.role !== UserRole.ADMIN) {
-      query.andWhere('client.responsableId = :userId', { userId: currentUser.id });
+      if (currentUser.site === UserSite.REUNION) {
+        query.andWhere('client.responsableId = :userId', { userId: currentUser.id });
+      } else {
+        // Collaborateur Madagascar : uniquement ses dossiers sous-assignés
+        query.andWhere('client.collaborateurMgId = :userId', { userId: currentUser.id });
+      }
     }
 
     if (site) query.andWhere('client.site = :site', { site });
@@ -72,10 +78,10 @@ export class ClientsService {
   // Controller: checks access rights
   async findOneForUser(id: number, currentUser: User) {
     const client = await this.findOne(id);
-    if (currentUser.role !== UserRole.ADMIN && client.responsable?.id !== currentUser.id) {
-      throw new ForbiddenException('Vous n\'avez pas accès à ce dossier');
-    }
-    return client;
+    if (currentUser.role === UserRole.ADMIN) return client;
+    if (currentUser.site === UserSite.REUNION && client.responsableId === currentUser.id) return client;
+    if (currentUser.site === UserSite.MADAGASCAR && client.collaborateurMgId === currentUser.id) return client;
+    throw new ForbiddenException('Vous n\'avez pas accès à ce dossier');
   }
 
   async update(id: number, dto: UpdateClientDto, currentUser: User) {
@@ -93,6 +99,27 @@ export class ClientsService {
   async assign(clientId: number, responsableId: number) {
     await this.findOne(clientId);
     await this.repo.update(clientId, { responsable: { id: responsableId } });
+    return this.findOne(clientId);
+  }
+
+  async assignMg(clientId: number, collaborateurMgId: number | null, currentUser: User) {
+    const client = await this.findOne(clientId);
+
+    if (currentUser.role !== UserRole.ADMIN) {
+      // Collaborateur Réunion : ne peut sous-assigner que ses propres dossiers
+      if (client.responsableId !== currentUser.id) {
+        throw new ForbiddenException('Ce dossier ne fait pas partie de votre portefeuille');
+      }
+      // Vérifier que le collaborateur MG appartient bien à son équipe
+      if (collaborateurMgId) {
+        const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
+        if (!mgUser || mgUser.referentId !== currentUser.id) {
+          throw new ForbiddenException('Ce collaborateur ne fait pas partie de votre équipe');
+        }
+      }
+    }
+
+    await this.repo.update(clientId, { collaborateurMgId: collaborateurMgId as any });
     return this.findOne(clientId);
   }
 

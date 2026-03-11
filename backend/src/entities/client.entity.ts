@@ -48,6 +48,14 @@ export class Client {
   @Column({ nullable: true })
   responsableId: number;
 
+  // Collaborateur Madagascar qui traite ce dossier (sous-assignation du portefeuille Réunion)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'collaborateurMgId' })
+  collaborateurMg: User;
+
+  @Column({ nullable: true })
+  collaborateurMgId: number;
+
   @OneToOne(() => FicheIdentite, (f) => f.client, { cascade: true })
   ficheIdentite: FicheIdentite;
 

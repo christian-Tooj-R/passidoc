@@ -44,9 +44,19 @@ export class ClientsController {
 
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Assigner un responsable à un dossier (ADMIN uniquement)' })
+  @ApiOperation({ summary: 'Assigner un responsable Réunion à un dossier (ADMIN uniquement)' })
   assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number) {
     return this.clientsService.assign(id, responsableId);
+  }
+
+  @Patch(':id/assign-mg')
+  @ApiOperation({ summary: 'Sous-assigner un collaborateur Madagascar (admin ou collaborateur Réunion)' })
+  assignMg(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('collaborateurMgId') collaborateurMgId: number | null,
+    @Req() req: any,
+  ) {
+    return this.clientsService.assignMg(id, collaborateurMgId, req.user);
   }
 
   @Delete(':id')

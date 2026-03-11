@@ -51,8 +51,6 @@ export const routes: Routes = [
       },
       {
         path: 'portefeuilles',
-        canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/portefeuilles.component').then((m) => m.PortefeuillesComponent),
       },
       {

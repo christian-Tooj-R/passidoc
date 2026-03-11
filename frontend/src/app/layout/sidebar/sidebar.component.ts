@@ -41,17 +41,19 @@ import { AuthService } from '../../core/services/auth.service';
             <span>Tâches</span>
           </a>
         </li>
+        @if (auth.canManagePortefeuilles()) {
+          <li>
+            <a routerLink="/portefeuilles" routerLinkActive="active">
+              <span class="nav-icon"><mat-icon>folder_shared</mat-icon></span>
+              <span>Portefeuilles</span>
+            </a>
+          </li>
+        }
         @if (auth.isAdmin()) {
           <li>
             <a routerLink="/equipes" routerLinkActive="active">
               <span class="nav-icon"><mat-icon>people</mat-icon></span>
               <span>Équipes</span>
-            </a>
-          </li>
-          <li>
-            <a routerLink="/portefeuilles" routerLinkActive="active">
-              <span class="nav-icon"><mat-icon>folder_shared</mat-icon></span>
-              <span>Portefeuilles</span>
             </a>
           </li>
           <li>

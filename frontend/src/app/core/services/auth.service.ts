@@ -51,6 +51,9 @@ export class AuthService {
   isLoggedIn(): boolean { return !!this._token(); }
   isAdmin(): boolean { return this._user()?.role === 'ADMIN'; }
   isExpert(): boolean { return this._user()?.role === 'EXPERT_COMPTABLE'; }
+  isReunion(): boolean { return this._user()?.site === 'REUNION'; }
+  isMadagascar(): boolean { return this._user()?.site === 'MADAGASCAR'; }
+  canManagePortefeuilles(): boolean { return this.isAdmin() || this.isReunion(); }
 
   private setSession(res: any) {
     localStorage.setItem('token', res.access_token);
