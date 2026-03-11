@@ -10,6 +10,8 @@ export enum TaskStatut {
   A_FAIRE = 'A_FAIRE',
   EN_COURS = 'EN_COURS',
   TERMINEE = 'TERMINEE',
+  NON_FAIT = 'NON_FAIT',
+  EN_ATTENTE = 'EN_ATTENTE',
 }
 
 export enum TaskPriorite {
@@ -18,10 +20,24 @@ export enum TaskPriorite {
   HAUTE = 'HAUTE',
 }
 
+export enum TaskType {
+  TVA = 'TVA',
+  PAIE = 'PAIE',
+  ACHATS = 'ACHATS',
+  VENTES = 'VENTES',
+  RB = 'RB',
+  GV = 'GV',
+  DR = 'DR',
+  AUTRE = 'AUTRE',
+}
+
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  taskId: string; // Format T-2025-001
 
   @Column()
   titre: string;
@@ -35,8 +51,27 @@ export class Task {
   @Column({ type: 'enum', enum: TaskPriorite, default: TaskPriorite.NORMALE })
   priorite: TaskPriorite;
 
+  @Column({ type: 'enum', enum: TaskType, nullable: true })
+  type: TaskType;
+
   @Column({ nullable: true, type: 'date' })
   dateEcheance: string;
+
+  // Suivi du temps
+  @Column({ nullable: true, type: 'datetime' })
+  heureDebut: Date;
+
+  @Column({ nullable: true, type: 'datetime' })
+  heureFin: Date;
+
+  @Column({ nullable: true, type: 'float', default: 0 })
+  tempsExecution: number; // en minutes
+
+  @Column({ nullable: true, type: 'float', default: 0 })
+  heuresSup: number;
+
+  @Column({ nullable: true })
+  semaine: number; // numéro de semaine ISO
 
   @ManyToOne(() => Client, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clientId' })
