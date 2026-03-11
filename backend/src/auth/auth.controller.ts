@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Get, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Verify2faDto } from './dto/verify-2fa.dto';
@@ -14,6 +15,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
   @ApiOperation({ summary: 'Connexion utilisateur' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -21,6 +23,7 @@ export class AuthController {
 
   @Post('2fa/verify')
   @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
   @ApiOperation({ summary: 'Vérification code 2FA après login' })
   verify2fa(@Body() dto: Verify2faDto & { userId: number }) {
     return this.authService.verify2FA(dto.userId, dto.token);

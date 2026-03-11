@@ -1,0 +1,56 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - name: "Montée en charge progressive"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 20
+    - name: "Charge soutenue"
+      duration: 120
+      arrivalRate: 20
+    - name: "Pic de charge"
+      duration: 30
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Flux login → liste clients"
+    weight: 70
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ $processEnvironment.TEST_EMAIL }}"
+            password: "{{ $processEnvironment.TEST_PASSWORD }}"
+          capture:
+            - json: "$.access_token"
+              as: "token"
+      - get:
+          url: "/api/clients"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+  - name: "Tentatives de login invalides"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "invalide@test.com"
+            password: "wrongpassword"
+          expect:
+            - statusCode: 401
+
+  - name: "Accès sans authentification"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/clients"
+          expect:
+            - statusCode: 401
+      - get:
+          url: "/api/users"
+          expect:
+            - statusCode: 401
