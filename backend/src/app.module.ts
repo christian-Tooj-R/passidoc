@@ -13,6 +13,11 @@ import { FournisseursModule } from './fournisseurs/fournisseurs.module';
 import { SyntheseCloureModule } from './synthese-cloture/synthese-cloture.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportModule } from './export/export.module';
+import { AnalyseStrategiqueModule } from './analyse-strategique/analyse-strategique.module';
+import { MissionsModule } from './missions/missions.module';
+import { ObjectifsModule } from './objectifs/objectifs.module';
+import { ControleInterneModule } from './controle-interne/controle-interne.module';
+import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
@@ -42,6 +47,11 @@ import { ExportModule } from './export/export.module';
     SyntheseCloureModule,
     DocumentsModule,
     ExportModule,
+    AnalyseStrategiqueModule,
+    MissionsModule,
+    ObjectifsModule,
+    ControleInterneModule,
+    AiAssistantModule,
   ],
   controllers: [AppController],
   providers: [AppService],
