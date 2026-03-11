@@ -19,7 +19,7 @@ export class ClientsService {
     return this.http.get<Client>(`${this.api}/${id}`);
   }
 
-  create(data: { nom: string; site: string }) {
+  create(data: { nom: string; site: string; ficheData?: any }) {
     return this.http.post<Client>(this.api, data);
   }
 
@@ -30,6 +30,11 @@ export class ClientsService {
   delete(id: number) {
     return this.http.delete(`${this.api}/${id}`);
   }
+
+  assign(clientId: number, responsableId: number) {
+    return this.http.patch<Client>(`${this.api}/${clientId}/assign`, { responsableId });
+  }
+
 
   exportPdf(id: number) {
     return this.http.get(`${this.api}/${id}/export/pdf`, { responseType: 'blob' });

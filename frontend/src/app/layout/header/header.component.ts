@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
+import { NotificationStreamService } from '../../core/services/notification-stream.service';
 
 @Component({
   selector: 'app-header',
@@ -22,32 +23,50 @@ import { AlertesService } from '../../core/services/alertes.service';
 
       <div class="header__right">
 
-        <!-- Notification bell -->
-        <button mat-icon-button [matMenuTriggerFor]="alertMenu" class="btn-bell"
-                [class.has-alerts]="alertes.count() > 0">
+        <!-- Bell : alertes flux + tâches -->
+        <button mat-icon-button [matMenuTriggerFor]="bellMenu" class="btn-bell"
+                [class.has-notif]="totalCount() > 0"
+                (click)="notifStream.markAllRead()">
           <mat-icon
-            [matBadge]="alertes.count() > 0 ? alertes.count() : null"
+            [matBadge]="totalCount() > 0 ? totalCount() : null"
             matBadgeColor="warn"
             matBadgeSize="small">
             notifications
           </mat-icon>
         </button>
 
-        <mat-menu #alertMenu="matMenu" xPosition="before" class="alert-menu">
-          <div class="alert-menu__header">
-            <span class="alert-menu__title">Alertes dépôt</span>
+        <mat-menu #bellMenu="matMenu" xPosition="before" class="bell-menu">
+
+          <!-- Tâches assignées -->
+          @if (notifStream.notifications().length > 0) {
+            <div class="section-header">
+              <mat-icon>task_alt</mat-icon> Tâches assignées
+            </div>
+            @for (n of notifStream.notifications().slice(0, 5); track n.id) {
+              <button mat-menu-item class="notif-item" (click)="notifStream.navigateTo(n)">
+                <div class="notif-item__body">
+                  <div class="notif-item__msg">{{ n.message }}</div>
+                  <div class="notif-item__titre">{{ n.titre }}</div>
+                </div>
+                @if (!n.read) { <span class="notif-dot"></span> }
+              </button>
+            }
+            <mat-divider />
+          }
+
+          <!-- Alertes flux mensuels -->
+          <div class="section-header">
+            <mat-icon>warning_amber</mat-icon> Alertes dépôt
             @if (alertes.count() > 0) {
-              <span class="alert-menu__count">{{ alertes.count() }} alerte(s)</span>
+              <span class="section-count">{{ alertes.count() }}</span>
             }
           </div>
-          <mat-divider />
           @if (alertes.alertes().length === 0) {
-            <div class="alert-menu__empty">
-              <mat-icon>check_circle</mat-icon>
-              <span>Aucune alerte</span>
+            <div class="empty-section">
+              <mat-icon>check_circle</mat-icon> Aucune alerte
             </div>
           }
-          @for (a of alertes.alertes().slice(0, 8); track a.id) {
+          @for (a of alertes.alertes().slice(0, 6); track a.id) {
             <a mat-menu-item [routerLink]="['/clients', a.client.id]" class="alert-item">
               <div class="alert-item__body">
                 <div class="alert-item__client">{{ a.client.nom }}</div>
@@ -55,14 +74,11 @@ import { AlertesService } from '../../core/services/alertes.service';
                   {{ alertes.typeLabel(a.type) }} — {{ alertes.moisLabel(a.mois) }} {{ a.annee }}
                 </div>
               </div>
-              <span class="alert-item__badge" [class.badge-retard]="a.statut === 'EN_RETARD'"
+              <span class="badge" [class.badge-retard]="a.statut === 'EN_RETARD'"
                     [class.badge-manquant]="a.statut === 'MANQUANT'">
                 {{ a.statut === 'EN_RETARD' ? 'En retard' : 'Manquant' }}
               </span>
             </a>
-          }
-          @if (alertes.alertes().length > 8) {
-            <div class="alert-menu__more">+ {{ alertes.alertes().length - 8 }} autres alertes</div>
           }
         </mat-menu>
 
@@ -97,8 +113,7 @@ import { AlertesService } from '../../core/services/alertes.service';
   `,
   styles: [`
     .header {
-      height: 60px;
-      background: white;
+      height: 60px; background: white;
       border-bottom: 1px solid #e8ecf0;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       display: flex; align-items: center;
@@ -107,33 +122,42 @@ import { AlertesService } from '../../core/services/alertes.service';
     .header__spacer { flex: 1; }
     .header__right { display: flex; align-items: center; gap: 4px; }
 
-    /* Bell */
-    .btn-bell { color: #94a3b8 !important; }
-    .btn-bell.has-alerts { color: #f59e0b !important; }
-
-    /* Alert menu */
-    .alert-menu__header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 16px 10px; pointer-events: none;
+    .btn-bell { color: #94a3b8 !important; transition: color 0.2s; }
+    .btn-bell.has-notif { color: #f59e0b !important; animation: bell-shake 0.5s ease; }
+    @keyframes bell-shake {
+      0%,100% { transform: rotate(0); }
+      20% { transform: rotate(-12deg); }
+      40% { transform: rotate(12deg); }
+      60% { transform: rotate(-8deg); }
+      80% { transform: rotate(8deg); }
     }
-    .alert-menu__title { font-size: 13px; font-weight: 700; color: #0f172a; }
-    .alert-menu__count { font-size: 11px; font-weight: 600; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 20px; }
-    .alert-menu__empty {
-      display: flex; align-items: center; gap: 8px;
-      padding: 16px; color: #94a3b8; font-size: 13px; pointer-events: none;
-    }
-    .alert-menu__empty mat-icon { font-size: 18px; width: 18px; height: 18px; color: #22c55e; }
-    .alert-menu__more { padding: 8px 16px; font-size: 12px; color: #94a3b8; text-align: center; }
 
-    .alert-item { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; min-width: 320px; }
+    .section-header {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 16px 6px; font-size: 11px; font-weight: 700;
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;
+      pointer-events: none;
+    }
+    .section-header mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .section-count { background: #fee2e2; color: #dc2626; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; margin-left: auto; }
+
+    .notif-item { display: flex !important; align-items: center !important; gap: 8px !important; min-width: 300px; }
+    .notif-item__body { flex: 1; }
+    .notif-item__msg { font-size: 12px; color: #64748b; }
+    .notif-item__titre { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: #6366f1; flex-shrink: 0; }
+
+    .empty-section { display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 12px; color: #94a3b8; pointer-events: none; }
+    .empty-section mat-icon { font-size: 15px; width: 15px; height: 15px; color: #22c55e; }
+
+    .alert-item { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; min-width: 300px; }
     .alert-item__body { flex: 1; min-width: 0; }
     .alert-item__client { font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .alert-item__detail { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-    .alert-item__badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
     .badge-retard { background: #fff7ed; color: #c2410c; }
     .badge-manquant { background: #fee2e2; color: #dc2626; }
 
-    /* User button */
     .header__user-btn {
       display: flex !important; align-items: center !important; gap: 10px !important;
       padding: 5px 10px 5px 6px !important; border-radius: 40px !important;
@@ -169,10 +193,23 @@ import { AlertesService } from '../../core/services/alertes.service';
   `],
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  constructor(public auth: AuthService, public alertes: AlertesService) {}
+  constructor(
+    public auth: AuthService,
+    public alertes: AlertesService,
+    public notifStream: NotificationStreamService,
+  ) {}
 
-  ngOnInit() { this.alertes.startPolling(); }
-  ngOnDestroy() { this.alertes.stopPolling(); }
+  totalCount = computed(() => this.alertes.count() + this.notifStream.unreadCount());
+
+  ngOnInit() {
+    this.alertes.startPolling();
+    this.notifStream.connect();
+  }
+
+  ngOnDestroy() {
+    this.alertes.stopPolling();
+    this.notifStream.disconnect();
+  }
 
   get initials(): string {
     const u = this.auth.currentUser();

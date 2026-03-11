@@ -57,6 +57,30 @@ async function seed() {
       site: UserSite.MADAGASCAR,
       password: 'Expert2024!',
     },
+    {
+      email: 'marie@afym.re',
+      firstName: 'Marie',
+      lastName: 'Lefevre',
+      role: UserRole.COLLABORATEUR,
+      site: UserSite.REUNION,
+      password: 'Marie2024!',
+    },
+    {
+      email: 'thomas@afym.re',
+      firstName: 'Thomas',
+      lastName: 'Berger',
+      role: UserRole.EXPERT_COMPTABLE,
+      site: UserSite.REUNION,
+      password: 'Thomas2024!',
+    },
+    {
+      email: 'romuald@afym.mg',
+      firstName: 'Romuald',
+      lastName: 'Andriamaro',
+      role: UserRole.ADMIN,
+      site: UserSite.MADAGASCAR,
+      password: 'Romuald2024!',
+    },
   ];
 
   for (const u of users) {
@@ -70,12 +94,18 @@ async function seed() {
     }
   }
 
-  // ── Clients La Réunion ────────────────────────────────────────────────────
+  // ── Résolution des responsables ──────────────────────────────────────────
+  const marie = await userRepo.findOne({ where: { email: 'marie@afym.re' } });
+  const thomas = await userRepo.findOne({ where: { email: 'thomas@afym.re' } });
+  const hery = await userRepo.findOne({ where: { email: 'expert@afym.mg' } });
+
+  // ── Clients ────────────────────────────────────────────────────────────────
 
   const clientsData = [
     {
       nom: 'Boulangerie Du Four à la Planche',
       site: ClientSite.REUNION,
+      responsable: marie,
       fiche: {
         raisonSociale: 'SARL Du Four à la Planche',
         siren: '123456789',
@@ -118,6 +148,7 @@ async function seed() {
     {
       nom: 'Cabinet Médical Saint-Denis',
       site: ClientSite.REUNION,
+      responsable: marie,
       fiche: {
         raisonSociale: 'SCP Docteurs Renard & Moreau',
         siren: '987654321',
@@ -159,6 +190,7 @@ async function seed() {
     {
       nom: 'Hôtel Le Lagon Bleu',
       site: ClientSite.REUNION,
+      responsable: thomas,
       fiche: {
         raisonSociale: 'SA Le Lagon Bleu',
         siren: '456789123',
@@ -198,6 +230,7 @@ async function seed() {
     {
       nom: 'Epicerie Fine Randriantsoa',
       site: ClientSite.MADAGASCAR,
+      responsable: hery,
       fiche: {
         raisonSociale: 'SARL Randriantsoa Commerce',
         siren: '321654987',
@@ -241,8 +274,12 @@ async function seed() {
       continue;
     }
 
-    // Créer le client
-    const client = await clientRepo.save(clientRepo.create({ nom: data.nom, site: data.site }));
+    // Créer le client avec responsable
+    const client = await clientRepo.save(clientRepo.create({
+      nom: data.nom,
+      site: data.site,
+      responsable: data.responsable ?? undefined,
+    }));
 
     // Fiche identité
     await ficheRepo.save(ficheRepo.create({ ...data.fiche, client }));
@@ -291,6 +328,9 @@ async function seed() {
   console.log('   expert@afym.re      → password: Expert2024!  (EXPERT_COMPTABLE)');
   console.log('   collab@afym.re      → password: Collab2024!  (COLLABORATEUR)');
   console.log('   expert@afym.mg      → password: Expert2024!  (EXPERT_COMPTABLE - Madagascar)');
+  console.log('   marie@afym.re       → password: Marie2024!   (COLLABORATEUR - scénario démo)');
+  console.log('   thomas@afym.re      → password: Thomas2024!  (EXPERT_COMPTABLE - scénario démo)');
+  console.log('   romuald@afym.mg     → password: Romuald2024! (ADMIN - scénario démo Madagascar)');
 
   await app.close();
 }

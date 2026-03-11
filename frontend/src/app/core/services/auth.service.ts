@@ -50,6 +50,7 @@ export class AuthService {
   currentUser(): User | null { return this._user(); }
   isLoggedIn(): boolean { return !!this._token(); }
   isAdmin(): boolean { return this._user()?.role === 'ADMIN'; }
+  isExpert(): boolean { return this._user()?.role === 'EXPERT_COMPTABLE'; }
 
   private setSession(res: any) {
     localStorage.setItem('token', res.access_token);
