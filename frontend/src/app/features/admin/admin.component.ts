@@ -1,130 +1,97 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../../core/services/users.service';
 import { User } from '../../core/models/user.model';
 
+/* ── Dialog création utilisateur ── */
 @Component({
-  selector: 'app-admin',
+  selector: 'app-create-user-dialog',
   standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, MatTableModule, MatButtonModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatCardModule, MatDialogModule, MatSnackBarModule, MatChipsModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
   template: `
-    <div class="page">
-      <h1>Administration</h1>
-
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title>Gestion des utilisateurs</mat-card-title>
-          <div class="card-actions">
-            <button mat-flat-button color="primary" (click)="showForm = !showForm">
-              <mat-icon>person_add</mat-icon> Nouvel utilisateur
-            </button>
-          </div>
-        </mat-card-header>
-
-        <mat-card-content>
-          @if (showForm) {
-            <form [formGroup]="form" (ngSubmit)="createUser()" class="user-form">
-              <mat-form-field appearance="outline">
-                <mat-label>Prénom</mat-label>
-                <input matInput formControlName="firstName" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Nom</mat-label>
-                <input matInput formControlName="lastName" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Email</mat-label>
-                <input matInput type="email" formControlName="email" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Mot de passe</mat-label>
-                <input matInput type="password" formControlName="password" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Rôle</mat-label>
-                <mat-select formControlName="role">
-                  <mat-option value="COLLABORATEUR">Collaborateur</mat-option>
-                  <mat-option value="EXPERT_COMPTABLE">Expert-Comptable</mat-option>
-                  <mat-option value="ADMIN">Admin</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Site</mat-label>
-                <mat-select formControlName="site">
-                  <mat-option value="REUNION">La Réunion</mat-option>
-                  <mat-option value="MADAGASCAR">Madagascar</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <div class="form-actions">
-                <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Créer</button>
-                <button mat-button type="button" (click)="showForm = false">Annuler</button>
-              </div>
-            </form>
-          }
-
-          <table mat-table [dataSource]="users" class="full-width">
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nom</th>
-              <td mat-cell *matCellDef="let u">{{ u.firstName }} {{ u.lastName }}</td>
-            </ng-container>
-            <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef>Email</th>
-              <td mat-cell *matCellDef="let u">{{ u.email }}</td>
-            </ng-container>
-            <ng-container matColumnDef="role">
-              <th mat-header-cell *matHeaderCellDef>Rôle</th>
-              <td mat-cell *matCellDef="let u">
-                <mat-chip [color]="roleColor(u.role)" selected>{{ u.role }}</mat-chip>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="site">
-              <th mat-header-cell *matHeaderCellDef>Site</th>
-              <td mat-cell *matCellDef="let u">{{ u.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }} {{ u.site }}</td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let u">
-                <button mat-icon-button color="warn" (click)="deleteUser(u)">
-                  <mat-icon>person_off</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-          </table>
-        </mat-card-content>
-      </mat-card>
+    <div class="dialog">
+      <div class="dialog-header">
+        <div class="dialog-header__icon"><mat-icon>person_add</mat-icon></div>
+        <div>
+          <h2>Nouvel utilisateur</h2>
+          <p>Créer un compte collaborateur ou expert</p>
+        </div>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="confirm()" class="dialog-body">
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Prénom</mat-label>
+            <input matInput formControlName="firstName" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nom</mat-label>
+            <input matInput formControlName="lastName" />
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Adresse email</mat-label>
+          <mat-icon matPrefix>alternate_email</mat-icon>
+          <input matInput type="email" formControlName="email" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Mot de passe</mat-label>
+          <mat-icon matPrefix>lock_outline</mat-icon>
+          <input matInput type="password" formControlName="password" />
+          <mat-hint>Minimum 8 caractères</mat-hint>
+        </mat-form-field>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Rôle</mat-label>
+            <mat-select formControlName="role">
+              <mat-option value="COLLABORATEUR">Collaborateur</mat-option>
+              <mat-option value="EXPERT_COMPTABLE">Expert-Comptable</mat-option>
+              <mat-option value="ADMIN">Administrateur</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Site</mat-label>
+            <mat-select formControlName="site">
+              <mat-option value="REUNION">🇷🇪 La Réunion</mat-option>
+              <mat-option value="MADAGASCAR">🇲🇬 Madagascar</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </form>
+      <div class="dialog-actions">
+        <button mat-stroked-button type="button" (click)="cancel()">Annuler</button>
+        <button mat-flat-button class="btn-create" [disabled]="form.invalid" (click)="confirm()">
+          <mat-icon>person_add</mat-icon> Créer le compte
+        </button>
+      </div>
     </div>
   `,
   styles: [`
-    .page h1 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 24px; }
-    .card-actions { margin-left: auto; }
-    mat-card-header { display: flex; align-items: center; }
-    .user-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 24px 0; }
-    .form-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
-    .full-width { width: 100%; }
+    .dialog { width: 500px; max-width: 100%; }
+    .dialog-header { display: flex; align-items: center; gap: 16px; padding: 28px 28px 20px; border-bottom: 1px solid #f1f5f9; }
+    .dialog-header__icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1e40af, #3730a3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .dialog-header__icon mat-icon { color: white; font-size: 24px; width: 24px; height: 24px; }
+    .dialog-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+    .dialog-header p { font-size: 13px; color: #64748b; margin: 0; }
+    .dialog-body { padding: 20px 28px; display: flex; flex-direction: column; gap: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .full { width: 100%; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 28px 24px; border-top: 1px solid #f1f5f9; }
+    .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; }
   `],
 })
-export class AdminComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  users: User[] = [];
-  columns = ['name', 'email', 'role', 'site', 'actions'];
-  showForm = false;
+export class CreateUserDialogComponent {
+  dialogRef = inject(MatDialogRef<CreateUserDialogComponent>);
+  fb = inject(FormBuilder);
   form = this.fb.group({
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
@@ -133,28 +100,211 @@ export class AdminComponent implements OnInit {
     role: ['COLLABORATEUR', Validators.required],
     site: ['REUNION', Validators.required],
   });
+  confirm() { if (this.form.valid) this.dialogRef.close(this.form.value); else this.form.markAllAsTouched(); }
+  cancel() { this.dialogRef.close(null); }
+}
 
-  constructor(private usersService: UsersService, private snack: MatSnackBar) {}
+/* ── Page Administration ── */
+@Component({
+  selector: 'app-admin',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatSnackBarModule,
+    MatDialogModule, MatTooltipModule],
+  template: `
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1>Administration</h1>
+          <p class="page-subtitle">{{ users.length }} utilisateur(s) enregistré(s)</p>
+        </div>
+        <button mat-flat-button class="btn-create" (click)="openCreate()">
+          <mat-icon>person_add</mat-icon> Nouvel utilisateur
+        </button>
+      </div>
+
+      <!-- Stats mini -->
+      <div class="stats-row">
+        <div class="stat-chip">
+          <mat-icon>manage_accounts</mat-icon>
+          <span>{{ countRole('ADMIN') }} Admin</span>
+        </div>
+        <div class="stat-chip">
+          <mat-icon>work</mat-icon>
+          <span>{{ countRole('EXPERT_COMPTABLE') }} Expert-comptable</span>
+        </div>
+        <div class="stat-chip">
+          <mat-icon>badge</mat-icon>
+          <span>{{ countRole('COLLABORATEUR') }} Collaborateur</span>
+        </div>
+        <div class="stat-chip">
+          <mat-icon>flag</mat-icon>
+          <span>{{ countSite('REUNION') }} Réunion · {{ countSite('MADAGASCAR') }} Madagascar</span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Utilisateur</th>
+              <th>Email</th>
+              <th>Rôle</th>
+              <th>Site</th>
+              <th>2FA</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of users; track u.id) {
+              <tr class="table-row">
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar">{{ (u.firstName?.[0] || '') + (u.lastName?.[0] || '') }}</div>
+                    <span class="user-name">{{ u.firstName }} {{ u.lastName }}</span>
+                  </div>
+                </td>
+                <td class="text-muted">{{ u.email }}</td>
+                <td>
+                  <span class="role-badge" [class]="'role-' + u.role?.toLowerCase()">
+                    {{ roleLabel(u.role) }}
+                  </span>
+                </td>
+                <td>
+                  <span [class]="u.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
+                    {{ u.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="twofa-badge" [class.active]="u.isTwoFactorEnabled">
+                    <mat-icon>{{ u.isTwoFactorEnabled ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
+                    {{ u.isTwoFactorEnabled ? 'Activé' : 'Inactif' }}
+                  </span>
+                </td>
+                <td class="action-cell">
+                  <button mat-icon-button class="btn-delete" matTooltip="Désactiver l'utilisateur"
+                          (click)="deleteUser(u)">
+                    <mat-icon>person_off</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+            @if (users.length === 0) {
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <mat-icon>group_off</mat-icon>
+                  <span>Aucun utilisateur</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .page { max-width: 1280px; margin: 0 auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .page-header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
+    .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; color: white !important; }
+
+    /* Stats */
+    .stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: white; border: 1px solid #e8ecf0;
+      border-radius: 10px; padding: 8px 14px;
+      font-size: 13px; font-weight: 500; color: #475569;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .stat-chip mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
+
+    /* Table */
+    .table-card {
+      background: white; border-radius: 16px;
+      border: 1px solid #e8ecf0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      overflow: hidden;
+    }
+    .users-table { width: 100%; border-collapse: collapse; }
+    .users-table thead th {
+      padding: 14px 20px; text-align: left;
+      font-size: 11px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      background: #f8fafc; border-bottom: 1px solid #e8ecf0;
+    }
+    .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+    .table-row:last-child { border-bottom: none; }
+    .table-row:hover { background: #f8fafc; }
+    .users-table td { padding: 14px 20px; vertical-align: middle; }
+
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #dbeafe, #c7d2fe);
+      color: #1e40af; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .user-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .text-muted { font-size: 13px; color: #64748b; }
+
+    .role-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .role-admin { background: #ede9fe; color: #7c3aed; }
+    .role-expert_comptable { background: #dbeafe; color: #1d4ed8; }
+    .role-collaborateur { background: #f0fdf4; color: #15803d; }
+
+    .badge-reunion { display: inline-flex; align-items: center; background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-madagascar { display: inline-flex; align-items: center; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+
+    .twofa-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: #94a3b8; }
+    .twofa-badge mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .twofa-badge.active { color: #15803d; }
+
+    .action-cell { text-align: right; }
+    .btn-delete { color: #cbd5e1 !important; }
+    .btn-delete:hover { color: #f87171 !important; }
+
+    .empty-state { text-align: center; padding: 48px !important; color: #94a3b8; }
+    .empty-state mat-icon { font-size: 36px; width: 36px; height: 36px; display: block; margin: 0 auto 8px; }
+  `],
+})
+export class AdminComponent implements OnInit {
+  private usersService = inject(UsersService);
+  private snack = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+
+  users: User[] = [];
+
   ngOnInit() { this.load(); }
   load() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
 
-  createUser() {
-    this.usersService.create(this.form.value).subscribe(() => {
-      this.load(); this.showForm = false; this.form.reset();
-      this.snack.open('Utilisateur créé', 'OK', { duration: 2000 });
+  openCreate() {
+    const ref = this.dialog.open(CreateUserDialogComponent, { panelClass: 'rounded-dialog' });
+    ref.afterClosed().subscribe((result) => {
+      if (result) {
+        this.usersService.create(result).subscribe(() => {
+          this.load();
+          this.snack.open('Utilisateur créé avec succès', 'OK', { duration: 3000 });
+        });
+      }
     });
   }
 
   deleteUser(u: User) {
+    if (!confirm(`Désactiver le compte de ${u.firstName} ${u.lastName} ?`)) return;
     this.usersService.delete(u.id).subscribe(() => {
       this.load();
-      this.snack.open('Utilisateur désactivé', 'OK', { duration: 2000 });
+      this.snack.open('Utilisateur désactivé', 'OK', { duration: 2500 });
     });
   }
 
-  roleColor(role: string) {
-    if (role === 'ADMIN') return 'warn';
-    if (role === 'EXPERT_COMPTABLE') return 'primary';
-    return 'accent';
+  roleLabel(role: string) {
+    if (role === 'ADMIN') return 'Admin';
+    if (role === 'EXPERT_COMPTABLE') return 'Expert-comptable';
+    return 'Collaborateur';
   }
+  countRole(role: string) { return this.users.filter((u) => u.role === role).length; }
+  countSite(site: string) { return this.users.filter((u) => u.site === site).length; }
 }
