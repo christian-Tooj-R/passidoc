@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -15,7 +15,7 @@ import { NotificationStreamService } from '../../core/services/notification-stre
   selector: 'app-top-nav',
   standalone: true,
   imports: [
-    CommonModule, RouterLink,
+    CommonModule, RouterLink, RouterLinkActive,
     MatButtonModule, MatIconModule, MatMenuModule,
     MatDividerModule, MatBadgeModule, MatTooltipModule,
   ],
@@ -37,6 +37,32 @@ import { NotificationStreamService } from '../../core/services/notification-stre
           </div>
         </a>
       </div>
+
+      <!-- ── Nav items ───────────────────────────────── -->
+      <nav class="topnav__nav">
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+          <mat-icon>dashboard</mat-icon><span>Tableau de bord</span>
+        </a>
+        <a routerLink="/clients" routerLinkActive="active" class="nav-item">
+          <mat-icon>folder_shared</mat-icon><span>Dossiers</span>
+        </a>
+        <a routerLink="/tasks" routerLinkActive="active" class="nav-item">
+          <mat-icon>task_alt</mat-icon><span>Tâches</span>
+        </a>
+        @if (auth.canManagePortefeuilles()) {
+          <a routerLink="/portefeuilles" routerLinkActive="active" class="nav-item">
+            <mat-icon>account_tree</mat-icon><span>Portefeuilles</span>
+          </a>
+        }
+        @if (auth.isAdmin()) {
+          <a routerLink="/equipes" routerLinkActive="active" class="nav-item">
+            <mat-icon>people</mat-icon><span>Équipes</span>
+          </a>
+          <a routerLink="/admin" routerLinkActive="active" class="nav-item">
+            <mat-icon>manage_accounts</mat-icon><span>Utilisateurs</span>
+          </a>
+        }
+      </nav>
 
       <div class="spacer"></div>
 
@@ -169,6 +195,54 @@ import { NotificationStreamService } from '../../core/services/notification-stre
     .brand-text { display: flex; flex-direction: column; gap: 1px; }
     .brand-name { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -.4px; line-height: 1.1; }
     .brand-sub  { font-size: 9.5px; color: #94a3b8; font-weight: 500; line-height: 1; }
+
+    /* ── Nav items ──────────────────────────────────── */
+    .topnav__nav {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin: 0 8px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #64748b;
+      white-space: nowrap;
+      transition: all .15s;
+      position: relative;
+    }
+    .nav-item mat-icon {
+      font-size: 16px; width: 16px; height: 16px;
+      color: inherit; opacity: .7;
+      transition: opacity .15s;
+    }
+    .nav-item:hover {
+      color: #1e293b;
+      background: #f1f5f9;
+    }
+    .nav-item:hover mat-icon { opacity: 1; }
+    .nav-item.active {
+      color: #4f46e5;
+      background: #eef2ff;
+      font-weight: 600;
+    }
+    .nav-item.active mat-icon { opacity: 1; }
+    /* Underline indicator */
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -9px; left: 50%;
+      transform: translateX(-50%);
+      width: 24px; height: 2.5px;
+      background: #6366f1;
+      border-radius: 2px;
+    }
 
     .spacer { flex: 1; }
 
