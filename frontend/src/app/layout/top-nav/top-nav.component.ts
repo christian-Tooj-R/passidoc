@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, output, input } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,8 +24,8 @@ import { NotificationStreamService } from '../../core/services/notification-stre
 
       <!-- ── Toggle + Brand ──────────────────────────── -->
       <div class="topnav__left">
-        <button class="btn-toggle" (click)="toggleSidebar.emit()" matTooltip="Menu">
-          <mat-icon>{{ sidebarOpen() ? 'menu_open' : 'menu' }}</mat-icon>
+        <button class="btn-toggle" matTooltip="Menu">
+          <mat-icon>menu</mat-icon>
         </button>
         <a routerLink="/dashboard" class="brand">
           <div class="brand-icon">
@@ -265,9 +265,6 @@ import { NotificationStreamService } from '../../core/services/notification-stre
   `],
 })
 export class TopNavComponent implements OnInit, OnDestroy {
-  sidebarOpen = input<boolean>(true);
-  toggleSidebar = output<void>();
-
   constructor(
     public auth: AuthService,
     public alertes: AlertesService,
