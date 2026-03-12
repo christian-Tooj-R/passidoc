@@ -57,8 +57,8 @@ export class TasksService {
   }
 
   getDashboard(semaine?: number) {
-    const params = semaine ? { semaine: semaine.toString() } : {};
-    return this.http.get<TaskDashboard>(`${environment.apiUrl}/tasks/dashboard`, { params });
+    const params = semaine ? { semaine: semaine.toString() } : undefined;
+    return this.http.get<TaskDashboard>(`${environment.apiUrl}/tasks/dashboard`, params ? { params } : {});
   }
 
   create(clientId: number, data: {
