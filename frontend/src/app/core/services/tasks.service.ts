@@ -24,6 +24,9 @@ export interface Task {
   tempsExecution?: number;
   heuresSup?: number;
   semaine?: number;
+  mois?: number;
+  annee?: number;
+  commentaire?: string;
   createdAt: string;
 }
 
@@ -38,6 +41,12 @@ export interface TaskDashboard {
   tempsMoyen: number;
   parCollaborateur: { name: string; total: number; terminees: number; tempsTotal: number }[];
   parType: { type: string; count: number }[];
+}
+
+export interface GrilleResult {
+  annee: number;
+  grille: Record<string, Record<number, Task | null>>;
+  drEtapes: Task[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -59,6 +68,24 @@ export class TasksService {
   getDashboard(semaine?: number) {
     const params = semaine ? { semaine: semaine.toString() } : undefined;
     return this.http.get<TaskDashboard>(`${environment.apiUrl}/tasks/dashboard`, params ? { params } : {});
+  }
+
+  getGrille(clientId: number, annee: number) {
+    return this.http.get<GrilleResult>(`${this.api(clientId)}/grille`, {
+      params: { annee: annee.toString() },
+    });
+  }
+
+  toggleMensuel(clientId: number, data: { type: string; mois: number; annee: number }) {
+    return this.http.post<Task | null>(`${this.api(clientId)}/toggle-mensuel`, data);
+  }
+
+  toggleDrEtape(clientId: number, id: number) {
+    return this.http.patch<Task>(`${this.api(clientId)}/dr-etape/${id}`, {});
+  }
+
+  updateCommentaire(clientId: number, type: string, annee: number, commentaire: string) {
+    return this.http.patch(`${this.api(clientId)}/commentaire`, { type, annee, commentaire });
   }
 
   create(clientId: number, data: {

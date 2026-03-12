@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Task } from '../entities/task.entity';
+import { Task, TaskStatut } from '../entities/task.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -180,5 +180,142 @@ export class TasksService {
     if (!task) throw new NotFoundException('Tâche introuvable');
     await this.repo.remove(task);
     return { message: 'Tâche supprimée' };
+  }
+
+  // ─── Grille mensuelle ───────────────────────────────────────────────────────
+
+  readonly TYPES_MENSUELS = ['TVA', 'PAIE', 'ACHATS', 'VENTES', 'RB', 'GV'] as const;
+  readonly DR_ETAPES = [
+    'Régularité formelle',
+    'Trésorerie / Emprunt',
+    'CA / Clients',
+    'Contrôle CA',
+    'Analyse solde client',
+    'Charges / Fournisseurs',
+    'Immobilisations',
+    'TVA / Taxes',
+  ] as const;
+
+  async findGrille(clientId: number, annee: number) {
+    const tasks = await this.repo.find({
+      where: { clientId, annee },
+      relations: ['assignee'],
+      order: { mois: 'ASC' },
+    });
+
+    // Grille mensuelle : { type -> { mois -> Task } }
+    const grille: Record<string, Record<number, any>> = {};
+    for (const type of this.TYPES_MENSUELS) {
+      grille[type] = {};
+      for (let m = 1; m <= 12; m++) {
+        grille[type][m] = tasks.find(t => t.type === type && t.mois === m) ?? null;
+      }
+    }
+
+    // DR : liste des étapes (mois=null)
+    const drTaches = tasks.filter(t => t.type === 'DR');
+
+    // S'assurer que toutes les étapes existent (init auto si besoin)
+    const etapesExistantes = drTaches.map(t => t.titre);
+    const etapesManquantes = this.DR_ETAPES.filter(e => !etapesExistantes.includes(e));
+    if (etapesManquantes.length > 0) {
+      const now = new Date();
+      const nouvelles = etapesManquantes.map(e => this.repo.create({
+          titre: e,
+          type: 'DR' as any,
+          statut: TaskStatut.A_FAIRE,
+          priorite: 'NORMALE' as any,
+          clientId,
+          annee,
+          mois: undefined,
+        }));
+      const saved = await this.repo.save(nouvelles);
+      drTaches.push(...saved);
+    }
+
+    // Ordonner les étapes DR selon l'ordre défini
+    const drOrdonnees = this.DR_ETAPES.map(e => drTaches.find(t => t.titre === e)).filter(Boolean);
+
+    return { grille, drEtapes: drOrdonnees, annee };
+  }
+
+  async toggleMensuel(
+    clientId: number,
+    dto: { type: string; mois: number; annee: number },
+    currentUser: User,
+  ) {
+    const existing = await this.repo.findOne({
+      where: { clientId, type: dto.type as any, mois: dto.mois, annee: dto.annee },
+    });
+
+    if (!existing) {
+      // Créer directement en TERMINEE (clic = cocher)
+      const now = new Date();
+      const task = this.repo.create({
+        titre: `${dto.type} — ${dto.mois}/${dto.annee}`,
+        type: dto.type as any,
+        statut: TaskStatut.TERMINEE,
+        priorite: 'NORMALE' as any,
+        clientId,
+        mois: dto.mois,
+        annee: dto.annee,
+        semaine: this.getWeekNumber(now),
+        heureDebut: now,
+        heureFin: now,
+        createdBy: currentUser,
+      });
+      const saved = await this.repo.save(task);
+      const year = now.getFullYear();
+      await this.repo.update(saved.id, { taskId: `T-${year}-${saved.id.toString().padStart(3, '0')}` });
+      return this.repo.findOne({ where: { id: saved.id } });
+    }
+
+    // TERMINEE → NON_FAIT → suppression (retour à vide)
+    if (existing.statut === TaskStatut.TERMINEE) {
+      await this.repo.update(existing.id, { statut: TaskStatut.NON_FAIT });
+      return this.repo.findOne({ where: { id: existing.id } });
+    } else {
+      await this.repo.remove(existing);
+      return null;
+    }
+  }
+
+  async toggleDrEtape(id: number) {
+    const task = await this.repo.findOne({ where: { id } });
+    if (!task) throw new NotFoundException('Étape introuvable');
+    const newStatut = task.statut === TaskStatut.TERMINEE ? TaskStatut.A_FAIRE : TaskStatut.TERMINEE;
+    await this.repo.update(id, { statut: newStatut });
+    return this.repo.findOne({ where: { id } });
+  }
+
+  async updateCommentaire(clientId: number, type: string, annee: number, commentaire: string) {
+    // Le commentaire est stocké sur une tâche sentinelle mois=0
+    let sentinel = await this.repo.findOne({
+      where: { clientId, type: type as any, annee, mois: 0 },
+    });
+    if (!sentinel) {
+      sentinel = this.repo.create({
+        titre: `__commentaire__${type}`,
+        type: type as any,
+        statut: TaskStatut.A_FAIRE,
+        priorite: 'NORMALE' as any,
+        clientId,
+        annee,
+        mois: 0,
+        commentaire,
+      });
+    } else {
+      sentinel.commentaire = commentaire;
+    }
+    return this.repo.save(sentinel);
+  }
+
+  async getCommentaires(clientId: number, annee: number) {
+    const sentinels = await this.repo.find({
+      where: { clientId, annee, mois: 0 },
+    });
+    const map: Record<string, string> = {};
+    for (const s of sentinels) map[s.type] = s.commentaire ?? '';
+    return map;
   }
 }

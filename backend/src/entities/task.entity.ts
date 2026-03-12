@@ -73,6 +73,15 @@ export class Task {
   @Column({ nullable: true })
   semaine: number; // numéro de semaine ISO
 
+  @Column({ nullable: true })
+  mois: number; // 1-12 (grille mensuelle)
+
+  @Column({ nullable: true })
+  annee: number; // ex: 2025
+
+  @Column({ nullable: true, type: 'text' })
+  commentaire: string; // note libre par ligne de grille
+
   @ManyToOne(() => Client, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clientId' })
   client: Client;
