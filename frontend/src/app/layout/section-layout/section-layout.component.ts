@@ -31,16 +31,16 @@ import { CommonModule } from '@angular/common';
     .section-wrap {
       display: flex;
       align-items: flex-start;
-      gap: 20px;
-      max-width: 1400px;
+      gap: 24px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 28px 32px;
     }
 
     /* Panneau flottant */
     .float-panel {
-      width: 196px;
-      min-width: 196px;
+      width: 240px;
+      min-width: 240px;
       position: sticky;
       top: 24px;
       align-self: flex-start;

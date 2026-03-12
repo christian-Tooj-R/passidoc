@@ -146,7 +146,7 @@ interface TabGroup {
   styles: [`
     /* ─── Page wrapper ──────────────────────────────── */
     .detail {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 28px 32px;
     }
@@ -217,14 +217,14 @@ interface TabGroup {
     /* ─── Detail body ────────────────────────────────── */
     .detail-body {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       align-items: flex-start;
     }
 
     /* ─── Floating nav panel ─────────────────────────── */
     .float-panel {
-      width: 196px;
-      min-width: 196px;
+      width: 240px;
+      min-width: 240px;
       position: sticky;
       top: 0;
       align-self: flex-start;
@@ -241,19 +241,19 @@ interface TabGroup {
     .panel-top {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 14px 14px 10px;
+      gap: 9px;
+      padding: 16px 16px 12px;
       border-bottom: 1px solid #f1f5f9;
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 700;
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: .8px;
     }
-    .panel-top-icon { font-size: 14px; width: 14px; height: 14px; }
+    .panel-top-icon { font-size: 15px; width: 15px; height: 15px; }
 
     .panel-group {
-      padding: 8px 8px 4px;
+      padding: 10px 10px 6px;
     }
     .panel-group + .panel-group {
       border-top: 1px solid #f1f5f9;
@@ -262,32 +262,32 @@ interface TabGroup {
     .group-header {
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 6px 6px;
-      font-size: 9.5px;
+      gap: 6px;
+      padding: 4px 8px 8px;
+      font-size: 10px;
       font-weight: 700;
       color: #cbd5e1;
       text-transform: uppercase;
       letter-spacing: .7px;
     }
-    .group-icon { font-size: 12px; width: 12px; height: 12px; }
+    .group-icon { font-size: 13px; width: 13px; height: 13px; }
 
     .panel-item {
       width: 100%;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 7px 8px;
+      gap: 10px;
+      padding: 9px 10px;
       border: none;
       background: none;
       cursor: pointer;
-      border-radius: 9px;
-      font-size: 13px;
+      border-radius: 10px;
+      font-size: 13.5px;
       font-weight: 500;
       color: #64748b;
       text-align: left;
       transition: all .14s ease;
-      margin-bottom: 1px;
+      margin-bottom: 2px;
     }
     .panel-item:hover {
       background: #f8fafc;
@@ -297,11 +297,11 @@ interface TabGroup {
       background: linear-gradient(135deg, #eef2ff, #f0f4ff);
       color: #4f46e5;
       font-weight: 600;
-      box-shadow: inset 2px 0 0 #6366f1;
+      box-shadow: inset 3px 0 0 #6366f1;
     }
     .item-icon {
-      font-size: 15px;
-      width: 15px; height: 15px;
+      font-size: 17px;
+      width: 17px; height: 17px;
       flex-shrink: 0;
       color: inherit;
       opacity: .7;
@@ -309,7 +309,7 @@ interface TabGroup {
     .panel-item.active .item-icon { opacity: 1; }
     .item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-chevron {
-      font-size: 13px; width: 13px; height: 13px;
+      font-size: 14px; width: 14px; height: 14px;
       color: #818cf8; margin-left: auto; flex-shrink: 0;
     }
 

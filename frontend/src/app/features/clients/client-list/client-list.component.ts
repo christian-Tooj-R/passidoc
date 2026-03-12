@@ -206,39 +206,39 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
     .panel-search {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
+      gap: 9px;
+      padding: 12px 14px;
       border-bottom: 1px solid #f1f5f9;
     }
-    .search-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; }
+    .search-icon { font-size: 17px; width: 17px; height: 17px; color: #94a3b8; flex-shrink: 0; }
     .search-input {
       border: none; outline: none; background: none;
-      font-size: 13px; color: #1e293b; width: 100%;
+      font-size: 13.5px; color: #1e293b; width: 100%;
     }
     .search-input::placeholder { color: #cbd5e1; }
 
     .panel-section {
-      padding: 10px 10px 6px;
+      padding: 12px 12px 8px;
       border-bottom: 1px solid #f1f5f9;
     }
     .panel-section:last-of-type { border-bottom: none; }
     .section-title {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 9.5px; font-weight: 700; color: #cbd5e1;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 700; color: #cbd5e1;
       text-transform: uppercase; letter-spacing: .7px;
-      padding: 0 4px 6px;
+      padding: 0 4px 8px;
     }
-    .section-title mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .section-title mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
     .filter-btn {
       width: 100%;
-      display: flex; align-items: center; gap: 7px;
-      padding: 7px 8px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 10px;
       border: none; background: none; cursor: pointer;
-      border-radius: 8px;
-      font-size: 12.5px; font-weight: 500; color: #64748b;
+      border-radius: 9px;
+      font-size: 13.5px; font-weight: 500; color: #64748b;
       text-align: left; transition: all .13s;
-      margin-bottom: 1px;
+      margin-bottom: 2px;
     }
     .filter-btn:hover { background: #f8fafc; color: #1e293b; }
     .filter-btn.active {
