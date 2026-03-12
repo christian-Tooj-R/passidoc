@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -18,28 +18,45 @@ export class ClientsController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Créer un dossier client' })
-  create(@Body() dto: CreateClientDto) {
-    return this.clientsService.create(dto);
+  create(@Body() dto: CreateClientDto, @Req() req: any) {
+    return this.clientsService.create(dto, req.user);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Liste des dossiers clients' })
+  @ApiOperation({ summary: 'Liste des dossiers clients (filtrée par responsable pour non-admin)' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  findAll(@Query('site') site?: string) {
-    return this.clientsService.findAll(site);
+  findAll(@Req() req: any, @Query('site') site?: string) {
+    return this.clientsService.findAll(req.user, site);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Détail d\'un dossier client (tous onglets)' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.clientsService.findOne(id);
+  @ApiOperation({ summary: 'Détail d\'un dossier client' })
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.clientsService.findOneForUser(id, req.user);
   }
 
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Modifier un dossier client' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateClientDto) {
-    return this.clientsService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateClientDto, @Req() req: any) {
+    return this.clientsService.update(id, dto, req.user);
+  }
+
+  @Patch(':id/assign')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Assigner un responsable Réunion à un dossier (ADMIN uniquement)' })
+  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number) {
+    return this.clientsService.assign(id, responsableId);
+  }
+
+  @Patch(':id/assign-mg')
+  @ApiOperation({ summary: 'Sous-assigner un collaborateur Madagascar (admin ou collaborateur Réunion)' })
+  assignMg(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('collaborateurMgId') collaborateurMgId: number | null,
+    @Req() req: any,
+  ) {
+    return this.clientsService.assignMg(id, collaborateurMgId, req.user);
   }
 
   @Delete(':id')

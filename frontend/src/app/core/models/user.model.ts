@@ -10,5 +10,6 @@ export interface User {
   site: UserSite;
   isTwoFactorEnabled: boolean;
   isActive: boolean;
+  referentId?: number;
   createdAt: string;
 }

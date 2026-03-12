@@ -1,5 +1,12 @@
 export type ClientSite = 'REUNION' | 'MADAGASCAR';
 
+export interface Responsable {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface Client {
   id: number;
   nom: string;
@@ -7,6 +14,8 @@ export interface Client {
   site: ClientSite;
   santePassation: number;
   isActive: boolean;
+  responsable?: Responsable;
+  collaborateurMg?: Responsable;
   ficheIdentite?: FicheIdentite;
   fluxMensuels?: FluxMensuel[];
   fournisseurs?: Fournisseur[];
@@ -24,6 +33,8 @@ export interface FicheIdentite {
   adresse?: string;
   surfaceCommerciale?: number;
   activite?: string;
+  emailContact?: string;
+  telephoneContact?: string;
   gerants?: Gerant[];
   salaries?: Salarie[];
 }

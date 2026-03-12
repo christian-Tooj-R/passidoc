@@ -104,18 +104,21 @@ export class CreateUserDialogComponent {
   cancel() { this.dialogRef.close(null); }
 }
 
-/* ── Page Administration ── */
+/* ── Page Utilisateurs ── */
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatSnackBarModule,
+  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
     MatDialogModule, MatTooltipModule],
   template: `
     <div class="page">
       <div class="page-header">
-        <div>
-          <h1>Administration</h1>
-          <p class="page-subtitle">{{ users.length }} utilisateur(s) enregistré(s)</p>
+        <div class="page-header__left">
+          <mat-icon class="page-icon">manage_accounts</mat-icon>
+          <div>
+            <h1>Utilisateurs</h1>
+            <p class="page-subtitle">{{ users.length }} compte(s) enregistré(s)</p>
+          </div>
         </div>
         <button mat-flat-button class="btn-create" (click)="openCreate()">
           <mat-icon>person_add</mat-icon> Nouvel utilisateur
@@ -142,7 +145,6 @@ export class CreateUserDialogComponent {
         </div>
       </div>
 
-      <!-- Table -->
       <div class="table-card">
         <table class="users-table">
           <thead>
@@ -203,14 +205,16 @@ export class CreateUserDialogComponent {
     </div>
   `,
   styles: [`
-    .page { max-width: 1280px; margin: 0 auto; }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-    .page-header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
+    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-header__left { display: flex; align-items: center; gap: 16px; }
+    .page-icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
+    .page-header h1 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; }
+    .page-subtitle { font-size: 13px; color: #94a3b8; margin: 0; }
     .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; color: white !important; }
 
     /* Stats */
-    .stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .stats-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
     .stat-chip {
       display: flex; align-items: center; gap: 8px;
       background: white; border: 1px solid #e8ecf0;
@@ -225,7 +229,7 @@ export class CreateUserDialogComponent {
       background: white; border-radius: 16px;
       border: 1px solid #e8ecf0;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
-      overflow: hidden;
+      overflow: hidden; margin-bottom: 8px;
     }
     .users-table { width: 100%; border-collapse: collapse; }
     .users-table thead th {
@@ -237,7 +241,7 @@ export class CreateUserDialogComponent {
     .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
     .table-row:last-child { border-bottom: none; }
     .table-row:hover { background: #f8fafc; }
-    .users-table td { padding: 14px 20px; vertical-align: middle; }
+    .users-table td { padding: 12px 20px; vertical-align: middle; }
 
     .user-cell { display: flex; align-items: center; gap: 10px; }
     .user-avatar {
@@ -247,8 +251,16 @@ export class CreateUserDialogComponent {
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       text-transform: uppercase;
     }
+    .user-avatar.small { width: 26px; height: 26px; font-size: 10px; }
+    .folder-avatar {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      color: #d97706; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
     .user-name { font-size: 14px; font-weight: 600; color: #1e293b; }
     .text-muted { font-size: 13px; color: #64748b; }
+    .resp-none { font-size: 13px; color: #cbd5e1; font-style: italic; }
 
     .role-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
     .role-admin { background: #ede9fe; color: #7c3aed; }
@@ -277,15 +289,18 @@ export class AdminComponent implements OnInit {
 
   users: User[] = [];
 
-  ngOnInit() { this.load(); }
-  load() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
+  ngOnInit() {
+    this.loadUsers();
+  }
+
+  loadUsers() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
 
   openCreate() {
     const ref = this.dialog.open(CreateUserDialogComponent, { panelClass: 'rounded-dialog' });
     ref.afterClosed().subscribe((result) => {
       if (result) {
         this.usersService.create(result).subscribe(() => {
-          this.load();
+          this.loadUsers();
           this.snack.open('Utilisateur créé avec succès', 'OK', { duration: 3000 });
         });
       }
@@ -295,7 +310,7 @@ export class AdminComponent implements OnInit {
   deleteUser(u: User) {
     if (!confirm(`Désactiver le compte de ${u.firstName} ${u.lastName} ?`)) return;
     this.usersService.delete(u.id).subscribe(() => {
-      this.load();
+      this.loadUsers();
       this.snack.open('Utilisateur désactivé', 'OK', { duration: 2500 });
     });
   }

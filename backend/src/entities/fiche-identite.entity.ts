@@ -37,6 +37,12 @@ export class FicheIdentite {
   activite: string;
 
   @Column({ nullable: true })
+  emailContact: string;
+
+  @Column({ nullable: true })
+  telephoneContact: string;
+
+  @Column({ nullable: true })
   entrepriseFamiliale: string;
 
   @Column({ type: 'json', nullable: true })

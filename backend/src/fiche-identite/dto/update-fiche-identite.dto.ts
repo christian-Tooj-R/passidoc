@@ -9,6 +9,8 @@ export class UpdateFicheIdentiteDto {
   @ApiPropertyOptional() @IsOptional() @IsString() adresse?: string;
   @ApiPropertyOptional() @IsOptional() @IsNumber() surfaceCommerciale?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() activite?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() emailContact?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() telephoneContact?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() gerants?: any[];
   @ApiPropertyOptional() @IsOptional() @IsArray() salaries?: any[];
 }

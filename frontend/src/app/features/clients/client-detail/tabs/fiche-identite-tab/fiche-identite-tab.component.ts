@@ -54,6 +54,16 @@ import { FicheIdentiteService } from '../../../../../core/services/fiche-identit
                 <mat-label>Surface commerciale (m²)</mat-label>
                 <input matInput type="number" formControlName="surfaceCommerciale" />
               </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Email de contact</mat-label>
+                <mat-icon matPrefix>email</mat-icon>
+                <input matInput type="email" formControlName="emailContact" placeholder="contact@entreprise.re" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Téléphone de contact</mat-label>
+                <mat-icon matPrefix>phone</mat-icon>
+                <input matInput formControlName="telephoneContact" placeholder="0262 XX XX XX" />
+              </mat-form-field>
             </div>
           </mat-expansion-panel>
         </mat-accordion>
@@ -80,6 +90,7 @@ export class FicheIdentiteTabComponent implements OnInit {
     raisonSociale: [''], siren: [''], siret: [''],
     formeJuridique: [''], adresse: [''], activite: [''],
     surfaceCommerciale: [null as number | null],
+    emailContact: [''], telephoneContact: [''],
   });
   saving = false;
 

@@ -4,9 +4,10 @@ import { ClientsService } from './clients.service';
 import { ClientsController } from './clients.controller';
 import { Client } from '../entities/client.entity';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
+import { User } from '../entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Client, FicheIdentite])],
+  imports: [TypeOrmModule.forFeature([Client, FicheIdentite, User])],
   controllers: [ClientsController],
   providers: [ClientsService],
   exports: [ClientsService],

@@ -18,6 +18,9 @@ import { MissionsModule } from './missions/missions.module';
 import { ObjectifsModule } from './objectifs/objectifs.module';
 import { ControleInterneModule } from './controle-interne/controle-interne.module';
 import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
+import { PappersModule } from './pappers/pappers.module';
+import { TasksModule } from './tasks/tasks.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
     ObjectifsModule,
     ControleInterneModule,
     AiAssistantModule,
+    PappersModule,
+    TasksModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

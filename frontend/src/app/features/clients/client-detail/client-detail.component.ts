@@ -17,6 +17,7 @@ import { MissionsTabComponent } from './tabs/missions-tab/missions-tab.component
 import { ObjectifsTabComponent } from './tabs/objectifs-tab/objectifs-tab.component';
 import { ControleInterneTabComponent } from './tabs/controle-interne-tab/controle-interne-tab.component';
 import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-tab.component';
+import { TachesTabComponent } from './tabs/taches-tab/taches-tab.component';
 
 @Component({
   selector: 'app-client-detail',
@@ -28,7 +29,7 @@ import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-ta
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
-    AiAssistantTabComponent,
+    AiAssistantTabComponent, TachesTabComponent,
   ],
   template: `
     @if (client) {
@@ -112,6 +113,10 @@ import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-ta
             <mat-tab>
               <ng-template mat-tab-label><mat-icon class="ti">attach_file</mat-icon> Documents</ng-template>
               <div class="tab-content"><app-documents-tab [clientId]="client.id" /></div>
+            </mat-tab>
+            <mat-tab>
+              <ng-template mat-tab-label><mat-icon class="ti">task_alt</mat-icon> Tâches</ng-template>
+              <div class="tab-content"><app-taches-tab [clientId]="client.id" /></div>
             </mat-tab>
             <mat-tab>
               <ng-template mat-tab-label>

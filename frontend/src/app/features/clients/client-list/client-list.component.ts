@@ -60,6 +60,7 @@ import { CreateClientDialogComponent } from './create-client-dialog.component';
             <tr>
               <th>Client</th>
               <th>Site</th>
+              <th>Responsable</th>
               <th>Santé de passation</th>
               <th>Statut</th>
               <th></th>
@@ -78,6 +79,16 @@ import { CreateClientDialogComponent } from './create-client-dialog.component';
                   <span [class]="c.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
                     {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                   </span>
+                </td>
+                <td>
+                  @if (c.responsable) {
+                    <div class="resp-cell">
+                      <div class="resp-avatar">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
+                      <span class="resp-name">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
+                    </div>
+                  } @else {
+                    <span class="resp-none">Non assigné</span>
+                  }
                 </td>
                 <td>
                   <div class="score-cell">
@@ -118,6 +129,7 @@ import { CreateClientDialogComponent } from './create-client-dialog.component';
     .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
     .page-header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.5px; }
     .page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
     .btn-create { border-radius: 10px !important; height: 42px; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; }
 
     /* Filters */
@@ -185,6 +197,16 @@ import { CreateClientDialogComponent } from './create-client-dialog.component';
       align-items: center; gap: 8px;
     }
     .empty-state mat-icon { font-size: 36px; width: 36px; height: 36px; }
+
+    .resp-cell { display: flex; align-items: center; gap: 8px; }
+    .resp-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+      color: #4338ca; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .resp-name { font-size: 13px; color: #475569; }
+    .resp-none { font-size: 13px; color: #cbd5e1; font-style: italic; }
   `],
 })
 export class ClientListComponent implements OnInit {
@@ -224,7 +246,7 @@ export class ClientListComponent implements OnInit {
     });
     ref.afterClosed().subscribe((result) => {
       if (result?.nom && result?.site) {
-        this.clientsService.create({ nom: result.nom, site: result.site }).subscribe(() => this.load());
+        this.clientsService.create({ nom: result.nom, site: result.site, ficheData: result.ficheData }).subscribe(() => this.load());
       }
     });
   }
