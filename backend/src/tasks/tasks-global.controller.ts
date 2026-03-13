@@ -21,4 +21,10 @@ export class AllTasksController {
   getDashboard(@Query('semaine') semaine?: string) {
     return this.service.getDashboard(semaine ? parseInt(semaine) : undefined);
   }
+
+  @Get('mes-taches')
+  @ApiOperation({ summary: 'Tâches assignées à l\'utilisateur connecté' })
+  mesTaches(@Req() req: any) {
+    return this.service.findMesTaches(req.user.id);
+  }
 }

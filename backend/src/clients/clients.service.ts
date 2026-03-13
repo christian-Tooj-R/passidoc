@@ -6,6 +6,7 @@ import { FicheIdentite } from '../entities/fiche-identite.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { MinioService } from '../storage/minio.service';
 
 @Injectable()
 export class ClientsService {
@@ -13,6 +14,7 @@ export class ClientsService {
     @InjectRepository(Client) private repo: Repository<Client>,
     @InjectRepository(FicheIdentite) private ficheRepo: Repository<FicheIdentite>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    private minio: MinioService,
   ) {}
 
   async create(dto: CreateClientDto, currentUser: User) {
@@ -69,7 +71,7 @@ export class ClientsService {
   async findOne(id: number) {
     const client = await this.repo.findOne({
       where: { id },
-      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents', 'responsable'],
+      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents', 'responsable', 'analyseStrategique', 'missions', 'controleInterne'],
     });
     if (!client) throw new NotFoundException('Dossier client introuvable');
     return client;
@@ -110,11 +112,11 @@ export class ClientsService {
       if (client.responsableId !== currentUser.id) {
         throw new ForbiddenException('Ce dossier ne fait pas partie de votre portefeuille');
       }
-      // Vérifier que le collaborateur MG appartient bien à son équipe
+      // Vérifier que le collaborateur MG est bien du site Madagascar
       if (collaborateurMgId) {
         const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
-        if (!mgUser || mgUser.referentId !== currentUser.id) {
-          throw new ForbiddenException('Ce collaborateur ne fait pas partie de votre équipe');
+        if (!mgUser || mgUser.site !== UserSite.MADAGASCAR) {
+          throw new ForbiddenException('Ce collaborateur ne fait pas partie de l\'équipe Madagascar');
         }
       }
     }
@@ -123,25 +125,12 @@ export class ClientsService {
     return this.findOne(clientId);
   }
 
-  async updateSantePassation(id: number) {
-    const client = await this.repo.findOne({
-      where: { id },
-      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents'],
-    });
-    if (!client) return;
-
-    let score = 0;
-    const fiche = client.ficheIdentite;
-
-    if (fiche?.raisonSociale) score += 15;
-    if (fiche?.siren) score += 10;
-    if (fiche?.gerants?.length > 0) score += 15;
-    if (fiche?.salaries?.length > 0) score += 10;
-    if (client.fluxMensuels?.length > 0) score += 15;
-    if (client.fournisseurs?.length > 0) score += 10;
-    if (client.synthesesCloture?.length > 0) score += 15;
-    if (client.documents?.length > 0) score += 10;
-
-    await this.repo.update(id, { santePassation: Math.min(score, 100) });
+  async uploadLogo(id: number, file: Express.Multer.File): Promise<Client> {
+    const client = await this.findOne(id);
+    const ext = file.originalname.split('.').pop();
+    const objectName = `logos/${id}/${Date.now()}.${ext}`;
+    const url = await this.minio.uploadFile('passidoc-logos', objectName, file.buffer, file.mimetype);
+    await this.repo.update(id, { logoUrl: url });
+    return this.findOne(id);
   }
 }

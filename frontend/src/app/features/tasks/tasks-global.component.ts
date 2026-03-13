@@ -8,14 +8,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../core/services/toast.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { TasksService, Task, TaskStatut, TaskDashboard } from '../../core/services/tasks.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { UsersService } from '../../core/services/users.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Client } from '../../core/models/client.model';
 import { User } from '../../core/models/user.model';
+import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 
 // ─── Dialog Synthèse hebdomadaire ────────────────────────────────────────────
 @Component({
@@ -288,6 +290,273 @@ export class SyntheseDialogComponent implements OnInit {
   }
 }
 
+// ─── Dialog Détail / Édition tâche ───────────────────────────────────────────
+@Component({
+  selector: 'app-task-detail-dialog',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink,
+    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatTooltipModule, MatDialogModule, LocalDatePipe],
+  template: `
+    <div class="td-wrap">
+      <!-- En-tête -->
+      <div class="td-header">
+        <div class="td-header__left">
+          <span class="td-id">{{ task.taskId ?? '—' }}</span>
+          <div class="td-meta">
+            <span class="td-titre">{{ task.titre }}</span>
+            <span class="td-date">Créée le {{ task.createdAt | localDate:'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+        <div class="td-header__right">
+          <select class="statut-select statut-{{ currentStatut.toLowerCase() }}"
+                  [value]="currentStatut"
+                  [disabled]="!canChangeStatut"
+                  (change)="onStatutChange($any($event.target).value)">
+            <option value="A_FAIRE">À faire</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="TERMINEE">Terminée</option>
+            <option value="NON_FAIT">Non fait</option>
+            <option value="EN_ATTENTE">En attente</option>
+          </select>
+          <button mat-icon-button (click)="dialogRef.close()" class="td-close"><mat-icon>close</mat-icon></button>
+        </div>
+      </div>
+
+      <div class="td-body">
+        <!-- Infos fixes -->
+        <div class="td-info-grid">
+          <div class="td-info-item">
+            <span class="td-lbl">Client</span>
+            @if (task.client) {
+              <a class="td-client-link" [routerLink]="['/clients', task.client.id]" (click)="dialogRef.close()">
+                <mat-icon>folder_shared</mat-icon>{{ task.client.nom }}
+              </a>
+            } @else { <span class="none">—</span> }
+          </div>
+          <div class="td-info-item">
+            <span class="td-lbl">Attribué par</span>
+            <span class="td-val">{{ task.createdBy ? (task.createdBy.firstName + ' ' + task.createdBy.lastName) : '—' }}</span>
+          </div>
+          <div class="td-info-item">
+            <span class="td-lbl">Temps d'exéc.</span>
+            <span class="td-val">{{ task.tempsExecution && task.tempsExecution > 0 ? formatTime(task.tempsExecution) : '—' }}</span>
+          </div>
+          <div class="td-info-item">
+            <span class="td-lbl">Horaires</span>
+            <span class="td-val">
+              @if (task.heureDebut && task.heureFin) {
+                {{ task.heureDebut | localDate:'HH:mm' }} → {{ task.heureFin | localDate:'HH:mm' }}
+              } @else { — }
+            </span>
+          </div>
+        </div>
+
+        @if (!canEdit) {
+          <div class="td-readonly-banner">
+            <mat-icon>lock_outline</mat-icon>
+            @if (canChangeStatut) {
+              Vous pouvez uniquement modifier le statut
+            } @else {
+              Lecture seule — seul <strong>{{ task.createdBy?.firstName }} {{ task.createdBy?.lastName }}</strong> peut modifier cette tâche
+            }
+          </div>
+        }
+
+        <div class="td-divider"></div>
+
+        <!-- Formulaire édition -->
+        <form [formGroup]="form" class="td-form">
+
+          <mat-form-field appearance="outline" class="td-field-full">
+            <mat-label>Titre</mat-label>
+            <input matInput formControlName="titre" [readonly]="!canEdit" />
+          </mat-form-field>
+
+          <div class="td-row">
+            <mat-form-field appearance="outline" class="td-field">
+              <mat-label>Priorité</mat-label>
+              <mat-select formControlName="priorite" [disabled]="!canEdit">
+                <mat-option value="BASSE">Basse</mat-option>
+                <mat-option value="NORMALE">Normale</mat-option>
+                <mat-option value="HAUTE">Haute</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="td-field">
+              <mat-label>Type</mat-label>
+              <mat-select formControlName="type" [disabled]="!canEdit">
+                <mat-option value="TVA">TVA</mat-option>
+                <mat-option value="PAIE">Paie</mat-option>
+                <mat-option value="ACHATS">Achats</mat-option>
+                <mat-option value="VENTES">Ventes</mat-option>
+                <mat-option value="RB">Relevé Bancaire</mat-option>
+                <mat-option value="GV">GV</mat-option>
+                <mat-option value="DR">Dossier Révision</mat-option>
+                <mat-option value="AUTRE">Autre</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="td-row">
+            <mat-form-field appearance="outline" class="td-field">
+              <mat-label>Assigné à</mat-label>
+              <mat-select formControlName="assigneeId" [disabled]="!canEdit">
+                <mat-option [value]="null">— Non assignée —</mat-option>
+                @for (u of data.users; track u.id) {
+                  <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="td-field">
+              <mat-label>Échéance</mat-label>
+              <input matInput type="date" formControlName="dateEcheance" [readonly]="!canEdit" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="td-field">
+              <mat-label>H. Sup</mat-label>
+              <input matInput type="number" formControlName="heuresSup" [readonly]="!canEdit" min="0" step="0.5" />
+            </mat-form-field>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Footer -->
+      <div class="td-footer">
+        @if (canEdit) {
+          <button mat-stroked-button class="td-btn-del" (click)="delete()">
+            <mat-icon>delete_outline</mat-icon> Supprimer
+          </button>
+        }
+        <span class="td-spacer"></span>
+        <button mat-stroked-button (click)="dialogRef.close()">Annuler</button>
+        @if (canChangeStatut) {
+        <button mat-flat-button class="td-btn-save" (click)="save()" [disabled]="form.invalid || (form.pristine && currentStatut === task.statut)">
+          <mat-icon>save</mat-icon> Enregistrer
+        </button>
+        }
+      </div>
+    </div>
+  `,
+  styles: [`
+    .td-wrap { display: flex; flex-direction: column; max-height: 90vh; width: 680px; }
+    .td-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid #e8ecf0; gap: 12px; flex-shrink: 0; }
+    .td-header__left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+    .td-header__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .td-id { font-family: monospace; font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 3px 8px; border-radius: 5px; white-space: nowrap; margin-top: 2px; }
+    .td-meta { display: flex; flex-direction: column; min-width: 0; }
+    .td-titre { font-size: 15px; font-weight: 700; color: #1e293b; line-height: 1.3; }
+    .td-date { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .td-close { color: #94a3b8 !important; }
+    .td-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+    .td-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .td-info-item { display: flex; flex-direction: column; gap: 3px; }
+    .td-lbl { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; }
+    .td-val { font-size: 13px; color: #1e293b; font-weight: 500; }
+    .td-client-link { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #6366f1; text-decoration: none; }
+    .td-client-link:hover { text-decoration: underline; }
+    .td-client-link mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .td-readonly-banner { display: flex; align-items: center; gap: 7px; background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #92400e; margin-bottom: 12px; }
+    .td-readonly-banner mat-icon { font-size: 15px; width: 15px; height: 15px; color: #d97706; flex-shrink: 0; }
+    .statut-select { border: none; outline: none; border-radius: 20px; padding: 4px 22px 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; transition: opacity .15s; }
+    .statut-select:hover { opacity: .85; }
+    .statut-select:disabled { opacity: .6; cursor: default; }
+    .statut-a_faire   { background-color: #eff6ff; color: #1d4ed8; }
+    .statut-en_cours  { background-color: #fffbeb; color: #d97706; }
+    .statut-terminee  { background-color: #f0fdf4; color: #15803d; }
+    .statut-non_fait  { background-color: #fff1f2; color: #e11d48; }
+    .statut-en_attente { background-color: #f5f3ff; color: #7c3aed; }
+    .td-divider { height: 1px; background: #f1f5f9; margin-bottom: 16px; }
+    .td-form { display: flex; flex-direction: column; gap: 4px; }
+    .td-field-full { width: 100%; }
+    .td-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .td-field { width: 100%; }
+    .td-footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid #e8ecf0; flex-shrink: 0; }
+    .td-spacer { flex: 1; }
+    .td-btn-del { color: #ef4444 !important; border-color: #fecaca !important; border-radius: 8px !important; }
+    .td-btn-del mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .td-btn-save { background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: white !important; border-radius: 8px !important; gap: 4px; }
+    .td-btn-save mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .statut-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .statut-a_faire   { background: #eff6ff; color: #1d4ed8; }
+    .statut-en_cours  { background: #fffbeb; color: #d97706; }
+    .statut-terminee  { background: #f0fdf4; color: #15803d; }
+    .statut-non_fait  { background: #fff1f2; color: #e11d48; }
+    .statut-en_attente { background: #f5f3ff; color: #7c3aed; }
+    .none { color: #cbd5e1; font-size: 13px; }
+  `],
+})
+export class TaskDetailDialogComponent {
+  private tasksService = inject(TasksService);
+  private toast = inject(ToastService);
+  dialogRef = inject(MatDialogRef<TaskDetailDialogComponent>);
+  data: { task: Task; users: User[]; currentUserId: number; currentUserIsAdmin: boolean } = inject(MAT_DIALOG_DATA);
+  private fb = inject(FormBuilder);
+
+  task = this.data.task;
+  currentStatut: TaskStatut = this.data.task.statut;
+
+  get canEdit(): boolean {
+    return this.data.currentUserIsAdmin || this.data.currentUserId === this.task.createdBy?.id;
+  }
+  get canChangeStatut(): boolean {
+    return this.canEdit || this.data.currentUserId === this.task.assignee?.id;
+  }
+
+  onStatutChange(statut: TaskStatut) {
+    this.currentStatut = statut;
+    this.form.markAsDirty();
+  }
+
+  form = this.fb.group({
+    titre:        [this.task.titre, Validators.required],
+    priorite:     [this.task.priorite ?? 'NORMALE'],
+    type:         [this.task.type ?? null],
+    assigneeId:   [this.task.assignee?.id ?? null],
+    dateEcheance: [this.task.dateEcheance ? this.task.dateEcheance.substring(0, 10) : ''],
+    heuresSup:    [this.task.heuresSup ?? null],
+  });
+
+  save() {
+    if (this.form.invalid || this.form.pristine) return;
+    const v = this.form.value;
+    this.tasksService.update(this.task.clientId, this.task.id, {
+      titre:        v.titre!,
+      statut:       this.currentStatut,
+      priorite:     v.priorite as any,
+      type:         v.type as any,
+      assigneeId:   v.assigneeId ?? undefined,
+      dateEcheance: v.dateEcheance || undefined,
+      heuresSup:    v.heuresSup ?? undefined,
+    }).subscribe(() => {
+      this.toast.success('Tâche mise à jour');
+      this.dialogRef.close('updated');
+    });
+  }
+
+  delete() {
+    this.tasksService.delete(this.task.clientId, this.task.id).subscribe(() => {
+      this.toast.success('Tâche supprimée');
+      this.dialogRef.close('deleted');
+    });
+  }
+
+  statutLabel(s: string): string {
+    const m: Record<string, string> = {
+      A_FAIRE: 'À faire', EN_COURS: 'En cours', TERMINEE: 'Terminée',
+      NON_FAIT: 'Non fait', EN_ATTENTE: 'En attente',
+    };
+    return m[s] ?? s;
+  }
+
+  formatTime(minutes: number): string {
+    if (!minutes || minutes <= 0) return '—';
+    if (minutes < 60) return `${Math.round(minutes)}min`;
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return m > 0 ? `${h}h${m}` : `${h}h`;
+  }
+}
+
 // ─── Page principale Tâches ───────────────────────────────────────────────────
 @Component({
   selector: 'app-tasks-global',
@@ -295,7 +564,8 @@ export class SyntheseDialogComponent implements OnInit {
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule, FormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule, MatDialogModule,
+    MatInputModule, MatSelectModule, MatTooltipModule, MatDialogModule,
+    LocalDatePipe, TaskDetailDialogComponent,
   ],
   template: `
     <div class="page">
@@ -394,6 +664,13 @@ export class SyntheseDialogComponent implements OnInit {
 
       <!-- Filtres secondaires -->
       <div class="filters">
+        <button class="btn-mes-taches" [class.btn-mes-taches--active]="mesTachesOnly" (click)="toggleMesTaches()">
+          <mat-icon>person</mat-icon>
+          Mes tâches
+          @if (myTaskCount > 0) {
+            <span class="mes-badge">{{ myTaskCount }}</span>
+          }
+        </button>
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Dossier</mat-label>
           <mat-select [(ngModel)]="filterClientId" (ngModelChange)="applyFilter()">
@@ -421,7 +698,7 @@ export class SyntheseDialogComponent implements OnInit {
             }
           </mat-select>
         </mat-form-field>
-        @if (filterClientId || filterAssigneeId || filterType) {
+        @if (mesTachesOnly || filterClientId || filterAssigneeId || filterType) {
           <button mat-icon-button class="btn-reset" matTooltip="Réinitialiser" (click)="resetFilters()">
             <mat-icon>filter_alt_off</mat-icon>
           </button>
@@ -439,20 +716,23 @@ export class SyntheseDialogComponent implements OnInit {
               <th class="col-client">Client</th>
               <th class="col-tache">Tâche</th>
               <th class="col-type">Type</th>
+              <th class="col-prio">Priorité</th>
               <th class="col-collab">Collaborateur</th>
               <th class="col-attrib">Attribué par</th>
               <th class="col-statut">Statut</th>
-              <th class="col-temps">Temps</th>
+              <th class="col-temps">Exéc.</th>
+              <th class="col-sup">H. Sup</th>
               <th class="col-actions"></th>
             </tr>
           </thead>
           <tbody>
             @for (t of filteredTasks; track t.id) {
-              <tr [class.row-terminee]="t.statut === 'TERMINEE'" [class.row-nonfait]="t.statut === 'NON_FAIT'">
+              <tr [class.row-terminee]="t.statut === 'TERMINEE'" [class.row-nonfait]="t.statut === 'NON_FAIT'"
+                  class="row-clickable" (click)="openDetail(t)">
                 <td class="col-id">
                   <span class="task-id-badge">{{ t.taskId ?? '—' }}</span>
                 </td>
-                <td class="col-date">{{ t.createdAt | date:'dd/MM/yy' }}</td>
+                <td class="col-date">{{ t.createdAt | localDate:'dd/MM/yy' }}</td>
                 <td class="col-client">
                   @if (t.client) {
                     <a class="client-link" [routerLink]="['/clients', t.client.id]">{{ t.client.nom }}</a>
@@ -462,7 +742,7 @@ export class SyntheseDialogComponent implements OnInit {
                   <span class="task-titre-cell">{{ t.titre }}</span>
                   @if (t.dateEcheance) {
                     <span class="echeance" [class.overdue]="isOverdue(t)">
-                      <mat-icon>event</mat-icon>{{ t.dateEcheance | date:'dd/MM' }}
+                      <mat-icon>event</mat-icon>{{ t.dateEcheance | localDate:'dd/MM' }}
                     </span>
                   }
                 </td>
@@ -470,6 +750,12 @@ export class SyntheseDialogComponent implements OnInit {
                   @if (t.type) {
                     <span class="type-badge type-{{ t.type.toLowerCase() }}">{{ t.type }}</span>
                   } @else { <span class="none">—</span> }
+                </td>
+                <td class="col-prio">
+                  <span class="prio-badge prio-{{ t.priorite?.toLowerCase() }}"
+                        [matTooltip]="t.priorite === 'HAUTE' ? 'Priorité haute' : t.priorite === 'BASSE' ? 'Priorité basse' : 'Priorité normale'">
+                    {{ t.priorite === 'HAUTE' ? '↑' : t.priorite === 'BASSE' ? '↓' : '—' }}
+                  </span>
                 </td>
                 <td class="col-collab">
                   {{ t.assignee ? (t.assignee.firstName + ' ' + t.assignee.lastName) : '' }}
@@ -479,21 +765,29 @@ export class SyntheseDialogComponent implements OnInit {
                   {{ t.createdBy ? (t.createdBy.firstName + ' ' + t.createdBy.lastName) : '' }}
                   @if (!t.createdBy) { <span class="none">—</span> }
                 </td>
-                <td class="col-statut">
-                  <span class="statut-badge statut-{{ t.statut.toLowerCase() }}">{{ statutLabel(t.statut) }}</span>
+                <td class="col-statut" (click)="$event.stopPropagation()">
+                  <select class="statut-select statut-{{ t.statut.toLowerCase() }}"
+                          [value]="t.statut"
+                          (change)="changeStatut(t, $any($event.target).value)">
+                    <option value="A_FAIRE">À faire</option>
+                    <option value="EN_COURS">En cours</option>
+                    <option value="TERMINEE">Terminée</option>
+                    <option value="NON_FAIT">Non fait</option>
+                    <option value="EN_ATTENTE">En attente</option>
+                  </select>
                 </td>
-                <td class="col-temps">{{ t.tempsExecution && t.tempsExecution > 0 ? formatTime(t.tempsExecution) : '—' }}</td>
-                <td class="col-actions">
-                  @if (t.statut === 'A_FAIRE') {
-                    <button mat-icon-button class="act-btn act-play" matTooltip="Démarrer" (click)="changeStatut(t, 'EN_COURS')">
-                      <mat-icon>play_arrow</mat-icon>
-                    </button>
-                  }
-                  @if (t.statut === 'EN_COURS') {
-                    <button mat-icon-button class="act-btn act-done" matTooltip="Terminer" (click)="changeStatut(t, 'TERMINEE')">
-                      <mat-icon>check_circle</mat-icon>
-                    </button>
-                  }
+                <td class="col-temps"
+                    [matTooltip]="t.heureDebut && t.heureFin ? 'De ' + (t.heureDebut | localDate:'HH:mm') + ' à ' + (t.heureFin | localDate:'HH:mm') : ''">
+                  {{ t.tempsExecution && t.tempsExecution > 0 ? formatTime(t.tempsExecution) : '—' }}
+                </td>
+                <td class="col-sup">
+                  @if (t.heuresSup && t.heuresSup > 0) {
+                    <span class="sup-badge" [matTooltip]="'Heures sup : ' + formatTime(t.heuresSup * 60)">
+                      +{{ formatTime(t.heuresSup * 60) }}
+                    </span>
+                  } @else { <span class="none">—</span> }
+                </td>
+                <td class="col-actions" (click)="$event.stopPropagation()">
                   <button mat-icon-button class="act-btn act-del" matTooltip="Supprimer" (click)="remove(t)">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
@@ -501,7 +795,7 @@ export class SyntheseDialogComponent implements OnInit {
               </tr>
             }
             @if (filteredTasks.length === 0) {
-              <tr><td colspan="10" class="table-empty">Aucune tâche trouvée</td></tr>
+              <tr><td colspan="12" class="table-empty">Aucune tâche trouvée</td></tr>
             }
           </tbody>
         </table>
@@ -567,6 +861,17 @@ export class SyntheseDialogComponent implements OnInit {
     .btn-reset { color: #94a3b8 !important; }
     .btn-reset:hover { color: #ef4444 !important; }
     .filter-count { margin-left: auto; font-size: 12px; color: #94a3b8; font-weight: 500; }
+    .btn-mes-taches {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 12px; height: 36px; border-radius: 8px;
+      border: 1.5px solid #e2e8f0; background: white;
+      font-size: 12.5px; font-weight: 600; color: #64748b;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn-mes-taches mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .btn-mes-taches:hover { border-color: #c7d2fe; color: #6366f1; background: #f8f8ff; }
+    .btn-mes-taches--active { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
+    .mes-badge { background: #6366f1; color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px; }
 
     /* Tableau */
     .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #e8ecf0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 24px; }
@@ -574,7 +879,8 @@ export class SyntheseDialogComponent implements OnInit {
     .tasks-table thead tr { background: #f8fafc; border-bottom: 2px solid #e8ecf0; }
     .tasks-table th { padding: 10px 12px; text-align: left; font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
     .tasks-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .1s; }
-    .tasks-table tbody tr:hover { background: #fafbfc; }
+    .tasks-table tbody tr.row-clickable { cursor: pointer; }
+    .tasks-table tbody tr.row-clickable:hover { background: #f5f3ff; }
     .tasks-table tbody tr:last-child { border-bottom: none; }
     .tasks-table td { padding: 9px 12px; color: #1e293b; vertical-align: middle; }
     .row-terminee td { color: #94a3b8; }
@@ -582,10 +888,12 @@ export class SyntheseDialogComponent implements OnInit {
     .col-id { width: 90px; }
     .col-date { width: 70px; white-space: nowrap; }
     .col-client { max-width: 150px; }
-    .col-type { width: 78px; }
-    .col-collab, .col-attrib { width: 130px; }
-    .col-statut { width: 110px; }
-    .col-temps { width: 68px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; color: #64748b; }
+    .col-type { width: 68px; }
+    .col-prio { width: 52px; text-align: center; }
+    .col-collab, .col-attrib { width: 120px; }
+    .col-statut { width: 100px; }
+    .col-temps { width: 58px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; color: #64748b; cursor: default; }
+    .col-sup { width: 60px; text-align: right; }
     .col-actions { width: 72px; white-space: nowrap; }
     .table-empty { text-align: center; padding: 48px; color: #94a3b8; font-size: 13px; }
     .task-id-badge { font-family: monospace; font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
@@ -596,18 +904,29 @@ export class SyntheseDialogComponent implements OnInit {
     .echeance mat-icon { font-size: 11px; width: 11px; height: 11px; }
     .echeance.overdue { color: #dc2626; font-weight: 600; }
     .none { color: #cbd5e1; }
-    .statut-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .statut-a_faire   { background: #eff6ff; color: #1d4ed8; }
-    .statut-en_cours  { background: #fffbeb; color: #d97706; }
-    .statut-terminee  { background: #f0fdf4; color: #15803d; }
-    .statut-non_fait  { background: #fff1f2; color: #e11d48; }
-    .statut-en_attente { background: #f5f3ff; color: #7c3aed; }
+    .statut-select {
+      border: none; outline: none; border-radius: 20px;
+      padding: 3px 10px; font-size: 11px; font-weight: 700;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 7px center;
+      padding-right: 22px; transition: opacity .15s;
+    }
+    .statut-select:hover { opacity: .85; }
+    .statut-a_faire   { background-color: #eff6ff; color: #1d4ed8; }
+    .statut-en_cours  { background-color: #fffbeb; color: #d97706; }
+    .statut-terminee  { background-color: #f0fdf4; color: #15803d; }
+    .statut-non_fait  { background-color: #fff1f2; color: #e11d48; }
+    .statut-en_attente { background-color: #f5f3ff; color: #7c3aed; }
     .act-btn { width: 28px !important; height: 28px !important; line-height: 28px !important; }
-    .act-play { color: #6366f1 !important; }
-    .act-done { color: #15803d !important; }
     .act-del  { color: #cbd5e1 !important; }
     .act-del:hover { color: #f87171 !important; }
     ::ng-deep .act-btn .mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; }
+    .prio-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; font-size: 13px; font-weight: 800; }
+    .prio-haute  { background: #fee2e2; color: #dc2626; }
+    .prio-normale { background: transparent; color: #cbd5e1; font-size: 11px; }
+    .prio-basse  { background: #f0fdf4; color: #16a34a; }
+    .sup-badge { font-size: 11px; font-weight: 700; color: #d97706; background: #fff7ed; padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
     .type-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
     .type-tva    { background: #fef9c3; color: #854d0e; }
     .type-paie   { background: #dbeafe; color: #1e40af; }
@@ -623,7 +942,7 @@ export class TasksGlobalComponent implements OnInit {
   private tasksService = inject(TasksService);
   private clientsService = inject(ClientsService);
   private usersService = inject(UsersService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
   private dialog = inject(MatDialog);
   private fb = inject(FormBuilder);
 
@@ -633,10 +952,15 @@ export class TasksGlobalComponent implements OnInit {
   users: User[] = [];
 
   showForm = false;
+  mesTachesOnly = false;
   filterClientId: number | null = null;
   filterAssigneeId: number | null = null;
   filterType: string | null = null;
   filterStatut: TaskStatut | null = null;
+
+  private auth = inject(AuthService);
+  get currentUserId(): number | null { return this.auth.currentUser()?.id ?? null; }
+  get myTaskCount(): number { return this.tasks.filter(t => t.assignee?.id === this.currentUserId && !['TERMINEE','NON_FAIT'].includes(t.statut)).length; }
 
   get currentWeek(): number {
     const d = new Date();
@@ -687,6 +1011,17 @@ export class TasksGlobalComponent implements OnInit {
     });
   }
 
+  openDetail(task: Task) {
+    const ref = this.dialog.open(TaskDetailDialogComponent, {
+      width: '700px',
+      maxWidth: '96vw',
+      data: { task, users: this.users, currentUserId: this.auth.currentUser()?.id, currentUserIsAdmin: this.auth.isAdmin() },
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result === 'updated' || result === 'deleted') this.load();
+    });
+  }
+
   openRapport() {
     this.dialog.open(SyntheseDialogComponent, {
       width: '860px',
@@ -702,6 +1037,7 @@ export class TasksGlobalComponent implements OnInit {
 
   applyFilter() {
     this.filteredTasks = this.tasks.filter(t => {
+      if (this.mesTachesOnly    && t.assignee?.id  !== this.currentUserId)    return false;
       if (this.filterClientId   && t.clientId      !== this.filterClientId)   return false;
       if (this.filterAssigneeId && t.assignee?.id  !== this.filterAssigneeId) return false;
       if (this.filterType       && t.type          !== this.filterType)       return false;
@@ -710,7 +1046,13 @@ export class TasksGlobalComponent implements OnInit {
     });
   }
 
+  toggleMesTaches() {
+    this.mesTachesOnly = !this.mesTachesOnly;
+    this.applyFilter();
+  }
+
   resetFilters() {
+    this.mesTachesOnly = false;
     this.filterClientId = this.filterAssigneeId = this.filterType = null;
     this.applyFilter();
   }
@@ -740,18 +1082,24 @@ export class TasksGlobalComponent implements OnInit {
       this.load();
       this.form.reset({ priorite: 'NORMALE', type: 'AUTRE', assigneeId: null, clientId: null });
       this.showForm = false;
-      this.snack.open('Tâche créée', 'OK', { duration: 2000 });
+      this.toast.success('Tâche créée');
     });
   }
 
   changeStatut(t: Task, statut: TaskStatut) {
-    this.tasksService.update(t.clientId, t.id, { statut }).subscribe(() => this.load());
+    const prev = t.statut;
+    t.statut = statut; // mise à jour optimiste
+    this.tasksService.update(t.clientId, t.id, { statut }).subscribe({
+      next: () => this.applyFilter(),
+      error: () => { t.statut = prev; }, // rollback si erreur
+    });
   }
+
 
   remove(t: Task) {
     this.tasksService.delete(t.clientId, t.id).subscribe(() => {
       this.load();
-      this.snack.open('Tâche supprimée', 'OK', { duration: 2000 });
+      this.toast.success('Tâche supprimée');
     });
   }
 

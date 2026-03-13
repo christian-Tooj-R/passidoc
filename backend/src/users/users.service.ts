@@ -52,10 +52,10 @@ export class UsersService {
       return this.findAll();
     }
     if (currentUser.site === UserSite.REUNION) {
-      // Son équipe Madagascar + lui-même
-      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      // Tous les collaborateurs Madagascar actifs + lui-même
+      const mgTeam = await this.repo.find({ where: { site: UserSite.MADAGASCAR, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
-      const result = self ? [self, ...team] : team;
+      const result = self ? [self, ...mgTeam] : mgTeam;
       return result.map(u => this.sanitize(u));
     }
     // Collaborateur Madagascar : uniquement lui-même

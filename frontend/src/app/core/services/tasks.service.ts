@@ -47,6 +47,7 @@ export interface GrilleResult {
   annee: number;
   grille: Record<string, Record<number, Task | null>>;
   drEtapes: Task[];
+  commentaires: Record<string, string>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -63,6 +64,10 @@ export class TasksService {
 
   getAllGlobal() {
     return this.http.get<Task[]>(`${environment.apiUrl}/tasks`);
+  }
+
+  getMesTaches() {
+    return this.http.get<Task[]>(`${environment.apiUrl}/tasks/mes-taches`);
   }
 
   getDashboard(semaine?: number) {

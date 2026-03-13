@@ -19,7 +19,7 @@ export class TasksService {
     if (assigner.role === UserRole.ADMIN) return true;
     if (assigner.site === UserSite.REUNION) {
       const assignee = await this.userRepo.findOne({ where: { id: assigneeId } });
-      return assignee?.referentId === assigner.id || assigneeId === assigner.id;
+      return assignee?.site === UserSite.MADAGASCAR || assigneeId === assigner.id;
     }
     return assigneeId === assigner.id;
   }
@@ -31,12 +31,25 @@ export class TasksService {
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   }
 
+  findMesTaches(userId: number) {
+    return this.repo.createQueryBuilder('task')
+      .leftJoinAndSelect('task.client', 'client')
+      .leftJoinAndSelect('task.createdBy', 'createdBy')
+      .where('task.assigneeId = :userId', { userId })
+      .andWhere('task.annee IS NULL')
+      .andWhere('task.statut NOT IN (:...done)', { done: ['TERMINEE', 'NON_FAIT'] })
+      .orderBy('task.createdAt', 'DESC')
+      .getMany();
+  }
+
   findAllByClient(clientId: number) {
-    return this.repo.find({
-      where: { clientId },
-      relations: ['assignee', 'createdBy'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.repo.createQueryBuilder('task')
+      .leftJoinAndSelect('task.assignee', 'assignee')
+      .leftJoinAndSelect('task.createdBy', 'createdBy')
+      .where('task.clientId = :clientId', { clientId })
+      .andWhere('task.annee IS NULL')
+      .orderBy('task.createdAt', 'DESC')
+      .getMany();
   }
 
   findAll(currentUser: User) {
@@ -44,10 +57,11 @@ export class TasksService {
       .leftJoinAndSelect('task.assignee', 'assignee')
       .leftJoinAndSelect('task.createdBy', 'createdBy')
       .leftJoinAndSelect('task.client', 'client')
+      .where('task.annee IS NULL')
       .orderBy('task.createdAt', 'DESC');
 
     if (currentUser.role !== UserRole.ADMIN) {
-      qb.where('client.responsableId = :userId', { userId: currentUser.id });
+      qb.andWhere('(client.responsableId = :userId OR task.assigneeId = :userId)', { userId: currentUser.id });
     }
 
     return qb.getMany();
@@ -56,10 +70,11 @@ export class TasksService {
   async getDashboard(semaine?: number) {
     const qb = this.repo.createQueryBuilder('task')
       .leftJoinAndSelect('task.assignee', 'assignee')
-      .leftJoinAndSelect('task.client', 'client');
+      .leftJoinAndSelect('task.client', 'client')
+      .where('task.annee IS NULL');
 
     if (semaine) {
-      qb.where('task.semaine = :semaine', { semaine });
+      qb.andWhere('task.semaine = :semaine', { semaine });
     }
 
     const tasks = await qb.getMany();
@@ -188,12 +203,20 @@ export class TasksService {
   readonly DR_ETAPES = [
     'Régularité formelle',
     'Trésorerie / Emprunt',
-    'CA / Clients',
+    'Chiffre d\'Affaires / Clients',
     'Contrôle CA',
     'Analyse solde client',
     'Charges / Fournisseurs',
+    'Analyse solde fournisseurs',
+    'Clients douteux',
+    'Stock',
     'Immobilisations',
-    'TVA / Taxes',
+    'Personnel',
+    'État',
+    'Cadrage TVA',
+    'Capitaux propres',
+    'Autres comptes',
+    'Calcul IS',
   ] as const;
 
   async findGrille(clientId: number, annee: number) {
@@ -236,7 +259,10 @@ export class TasksService {
     // Ordonner les étapes DR selon l'ordre défini
     const drOrdonnees = this.DR_ETAPES.map(e => drTaches.find(t => t.titre === e)).filter(Boolean);
 
-    return { grille, drEtapes: drOrdonnees, annee };
+    // Commentaires (tâches sentinelles mois=0)
+    const commentaires = await this.getCommentaires(clientId, annee);
+
+    return { grille, drEtapes: drOrdonnees, annee, commentaires };
   }
 
   async toggleMensuel(
