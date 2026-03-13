@@ -4,14 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../core/services/toast.service';
 import { UsersService } from '../../core/services/users.service';
 import { User } from '../../core/models/user.model';
 
 @Component({
   selector: 'app-equipes',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatSnackBarModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule],
   template: `
     <div class="page">
       <div class="page-header">
@@ -172,7 +172,7 @@ import { User } from '../../core/models/user.model';
 })
 export class EquipesComponent implements OnInit {
   private usersService = inject(UsersService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
 
   users: User[] = [];
 
@@ -204,7 +204,7 @@ export class EquipesComponent implements OnInit {
   setReferent(user: User, referentId: number | null) {
     this.usersService.setReferent(user.id, referentId).subscribe(updated => {
       user.referentId = updated.referentId;
-      this.snack.open('Équipe mise à jour', 'OK', { duration: 2000 });
+      this.toast.success('Équipe mise à jour');
     });
   }
 }

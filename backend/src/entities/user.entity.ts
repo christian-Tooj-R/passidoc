@@ -47,6 +47,9 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ nullable: true, default: 'Indian/Reunion' })
+  timezone: string;
+
   // Collaborateur Réunion référent (pour les collaborateurs Madagascar)
   @Column({ nullable: true })
   referentId: number;

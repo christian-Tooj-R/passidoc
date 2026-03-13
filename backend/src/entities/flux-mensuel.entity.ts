@@ -5,9 +5,14 @@ import {
 import { Client } from './client.entity';
 
 export enum TypeFlux {
-  RELEVE_BANCAIRE = 'RELEVE_BANCAIRE',
-  RAPPORT_VENTE = 'RAPPORT_VENTE',
-  RAPPORT_REGLEMENT = 'RAPPORT_REGLEMENT',
+  RELEVE_BANCAIRE   = 'RELEVE_BANCAIRE',
+  TVA_MENSUELLE     = 'TVA_MENSUELLE',
+  TVA_TRIMESTRIELLE = 'TVA_TRIMESTRIELLE',
+  TVA_ANNUELLE      = 'TVA_ANNUELLE',
+  PAIE              = 'PAIE',
+  RAPPORT_VENTE     = 'RAPPORT_VENTE',
+  RECETTE_AMENITIZ  = 'RECETTE_AMENITIZ',
+  PIECES_COMPTABLES = 'PIECES_COMPTABLES',
 }
 
 export enum StatutDepot {
@@ -37,6 +42,9 @@ export class FluxMensuel {
   dateDepot: Date;
 
   @Column({ nullable: true })
+  dateRelance: Date; // dernière relance client
+
+  @Column({ nullable: true, type: 'text' })
   commentaire: string;
 
   @ManyToOne(() => Client, (client) => client.fluxMensuels)

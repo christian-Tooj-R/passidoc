@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: passidoc-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Passidoc2024!}
+      MYSQL_DATABASE: passidoc_db
+      MYSQL_USER: passidoc_user
+      MYSQL_PASSWORD: ${DB_PASSWORD:-Passidoc2024!}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Passidoc2024!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - passidoc-net
+
+  minio:
+    image: minio/minio
+    container_name: passidoc-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - passidoc-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: passidoc-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - passidoc-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: passidoc-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - passidoc-net
+
+volumes:
+  mysql_data:
+  minio_data:
+
+networks:
+  passidoc-net:
+    driver: bridge

@@ -81,6 +81,16 @@ h1, h2, h3, h4 { margin: 0; font-family: 'Inter', sans-serif; }
   box-shadow: 0 8px 40px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08) !important;
 }
 
+/* ── Toast notifications ── */
+.toast-panel .mdc-snackbar__surface {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+}
+.toast-panel .mdc-snackbar__label { padding: 0 !important; }
+.toast-panel .mat-mdc-snack-bar-container { padding: 0 !important; }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

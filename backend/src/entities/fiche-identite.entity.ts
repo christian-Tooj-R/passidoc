@@ -69,6 +69,22 @@ export class FicheIdentite {
   @Column({ type: 'json', nullable: true })
   reglementations: string[];
 
+  // Présence digitale & marché
+  @Column({ nullable: true })
+  siteWeb: string;
+
+  @Column({ type: 'json', nullable: true })
+  reseauxSociaux: string[];
+
+  @Column({ nullable: true })
+  nbConcurrentsQuartier: number;
+
+  @Column({ nullable: true })
+  nbConcurrentsCommune: number;
+
+  @Column({ type: 'text', nullable: true })
+  evolutionSecteur: string;
+
   @OneToOne(() => Client, (client) => client.ficheIdentite)
   @JoinColumn()
   client: Client;

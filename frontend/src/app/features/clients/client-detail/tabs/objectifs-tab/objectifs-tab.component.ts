@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { ObjectifsService } from '../../../../../core/services/objectifs.service';
 
 @Component({
@@ -14,7 +14,7 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
   imports: [
     CommonModule, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSnackBarModule,
+    MatInputModule,
   ],
   template: `
     <div class="tab">
@@ -87,6 +87,28 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
           <textarea matInput rows="2" formControlName="recommandationsFaites"
             placeholder="Ex: A recommandé nos services à son frère..."></textarea>
         </mat-form-field>
+
+        <!-- Relation par pôle -->
+        <div class="section-title"><mat-icon>groups</mat-icon> Qualité de la relation par pôle</div>
+        <div class="ec-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le collaborateur en charge</mat-label>
+            <textarea matInput rows="2" formControlName="relationCollaborateur"
+              placeholder="Ex: Relation de confiance, échanges réguliers..."></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le pôle social</mat-label>
+            <textarea matInput rows="2" formControlName="relationPoleSocial"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le pôle juridique</mat-label>
+            <textarea matInput rows="2" formControlName="relationPoleJuridique"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le directeur d'antenne / l'EC</mat-label>
+            <textarea matInput rows="2" formControlName="relationDirecteur"></textarea>
+          </mat-form-field>
+        </div>
       </form>
     </div>
   `,
@@ -119,7 +141,7 @@ export class ObjectifsTabComponent implements OnInit {
   @Input() clientId!: number;
   private fb = inject(FormBuilder);
   private service = inject(ObjectifsService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
 
   form = this.fb.group({
     objectifs12mois: [''],
@@ -130,6 +152,10 @@ export class ObjectifsTabComponent implements OnInit {
     qualiteRelation: [''],
     axesAmelioration: [''],
     recommandationsFaites: [''],
+    relationCollaborateur: [''],
+    relationPoleSocial: [''],
+    relationPoleJuridique: [''],
+    relationDirecteur: [''],
   });
 
   ngOnInit() {
@@ -140,7 +166,7 @@ export class ObjectifsTabComponent implements OnInit {
 
   save() {
     this.service.save(this.clientId, this.form.value).subscribe(() => {
-      this.snack.open('Objectifs enregistrés', 'OK', { duration: 2500 });
+      this.toast.success('Objectifs enregistrés');
     });
   }
 }

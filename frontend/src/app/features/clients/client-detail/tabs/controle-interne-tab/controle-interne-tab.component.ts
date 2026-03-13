@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { ControleInterneService } from '../../../../../core/services/controle-interne.service';
 
 @Component({
@@ -14,7 +14,7 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSnackBarModule,
+    MatInputModule,
   ],
   template: `
     <div class="tab">
@@ -135,7 +135,7 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
 export class ControleInterneTabComponent implements OnInit {
   @Input() clientId!: number;
   private service = inject(ControleInterneService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
 
   processOk: { description: string; raison: string }[] = [];
   processKo: { description: string; raison: string; risques: string }[] = [];
@@ -169,7 +169,7 @@ export class ControleInterneTabComponent implements OnInit {
       outilsPilotage: this.outils,
       noteGenerale: this.noteGenerale,
     }).subscribe(() => {
-      this.snack.open('Contrôle interne enregistré', 'OK', { duration: 2500 });
+      this.toast.success('Contrôle interne enregistré');
     });
   }
 }

@@ -36,27 +36,29 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
           <input class="search-input" [formControl]="searchCtrl" placeholder="Rechercher…" />
         </div>
 
-        <!-- Filtre site -->
-        <div class="panel-section">
-          <div class="section-title">
-            <mat-icon>public</mat-icon> Site
+        <!-- Filtre site — admin uniquement -->
+        @if (auth.isAdmin()) {
+          <div class="panel-section">
+            <div class="section-title">
+              <mat-icon>public</mat-icon> Site
+            </div>
+            <button class="filter-btn" [class.active]="siteCtrl.value === ''" (click)="siteCtrl.setValue('')">
+              <mat-icon>layers</mat-icon>
+              <span>Tous les sites</span>
+              <span class="count-badge">{{ clients.length }}</span>
+            </button>
+            <button class="filter-btn" [class.active]="siteCtrl.value === 'REUNION'" (click)="siteCtrl.setValue('REUNION')">
+              <span class="flag">🇷🇪</span>
+              <span>La Réunion</span>
+              <span class="count-badge">{{ countBySite('REUNION') }}</span>
+            </button>
+            <button class="filter-btn" [class.active]="siteCtrl.value === 'MADAGASCAR'" (click)="siteCtrl.setValue('MADAGASCAR')">
+              <span class="flag">🇲🇬</span>
+              <span>Madagascar</span>
+              <span class="count-badge">{{ countBySite('MADAGASCAR') }}</span>
+            </button>
           </div>
-          <button class="filter-btn" [class.active]="siteCtrl.value === ''" (click)="siteCtrl.setValue('')">
-            <mat-icon>layers</mat-icon>
-            <span>Tous les sites</span>
-            <span class="count-badge">{{ clients.length }}</span>
-          </button>
-          <button class="filter-btn" [class.active]="siteCtrl.value === 'REUNION'" (click)="siteCtrl.setValue('REUNION')">
-            <span class="flag">🇷🇪</span>
-            <span>La Réunion</span>
-            <span class="count-badge">{{ countBySite('REUNION') }}</span>
-          </button>
-          <button class="filter-btn" [class.active]="siteCtrl.value === 'MADAGASCAR'" (click)="siteCtrl.setValue('MADAGASCAR')">
-            <span class="flag">🇲🇬</span>
-            <span>Madagascar</span>
-            <span class="count-badge">{{ countBySite('MADAGASCAR') }}</span>
-          </button>
-        </div>
+        }
 
         <!-- Filtre santé -->
         <div class="panel-section">
@@ -90,7 +92,7 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
             <mat-icon>insights</mat-icon> Statistiques
           </div>
           <div class="stat-row">
-            <span class="stat-label">Total dossiers</span>
+            <span class="stat-label">{{ auth.isAdmin() ? 'Total dossiers' : 'Mes dossiers' }}</span>
             <span class="stat-value">{{ clients.length }}</span>
           </div>
           <div class="stat-row">
@@ -119,7 +121,7 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
       <div>
         <div class="page-header">
           <div>
-            <h1>Dossiers clients</h1>
+            <h1>{{ auth.isAdmin() ? 'Tous les dossiers' : 'Mes dossiers' }}</h1>
             <p class="page-subtitle">{{ filteredClients.length }} dossier(s) affiché(s)</p>
           </div>
         </div>
@@ -130,7 +132,9 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
               <tr>
                 <th>Client</th>
                 <th>Site</th>
-                <th>Responsable</th>
+                @if (auth.isAdmin()) {
+                  <th>Responsable</th>
+                }
                 <th>Santé de passation</th>
                 <th>Statut</th>
                 <th></th>
@@ -150,16 +154,18 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
                       {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                     </span>
                   </td>
-                  <td>
-                    @if (c.responsable) {
-                      <div class="resp-cell">
-                        <div class="resp-avatar">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
-                        <span class="resp-name">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                      </div>
-                    } @else {
-                      <span class="resp-none">Non assigné</span>
-                    }
-                  </td>
+                  @if (auth.isAdmin()) {
+                    <td>
+                      @if (c.responsable) {
+                        <div class="resp-cell">
+                          <div class="resp-avatar">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
+                          <span class="resp-name">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
+                        </div>
+                      } @else {
+                        <span class="resp-none">Non assigné</span>
+                      }
+                    </td>
+                  }
                   <td>
                     <div class="score-cell">
                       <div class="score-bar-track">
@@ -183,7 +189,7 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
               }
               @if (filteredClients.length === 0) {
                 <tr>
-                  <td colspan="6" class="empty-state">
+                  <td [attr.colspan]="auth.isAdmin() ? 6 : 5" class="empty-state">
                     <mat-icon>folder_off</mat-icon>
                     <span>Aucun dossier trouvé</span>
                   </td>

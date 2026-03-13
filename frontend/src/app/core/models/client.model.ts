@@ -14,6 +14,7 @@ export interface Client {
   site: ClientSite;
   santePassation: number;
   isActive: boolean;
+  typesFluxActifs?: TypeFlux[];
   responsable?: Responsable;
   collaborateurMg?: Responsable;
   ficheIdentite?: FicheIdentite;
@@ -53,7 +54,16 @@ export interface Salarie {
   typeContrat: string;
 }
 
-export type TypeFlux = 'RELEVE_BANCAIRE' | 'RAPPORT_VENTE' | 'RAPPORT_REGLEMENT';
+export type TypeFlux =
+  | 'RELEVE_BANCAIRE'
+  | 'TVA_MENSUELLE'
+  | 'TVA_TRIMESTRIELLE'
+  | 'TVA_ANNUELLE'
+  | 'PAIE'
+  | 'RAPPORT_VENTE'
+  | 'RECETTE_AMENITIZ'
+  | 'PIECES_COMPTABLES';
+
 export type StatutDepot = 'DEPOSE' | 'MANQUANT' | 'EN_RETARD';
 
 export interface FluxMensuel {
@@ -63,6 +73,7 @@ export interface FluxMensuel {
   annee: number;
   statut: StatutDepot;
   dateDepot?: string;
+  dateRelance?: string;
   commentaire?: string;
   createdAt: string;
 }

@@ -21,7 +21,6 @@ export class FicheIdentiteService {
   async update(clientId: number, dto: UpdateFicheIdentiteDto) {
     const fiche = await this.findByClient(clientId);
     await this.repo.update(fiche.id, dto);
-    await this.clientsService.updateSantePassation(clientId);
     return this.findByClient(clientId);
   }
 }

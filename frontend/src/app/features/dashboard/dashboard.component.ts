@@ -5,13 +5,22 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ClientsService } from '../../core/services/clients.service';
+import { FluxMensuelService } from '../../core/services/flux-mensuel.service';
 import { Client } from '../../core/models/client.model';
 import { AuthService } from '../../core/services/auth.service';
+
+const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const TYPE_LABELS: Record<string, string> = {
+  RELEVE_BANCAIRE: 'Relevé bancaire',
+  TVA:             'TVA',
+  PAIE:            'Paie',
+  RAPPORT_VENTE:   'Rapport de vente',
+};
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressBarModule],
   template: `
     <div class="dashboard">
       <!-- Page header -->
@@ -70,7 +79,60 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
           <div class="stat-card__trend stat-card__trend--red">Score &lt; 50%</div>
         </div>
+
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--purple">
+            <mat-icon>notifications_active</mat-icon>
+          </div>
+          <div class="stat-card__body">
+            <div class="stat-card__value">{{ alertes.length }}</div>
+            <div class="stat-card__label">Documents manquants</div>
+          </div>
+          <div class="stat-card__trend" [class]="alertes.length > 0 ? 'stat-card__trend--red' : 'stat-card__trend--green'">
+            {{ alertes.length > 0 ? 'À traiter' : 'Tout reçu' }}
+          </div>
+        </div>
       </div>
+
+      <!-- Alertes flux manquants -->
+      @if (alertes.length > 0) {
+        <div class="alertes-section">
+          <div class="alertes-header">
+            <div class="alertes-title">
+              <mat-icon class="alertes-icon">notifications_active</mat-icon>
+              <span>Documents manquants ou en retard</span>
+              <span class="alertes-count">{{ alertes.length }}</span>
+            </div>
+            <button class="toggle-btn" (click)="alertesExpanded = !alertesExpanded">
+              {{ alertesExpanded ? 'Réduire' : 'Voir tout' }}
+              <mat-icon>{{ alertesExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </div>
+
+          <div class="alertes-list" [class.collapsed]="!alertesExpanded">
+            @for (a of alertesVisible; track $index) {
+              <div class="alerte-row" [routerLink]="['/clients', a.client?.id]"
+                   [fragment]="'pilotage'"
+                   [class.alerte-retard]="a.statut === 'EN_RETARD'"
+                   [class.alerte-manquant]="a.statut === 'MANQUANT'">
+                <div class="alerte-status-dot" [class.dot-orange]="a.statut === 'EN_RETARD'"
+                     [class.dot-red]="a.statut === 'MANQUANT'"></div>
+                <div class="alerte-client">{{ a.client?.nom }}</div>
+                <div class="alerte-type">{{ typeLabel(a.type) }}</div>
+                <div class="alerte-period">{{ moisLabel(a.mois) }} {{ a.annee }}</div>
+                <div class="alerte-badge" [class.badge-retard]="a.statut === 'EN_RETARD'"
+                     [class.badge-manquant]="a.statut === 'MANQUANT'">
+                  {{ a.statut === 'EN_RETARD' ? 'En retard' : 'Manquant' }}
+                </div>
+                <mat-icon class="alerte-arrow">chevron_right</mat-icon>
+              </div>
+            }
+            @if (!alertesExpanded && alertes.length > 5) {
+              <div class="alertes-more">+ {{ alertes.length - 5 }} autres alertes</div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Filters -->
       <div class="section-header">
@@ -132,7 +194,7 @@ import { AuthService } from '../../core/services/auth.service';
     }
 
     /* Stats */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 36px; }
     .stat-card {
       background: white;
       border-radius: 16px;
@@ -148,6 +210,7 @@ import { AuthService } from '../../core/services/auth.service';
     .stat-card:nth-child(2)::before { background: linear-gradient(90deg, #22c55e, #16a34a); }
     .stat-card:nth-child(3)::before { background: linear-gradient(90deg, #f59e0b, #f97316); }
     .stat-card:nth-child(4)::before { background: linear-gradient(90deg, #f87171, #dc2626); }
+    .stat-card:nth-child(5)::before { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
     .stat-card__icon {
       width: 46px; height: 46px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
@@ -156,7 +219,8 @@ import { AuthService } from '../../core/services/auth.service';
     .stat-card__icon--blue { background: linear-gradient(135deg, #3b82f6, #4f46e5); }
     .stat-card__icon--green { background: linear-gradient(135deg, #22c55e, #16a34a); }
     .stat-card__icon--orange { background: linear-gradient(135deg, #f59e0b, #f97316); }
-    .stat-card__icon--red { background: linear-gradient(135deg, #f87171, #dc2626); }
+    .stat-card__icon--red    { background: linear-gradient(135deg, #f87171, #dc2626); }
+    .stat-card__icon--purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
     .stat-card__body { flex: 1; }
     .stat-card__value { font-size: 32px; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -1px; }
     .stat-card__label { font-size: 13px; color: #64748b; margin-top: 5px; font-weight: 500; }
@@ -230,12 +294,69 @@ import { AuthService } from '../../core/services/auth.service';
     .badge-reunion { display: inline-flex; align-items: center; gap: 4px; background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
     .badge-madagascar { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
 
-    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+    /* Alertes flux */
+    .alertes-section {
+      background: white; border-radius: 16px; border: 1px solid #fecaca;
+      box-shadow: 0 1px 4px rgba(220,38,38,.06); margin-bottom: 32px; overflow: hidden;
+    }
+    .alertes-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid #fef2f2;
+      background: linear-gradient(135deg, #fff1f1, #fff7ed);
+    }
+    .alertes-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 700; color: #dc2626;
+    }
+    .alertes-icon { font-size: 18px; width: 18px; height: 18px; color: #dc2626; }
+    .alertes-count {
+      background: #dc2626; color: white;
+      font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+    }
+    .toggle-btn {
+      display: flex; align-items: center; gap: 4px;
+      border: 1px solid #fecaca; background: white; color: #dc2626;
+      font-size: 12px; font-weight: 600; padding: 5px 12px;
+      border-radius: 8px; cursor: pointer;
+    }
+    .toggle-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .alertes-list { }
+    .alerte-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid #fef2f2;
+      cursor: pointer; transition: background .12s;
+    }
+    .alerte-row:last-child { border-bottom: none; }
+    .alerte-row:hover { background: #fef9f9; }
+
+    .alerte-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-orange { background: #f97316; }
+    .dot-red    { background: #dc2626; }
+
+    .alerte-client { font-size: 13px; font-weight: 600; color: #1e293b; flex: 2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alerte-type   { font-size: 12px; color: #64748b; flex: 2; }
+    .alerte-period { font-size: 12px; color: #94a3b8; flex: 1; }
+    .alerte-badge  { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .badge-retard  { background: #fff7ed; color: #c2410c; }
+    .badge-manquant{ background: #fee2e2; color: #dc2626; }
+    .alerte-arrow  { font-size: 16px; width: 16px; height: 16px; color: #cbd5e1; margin-left: auto; }
+
+    .alertes-more {
+      padding: 10px 20px; font-size: 12px; color: #94a3b8;
+      text-align: center; border-top: 1px solid #fef2f2;
+    }
+
+    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
   `],
 })
 export class DashboardComponent implements OnInit {
   clients: Client[] = [];
   filteredClients: Client[] = [];
+  alertes: any[] = [];
+  alertesExpanded = false;
   siteFilter = '';
   today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -243,14 +364,20 @@ export class DashboardComponent implements OnInit {
   get dossiersPartiels() { return this.clients.filter(c => c.santePassation >= 50 && c.santePassation < 80).length; }
   get dossiersEnAlerte() { return this.clients.filter(c => c.santePassation < 50).length; }
   get firstName() { return this.auth.currentUser()?.firstName || ''; }
+  get alertesVisible() { return this.alertesExpanded ? this.alertes : this.alertes.slice(0, 5); }
 
-  constructor(private clientsService: ClientsService, private auth: AuthService) {}
+  constructor(
+    private clientsService: ClientsService,
+    private fluxService: FluxMensuelService,
+    private auth: AuthService,
+  ) {}
 
   ngOnInit() {
     this.clientsService.getAll().subscribe((data) => {
       this.clients = data;
       this.filteredClients = data;
     });
+    this.fluxService.getAlertesGlobales().subscribe(data => this.alertes = data);
   }
 
   filterSite(site: string) {
@@ -279,4 +406,7 @@ export class DashboardComponent implements OnInit {
     if (score >= 50) return 'Partiellement renseigné';
     return 'Risque de perte d\'information';
   }
+
+  typeLabel(type: string) { return TYPE_LABELS[type] ?? type; }
+  moisLabel(m: number)    { return MOIS_COURT[m - 1] ?? ''; }
 }

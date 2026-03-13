@@ -34,6 +34,19 @@ export class ObjectifsClient {
   @Column({ type: 'text', nullable: true })
   recommandationsFaites: string;
 
+  // Qualité de la relation par pôle (source : docx "NOTRE MISSION D'EXPERT COMPTABLE")
+  @Column({ type: 'text', nullable: true })
+  relationCollaborateur: string;
+
+  @Column({ type: 'text', nullable: true })
+  relationPoleSocial: string;
+
+  @Column({ type: 'text', nullable: true })
+  relationPoleJuridique: string;
+
+  @Column({ type: 'text', nullable: true })
+  relationDirecteur: string;
+
   @OneToOne(() => Client, (client) => client.objectifs)
   @JoinColumn()
   client: Client;

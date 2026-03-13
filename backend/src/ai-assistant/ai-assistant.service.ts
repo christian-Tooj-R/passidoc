@@ -197,12 +197,19 @@ export class AiAssistantService {
       if (analyse.faiblesses?.length) lines.push(`Faiblesses : ${analyse.faiblesses.join(' | ')}`);
       if (analyse.opportunites?.length) lines.push(`Opportunités : ${analyse.opportunites.join(' | ')}`);
       if (analyse.menaces?.length) lines.push(`Menaces : ${analyse.menaces.join(' | ')}`);
-      if (analyse.ca) lines.push(`CA (${analyse.anneeExercice || 'N'}) : ${analyse.ca.toLocaleString('fr-FR')} €`);
-      if (analyse.ebe) lines.push(`EBE : ${analyse.ebe.toLocaleString('fr-FR')} €`);
-      if (analyse.resultatNet) lines.push(`Résultat net : ${analyse.resultatNet.toLocaleString('fr-FR')} €`);
-      if (analyse.commentaireFinancier) lines.push(`Commentaire financier : ${analyse.commentaireFinancier}`);
-      if (analyse.evolutionSecteur) lines.push(`Évolution secteur : ${analyse.evolutionSecteur}`);
+      if (fi?.evolutionSecteur) lines.push(`Évolution secteur : ${fi.evolutionSecteur}`);
       if (analyse.businessModelCanvas) lines.push(`BMC : ${analyse.businessModelCanvas}`);
+    }
+
+    // KPIs depuis la synthèse la plus récente
+    const derniereSynthese = syntheses.sort((a, b) => b.exercice - a.exercice)[0];
+    if (derniereSynthese) {
+      lines.push(`\n=== PERFORMANCES FINANCIÈRES (Exercice ${derniereSynthese.exercice}) ===`);
+      if (derniereSynthese.ca) lines.push(`CA : ${derniereSynthese.ca.toLocaleString('fr-FR')} €`);
+      if (derniereSynthese.caPrecedent) lines.push(`CA N-1 : ${derniereSynthese.caPrecedent.toLocaleString('fr-FR')} €`);
+      if (derniereSynthese.ebe) lines.push(`EBE : ${derniereSynthese.ebe.toLocaleString('fr-FR')} €`);
+      if (derniereSynthese.resultatNet) lines.push(`Résultat net : ${derniereSynthese.resultatNet.toLocaleString('fr-FR')} €`);
+      if (derniereSynthese.commentaireFinancier) lines.push(`Commentaire : ${derniereSynthese.commentaireFinancier}`);
     }
 
     if (missions.length) {

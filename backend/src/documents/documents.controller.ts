@@ -3,9 +3,7 @@ import {
   ParseIntPipe, UseInterceptors, UploadedFile, Res, StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { createReadStream } from 'fs';
+import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
@@ -25,13 +23,7 @@ export class DocumentsController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (_req, file, cb) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     }),
   )
@@ -56,8 +48,7 @@ export class DocumentsController {
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const doc = await this.service.findOne(id, clientId);
-    const stream = createReadStream(doc.storagePath);
+    const { stream, doc } = await this.service.getStream(id, clientId);
     res.set({
       'Content-Type': doc.mimeType,
       'Content-Disposition': `attachment; filename="${doc.nom}"`,

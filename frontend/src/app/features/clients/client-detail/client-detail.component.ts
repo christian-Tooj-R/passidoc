@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,11 +17,12 @@ import { ObjectifsTabComponent } from './tabs/objectifs-tab/objectifs-tab.compon
 import { ControleInterneTabComponent } from './tabs/controle-interne-tab/controle-interne-tab.component';
 import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-tab.component';
 import { TachesTabComponent } from './tabs/taches-tab/taches-tab.component';
+import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 
 type TabId =
   | 'fiche' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'taches' | 'ia';
+  | 'documents' | 'taches' | 'ia' | 'historique';
 
 interface TabGroup {
   label: string;
@@ -39,7 +40,7 @@ interface TabGroup {
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
-    AiAssistantTabComponent, TachesTabComponent,
+    AiAssistantTabComponent, TachesTabComponent, HistoriqueTabComponent,
   ],
   template: `
     @if (client) {
@@ -54,7 +55,17 @@ interface TabGroup {
               <span>{{ client.nom }}</span>
             </div>
             <div class="detail-hero__title-row">
-              <div class="detail-avatar">{{ getInitials(client.nom) }}</div>
+              <div class="detail-avatar" (click)="triggerLogoUpload()">
+                @if (client.logoUrl) {
+                  <img [src]="client.logoUrl" [alt]="client.nom" class="logo-img" />
+                } @else {
+                  {{ getInitials(client.nom) }}
+                }
+                <div class="avatar-overlay">
+                  <mat-icon>photo_camera</mat-icon>
+                </div>
+              </div>
+              <input #logoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onLogoChange($event)" />
               <div>
                 <h1>{{ client.nom }}</h1>
                 <span [class]="client.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
@@ -124,10 +135,10 @@ interface TabGroup {
             </div>
             <div class="tab-content">
               @switch (activeTab()) {
-                @case ('fiche')        { <app-fiche-identite-tab      [clientId]="client.id" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab        [clientId]="client.id" /> }
+                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" (typesChanged)="onTypesChanged($event)" /> }
+                @case ('pilotage')     { <app-flux-mensuel-tab  [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
-                @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" /> }
+                @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
                 @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" /> }
                 @case ('missions')     { <app-missions-tab            [clientId]="client.id" /> }
                 @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" /> }
@@ -135,6 +146,7 @@ interface TabGroup {
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
                 @case ('taches')       { <app-taches-tab              [clientId]="client.id" /> }
                 @case ('ia')           { <app-ai-assistant-tab        [clientId]="client.id" /> }
+                @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
           </div>
@@ -187,7 +199,12 @@ interface TabGroup {
       border: 1px solid rgba(255,255,255,.25);
       color: white; font-size: 18px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      position: relative; cursor: pointer; overflow: hidden;
     }
+    .detail-avatar:hover .avatar-overlay { opacity: 1; }
+    .logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+    .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.4); border-radius: 14px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
+    .avatar-overlay mat-icon { color: white; font-size: 20px; width: 20px; height: 20px; }
     .detail-hero__title-row h1 {
       font-size: 24px; font-weight: 800; color: white;
       margin-bottom: 8px; letter-spacing: -.4px;
@@ -341,6 +358,8 @@ interface TabGroup {
   `],
 })
 export class ClientDetailComponent implements OnInit {
+  @ViewChild('logoInput') logoInput!: ElementRef<HTMLInputElement>;
+
   client: Client | null = null;
   activeTab = signal<TabId>('fiche');
 
@@ -375,8 +394,9 @@ export class ClientDetailComponent implements OnInit {
       label: 'Ressources',
       icon: 'inventory_2',
       tabs: [
-        { id: 'documents', icon: 'attach_file', label: 'Documents' },
-        { id: 'taches',    icon: 'task_alt',    label: 'Tâches' },
+        { id: 'documents',  icon: 'attach_file', label: 'Documents' },
+        { id: 'taches',     icon: 'task_alt',    label: 'Tâches' },
+        { id: 'historique', icon: 'history',     label: 'Historique' },
       ],
     },
     {
@@ -393,6 +413,10 @@ export class ClientDetailComponent implements OnInit {
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.clientsService.getOne(id).subscribe(c => this.client = c);
+  }
+
+  onTypesChanged(types: any[]) {
+    if (this.client) this.client = { ...this.client, typesFluxActifs: types };
   }
 
   activeTabMeta() {
@@ -412,6 +436,18 @@ export class ClientDetailComponent implements OnInit {
       a.download = `note-passation-${this.client!.nom}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+    });
+  }
+
+  triggerLogoUpload() {
+    this.logoInput?.nativeElement.click();
+  }
+
+  onLogoChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !this.client) return;
+    this.clientsService.uploadLogo(this.client.id, file).subscribe(updated => {
+      this.client = { ...this.client!, logoUrl: updated.logoUrl };
     });
   }
 

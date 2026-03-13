@@ -42,45 +42,6 @@ export class AnalyseStrategique {
   @Column({ type: 'text', nullable: true })
   businessModelCanvas: string;
 
-  // KPIs financiers
-  @Column({ type: 'float', nullable: true })
-  ca: number;
-
-  @Column({ type: 'float', nullable: true })
-  caPrecedent: number;
-
-  @Column({ type: 'float', nullable: true })
-  ebe: number;
-
-  @Column({ type: 'float', nullable: true })
-  resultatNet: number;
-
-  @Column({ type: 'float', nullable: true })
-  fluxTresorerie: number;
-
-  @Column({ nullable: true })
-  anneeExercice: number;
-
-  @Column({ type: 'text', nullable: true })
-  commentaireFinancier: string;
-
-  // Concurrents & marché
-  @Column({ nullable: true })
-  nbConcurrentsQuartier: number;
-
-  @Column({ nullable: true })
-  nbConcurrentsCommune: number;
-
-  @Column({ type: 'text', nullable: true })
-  evolutionSecteur: string;
-
-  // Présence digitale
-  @Column({ type: 'json', nullable: true })
-  reseauxSociaux: string[];
-
-  @Column({ nullable: true })
-  siteWeb: string;
-
   @OneToOne(() => Client, (client) => client.analyseStrategique)
   @JoinColumn()
   client: Client;

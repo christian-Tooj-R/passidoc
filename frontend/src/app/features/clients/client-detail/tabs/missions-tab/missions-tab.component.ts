@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { MissionsService, Mission } from '../../../../../core/services/missions.service';
 
 @Component({
@@ -15,7 +15,7 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
   imports: [
     CommonModule, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatSnackBarModule,
+    MatInputModule, MatSelectModule,
   ],
   template: `
     <div class="tab">
@@ -200,7 +200,7 @@ export class MissionsTabComponent implements OnInit {
   @Input() clientId!: number;
   private fb = inject(FormBuilder);
   private service = inject(MissionsService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
 
   missions: Mission[] = [];
   showForm = false;
@@ -222,7 +222,9 @@ export class MissionsTabComponent implements OnInit {
     { type: 'IA', label: 'Missions détectées par l\'IA', icon: '🤖' },
   ];
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+  }
 
   load() {
     this.service.getAll(this.clientId).subscribe(data => this.missions = data);
@@ -235,7 +237,7 @@ export class MissionsTabComponent implements OnInit {
   submit() {
     if (this.form.invalid) return;
     this.service.create(this.clientId, this.form.value as any).subscribe(() => {
-      this.snack.open('Mission ajoutée', 'OK', { duration: 2000 });
+      this.toast.success('Mission ajoutée');
       this.form.reset({ type: 'DETECTEE', annee: new Date().getFullYear() });
       this.showForm = false;
       this.load();
@@ -244,7 +246,7 @@ export class MissionsTabComponent implements OnInit {
 
   delete(id: number) {
     this.service.delete(this.clientId, id).subscribe(() => {
-      this.snack.open('Mission supprimée', 'OK', { duration: 2000 });
+      this.toast.success('Mission supprimée');
       this.load();
     });
   }

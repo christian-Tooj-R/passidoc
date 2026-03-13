@@ -1,8 +1,9 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn,
-  OneToOne, OneToMany, ManyToOne, JoinColumn,
+  OneToOne, OneToMany, ManyToOne, JoinColumn, AfterLoad,
 } from 'typeorm';
+import { TypeFlux } from './flux-mensuel.entity';
 import { User } from './user.entity';
 import { FicheIdentite } from './fiche-identite.entity';
 import { FluxMensuel } from './flux-mensuel.entity';
@@ -35,11 +36,32 @@ export class Client {
   @Column({ type: 'enum', enum: ClientSite })
   site: ClientSite;
 
-  @Column({ default: 0 })
-  santePassation: number;
+  santePassation: number = 0;
+
+  @AfterLoad()
+  computeSantePassation() {
+    let score = 0;
+    const fiche = (this as any).ficheIdentite;
+    if (fiche?.raisonSociale) score += 10;
+    if (fiche?.siren) score += 5;
+    if (fiche?.gerants?.length > 0) score += 10;
+    if (fiche?.salaries?.length > 0) score += 5;
+    if (fiche?.emailContact || fiche?.telephoneContact) score += 5;
+    if ((this as any).fluxMensuels?.length > 0) score += 10;
+    if ((this as any).fournisseurs?.length > 0) score += 10;
+    if ((this as any).synthesesCloture?.length > 0) score += 15;
+    if ((this as any).documents?.length > 0) score += 5;
+    if ((this as any).analyseStrategique?.forces?.length > 0 || (this as any).analyseStrategique?.ca) score += 10;
+    if ((this as any).missions?.length > 0) score += 10;
+    if ((this as any).controleInterne?.noteGenerale || (this as any).controleInterne?.processOk?.length > 0) score += 5;
+    this.santePassation = Math.min(score, 100);
+  }
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ type: 'simple-json', nullable: true })
+  typesFluxActifs: TypeFlux[];
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'responsableId' })

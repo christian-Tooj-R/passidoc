@@ -1,17 +1,18 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DocumentsService } from '../../../../../core/services/documents.service';
 import { ClientDocument } from '../../../../../core/models/client.model';
+import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
 
 @Component({
   selector: 'app-documents-tab',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatProgressBarModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule, LocalDatePipe],
   template: `
     <div class="tab-content">
       <div class="tab-header">
@@ -46,7 +47,7 @@ import { ClientDocument } from '../../../../../core/models/client.model';
         </ng-container>
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let d">{{ d.createdAt | date:'dd/MM/yyyy' }}</td>
+          <td mat-cell *matCellDef="let d">{{ d.createdAt | localDate:'dd/MM/yyyy' }}</td>
         </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
@@ -91,7 +92,8 @@ export class DocumentsTabComponent implements OnInit {
   columns = ['nom', 'taille', 'uploadePar', 'date', 'actions'];
   uploading = false;
 
-  constructor(private service: DocumentsService, private snack: MatSnackBar) {}
+  private toast = inject(ToastService);
+  constructor(private service: DocumentsService) {}
   ngOnInit() { this.load(); }
   load() { this.service.getAll(this.clientId).subscribe((d) => (this.documents = d)); }
 
@@ -100,8 +102,8 @@ export class DocumentsTabComponent implements OnInit {
     if (!file) return;
     this.uploading = true;
     this.service.upload(this.clientId, file).subscribe({
-      next: () => { this.load(); this.uploading = false; this.snack.open('Fichier uploadé', 'OK', { duration: 2000 }); },
-      error: () => { this.uploading = false; this.snack.open('Erreur upload', 'OK', { duration: 3000 }); },
+      next: () => { this.load(); this.uploading = false; this.toast.success('Fichier uploadé'); },
+      error: () => { this.uploading = false; this.toast.error('Erreur upload'); },
     });
   }
 
@@ -117,7 +119,7 @@ export class DocumentsTabComponent implements OnInit {
   delete(doc: ClientDocument) {
     this.service.delete(this.clientId, doc.id).subscribe(() => {
       this.load();
-      this.snack.open('Document supprimé', 'OK', { duration: 2000 });
+      this.toast.success('Document supprimé');
     });
   }
 
