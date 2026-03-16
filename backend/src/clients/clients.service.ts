@@ -100,27 +100,28 @@ export class ClientsService {
     return { message: 'Dossier archivé' };
   }
 
-  async assign(clientId: number, responsableId: number) {
+  async assign(clientId: number, responsableId: number, actorId: number) {
     const client = await this.findOne(clientId);
     await this.repo.update(clientId, { responsable: { id: responsableId } });
-    this.notifications.emit(responsableId, {
-      type: 'CLIENT_ASSIGNED',
-      message: `Le dossier "${client.nom}" vous a été assigné`,
-      titre: client.nom,
-      clientId,
-    });
+    if (responsableId !== actorId) {
+      await this.notifications.emit(responsableId, {
+        type: 'CLIENT_ASSIGNED',
+        message: `Le dossier "${client.nom}" vous a été assigné`,
+        titre: client.nom,
+        clientId,
+      });
+    }
     return this.findOne(clientId);
   }
 
   async assignMg(clientId: number, collaborateurMgId: number | null, currentUser: User) {
     const client = await this.findOne(clientId);
+    const previousMgId = client.collaborateurMgId ?? null;
 
     if (currentUser.role !== UserRole.ADMIN) {
-      // Collaborateur Réunion : ne peut sous-assigner que ses propres dossiers
       if (client.responsableId !== currentUser.id) {
         throw new ForbiddenException('Ce dossier ne fait pas partie de votre portefeuille');
       }
-      // Vérifier que le collaborateur MG est bien du site Madagascar
       if (collaborateurMgId) {
         const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
         if (!mgUser || mgUser.site !== UserSite.MADAGASCAR) {
@@ -130,25 +131,49 @@ export class ClientsService {
     }
 
     await this.repo.update(clientId, { collaborateurMgId: collaborateurMgId as any });
+
     if (collaborateurMgId) {
-      // Notifier le collaborateur Madagascar
-      this.notifications.emit(collaborateurMgId, {
-        type: 'CLIENT_ASSIGNED',
-        message: `Le dossier "${client.nom}" vous a été distribué`,
-        titre: client.nom,
-        clientId,
-      });
-      // Notifier le responsable Réunion du dossier (confirmation)
+      // Assignation : notifier le collab MG (sauf si c'est lui qui agit)
+      if (collaborateurMgId !== currentUser.id) {
+        await this.notifications.emit(collaborateurMgId, {
+          type: 'CLIENT_ASSIGNED',
+          message: `Le dossier "${client.nom}" vous a été distribué`,
+          titre: client.nom,
+          clientId,
+        });
+      }
+      // Notifier le responsable Réunion (sauf si c'est lui qui agit)
       if (client.responsableId && client.responsableId !== currentUser.id) {
         const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
-        this.notifications.emit(client.responsableId, {
+        await this.notifications.emit(client.responsableId, {
           type: 'CLIENT_ASSIGNED',
           message: `${mgUser?.firstName} ${mgUser?.lastName} a été assigné au dossier "${client.nom}"`,
           titre: client.nom,
           clientId,
         });
       }
+    } else if (previousMgId) {
+      // Dé-assignation : notifier le collab MG retiré (sauf si c'est lui qui agit)
+      if (previousMgId !== currentUser.id) {
+        await this.notifications.emit(previousMgId, {
+          type: 'CLIENT_ASSIGNED',
+          message: `Le dossier "${client.nom}" vous a été retiré`,
+          titre: client.nom,
+          clientId,
+        });
+      }
+      // Notifier le responsable Réunion (sauf si c'est lui qui agit)
+      if (client.responsableId && client.responsableId !== currentUser.id) {
+        const previousMg = await this.userRepo.findOne({ where: { id: previousMgId } });
+        await this.notifications.emit(client.responsableId, {
+          type: 'CLIENT_ASSIGNED',
+          message: `${previousMg?.firstName} ${previousMg?.lastName} a été retiré du dossier "${client.nom}"`,
+          titre: client.nom,
+          clientId,
+        });
+      }
     }
+
     return this.findOne(clientId);
   }
 

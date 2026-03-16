@@ -146,7 +146,7 @@ export class TasksService {
     await this.repo.update(saved.id, { taskId });
 
     if (dto.assigneeId && dto.assigneeId !== currentUser.id) {
-      this.notifications.emit(dto.assigneeId, {
+      await this.notifications.emit(dto.assigneeId, {
         type: 'TASK_ASSIGNED',
         message: `${currentUser.firstName} ${currentUser.lastName} vous a assigné une tâche`,
         titre: dto.titre,
@@ -176,8 +176,8 @@ export class TasksService {
       }
     }
 
-    if (dto.assigneeId && dto.assigneeId !== task.assigneeId) {
-      this.notifications.emit(dto.assigneeId, {
+    if (dto.assigneeId && dto.assigneeId !== task.assigneeId && dto.assigneeId !== currentUser?.id) {
+      await this.notifications.emit(dto.assigneeId, {
         type: 'TASK_ASSIGNED',
         message: `Une tâche vous a été assignée`,
         titre: task.titre,

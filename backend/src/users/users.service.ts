@@ -67,26 +67,60 @@ export class UsersService {
     return self ? [this.sanitize(self)] : [];
   }
 
-  async setReferent(userId: number, referentId: number | null) {
+  async getMyTeam(currentUser: User) {
+    if (currentUser.site === UserSite.REUNION) {
+      // Mes collaborateurs Madagascar
+      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      return { referent: null, team: team.map(u => this.sanitize(u)) };
+    }
+    // Collaborateur Madagascar : mon référent Réunion
+    const referent = currentUser.referentId
+      ? await this.repo.findOne({ where: { id: currentUser.referentId } })
+      : null;
+    return { referent: referent ? this.sanitize(referent) : null, team: [] };
+  }
+
+  async setReferent(userId: number, referentId: number | null, actorId: number) {
     const user = await this.repo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
+    const previousReferentId = user.referentId;
     await this.repo.update(userId, { referentId: referentId as any });
     if (referentId) {
       const referent = await this.repo.findOne({ where: { id: referentId } });
-      // Notifier le collaborateur Madagascar
-      this.notifications.emit(userId, {
-        type: 'TEAM_ASSIGNED',
-        message: `Vous avez été rattaché à l'équipe de ${referent?.firstName} ${referent?.lastName}`,
-        titre: `${referent?.firstName} ${referent?.lastName}`,
-        clientId: null,
-      });
-      // Notifier le référent Réunion
-      this.notifications.emit(referentId, {
-        type: 'TEAM_ASSIGNED',
-        message: `${user.firstName} ${user.lastName} a été ajouté à votre équipe`,
-        titre: `${user.firstName} ${user.lastName}`,
-        clientId: null,
-      });
+      if (userId !== actorId) {
+        await this.notifications.emit(userId, {
+          type: 'TEAM_ASSIGNED',
+          message: `Vous avez été rattaché à l'équipe de ${referent?.firstName} ${referent?.lastName}`,
+          titre: `${referent?.firstName} ${referent?.lastName}`,
+          clientId: null,
+        });
+      }
+      if (referentId !== actorId) {
+        await this.notifications.emit(referentId, {
+          type: 'TEAM_ASSIGNED',
+          message: `${user.firstName} ${user.lastName} a été ajouté à votre équipe`,
+          titre: `${user.firstName} ${user.lastName}`,
+          clientId: null,
+        });
+      }
+    } else if (previousReferentId) {
+      const previousReferent = await this.repo.findOne({ where: { id: previousReferentId } });
+      if (userId !== actorId) {
+        await this.notifications.emit(userId, {
+          type: 'TEAM_ASSIGNED',
+          message: `Vous avez été retiré de l'équipe de ${previousReferent?.firstName} ${previousReferent?.lastName}`,
+          titre: `${previousReferent?.firstName} ${previousReferent?.lastName}`,
+          clientId: null,
+        });
+      }
+      if (previousReferentId !== actorId) {
+        await this.notifications.emit(previousReferentId, {
+          type: 'TEAM_ASSIGNED',
+          message: `${user.firstName} ${user.lastName} a été retiré de votre équipe`,
+          titre: `${user.firstName} ${user.lastName}`,
+          clientId: null,
+        });
+      }
     }
     return this.findOne(userId);
   }

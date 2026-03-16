@@ -46,8 +46,8 @@ export class ClientsController {
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Assigner un responsable Réunion à un dossier (ADMIN uniquement)' })
-  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number) {
-    return this.clientsService.assign(id, responsableId);
+  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number, @Req() req: any) {
+    return this.clientsService.assign(id, responsableId, req.user.id);
   }
 
   @Patch(':id/assign-mg')
