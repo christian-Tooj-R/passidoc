@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -8,7 +8,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { debounceTime } from 'rxjs';
+import { Subscription, debounceTime } from 'rxjs';
+import { filter } from 'rxjs/operators';
+import { NotificationStreamService } from '../../../core/services/notification-stream.service';
 import { ClientsService } from '../../../core/services/clients.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Client } from '../../../core/models/client.model';
@@ -357,13 +359,16 @@ import { SectionLayoutComponent } from '../../../layout/section-layout/section-l
     .resp-none { font-size: 13px; color: #cbd5e1; font-style: italic; }
   `],
 })
-export class ClientListComponent implements OnInit {
+export class ClientListComponent implements OnInit, OnDestroy {
   clients: Client[] = [];
   filteredClients: Client[] = [];
   searchCtrl = new FormControl('');
   siteCtrl    = new FormControl('');
   healthFilter = signal('');
   private dialog = inject(MatDialog);
+
+  private notifStream = inject(NotificationStreamService);
+  private sub = new Subscription();
 
   constructor(private clientsService: ClientsService, public auth: AuthService) {
     effect(() => { this.healthFilter(); this.applyFilters(); });
@@ -373,7 +378,12 @@ export class ClientListComponent implements OnInit {
     this.load();
     this.searchCtrl.valueChanges.pipe(debounceTime(250)).subscribe(() => this.applyFilters());
     this.siteCtrl.valueChanges.subscribe(() => this.applyFilters());
+    this.sub.add(
+      this.notifStream.newNotif$.pipe(filter(n => n.type === 'CLIENT_ASSIGNED')).subscribe(() => this.load())
+    );
   }
+
+  ngOnDestroy() { this.sub.unsubscribe(); }
 
   load() {
     this.clientsService.getAll().subscribe(data => {

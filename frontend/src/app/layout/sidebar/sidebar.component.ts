@@ -49,13 +49,13 @@ import { AuthService } from '../../core/services/auth.service';
             </a>
           </li>
         }
+        <li>
+          <a routerLink="/equipes" routerLinkActive="active">
+            <span class="nav-icon"><mat-icon>people</mat-icon></span>
+            <span>{{ auth.isAdmin() ? 'Équipes' : 'Mon équipe' }}</span>
+          </a>
+        </li>
         @if (auth.isAdmin()) {
-          <li>
-            <a routerLink="/equipes" routerLinkActive="active">
-              <span class="nav-icon"><mat-icon>people</mat-icon></span>
-              <span>Équipes</span>
-            </a>
-          </li>
           <li>
             <a routerLink="/admin" routerLinkActive="active">
               <span class="nav-icon"><mat-icon>manage_accounts</mat-icon></span>

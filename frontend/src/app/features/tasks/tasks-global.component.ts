@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as XLSX from 'xlsx';
@@ -14,6 +14,9 @@ import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angu
 import { TasksService, Task, TaskStatut, TaskDashboard } from '../../core/services/tasks.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { UsersService } from '../../core/services/users.service';
+import { NotificationStreamService } from '../../core/services/notification-stream.service';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { Client } from '../../core/models/client.model';
 import { User } from '../../core/models/user.model';
@@ -938,13 +941,15 @@ export class TaskDetailDialogComponent {
     .type-autre  { background: #f1f5f9; color: #475569; }
   `],
 })
-export class TasksGlobalComponent implements OnInit {
+export class TasksGlobalComponent implements OnInit, OnDestroy {
   private tasksService = inject(TasksService);
   private clientsService = inject(ClientsService);
   private usersService = inject(UsersService);
   private toast = inject(ToastService);
   private dialog = inject(MatDialog);
   private fb = inject(FormBuilder);
+  private notifStream = inject(NotificationStreamService);
+  private sub = new Subscription();
 
   tasks: Task[] = [];
   filteredTasks: Task[] = [];
@@ -1002,7 +1007,12 @@ export class TasksGlobalComponent implements OnInit {
     this.load();
     this.clientsService.getAll().subscribe(c => this.clients = c);
     this.usersService.getAssignable().subscribe(u => this.users = u);
+    this.sub.add(
+      this.notifStream.newNotif$.pipe(filter(n => n.type === 'TASK_ASSIGNED')).subscribe(() => this.load())
+    );
   }
+
+  ngOnDestroy() { this.sub.unsubscribe(); }
 
   load() {
     this.tasksService.getAllGlobal().subscribe(t => {

@@ -1,11 +1,15 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { ToastService } from '../../core/services/toast.service';
 import { UsersService } from '../../core/services/users.service';
+import { AuthService } from '../../core/services/auth.service';
+import { NotificationStreamService } from '../../core/services/notification-stream.service';
 import { User } from '../../core/models/user.model';
 
 @Component({
@@ -14,107 +18,170 @@ import { User } from '../../core/models/user.model';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule],
   template: `
     <div class="page">
-      <div class="page-header">
-        <div class="page-header__left">
-          <mat-icon class="page-icon">people</mat-icon>
-          <div>
-            <h1>Équipes</h1>
-            <p>Lier chaque collaborateur Madagascar à son collaborateur Réunion</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="info-banner">
-        <mat-icon>info</mat-icon>
-        <span>
-          Seul le collaborateur Réunion lié (et l'admin) peut assigner des tâches à un collaborateur Madagascar.
-          Un collaborateur Réunion ne peut pas assigner à l'équipe d'un autre.
-        </span>
-      </div>
-
-      <!-- Vue par collaborateur Réunion -->
-      @for (ref of reunionUsers; track ref.id) {
-        <div class="team-card">
-          <div class="team-card__header">
-            <div class="user-avatar re">{{ ref.firstName[0] }}{{ ref.lastName[0] }}</div>
+      @if (auth.isAdmin()) {
+        <!-- ======= VUE ADMIN ======= -->
+        <div class="page-header">
+          <div class="page-header__left">
+            <mat-icon class="page-icon">people</mat-icon>
             <div>
-              <div class="team-name">{{ ref.firstName }} {{ ref.lastName }}</div>
-              <div class="team-site">🇷🇪 Collaborateur Réunion</div>
+              <h1>Équipes</h1>
+              <p>Lier chaque collaborateur Madagascar à son collaborateur Réunion</p>
             </div>
-            <span class="team-count">{{ getTeam(ref.id).length }} collaborateur(s) Madagascar</span>
-          </div>
-          <div class="team-members">
-            @for (m of getTeam(ref.id); track m.id) {
-              <div class="member-chip">
-                <div class="user-avatar mg sm">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
-                <span>{{ m.firstName }} {{ m.lastName }}</span>
-                <button mat-icon-button class="btn-remove" (click)="setReferent(m, null)" matTooltip="Retirer de l'équipe">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-            }
-            @if (getTeam(ref.id).length === 0) {
-              <span class="no-member">Aucun collaborateur assigné</span>
-            }
           </div>
         </div>
-      }
 
-      <!-- Table assignation -->
-      <h2 class="section-title" style="margin-top:32px">
-        <mat-icon>swap_horiz</mat-icon> Configurer les liens
-      </h2>
-      <div class="table-card">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Collaborateur Madagascar</th>
-              <th>Collaborateur Réunion actuel</th>
-              <th>Modifier</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (u of madagascarCollabs; track u.id) {
-              <tr class="table-row">
-                <td>
-                  <div class="user-cell">
-                    <div class="user-avatar mg">{{ u.firstName[0] }}{{ u.lastName[0] }}</div>
-                    <div>
-                      <div class="user-name">{{ u.firstName }} {{ u.lastName }}</div>
-                      <div class="text-muted">{{ u.email }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  @if (u.referentId) {
-                    <div class="user-cell">
-                      <div class="user-avatar re sm">{{ getReferentInitials(u.referentId) }}</div>
-                      <span>{{ getReferentName(u.referentId) }}</span>
-                    </div>
-                  } @else {
-                    <span class="none">Non configuré</span>
-                  }
-                </td>
-                <td>
-                  <mat-form-field appearance="outline" class="assign-field">
-                    <mat-select [value]="u.referentId || null" (selectionChange)="setReferent(u, $event.value)">
-                      <mat-option [value]="null">— Aucun —</mat-option>
-                      @for (r of reunionUsers; track r.id) {
-                        <mat-option [value]="r.id">{{ r.firstName }} {{ r.lastName }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                </td>
+        <div class="info-banner">
+          <mat-icon>info</mat-icon>
+          <span>
+            Seul le collaborateur Réunion lié (et l'admin) peut assigner des tâches à un collaborateur Madagascar.
+            Un collaborateur Réunion ne peut pas assigner à l'équipe d'un autre.
+          </span>
+        </div>
+
+        <!-- Vue par collaborateur Réunion -->
+        @for (ref of reunionUsers; track ref.id) {
+          <div class="team-card">
+            <div class="team-card__header">
+              <div class="user-avatar re">{{ ref.firstName[0] }}{{ ref.lastName[0] }}</div>
+              <div>
+                <div class="team-name">{{ ref.firstName }} {{ ref.lastName }}</div>
+                <div class="team-site">🇷🇪 Collaborateur Réunion</div>
+              </div>
+              <span class="team-count">{{ getTeam(ref.id).length }} collaborateur(s) Madagascar</span>
+            </div>
+            <div class="team-members">
+              @for (m of getTeam(ref.id); track m.id) {
+                <div class="member-chip">
+                  <div class="user-avatar mg sm">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
+                  <span>{{ m.firstName }} {{ m.lastName }}</span>
+                  <button mat-icon-button class="btn-remove" (click)="setReferent(m, null)" matTooltip="Retirer de l'équipe">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+              @if (getTeam(ref.id).length === 0) {
+                <span class="no-member">Aucun collaborateur assigné</span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Table assignation -->
+        <h2 class="section-title" style="margin-top:32px">
+          <mat-icon>swap_horiz</mat-icon> Configurer les liens
+        </h2>
+        <div class="table-card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Collaborateur Madagascar</th>
+                <th>Collaborateur Réunion actuel</th>
+                <th>Modifier</th>
               </tr>
-            }
-            @if (madagascarCollabs.length === 0) {
-              <tr><td colspan="3" class="empty-state">
-                <mat-icon>people_outline</mat-icon><span>Aucun collaborateur à Madagascar</span>
-              </td></tr>
-            }
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              @for (u of madagascarCollabs; track u.id) {
+                <tr class="table-row">
+                  <td>
+                    <div class="user-cell">
+                      <div class="user-avatar mg">{{ u.firstName[0] }}{{ u.lastName[0] }}</div>
+                      <div>
+                        <div class="user-name">{{ u.firstName }} {{ u.lastName }}</div>
+                        <div class="text-muted">{{ u.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    @if (u.referentId) {
+                      <div class="user-cell">
+                        <div class="user-avatar re sm">{{ getReferentInitials(u.referentId) }}</div>
+                        <span>{{ getReferentName(u.referentId) }}</span>
+                      </div>
+                    } @else {
+                      <span class="none">Non configuré</span>
+                    }
+                  </td>
+                  <td>
+                    <mat-form-field appearance="outline" class="assign-field">
+                      <mat-select [value]="u.referentId || null" (selectionChange)="setReferent(u, $event.value)">
+                        <mat-option [value]="null">— Aucun —</mat-option>
+                        @for (r of reunionUsers; track r.id) {
+                          <mat-option [value]="r.id">{{ r.firstName }} {{ r.lastName }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                </tr>
+              }
+              @if (madagascarCollabs.length === 0) {
+                <tr><td colspan="3" class="empty-state">
+                  <mat-icon>people_outline</mat-icon><span>Aucun collaborateur à Madagascar</span>
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      } @else {
+        <!-- ======= VUE NON-ADMIN (Mon équipe) ======= -->
+        <div class="page-header">
+          <div class="page-header__left">
+            <mat-icon class="page-icon">people</mat-icon>
+            <div>
+              <h1>Mon équipe</h1>
+              @if (auth.currentUser()?.site === 'REUNION') {
+                <p>Vos collaborateurs Madagascar rattachés</p>
+              } @else {
+                <p>Votre collaborateur Réunion référent</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (auth.currentUser()?.site === 'REUNION') {
+          <!-- Collab Réunion : voir son équipe MG -->
+          @if (myTeam && myTeam.team.length > 0) {
+            <div class="my-team-grid">
+              @for (m of myTeam.team; track m.id) {
+                <div class="member-card">
+                  <div class="user-avatar mg lg">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
+                  <div class="member-info">
+                    <div class="member-name">{{ m.firstName }} {{ m.lastName }}</div>
+                    <div class="member-role">🇲🇬 Collaborateur Madagascar</div>
+                    <div class="member-email">{{ m.email }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-team">
+              <mat-icon>people_outline</mat-icon>
+              <p>Aucun collaborateur Madagascar ne vous est rattaché pour l'instant.</p>
+              <span>Contactez l'administrateur pour configurer votre équipe.</span>
+            </div>
+          }
+        } @else {
+          <!-- Collab Madagascar : voir son référent Réunion -->
+          @if (myTeam && myTeam.referent) {
+            <div class="my-team-grid">
+              <div class="member-card">
+                <div class="user-avatar re lg">{{ myTeam.referent.firstName[0] }}{{ myTeam.referent.lastName[0] }}</div>
+                <div class="member-info">
+                  <div class="member-name">{{ myTeam.referent.firstName }} {{ myTeam.referent.lastName }}</div>
+                  <div class="member-role">🇷🇪 Collaborateur Réunion — Référent</div>
+                  <div class="member-email">{{ myTeam.referent.email }}</div>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="empty-team">
+              <mat-icon>person_off</mat-icon>
+              <p>Vous n'avez pas encore de collaborateur Réunion référent.</p>
+              <span>Contactez l'administrateur pour être rattaché à une équipe.</span>
+            </div>
+          }
+        }
+      }
     </div>
   `,
   styles: [`
@@ -168,13 +235,30 @@ import { User } from '../../core/models/user.model';
 
     .empty-state { text-align: center; padding: 48px !important; color: #94a3b8; }
     .empty-state mat-icon { font-size: 36px; width: 36px; height: 36px; display: block; margin: 0 auto 8px; }
+
+    /* Non-admin "Mon équipe" */
+    .my-team-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
+    .member-card { display: flex; align-items: center; gap: 16px; background: white; border: 1px solid #e8ecf0; border-radius: 14px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); min-width: 280px; }
+    .user-avatar.lg { width: 52px; height: 52px; font-size: 18px; }
+    .member-info { display: flex; flex-direction: column; gap: 3px; }
+    .member-name { font-size: 16px; font-weight: 700; color: #1e293b; }
+    .member-role { font-size: 12px; color: #6366f1; font-weight: 600; }
+    .member-email { font-size: 12px; color: #94a3b8; }
+    .empty-team { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 32px; text-align: center; color: #94a3b8; }
+    .empty-team mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 16px; color: #cbd5e1; }
+    .empty-team p { font-size: 15px; color: #64748b; font-weight: 500; margin: 0 0 6px; }
+    .empty-team span { font-size: 13px; color: #94a3b8; }
   `],
 })
-export class EquipesComponent implements OnInit {
+export class EquipesComponent implements OnInit, OnDestroy {
   private usersService = inject(UsersService);
   private toast = inject(ToastService);
+  auth = inject(AuthService);
+  private notifStream = inject(NotificationStreamService);
+  private sub = new Subscription();
 
   users: User[] = [];
+  myTeam: { referent: User | null; team: User[] } | null = null;
 
   get madagascarCollabs(): User[] {
     return this.users.filter(u => u.site === 'MADAGASCAR' && u.role !== 'ADMIN' && u.isActive);
@@ -184,7 +268,20 @@ export class EquipesComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.usersService.getAll().subscribe(u => this.users = u);
+    this.load();
+    this.sub.add(
+      this.notifStream.newNotif$.pipe(filter(n => n.type === 'TEAM_ASSIGNED')).subscribe(() => this.load())
+    );
+  }
+
+  ngOnDestroy() { this.sub.unsubscribe(); }
+
+  private load() {
+    if (this.auth.isAdmin()) {
+      this.usersService.getAll().subscribe(u => this.users = u);
+    } else {
+      this.usersService.getMyTeam().subscribe(t => this.myTeam = t);
+    }
   }
 
   getTeam(referentId: number): User[] {
