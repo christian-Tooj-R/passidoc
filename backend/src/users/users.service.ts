@@ -5,10 +5,14 @@ import * as bcrypt from 'bcrypt';
 import { User, UserRole, UserSite } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private repo: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private repo: Repository<User>,
+    private notifications: NotificationsService,
+  ) {}
 
   async create(dto: CreateUserDto) {
     const exists = await this.repo.findOne({ where: { email: dto.email } });
@@ -67,6 +71,23 @@ export class UsersService {
     const user = await this.repo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
     await this.repo.update(userId, { referentId: referentId as any });
+    if (referentId) {
+      const referent = await this.repo.findOne({ where: { id: referentId } });
+      // Notifier le collaborateur Madagascar
+      this.notifications.emit(userId, {
+        type: 'TEAM_ASSIGNED',
+        message: `Vous avez été rattaché à l'équipe de ${referent?.firstName} ${referent?.lastName}`,
+        titre: `${referent?.firstName} ${referent?.lastName}`,
+        clientId: null,
+      });
+      // Notifier le référent Réunion
+      this.notifications.emit(referentId, {
+        type: 'TEAM_ASSIGNED',
+        message: `${user.firstName} ${user.lastName} a été ajouté à votre équipe`,
+        titre: `${user.firstName} ${user.lastName}`,
+        clientId: null,
+      });
+    }
     return this.findOne(userId);
   }
 

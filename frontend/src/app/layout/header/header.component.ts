@@ -37,13 +37,19 @@ import { NotificationStreamService } from '../../core/services/notification-stre
 
         <mat-menu #bellMenu="matMenu" xPosition="before" class="bell-menu">
 
-          <!-- Tâches assignées -->
+          <!-- Notifications -->
           @if (notifStream.notifications().length > 0) {
             <div class="section-header">
-              <mat-icon>task_alt</mat-icon> Tâches assignées
+              <mat-icon>notifications_active</mat-icon> Notifications
+              @if (notifStream.unreadCount() > 0) {
+                <span class="section-count">{{ notifStream.unreadCount() }}</span>
+              }
             </div>
-            @for (n of notifStream.notifications().slice(0, 5); track n.id) {
+            @for (n of notifStream.notifications().slice(0, 6); track n.id) {
               <button mat-menu-item class="notif-item" (click)="notifStream.navigateTo(n)">
+                <span class="notif-icon notif-{{ n.type.toLowerCase() }}">
+                  <mat-icon>{{ n.type === 'TASK_ASSIGNED' ? 'task_alt' : n.type === 'CLIENT_ASSIGNED' ? 'folder_shared' : 'people' }}</mat-icon>
+                </span>
                 <div class="notif-item__body">
                   <div class="notif-item__msg">{{ n.message }}</div>
                   <div class="notif-item__titre">{{ n.titre }}</div>
@@ -51,6 +57,11 @@ import { NotificationStreamService } from '../../core/services/notification-stre
                 @if (!n.read) { <span class="notif-dot"></span> }
               </button>
             }
+            <mat-divider />
+          } @else {
+            <div class="empty-section">
+              <mat-icon>notifications_none</mat-icon> Aucune notification
+            </div>
             <mat-divider />
           }
 
@@ -146,6 +157,11 @@ import { NotificationStreamService } from '../../core/services/notification-stre
     .notif-item__msg { font-size: 12px; color: #64748b; }
     .notif-item__titre { font-size: 13px; font-weight: 600; color: #1e293b; }
     .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: #6366f1; flex-shrink: 0; }
+    .notif-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .notif-icon mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .notif-task_assigned   { background: #eef2ff; color: #6366f1; }
+    .notif-client_assigned { background: #f0fdf4; color: #15803d; }
+    .notif-team_assigned   { background: #fef3c7; color: #d97706; }
 
     .empty-section { display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 12px; color: #94a3b8; pointer-events: none; }
     .empty-section mat-icon { font-size: 15px; width: 15px; height: 15px; color: #22c55e; }

@@ -7,6 +7,7 @@ import { User, UserRole, UserSite } from '../entities/user.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { MinioService } from '../storage/minio.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ClientsService {
@@ -15,6 +16,7 @@ export class ClientsService {
     @InjectRepository(FicheIdentite) private ficheRepo: Repository<FicheIdentite>,
     @InjectRepository(User) private userRepo: Repository<User>,
     private minio: MinioService,
+    private notifications: NotificationsService,
   ) {}
 
   async create(dto: CreateClientDto, currentUser: User) {
@@ -99,8 +101,14 @@ export class ClientsService {
   }
 
   async assign(clientId: number, responsableId: number) {
-    await this.findOne(clientId);
+    const client = await this.findOne(clientId);
     await this.repo.update(clientId, { responsable: { id: responsableId } });
+    this.notifications.emit(responsableId, {
+      type: 'CLIENT_ASSIGNED',
+      message: `Le dossier "${client.nom}" vous a été assigné`,
+      titre: client.nom,
+      clientId,
+    });
     return this.findOne(clientId);
   }
 
@@ -122,6 +130,25 @@ export class ClientsService {
     }
 
     await this.repo.update(clientId, { collaborateurMgId: collaborateurMgId as any });
+    if (collaborateurMgId) {
+      // Notifier le collaborateur Madagascar
+      this.notifications.emit(collaborateurMgId, {
+        type: 'CLIENT_ASSIGNED',
+        message: `Le dossier "${client.nom}" vous a été distribué`,
+        titre: client.nom,
+        clientId,
+      });
+      // Notifier le responsable Réunion du dossier (confirmation)
+      if (client.responsableId && client.responsableId !== currentUser.id) {
+        const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
+        this.notifications.emit(client.responsableId, {
+          type: 'CLIENT_ASSIGNED',
+          message: `${mgUser?.firstName} ${mgUser?.lastName} a été assigné au dossier "${client.nom}"`,
+          titre: client.nom,
+          clientId,
+        });
+      }
+    }
     return this.findOne(clientId);
   }
 
