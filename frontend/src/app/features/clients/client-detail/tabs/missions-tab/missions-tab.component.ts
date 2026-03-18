@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { MissionsService, Mission } from '../../../../../core/services/missions.service';
 
 @Component({
@@ -242,6 +243,7 @@ export class MissionsTabComponent implements OnInit {
   private fb = inject(FormBuilder);
   private service = inject(MissionsService);
   private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
 
   missions: Mission[] = [];
   showForm = false;
@@ -286,9 +288,12 @@ export class MissionsTabComponent implements OnInit {
   }
 
   delete(id: number) {
-    this.service.delete(this.clientId, id).subscribe(() => {
-      this.toast.success('Mission supprimée');
-      this.load();
+    this.confirm.confirm('Supprimer cette mission ?').subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(this.clientId, id).subscribe(() => {
+        this.toast.success('Mission supprimée');
+        this.load();
+      });
     });
   }
 }

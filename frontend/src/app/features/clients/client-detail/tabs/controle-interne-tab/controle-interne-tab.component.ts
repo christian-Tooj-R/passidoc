@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { ControleInterneService } from '../../../../../core/services/controle-interne.service';
 
 @Component({
@@ -178,6 +179,7 @@ export class ControleInterneTabComponent implements OnInit {
   @Input() clientId!: number;
   private service = inject(ControleInterneService);
   private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
 
   processOk: { description: string; raison: string }[] = [];
   processKo: { description: string; raison: string; risques: string }[] = [];
@@ -196,13 +198,19 @@ export class ControleInterneTabComponent implements OnInit {
   }
 
   addProcessOk() { this.processOk.push({ description: '', raison: '' }); }
-  removeProcessOk(i: number) { this.processOk.splice(i, 1); }
+  removeProcessOk(i: number) {
+    this.confirm.confirm('Supprimer ce process ?').subscribe(ok => { if (ok) this.processOk.splice(i, 1); });
+  }
 
   addProcessKo() { this.processKo.push({ description: '', raison: '', risques: '' }); }
-  removeProcessKo(i: number) { this.processKo.splice(i, 1); }
+  removeProcessKo(i: number) {
+    this.confirm.confirm('Supprimer ce process défaillant ?').subscribe(ok => { if (ok) this.processKo.splice(i, 1); });
+  }
 
   addOutil() { this.outils.push({ nom: '', description: '' }); }
-  removeOutil(i: number) { this.outils.splice(i, 1); }
+  removeOutil(i: number) {
+    this.confirm.confirm('Supprimer cet outil ?').subscribe(ok => { if (ok) this.outils.splice(i, 1); });
+  }
 
   save() {
     this.service.save(this.clientId, {

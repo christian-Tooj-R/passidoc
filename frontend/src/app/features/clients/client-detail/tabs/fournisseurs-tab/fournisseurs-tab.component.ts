@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { FournisseursService } from '../../../../../core/services/fournisseurs.service';
 import { Fournisseur } from '../../../../../core/models/client.model';
 
@@ -294,6 +295,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
 export class FournisseursTabComponent implements OnInit {
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
 
   @Input() clientId!: number;
   fournisseurs: Fournisseur[] = [];
@@ -322,9 +324,12 @@ export class FournisseursTabComponent implements OnInit {
   }
 
   delete(f: Fournisseur) {
-    this.service.delete(this.clientId, f.id).subscribe(() => {
-      this.load();
-      this.toast.info(`${f.nom} supprimé`);
+    this.confirm.confirm(`Supprimer ${f.nom} ?`).subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(this.clientId, f.id).subscribe(() => {
+        this.load();
+        this.toast.info(`${f.nom} supprimé`);
+      });
     });
   }
 

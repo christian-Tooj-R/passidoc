@@ -4,6 +4,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DocumentsService } from '../../../../../core/services/documents.service';
 import { ClientDocument } from '../../../../../core/models/client.model';
@@ -95,6 +96,7 @@ export class DocumentsTabComponent implements OnInit {
   uploading = false;
 
   private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
   constructor(private service: DocumentsService) {}
   ngOnInit() { this.load(); }
   load() { this.service.getAll(this.clientId).subscribe((d) => (this.documents = d)); }
@@ -119,9 +121,12 @@ export class DocumentsTabComponent implements OnInit {
   }
 
   delete(doc: ClientDocument) {
-    this.service.delete(this.clientId, doc.id).subscribe(() => {
-      this.load();
-      this.toast.success('Document supprimé');
+    this.confirm.confirm(`Supprimer "${doc.nom}" ?`).subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(this.clientId, doc.id).subscribe(() => {
+        this.load();
+        this.toast.success('Document supprimé');
+      });
     });
   }
 

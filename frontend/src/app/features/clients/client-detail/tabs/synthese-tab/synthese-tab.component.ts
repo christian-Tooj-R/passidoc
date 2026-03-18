@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
@@ -260,6 +261,7 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
 export class SyntheseTabComponent implements OnInit {
   private fb = inject(FormBuilder);
   private fiscalRefService = inject(FiscalReferenceService);
+  private confirm = inject(ConfirmService);
 
   @Input() clientId!: number;
   @Input() site: ClientSite = 'REUNION';
@@ -350,6 +352,9 @@ export class SyntheseTabComponent implements OnInit {
   }
 
   delete(s: SyntheseCloture) {
-    this.service.delete(this.clientId, s.id).subscribe(() => this.load());
+    this.confirm.confirm('Supprimer cet exercice ?').subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(this.clientId, s.id).subscribe(() => this.load());
+    });
   }
 }

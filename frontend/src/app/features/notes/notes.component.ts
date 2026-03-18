@@ -1,10 +1,11 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NotesService, Note } from '../../core/services/notes.service';
+import { ConfirmService } from '../../core/services/confirm.service';
 import { debounceTime, Subject } from 'rxjs';
 
 const PALETTE = [
@@ -295,6 +296,7 @@ export class NotesComponent implements OnInit {
   palette = PALETTE;
 
   private updateSubjects = new Map<number, Subject<Note>>();
+  private confirm = inject(ConfirmService);
 
   constructor(private service: NotesService) {}
 
@@ -322,8 +324,11 @@ export class NotesComponent implements OnInit {
   }
 
   deleteNote(id: number) {
-    this.service.delete(id).subscribe(() => {
-      this.notes.update(n => n.filter(x => x.id !== id));
+    this.confirm.confirm('Supprimer cette note ?').subscribe((ok: boolean) => {
+      if (!ok) return;
+      this.service.delete(id).subscribe(() => {
+        this.notes.update(n => n.filter(x => x.id !== id));
+      });
     });
   }
 
