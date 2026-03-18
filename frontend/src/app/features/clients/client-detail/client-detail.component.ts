@@ -58,6 +58,52 @@ interface TabGroup {
     AiAssistantTabComponent, TachesTabComponent, HistoriqueTabComponent,
   ],
   template: `
+    @if (loading()) {
+      <div class="skeleton-wrap">
+        <!-- Topbar skeleton -->
+        <div class="sk-topbar">
+          <div class="sk-bar sk-bar--back"></div>
+          <div class="sk-bar sk-bar--title"></div>
+          <div class="sk-spacer"></div>
+          <div class="sk-bar sk-bar--chip"></div>
+          <div class="sk-bar sk-bar--btn"></div>
+        </div>
+        <div class="sk-layout">
+          <!-- Sidebar skeleton -->
+          <div class="sk-sidebar">
+            <div class="sk-avatar"></div>
+            <div class="sk-bar sk-bar--name"></div>
+            <div class="sk-bar sk-bar--tag"></div>
+            <div class="sk-bar sk-bar--score"></div>
+            <div class="sk-divider"></div>
+            @for (i of [1,2,3,4,5,6,7,8]; track i) {
+              <div class="sk-nav-item" [class.sk-nav-item--label]="i === 1 || i === 4 || i === 7"></div>
+            }
+          </div>
+          <!-- Content skeleton -->
+          <div class="sk-content">
+            <div class="sk-content-header">
+              <div class="sk-icon-box"></div>
+              <div class="sk-lines">
+                <div class="sk-bar sk-bar--group"></div>
+                <div class="sk-bar sk-bar--section"></div>
+              </div>
+            </div>
+            <div class="sk-body">
+              <div class="sk-block sk-block--lg"></div>
+              <div class="sk-block-row">
+                <div class="sk-block sk-block--sm"></div>
+                <div class="sk-block sk-block--sm"></div>
+                <div class="sk-block sk-block--sm"></div>
+              </div>
+              <div class="sk-block sk-block--md"></div>
+              <div class="sk-block sk-block--lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (client) {
       <div class="detail" @detailEnter>
 
@@ -411,12 +457,110 @@ interface TabGroup {
       display: block;
       width: 100%;
     }
+
+    /* ══ SKELETON LOADER ═════════════════════════════════ */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .sk-pulse {
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 6px;
+    }
+    .skeleton-wrap {
+      display: flex; flex-direction: column;
+      width: 100%; height: 100vh; overflow: hidden;
+      background: #F4F6FB;
+    }
+    .sk-topbar {
+      height: 54px; flex-shrink: 0;
+      background: #FFFBFE; border-bottom: 1px solid #E0E2EC;
+      display: flex; align-items: center; gap: 10px; padding: 0 20px;
+    }
+    .sk-layout { display: flex; flex: 1; overflow: hidden; }
+    .sk-sidebar {
+      width: 248px; min-width: 248px;
+      background: #FFFBFE; border-right: 1px solid #E0E2EC;
+      padding: 28px 16px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .sk-content {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sk-content-header {
+      height: 72px; flex-shrink: 0;
+      background: #FFFBFE; border-bottom: 1px solid #E0E2EC;
+      display: flex; align-items: center; gap: 14px; padding: 0 24px;
+    }
+    .sk-body {
+      flex: 1; padding: 24px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .sk-block-row { display: flex; gap: 16px; }
+
+    /* Shimmer elements */
+    .sk-avatar {
+      width: 80px; height: 80px; border-radius: 22px;
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+      flex-shrink: 0;
+    }
+    .sk-icon-box {
+      width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    .sk-lines { display: flex; flex-direction: column; gap: 6px; }
+    .sk-divider { width: 100%; height: 1px; background: #E0E2EC; margin: 4px 0; }
+    .sk-spacer { flex: 1; }
+
+    .sk-bar {
+      border-radius: 6px;
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    .sk-bar--back   { width: 80px;  height: 26px; border-radius: 20px; }
+    .sk-bar--title  { width: 140px; height: 14px; }
+    .sk-bar--chip   { width: 110px; height: 28px; border-radius: 20px; }
+    .sk-bar--btn    { width: 130px; height: 34px; border-radius: 20px; }
+    .sk-bar--name   { width: 120px; height: 13px; }
+    .sk-bar--tag    { width: 80px;  height: 22px; border-radius: 20px; }
+    .sk-bar--score  { width: 100%;  height: 7px;  border-radius: 6px; }
+    .sk-bar--group  { width: 70px;  height: 9px; }
+    .sk-bar--section{ width: 140px; height: 14px; }
+
+    .sk-nav-item {
+      width: 100%; height: 34px; border-radius: 28px;
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    .sk-nav-item--label {
+      height: 10px; width: 60%; border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    .sk-block {
+      border-radius: 14px;
+      background: linear-gradient(90deg, #E8EAED 25%, #F4F6FB 50%, #E8EAED 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    .sk-block--lg { height: 120px; }
+    .sk-block--md { height: 80px; }
+    .sk-block--sm { flex: 1; height: 80px; }
   `],
 })
 export class ClientDetailComponent implements OnInit {
   @ViewChild('logoInput') logoInput!: ElementRef<HTMLInputElement>;
 
   client: Client | null = null;
+  loading = signal(true);
   activeTab = signal<TabId>('fiche');
 
   readonly TAB_GROUPS: TabGroup[] = [
@@ -468,7 +612,13 @@ export class ClientDetailComponent implements OnInit {
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.clientsService.getOne(id).subscribe(c => this.client = c);
+    const start = Date.now();
+    this.clientsService.getOne(id).subscribe(c => {
+      this.client = c;
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, 800 - elapsed);
+      setTimeout(() => this.loading.set(false), remaining);
+    });
   }
 
   onTypesChanged(types: any[]) {

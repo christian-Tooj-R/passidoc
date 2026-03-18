@@ -103,40 +103,75 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
     </div>
   `,
   styles: [`
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
-    .section { margin-bottom: 24px; }
-    .section-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px; border-radius: 10px 10px 0 0;
-      font-size: 14px; font-weight: 600; margin-bottom: 8px;
-    }
-    .section-header mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .section-header span { flex: 1; }
-    .section-header button { color: inherit !important; width: 28px !important; height: 28px !important; }
-    .section-header--green { background: #dcfce7; color: #15803d; }
-    .section-header--red { background: #fee2e2; color: #dc2626; }
-    .section-header--blue { background: #dbeafe; color: #1d4ed8; }
-    .section-header--gray { background: #f1f5f9; color: #475569; }
+    :host { display: block; padding: 24px; }
 
-    .process-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;
-      border: 1px solid rgba(0,0,0,0.06);
+    .tab-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 28px;
     }
-    .process-row--green { background: #f0fdf4; }
-    .process-row--red { background: #fef2f2; }
-    .process-row--blue { background: #eff6ff; }
+    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
+
+    /* ── Sections ───────────────────────────────────── */
+    .section { margin-bottom: 28px; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 12px 12px 0 0;
+      font-size: 13.5px; font-weight: 600;
+    }
+    .section-header mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+    .section-header span { flex: 1; }
+    .section-header button {
+      color: inherit !important;
+      width: 30px !important; height: 30px !important;
+      background: rgba(255,255,255,0.5) !important;
+      border-radius: 8px !important;
+    }
+    .section-header--green { background: #dcfce7; color: #15803d; }
+    .section-header--red   { background: #fee2e2; color: #dc2626; }
+    .section-header--blue  { background: #dbeafe; color: #1d4ed8; }
+    .section-header--gray  { background: #f1f5f9; color: #475569; }
+
+    /* ── Rows container ─────────────────────────────── */
+    .process-rows {
+      border: 1px solid rgba(0,0,0,0.07); border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 12px; background: white;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* ── Individual row ─────────────────────────────── */
+    .process-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.06);
+      transition: box-shadow .15s;
+    }
+    .process-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .process-row--green { background: #f8fffe; }
+    .process-row--red   { background: #fff8f8; }
+    .process-row--blue  { background: #f8faff; }
+
     .process-input {
       flex: 1; border: none; background: transparent;
-      font-size: 13px; padding: 4px 8px; border-radius: 6px;
-      font-family: inherit; color: #1e293b;
+      font-size: 13.5px; padding: 6px 10px; border-radius: 8px;
+      font-family: inherit; color: #1e293b; line-height: 1.4;
+      transition: background .15s, outline .15s;
     }
-    .process-input:focus { outline: 1px solid #6366f1; background: white; }
+    .process-input::placeholder { color: #94a3b8; }
+    .process-input:focus {
+      outline: 1.5px solid #6366f1;
+      background: white;
+    }
     .flex-2 { flex: 2 !important; }
+
     .full-width { width: 100%; }
-    .process-rows { border: 1px solid rgba(0,0,0,0.06); border-top: none; border-radius: 0 0 10px 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-    .empty-hint { font-size: 13px; color: #94a3b8; padding: 8px 12px; margin: 0; }
+
+    .empty-hint {
+      font-size: 13px; color: #94a3b8;
+      padding: 12px 14px; margin: 0;
+      font-style: italic;
+    }
   `],
 })
 export class ControleInterneTabComponent implements OnInit {
