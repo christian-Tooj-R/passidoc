@@ -4,10 +4,24 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { Chart, registerables, ChartData, ChartConfiguration } from 'chart.js';
 import { ClientsService } from '../../core/services/clients.service';
 import { FluxMensuelService } from '../../core/services/flux-mensuel.service';
+import { TasksService, Task } from '../../core/services/tasks.service';
 import { Client } from '../../core/models/client.model';
 import { AuthService } from '../../core/services/auth.service';
+
+Chart.register(...registerables);
+
+interface CollabStat {
+  name: string;
+  total: number;
+  terminees: number;
+  enCours: number;
+  taux: number;
+  dossiers: { nom: string; total: number; terminees: number; enCours: number }[];
+}
 
 const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const TYPE_LABELS: Record<string, string> = {
@@ -20,7 +34,7 @@ const TYPE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatRippleModule],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatRippleModule, BaseChartDirective],
   template: `
     <div class="dash">
 
@@ -69,6 +83,89 @@ const TYPE_LABELS: Record<string, string> = {
           </div>
         }
       </div>
+
+      <!-- ══ PERFORMANCE ÉQUIPE ════════════════════════════════ -->
+      @if (collabStats.length > 0) {
+        <div class="perf-section">
+
+          <!-- Header -->
+          <div class="perf-header">
+            <div class="perf-header__left">
+              <div class="perf-header__icon"><mat-icon>leaderboard</mat-icon></div>
+              <div>
+                <h2 class="perf-header__title">Performance équipe</h2>
+                <span class="perf-header__sub">{{ totalTasksCount }} tâches · {{ collabStats.length }} collaborateur(s)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Row 1 : Bar chart vue d'ensemble ── -->
+          <div class="chart-card chart-card--full">
+            <div class="chart-card__title">Vue d'ensemble — tâches par collaborateur</div>
+            <div class="chart-wrap chart-wrap--bar">
+              <canvas baseChart
+                [data]="teamBarData"
+                [options]="teamBarOptions"
+                type="bar">
+              </canvas>
+            </div>
+          </div>
+
+          <!-- ── Row 2 : Sélecteur collab + détail ── -->
+          <div class="perf-detail-section">
+
+            <!-- Onglets collabs -->
+            <div class="collab-tabs">
+              @for (s of collabStats; track s.name) {
+                <button class="ctab" [class.ctab--active]="selectedCollab === s.name" (click)="selectCollab(s.name)">
+                  <div class="ctab-av">{{ avatarInitials(s.name) }}</div>
+                  <span class="ctab-name">{{ s.name }}</span>
+                  <span class="ctab-taux"
+                    [class.taux-high]="s.taux >= 75"
+                    [class.taux-mid]="s.taux >= 40 && s.taux < 75"
+                    [class.taux-low]="s.taux < 40">{{ s.taux }}%</span>
+                </button>
+              }
+            </div>
+
+            <!-- Graphiques du collab sélectionné -->
+            @if (selectedCollabData) {
+              <div class="detail-charts-grid">
+
+                <!-- Doughnut statuts -->
+                <div class="chart-card">
+                  <div class="chart-card__title">
+                    Statuts — {{ selectedCollabData.name }}
+                  </div>
+                  <div class="chart-card__sub">{{ selectedCollabData.total }} tâche(s) assignée(s)</div>
+                  <div class="chart-wrap chart-wrap--donut">
+                    <canvas baseChart
+                      [data]="doughnutData"
+                      [options]="doughnutOptions"
+                      type="doughnut">
+                    </canvas>
+                  </div>
+                </div>
+
+                <!-- Bar horizontal dossiers -->
+                <div class="chart-card">
+                  <div class="chart-card__title">Tâches par dossier — {{ selectedCollabData.name }}</div>
+                  <div class="chart-card__sub">Top {{ selectedCollabData.dossiers.length }} dossier(s)</div>
+                  <div class="chart-wrap" [style.height.px]="Math.max(180, selectedCollabData.dossiers.length * 36)">
+                    <canvas baseChart
+                      [data]="dossierBarData"
+                      [options]="dossierBarOptions"
+                      type="bar">
+                    </canvas>
+                  </div>
+                </div>
+
+              </div>
+            }
+
+          </div>
+        </div>
+      }
 
       <!-- ══ ALERTES ════════════════════════════════════════ -->
       @if (alertes.length > 0) {
@@ -205,6 +302,73 @@ const TYPE_LABELS: Record<string, string> = {
     .metric__icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .metric__value { font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -.5px; }
     .metric__tag { font-size: 11px; font-weight: 500; }
+
+    /* ── Performance équipe ──────────────────────────── */
+    .perf-section {
+      background: #FFFBFE;
+      border: 1px solid #E0E2EC;
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 20px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .perf-header { display: flex; align-items: center; justify-content: space-between; }
+    .perf-header__left { display: flex; align-items: center; gap: 14px; }
+    .perf-header__icon {
+      width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(135deg, #4f46e5, #818cf8);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(79,70,229,.25);
+    }
+    .perf-header__icon mat-icon { color: white; font-size: 22px; width: 22px; height: 22px; }
+    .perf-header__title { font-size: 16px; font-weight: 700; color: #1A1C1E; margin: 0; }
+    .perf-header__sub { font-size: 12px; color: #6F7978; margin: 2px 0 0; }
+
+    /* Chart cards */
+    .chart-card {
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 16px; padding: 18px;
+    }
+    .chart-card--full { }
+    .chart-card__title { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+    .chart-card__sub { font-size: 11px; color: #94a3b8; margin-bottom: 14px; }
+
+    .chart-wrap { position: relative; }
+    .chart-wrap--bar   { height: 240px; }
+    .chart-wrap--donut { height: 220px; }
+
+    /* Collab tabs */
+    .perf-detail-section { display: flex; flex-direction: column; gap: 16px; }
+    .collab-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .ctab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 12px;
+      border: 1.5px solid #e2e8f0; background: white;
+      cursor: pointer; transition: all .13s; font-family: inherit;
+    }
+    .ctab:hover { border-color: #c7d2fe; background: #f5f3ff; }
+    .ctab--active { border-color: #6366f1; background: #eef2ff; }
+    .ctab-av {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      color: white; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ctab-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .ctab-taux { font-size: 12px; font-weight: 700; margin-left: 4px; }
+    .taux-high { color: #16a34a; }
+    .taux-mid  { color: #d97706; }
+    .taux-low  { color: #dc2626; }
+
+    /* Detail charts */
+    .detail-charts-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .detail-charts-grid { grid-template-columns: 1fr; } }
 
     /* ── Alertes ───────────────────────────────────── */
     .alertes {
@@ -345,6 +509,138 @@ export class DashboardComponent implements OnInit {
   siteFilter = '';
   today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  collabStats: CollabStat[] = [];
+  selectedCollab: string | null = null;
+  Math = Math;
+
+  get selectedCollabData() { return this.collabStats.find(s => s.name === this.selectedCollab) ?? null; }
+  get totalTasksCount()    { return this.collabStats.reduce((sum, s) => sum + s.total, 0); }
+
+  // ── Chart.js : vue d'ensemble équipe ────────────────────
+  get teamBarData(): ChartData<'bar'> {
+    return {
+      labels: this.collabStats.map(s => s.name),
+      datasets: [
+        {
+          label: 'Terminées',
+          data: this.collabStats.map(s => s.terminees),
+          backgroundColor: 'rgba(34,197,94,.85)',
+          borderColor: '#16a34a',
+          borderWidth: 1,
+          borderRadius: 5,
+        },
+        {
+          label: 'En cours',
+          data: this.collabStats.map(s => s.enCours),
+          backgroundColor: 'rgba(245,158,11,.85)',
+          borderColor: '#d97706',
+          borderWidth: 1,
+          borderRadius: 5,
+        },
+        {
+          label: 'Restantes',
+          data: this.collabStats.map(s => s.total - s.terminees - s.enCours),
+          backgroundColor: 'rgba(226,232,240,.9)',
+          borderColor: '#cbd5e1',
+          borderWidth: 1,
+          borderRadius: 5,
+        },
+      ],
+    };
+  }
+
+  teamBarOptions: ChartConfiguration['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 16, boxWidth: 12, boxHeight: 12 } },
+      tooltip: { mode: 'index', intersect: false },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 12, family: 'Inter' } } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, font: { size: 11, family: 'Inter' } }, beginAtZero: true },
+    },
+  };
+
+  // ── Chart.js : doughnut statuts collab sélectionné ─────
+  get doughnutData(): ChartData<'doughnut'> {
+    const s = this.selectedCollabData;
+    if (!s) return { labels: [], datasets: [] };
+    const restantes = s.total - s.terminees - s.enCours;
+    return {
+      labels: ['Terminées', 'En cours', 'Restantes / non faites'],
+      datasets: [{
+        data: [s.terminees, s.enCours, restantes],
+        backgroundColor: ['rgba(34,197,94,.85)', 'rgba(245,158,11,.85)', 'rgba(226,232,240,.9)'],
+        borderColor: ['#16a34a', '#d97706', '#cbd5e1'],
+        borderWidth: 1,
+        hoverOffset: 6,
+      }],
+    };
+  }
+
+  doughnutOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
+      tooltip: { callbacks: {
+        label: (ctx) => ` ${ctx.label}: ${ctx.parsed} tâche(s)`,
+      }},
+    },
+  };
+
+  // ── Chart.js : horizontal bar dossiers ─────────────────
+  get dossierBarData(): ChartData<'bar'> {
+    const s = this.selectedCollabData;
+    if (!s) return { labels: [], datasets: [] };
+    const top = s.dossiers.slice(0, 10);
+    return {
+      labels: top.map(d => d.nom),
+      datasets: [
+        {
+          label: 'Terminées',
+          data: top.map(d => d.terminees),
+          backgroundColor: 'rgba(34,197,94,.85)',
+          borderColor: '#16a34a',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'En cours',
+          data: top.map(d => d.enCours),
+          backgroundColor: 'rgba(245,158,11,.85)',
+          borderColor: '#d97706',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Restantes',
+          data: top.map(d => d.total - d.terminees - d.enCours),
+          backgroundColor: 'rgba(226,232,240,.9)',
+          borderColor: '#cbd5e1',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    };
+  }
+
+  dossierBarOptions: ChartConfiguration['options'] = {
+    indexAxis: 'y' as const,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
+      tooltip: { mode: 'index', intersect: false },
+    },
+    scales: {
+      x: { stacked: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, font: { size: 11 } }, beginAtZero: true },
+      y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' } } },
+    },
+  };
+
   get dossiersTransmissibles() { return this.clients.filter(c => c.santePassation >= 80).length; }
   get dossiersPartiels()       { return this.clients.filter(c => c.santePassation >= 50 && c.santePassation < 80).length; }
   get dossiersEnAlerte()       { return this.clients.filter(c => c.santePassation < 50).length; }
@@ -367,6 +663,7 @@ export class DashboardComponent implements OnInit {
   constructor(
     private clientsService: ClientsService,
     private fluxService: FluxMensuelService,
+    private tasksService: TasksService,
     private auth: AuthService,
   ) {}
 
@@ -376,14 +673,55 @@ export class DashboardComponent implements OnInit {
       this.filteredClients = data;
     });
     this.fluxService.getAlertesGlobales().subscribe(data => this.alertes = data);
+    this.tasksService.getAllGlobal().subscribe(tasks => this.buildCollabStats(tasks));
   }
+
+  buildCollabStats(tasks: Task[]) {
+    const map = new Map<string, { total: number; terminees: number; enCours: number; dossiers: Map<string, { total: number; terminees: number; enCours: number }> }>();
+
+    for (const t of tasks) {
+      if (!t.assignee) continue;
+      const name = `${t.assignee.firstName} ${t.assignee.lastName}`;
+      const clientNom = t.client?.nom ?? 'Sans dossier';
+
+      if (!map.has(name)) map.set(name, { total: 0, terminees: 0, enCours: 0, dossiers: new Map() });
+      const c = map.get(name)!;
+      c.total++;
+      if (t.statut === 'TERMINEE') c.terminees++;
+      if (t.statut === 'EN_COURS') c.enCours++;
+
+      if (!c.dossiers.has(clientNom)) c.dossiers.set(clientNom, { total: 0, terminees: 0, enCours: 0 });
+      const d = c.dossiers.get(clientNom)!;
+      d.total++;
+      if (t.statut === 'TERMINEE') d.terminees++;
+      if (t.statut === 'EN_COURS') d.enCours++;
+    }
+
+    this.collabStats = Array.from(map.entries())
+      .map(([name, s]) => ({
+        name,
+        total: s.total,
+        terminees: s.terminees,
+        enCours: s.enCours,
+        taux: s.total > 0 ? Math.round((s.terminees / s.total) * 100) : 0,
+        dossiers: Array.from(s.dossiers.entries())
+          .map(([nom, d]) => ({ nom, ...d }))
+          .sort((a, b) => b.total - a.total),
+      }))
+      .sort((a, b) => b.taux - a.taux);
+
+    if (this.collabStats.length > 0) this.selectedCollab = this.collabStats[0].name;
+  }
+
+  selectCollab(name: string) { this.selectedCollab = name; }
 
   filterSite(site: string) {
     this.siteFilter = site;
     this.filteredClients = site ? this.clients.filter(c => c.site === site) : this.clients;
   }
 
-  getInitials(nom: string) { return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+  getInitials(nom: string)    { return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+  avatarInitials(name: string) { return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
   getScoreLabel(score: number) {
     if (score >= 80) return 'Transmissible';
     if (score >= 50) return 'Partiellement renseigné';
