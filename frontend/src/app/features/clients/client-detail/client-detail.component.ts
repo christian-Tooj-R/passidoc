@@ -176,6 +176,8 @@ interface TabGroup {
                     <button
                       class="sidenav__item"
                       [class.active]="activeTab() === tab.id"
+                      [style.background]="activeTab() === tab.id ? groupStyle(group.label).bg : ''"
+                      [style.color]="activeTab() === tab.id ? groupStyle(group.label).color : ''"
                       (click)="activeTab.set(tab.id)">
                       <span class="sidenav__indicator" [style.background]="activeTab() === tab.id ? groupStyle(group.label).color : 'transparent'"></span>
                       <mat-icon [style.color]="activeTab() === tab.id ? groupStyle(group.label).color : null">{{ tab.icon }}</mat-icon>
@@ -404,7 +406,7 @@ interface TabGroup {
     }
     .sidenav__item:hover { background: #F0F1F5; color: #1A1C1E; }
     .sidenav__item:active { transform: scale(.98); }
-    .sidenav__item.active { background: #EEF2FB; color: #1A1C1E; font-weight: 600; }
+    .sidenav__item.active { font-weight: 600; }
     .sidenav__item mat-icon {
       font-size: 18px; width: 18px; height: 18px;
       color: #89909A; flex-shrink: 0;

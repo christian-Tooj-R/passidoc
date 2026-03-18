@@ -25,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StorageModule } from './storage/storage.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
+import { NotesModule } from './notes/notes.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { AuditInterceptor } from './audit/audit.interceptor';
     NotificationsModule,
     StorageModule,
     AuditModule,
+    NotesModule,
   ],
   controllers: [AppController],
   providers: [

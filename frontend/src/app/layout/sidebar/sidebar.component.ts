@@ -6,24 +6,18 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { filter } from 'rxjs/operators';
 
-// ─── Types ────────────────────────────────────────────────
-type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'equipe' | 'admin';
+type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin';
 
-interface SubItem {
-  label: string;
-  route: string;
-  icon: string;
-  badge?: number;
-}
+interface NavItem  { label: string; route: string; icon: string; badge?: number; }
+interface NavGroup { label: string; items: NavItem[]; }
 
 interface AppModule {
   id: ModuleId;
-  railIcon: string;
-  railLabel: string;
-  panelTitle: string;
-  panelColor: string;
-  panelTextColor: string;
-  items: SubItem[];
+  icon: string;
+  label: string;
+  color: string;       // active accent color
+  activeBg: string;    // light tint for panel items
+  groups: NavGroup[];
 }
 
 @Component({
@@ -31,85 +25,102 @@ interface AppModule {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule],
   template: `
-    <div class="sidebar-shell">
+    <div class="shell">
 
-      <!-- ══════════════════════════════════════════════
-           RAIL  (colonne 1 — module switcher)
-      ══════════════════════════════════════════════ -->
+      <!-- ══ RAIL ══════════════════════════════════════ -->
       <aside class="rail">
 
-        <a routerLink="/dashboard" class="rail__logo" matTooltip="Passidoc" matTooltipPosition="right">
+        <!-- Logo -->
+        <a routerLink="/dashboard" class="rail-logo" matTooltip="Passidoc" matTooltipPosition="right">
           <mat-icon>description</mat-icon>
         </a>
 
-        <div class="rail__sep"></div>
+        <div class="rail-divider"></div>
 
-        <nav class="rail__nav">
+        <!-- Module buttons -->
+        <nav class="rail-nav">
           @for (m of visibleModules(); track m.id) {
             <button
-              class="rail__btn"
+              class="rail-item"
               [class.active]="activeModule() === m.id"
+              [matTooltip]="m.label" matTooltipPosition="right"
               (click)="selectModule(m.id)">
-              <div class="rail__btn-indicator">
-                <mat-icon>{{ m.railIcon }}</mat-icon>
+              <div class="rail-item__pill"
+                   [style.background]="activeModule() === m.id ? 'rgba(147,197,253,0.22)' : 'transparent'">
+                <mat-icon [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.50)'">
+                  {{ m.icon }}
+                </mat-icon>
               </div>
-              <span class="rail__btn-label">{{ m.railLabel }}</span>
+              <span class="rail-item__label"
+                    [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.45)'">
+                {{ m.label }}
+              </span>
             </button>
           }
         </nav>
 
-        <div class="rail__spacer"></div>
+        <div class="rail-spacer"></div>
+        <div class="rail-divider"></div>
 
-        <!-- Séparateur bottom -->
-        <div class="rail__sep"></div>
-
-        <!-- Avatar utilisateur -->
-        <div class="rail__avatar-wrap" [matTooltip]="userName()" matTooltipPosition="right">
-          <div class="rail__avatar">{{ initials() }}</div>
-          <span class="rail__role-dot"></span>
-        </div>
+        <!-- Avatar -->
+        <button class="rail-avatar" [matTooltip]="fullName()" matTooltipPosition="right">
+          <span>{{ initials() }}</span>
+          <span class="rail-avatar__dot"></span>
+        </button>
 
       </aside>
 
-      <!-- ══════════════════════════════════════════════
-           NAV PANEL  (colonne 2 — navigation détaillée)
-      ══════════════════════════════════════════════ -->
-      <aside class="nav-panel">
+      <!-- ══ PANEL ══════════════════════════════════════ -->
+      <aside class="panel">
 
-        <!-- Header du module actif -->
         @if (currentModule(); as mod) {
-          <div class="panel-head">
-            <div class="panel-head__icon" [style.background]="mod.panelColor">
-              <mat-icon [style.color]="mod.panelTextColor">{{ mod.railIcon }}</mat-icon>
+
+          <!-- Header -->
+          <div class="panel-header">
+            <div class="panel-header__icon" [style.background]="mod.activeBg">
+              <mat-icon [style.color]="mod.color">{{ mod.icon }}</mat-icon>
             </div>
-            <div class="panel-head__title">{{ mod.panelTitle }}</div>
+            <span class="panel-header__title">{{ mod.label }}</span>
           </div>
 
-          <!-- Items du module -->
+          <!-- Groups + items -->
           <nav class="panel-nav">
-            @for (item of mod.items; track item.route) {
-              <a [routerLink]="item.route"
-                 routerLinkActive="active"
-                 class="panel-item">
-                <span class="panel-item__icon">
-                  <mat-icon>{{ item.icon }}</mat-icon>
-                </span>
-                <span class="panel-item__label">{{ item.label }}</span>
-                @if (item.badge) {
-                  <span class="panel-item__badge">{{ item.badge }}</span>
-                }
-              </a>
+            @for (group of mod.groups; track group.label) {
+              @if (group.label) {
+                <span class="panel-group-label">{{ group.label }}</span>
+              }
+              @for (item of group.items; track item.route) {
+                <a [routerLink]="item.route"
+                   routerLinkActive="active"
+                   #rla="routerLinkActive"
+                   class="panel-item"
+                   [style.background]="rla.isActive ? mod.activeBg : ''"
+                   [style.color]="rla.isActive ? mod.color : ''">
+                  <mat-icon [style.color]="rla.isActive ? mod.color : '#5F6368'">{{ item.icon }}</mat-icon>
+                  <span>{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="panel-item__badge">{{ item.badge }}</span>
+                  }
+                </a>
+              }
             }
           </nav>
+
         }
 
         <div class="panel-spacer"></div>
 
-        <!-- Footer site -->
+        <!-- Footer -->
         <div class="panel-footer">
-          <div class="site-chip" [class.site-mg]="auth.currentUser()?.site === 'MADAGASCAR'">
-            <span class="site-dot"></span>
-            {{ auth.currentUser()?.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+          <div class="panel-user">
+            <div class="panel-user__av">{{ initials() }}</div>
+            <div class="panel-user__info">
+              <span class="panel-user__name">{{ fullName() }}</span>
+              <span class="panel-user__role">{{ auth.currentUser()?.role }}</span>
+            </div>
+            <span class="panel-user__flag">
+              {{ auth.currentUser()?.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}
+            </span>
           </div>
         </div>
 
@@ -117,339 +128,263 @@ interface AppModule {
     </div>
   `,
   styles: [`
-    /* ── Shell ──────────────────────────────────────── */
-    .sidebar-shell {
-      display: flex;
-      flex-direction: row;
-      height: 100vh;
-      flex-shrink: 0;
-    }
+    .shell { display: flex; height: 100vh; flex-shrink: 0; }
 
-    /* ══════════════════════════════════════════════════
-       RAIL — MD3 Navigation Rail (80px)
-    ══════════════════════════════════════════════════ */
+    /* ══ RAIL ════════════════════════════════════════════ */
     .rail {
-      width: 80px;
-      height: 100vh;
-      background: linear-gradient(180deg, #0f2040 0%, #1e3a8a 55%, #312e81 100%);
-      box-shadow: 4px 0 16px rgba(15,32,64,.30);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px 0 16px;
-      flex-shrink: 0;
-      position: relative;
+      width: 72px; height: 100vh; flex-shrink: 0;
+      background: linear-gradient(180deg, #0c1a3a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      border-right: none;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 14px 0 18px;
       z-index: 2;
+      box-shadow: 2px 0 12px rgba(0,0,0,.25);
     }
 
     /* Logo */
-    .rail__logo {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #19D9B4, #53DA85);
-      border-radius: 12px;
+    .rail-logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, #1565C0, #60a5fa);
       display: flex; align-items: center; justify-content: center;
-      text-decoration: none;
-      flex-shrink: 0;
-      margin-bottom: 8px;
-      box-shadow: 0 2px 8px rgba(25,217,180,.4);
+      text-decoration: none; flex-shrink: 0; margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(21,101,192,.35);
+      transition: transform .18s, box-shadow .18s;
     }
-    .rail__logo mat-icon { color: #0F1523; font-size: 20px; width: 20px; height: 20px; }
+    .rail-logo:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(96,165,250,.45); }
+    .rail-logo mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
 
-    .rail__sep { width: 40px; height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; }
+    .rail-divider { width: 36px; height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; flex-shrink: 0; }
+    .rail-spacer  { flex: 1; }
 
-    /* Nav buttons — MD3: icon + label */
-    .rail__nav {
-      display: flex; flex-direction: column; gap: 4px;
-      width: 100%; align-items: center; padding: 4px 0;
-    }
+    /* Rail items */
+    .rail-nav { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; width: 100%; }
 
-    .rail__btn {
-      width: 72px;
-      border: none; background: transparent; cursor: pointer;
-      border-radius: 16px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 4px;
-      padding: 6px 0 8px;
+    .rail-item {
+      width: 64px; border: none; background: transparent; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 6px 0 8px; border-radius: 16px;
       transition: background .12s;
     }
-    .rail__btn:hover { background: rgba(255,255,255,.06); }
+    .rail-item:hover { background: rgba(255,255,255,.07); }
 
-    /* MD3 active indicator pill */
-    .rail__btn-indicator {
-      width: 56px; height: 32px;
-      border-radius: 16px;
+    .rail-item__pill {
+      width: 48px; height: 32px; border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
-      transition: background .15s;
-      background: transparent;
+      transition: background .18s, box-shadow .18s;
     }
-    .rail__btn:hover .rail__btn-indicator { background: rgba(255,255,255,.08); }
-    .rail__btn.active .rail__btn-indicator { background: rgba(25,217,180,.22); }
-
-    .rail__btn-indicator mat-icon {
+    .rail-item.active .rail-item__pill {
+      box-shadow: 0 2px 12px rgba(96,165,250,.30), inset 0 0 0 1px rgba(147,197,253,.50);
+    }
+    .rail-item__pill mat-icon {
       font-size: 22px; width: 22px; height: 22px;
-      color: rgba(255,255,255,.55);
-      transition: color .12s;
+      transition: color .18s;
     }
-    .rail__btn:hover .rail__btn-indicator mat-icon { color: rgba(255,255,255,.80); }
-    .rail__btn.active .rail__btn-indicator mat-icon { color: #19D9B4; }
 
-    /* Label sous l'icône */
-    .rail__btn-label {
-      font-size: 10px; font-weight: 500; letter-spacing: .2px;
-      color: rgba(255,255,255,.45);
-      transition: color .12s;
-      line-height: 1;
-      text-align: center;
+    .rail-item__label {
+      font-size: 10px; font-weight: 600; letter-spacing: .2px;
+      line-height: 1; text-align: center;
+      transition: color .18s;
     }
-    .rail__btn:hover .rail__btn-label { color: rgba(255,255,255,.75); }
-    .rail__btn.active .rail__btn-label { color: #19D9B4; font-weight: 600; }
-
-    .rail__spacer { flex: 1; }
 
     /* Avatar */
-    .rail__avatar-wrap {
-      position: relative; cursor: pointer; margin-top: 6px;
-    }
-    .rail__avatar {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, #19D9B4, #53DA85);
-      border-radius: 50%;
+    .rail-avatar {
+      position: relative; width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #1565C0, #60a5fa);
+      border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: #0F1523;
+      font-size: 12px; font-weight: 700; color: white;
+      transition: transform .15s;
+      margin-top: 6px;
     }
-    .rail__role-dot {
-      position: absolute; bottom: 1px; right: 1px;
-      width: 9px; height: 9px;
-      background: #19D9B4;
-      border-radius: 50%;
-      border: 2px solid #1e3a8a;
-    }
-
-    /* ══════════════════════════════════════════════════
-       NAV PANEL
-    ══════════════════════════════════════════════════ */
-    .nav-panel {
-      width: 220px;
-      height: 100vh;
-      background: #FFFBFE;
-      border-right: 1px solid #E0E2EC;
-      box-shadow: 1px 0 2px rgba(0,0,0,.12);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      flex-shrink: 0;
+    .rail-avatar:hover { transform: scale(1.08); }
+    .rail-avatar__dot {
+      position: absolute; bottom: 1px; right: 0;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #34A853; border: 2px solid #fff;
     }
 
-    /* Panel header */
-    .panel-head {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 20px 16px 16px;
-      border-bottom: 1px solid #E8EAED;
-      flex-shrink: 0;
+    /* ══ PANEL ════════════════════════════════════════════ */
+    .panel {
+      width: 220px; height: 100vh; flex-shrink: 0;
+      background: #F0F4FF;
+      border-right: 1px solid #DDE3F0;
+      display: flex; flex-direction: column; overflow: hidden;
     }
-    .panel-head__icon {
-      width: 36px; height: 36px; flex-shrink: 0;
-      border-radius: 10px;
+
+    /* Header */
+    .panel-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 16px 14px; flex-shrink: 0;
+      border-bottom: 1px solid #DDE3F0;
+    }
+    .panel-header__icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    .panel-head__icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .panel-head__title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #1A1C1E;
-      letter-spacing: -.2px;
+    .panel-header__icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .panel-header__title {
+      font-size: 15px; font-weight: 700; color: #202124; letter-spacing: -.2px;
     }
 
-    /* Nav items */
+    /* Nav */
     .panel-nav {
-      padding: 10px 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: 0;
+      padding: 8px 8px 4px;
+      display: flex; flex-direction: column; gap: 1px;
+      overflow-y: auto; flex: 1;
+      scrollbar-width: none;
+    }
+    .panel-nav::-webkit-scrollbar { display: none; }
+
+    .panel-group-label {
+      font-size: 10.5px; font-weight: 700; color: #80868B;
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 12px 8px 5px; display: block;
     }
 
     .panel-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 28px;
-      text-decoration: none;
-      font-size: 13.5px;
-      font-weight: 500;
-      color: #44474F;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 12px; height: 38px;
+      border-radius: 20px; text-decoration: none;
+      font-size: 13.5px; font-weight: 500; color: #3C4043;
       transition: background .12s, color .12s;
     }
-    .panel-item:hover { background: #E8EAED; color: #1A1C1E; }
-    .panel-item.active {
-      background: #DDE3EA;
-      color: #1A1C1E;
-      font-weight: 600;
+    .panel-item:hover { background: #E2E9F8; color: #202124; }
+    .panel-item.active { font-weight: 600; }
+    .panel-item mat-icon {
+      font-size: 19px; width: 19px; height: 19px; flex-shrink: 0;
+      transition: color .12s;
     }
-    .panel-item.active::before {
-      /* handled via border-left on the element */
-    }
-
-    .panel-item__icon {
-      width: 24px; height: 24px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .panel-item__icon mat-icon {
-      font-size: 20px; width: 20px; height: 20px;
-      color: #44474F;
-    }
-    .panel-item.active .panel-item__icon mat-icon { color: #1A1C1E; }
-    .panel-item__label { flex: 1; line-height: 1; }
+    .panel-item:hover mat-icon { color: #3C4043; }
+    .panel-item span { flex: 1; }
     .panel-item__badge {
-      font-size: 10px; font-weight: 700;
-      background: #EF4444; color: #fff;
-      padding: 1px 6px; border-radius: 20px;
+      font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+      background: #D93025; color: white; border-radius: 9px;
+      padding: 0 5px; display: flex; align-items: center; justify-content: center;
     }
 
     .panel-spacer { flex: 1; }
 
     /* Footer */
     .panel-footer {
-      padding: 10px 12px 16px;
-      border-top: 1px solid #E8EAED;
+      padding: 8px 10px 12px;
+      border-top: 1px solid #DDE3F0;
       flex-shrink: 0;
     }
-    .site-chip {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 28px;
-      background: #E8EAED;
-      font-size: 12px; font-weight: 600; color: #1A1C1E;
+    .panel-user {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 12px;
+      transition: background .12s; cursor: default;
     }
-    .site-chip.site-mg { background: #DDE3EA; color: #162351; }
-    .site-dot { width: 7px; height: 7px; border-radius: 50%; background: #19D9B4; flex-shrink: 0; }
+    .panel-user:hover { background: #E2E9F8; }
+    .panel-user__av {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #1565C0, #42A5F5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: white;
+    }
+    .panel-user__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .panel-user__name {
+      font-size: 12px; font-weight: 600; color: #202124;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panel-user__role { font-size: 10.5px; color: #80868B; text-transform: capitalize; }
+    .panel-user__flag { font-size: 15px; flex-shrink: 0; }
   `],
 })
 export class SidebarComponent implements OnInit {
 
   activeModule = signal<ModuleId>('apercu');
 
-  constructor(
-    public auth: AuthService,
-    private router: Router,
-  ) {}
+  constructor(public auth: AuthService, private router: Router) {}
 
   ngOnInit() {
-    // Sync active module with current route
-    this.syncModuleFromRoute(this.router.url);
-    this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd)
-    ).subscribe((e: any) => this.syncModuleFromRoute(e.urlAfterRedirects));
+    this.syncFromRoute(this.router.url);
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => this.syncFromRoute(e.urlAfterRedirects));
   }
 
-  private syncModuleFromRoute(url: string) {
-    if (url.startsWith('/dashboard')) this.activeModule.set('apercu');
+  private syncFromRoute(url: string) {
+    if      (url.startsWith('/dashboard'))                                this.activeModule.set('apercu');
     else if (url.startsWith('/clients') || url.startsWith('/portefeuilles')) this.activeModule.set('dossiers');
-    else if (url.startsWith('/tasks')) this.activeModule.set('travail');
-    else if (url.startsWith('/documents')) this.activeModule.set('documents');
-    else if (url.startsWith('/equipes')) this.activeModule.set('equipe');
-    else if (url.startsWith('/admin')) this.activeModule.set('admin');
+    else if (url.startsWith('/tasks'))                                    this.activeModule.set('travail');
+    else if (url.startsWith('/documents'))                                this.activeModule.set('documents');
+    else if (url.startsWith('/notes'))                                    this.activeModule.set('notes');
+    else if (url.startsWith('/equipes'))                                  this.activeModule.set('equipe');
+    else if (url.startsWith('/admin'))                                    this.activeModule.set('admin');
   }
 
   get allModules(): AppModule[] {
-    const isAdmin = this.auth.isAdmin();
+    const isAdmin   = this.auth.isAdmin();
     const canPortef = this.auth.canManagePortefeuilles();
     return [
       {
-        id: 'apercu',
-        railIcon: 'grid_view',
-        railLabel: 'Aperçu',
-        panelTitle: 'Aperçu général',
-        panelColor: 'linear-gradient(135deg, #19D9B4, #53DA85)',
-        panelTextColor: '#0F1523',
-        items: [
+        id: 'apercu', icon: 'space_dashboard', label: 'Aperçu',
+        color: '#0D9488', activeBg: '#CCFBF1',
+        groups: [{ label: '', items: [
           { label: 'Tableau de bord', route: '/dashboard', icon: 'space_dashboard' },
-        ],
+        ]}],
       },
       {
-        id: 'dossiers',
-        railIcon: 'folder_shared',
-        railLabel: 'Dossiers',
-        panelTitle: 'Dossiers clients',
-        panelColor: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-        panelTextColor: '#fff',
-        items: [
+        id: 'dossiers', icon: 'folder_shared', label: 'Dossiers',
+        color: '#1A73E8', activeBg: '#E8F0FE',
+        groups: [{ label: '', items: [
           { label: 'Tous les dossiers', route: '/clients', icon: 'folder_open' },
           ...(canPortef ? [{ label: 'Portefeuilles', route: '/portefeuilles', icon: 'account_tree' }] : []),
-        ],
+        ]}],
       },
       {
-        id: 'travail',
-        railIcon: 'checklist_rtl',
-        railLabel: 'Mon travail',
-        panelTitle: 'Mon travail',
-        panelColor: 'linear-gradient(135deg, #F97316, #EF4444)',
-        panelTextColor: '#fff',
-        items: [
+        id: 'travail', icon: 'checklist_rtl', label: 'Travail',
+        color: '#E8710A', activeBg: '#FEF3E2',
+        groups: [{ label: '', items: [
           { label: 'Toutes les tâches', route: '/tasks', icon: 'task_alt' },
-        ],
+        ]}],
       },
       {
-        id: 'documents',
-        railIcon: 'insert_drive_file',
-        railLabel: 'Documents',
-        panelTitle: 'Documents',
-        panelColor: 'linear-gradient(135deg, #F43F5E, #EC4899)',
-        panelTextColor: '#fff',
-        items: [
+        id: 'documents', icon: 'insert_drive_file', label: 'Documents',
+        color: '#C5221F', activeBg: '#FCE8E6',
+        groups: [{ label: '', items: [
           { label: 'Tous les documents', route: '/documents', icon: 'folder_open' },
-          { label: 'Importer', route: '/documents/import', icon: 'upload_file' },
-        ],
+        ]}],
       },
       {
-        id: 'equipe',
-        railIcon: 'groups',
-        railLabel: isAdmin ? 'Équipes' : 'Mon équipe',
-        panelTitle: isAdmin ? 'Gestion équipes' : 'Mon équipe',
-        panelColor: 'linear-gradient(135deg, #EC4899, #F43F5E)',
-        panelTextColor: '#fff',
-        items: [
+        id: 'notes', icon: 'sticky_note_2', label: 'Notes',
+        color: '#D97706', activeBg: '#FEF3C7',
+        groups: [{ label: '', items: [
+          { label: 'Mes notes', route: '/notes', icon: 'edit_note' },
+        ]}],
+      },
+      {
+        id: 'equipe', icon: 'groups', label: isAdmin ? 'Équipes' : 'Équipe',
+        color: '#7C3AED', activeBg: '#EDE9FE',
+        groups: [{ label: '', items: [
           { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
-        ],
+        ]}],
       },
       ...(isAdmin ? [{
-        id: 'admin' as ModuleId,
-        railIcon: 'admin_panel_settings',
-        railLabel: 'Administration',
-        panelTitle: 'Administration',
-        panelColor: 'linear-gradient(135deg, #F59E0B, #EAB308)',
-        panelTextColor: '#1a1200',
-        items: [
+        id: 'admin' as ModuleId, icon: 'admin_panel_settings', label: 'Admin',
+        color: '#B45309', activeBg: '#FEF3C7',
+        groups: [{ label: '', items: [
           { label: 'Utilisateurs', route: '/admin', icon: 'manage_accounts' },
-        ],
+        ]}],
       }] : []),
     ];
   }
 
   visibleModules() { return this.allModules; }
-
-  currentModule() {
-    return this.allModules.find(m => m.id === this.activeModule()) ?? null;
-  }
+  currentModule()  { return this.allModules.find(m => m.id === this.activeModule()) ?? null; }
 
   selectModule(id: ModuleId) {
     this.activeModule.set(id);
     const mod = this.allModules.find(m => m.id === id);
-    if (mod?.items.length) {
-      this.router.navigate([mod.items[0].route]);
-    }
+    if (mod?.groups[0]?.items.length) this.router.navigate([mod.groups[0].items[0].route]);
   }
 
   initials() {
     const u = this.auth.currentUser();
-    if (!u) return '?';
-    return (u.firstName?.[0] || '') + (u.lastName?.[0] || '');
+    return u ? (u.firstName?.[0] || '') + (u.lastName?.[0] || '') : '?';
   }
-
-  userName() {
+  fullName() {
     const u = this.auth.currentUser();
-    return u ? `${u.firstName} ${u.lastName} — ${u.role}` : '';
+    return u ? `${u.firstName} ${u.lastName}` : '';
   }
 }
