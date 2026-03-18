@@ -1,11 +1,10 @@
 import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService, TaskNotification } from '../../core/services/notification-stream.service';
@@ -14,91 +13,99 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
   selector: 'app-header',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, MatButtonModule, MatIconModule,
-    MatMenuModule, MatDividerModule, MatBadgeModule,
+    CommonModule, MatButtonModule, MatIconModule,
+    MatMenuModule, MatDividerModule,
   ],
   template: `
-    <header class="header">
-      <div class="header__spacer"></div>
+    <header class="topbar">
 
-      <div class="header__right">
+      <!-- ── Search bar MD3 ────────────────────────── -->
+      <div class="search-bar">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input class="search-input" type="text" placeholder="Rechercher un dossier, une tâche…" />
+      </div>
 
-        <!-- Bell button -->
-        <div class="bell-wrapper">
-          <button mat-icon-button class="btn-bell" [class.has-notif]="totalCount() > 0"
-                  (click)="toggleBell($event)">
-            <mat-icon
-              [matBadge]="totalCount() > 0 ? totalCount() : null"
-              matBadgeColor="warn"
-              matBadgeSize="small">
-              notifications
-            </mat-icon>
+      <div class="topbar__spacer"></div>
+
+      <!-- ── Right ────────────────────────────────── -->
+      <div class="topbar__right">
+
+        <!-- Bell -->
+        <div class="bell-wrap">
+          <button class="icon-btn" [class.bell-active]="totalCount() > 0"
+                  (click)="toggleBell($event)" aria-label="Notifications">
+            <mat-icon>notifications</mat-icon>
+            @if (totalCount() > 0) {
+              <span class="notif-badge">{{ totalCount() > 99 ? '99+' : totalCount() }}</span>
+            }
           </button>
 
-          <!-- Dropdown custom -->
           @if (bellOpen) {
-            <div class="bell-dropdown" (click)="$event.stopPropagation()">
+            <div class="bell-panel" (click)="$event.stopPropagation()">
 
-              <!-- Section Notifications -->
-              <div class="dropdown-section-header">
-                <span class="dropdown-section-title">
-                  <mat-icon>notifications_active</mat-icon> Notifications
-                </span>
+              <div class="bell-panel__head">
+                <span class="bell-panel__title">Notifications</span>
                 @if (notifStream.unreadCount() > 0) {
-                  <span class="section-count">{{ notifStream.unreadCount() }} non lue(s)</span>
+                  <button class="mark-all-btn" (click)="notifStream.markAllRead()">Tout marquer lu</button>
                 }
               </div>
 
-              <div class="notif-list">
+              <!-- Assignations -->
+              <div class="bell-section">
+                <mat-icon>task_alt</mat-icon> Assignations
+              </div>
+              <div class="bell-list">
                 @if (notifStream.notifications().length === 0) {
-                  <div class="empty-section">
+                  <div class="bell-empty">
                     <mat-icon>notifications_none</mat-icon> Aucune notification
                   </div>
                 }
                 @for (n of notifStream.notifications(); track n.id) {
-                  <div class="notif-item" [class.unread]="!n.read">
-                    <div class="notif-item__clickable" (click)="navigateTo(n)">
-                      <span class="notif-icon notif-{{ n.type.toLowerCase() }}">
-                        <mat-icon>{{ n.type === 'TASK_ASSIGNED' ? 'task_alt' : n.type === 'CLIENT_ASSIGNED' ? 'folder_shared' : 'people' }}</mat-icon>
+                  <div class="bell-item" [class.unread]="!n.read">
+                    <div class="bell-item__click" (click)="navigateTo(n)">
+                      <span class="bell-icon notif-{{ n.type.toLowerCase() }}">
+                        <mat-icon>{{ typeIcon(n.type) }}</mat-icon>
                       </span>
-                      <div class="notif-item__body">
-                        <div class="notif-item__msg">{{ n.message }}</div>
-                        <div class="notif-item__time">{{ n.createdAt | date:'dd/MM HH:mm' }}</div>
+                      <div class="bell-body">
+                        <div class="bell-msg">{{ n.message }}</div>
+                        <div class="bell-time">{{ n.createdAt | date:'dd/MM · HH:mm' }}</div>
                       </div>
                     </div>
-                    <button class="notif-dismiss" (click)="notifStream.dismiss(n.id)" title="Effacer">
+                    <button class="dismiss-btn" (click)="notifStream.dismiss(n.id)" title="Supprimer">
                       <mat-icon>close</mat-icon>
                     </button>
                   </div>
                 }
               </div>
 
-              <mat-divider />
+              <div class="bell-sep"></div>
 
-              <!-- Section Alertes -->
-              <div class="dropdown-section-header">
-                <span class="dropdown-section-title">
-                  <mat-icon>warning_amber</mat-icon> Alertes dépôt
-                </span>
+              <!-- Alertes -->
+              <div class="bell-section">
+                <mat-icon>warning_amber</mat-icon> Alertes dépôt
                 @if (alertes.count() > 0) {
-                  <span class="section-count warn">{{ alertes.count() }}</span>
+                  <span class="alert-count">{{ alertes.count() }}</span>
                 }
               </div>
-
-              <div class="notif-list">
+              <div class="bell-list">
                 @if (alertes.alertes().length === 0) {
-                  <div class="empty-section">
-                    <mat-icon style="color:#22c55e">check_circle</mat-icon> Aucune alerte
+                  <div class="bell-empty">
+                    <mat-icon style="color:#19D9B4">check_circle</mat-icon> Aucune alerte
                   </div>
                 }
                 @for (a of alertes.alertes().slice(0, 8); track a.id) {
-                  <div class="notif-item alert-row" (click)="goToClient(a.client.id)">
-                    <div class="notif-item__body">
-                      <div class="notif-item__msg" style="font-weight:600;color:#1e293b">{{ a.client.nom }}</div>
-                      <div class="notif-item__time">{{ alertes.typeLabel(a.type) }} — {{ alertes.moisLabel(a.mois) }} {{ a.annee }}</div>
+                  <div class="bell-item alert-row" (click)="goToClient(a.client.id)">
+                    <div class="bell-item__click">
+                      <span class="bell-icon alert-icon">
+                        <mat-icon>schedule</mat-icon>
+                      </span>
+                      <div class="bell-body">
+                        <div class="bell-msg" style="font-weight:600;color:#162351">{{ a.client.nom }}</div>
+                        <div class="bell-time">{{ alertes.typeLabel(a.type) }} — {{ alertes.moisLabel(a.mois) }} {{ a.annee }}</div>
+                      </div>
                     </div>
-                    <span class="badge" [class.badge-retard]="a.statut === 'EN_RETARD'" [class.badge-manquant]="a.statut === 'MANQUANT'">
-                      {{ a.statut === 'EN_RETARD' ? 'En retard' : 'Manquant' }}
+                    <span class="status-pill" [class.pill-retard]="a.statut === 'EN_RETARD'" [class.pill-manquant]="a.statut === 'MANQUANT'">
+                      {{ a.statut === 'EN_RETARD' ? 'Retard' : 'Manquant' }}
                     </span>
                   </div>
                 }
@@ -108,165 +115,231 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
           }
         </div>
 
-        <!-- User button -->
-        <button mat-button [matMenuTriggerFor]="userMenu" class="header__user-btn">
+        <!-- User -->
+        <button class="user-btn" [matMenuTriggerFor]="userMenu">
           <div class="user-avatar">{{ initials }}</div>
           <div class="user-info">
             <span class="user-name">{{ auth.currentUser()?.firstName }} {{ auth.currentUser()?.lastName }}</span>
-            <span class="user-role-badge" [class]="'role-' + auth.currentUser()?.role?.toLowerCase()">
-              {{ roleLabel }}
-            </span>
+            <span class="role-badge" [class]="'role-' + auth.currentUser()?.role?.toLowerCase()">{{ roleLabel }}</span>
           </div>
-          <mat-icon class="chevron">expand_more</mat-icon>
+          <mat-icon class="user-caret">expand_more</mat-icon>
         </button>
-      </div>
 
-      <mat-menu #userMenu="matMenu" xPosition="before">
-        <div class="menu-header">
-          <div class="menu-avatar">{{ initials }}</div>
-          <div>
-            <div class="menu-name">{{ auth.currentUser()?.firstName }} {{ auth.currentUser()?.lastName }}</div>
-            <div class="menu-email">{{ auth.currentUser()?.email }}</div>
+        <mat-menu #userMenu="matMenu" xPosition="before">
+          <div class="menu-head">
+            <div class="menu-avatar">{{ initials }}</div>
+            <div>
+              <div class="menu-name">{{ auth.currentUser()?.firstName }} {{ auth.currentUser()?.lastName }}</div>
+              <div class="menu-email">{{ auth.currentUser()?.email }}</div>
+            </div>
           </div>
-        </div>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="auth.logout()">
-          <mat-icon>logout</mat-icon>
-          <span>Déconnexion</span>
-        </button>
-      </mat-menu>
+          <mat-divider />
+          <button mat-menu-item (click)="auth.logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Déconnexion</span>
+          </button>
+        </mat-menu>
+
+      </div>
     </header>
   `,
   styles: [`
-    .header {
-      height: 60px; background: white;
-      border-bottom: 1px solid #e8ecf0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      display: flex; align-items: center;
-      padding: 0 28px; flex-shrink: 0;
+    /* ── Topbar ─────────────────────────────────── */
+    .topbar {
+      height: 64px;
+      background: #FFFBFE;
+      border-bottom: 1px solid #E0E2EC;
+      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      display: flex;
+      align-items: center;
+      padding: 0 28px 0 30px;
+      flex-shrink: 0;
+      gap: 12px;
     }
-    .header__spacer { flex: 1; }
-    .header__right { display: flex; align-items: center; gap: 4px; }
+    .topbar__spacer { flex: 1; }
+    .topbar__right  { display: flex; align-items: center; gap: 8px; }
 
-    .btn-bell { color: #94a3b8 !important; transition: color 0.2s; }
-    .btn-bell.has-notif { color: #f59e0b !important; animation: bell-shake 0.5s ease; }
-    @keyframes bell-shake {
-      0%,100% { transform: rotate(0); }
-      20% { transform: rotate(-12deg); }
-      40% { transform: rotate(12deg); }
-      60% { transform: rotate(-8deg); }
-      80% { transform: rotate(8deg); }
+    /* ── MD3 Search bar ──────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: #E8EAED;
+      border-radius: 28px;
+      padding: 0 16px;
+      height: 40px;
+      width: 320px;
+      transition: background .12s;
+    }
+    .search-bar:focus-within { background: #FFFBFE; outline: 2px solid #19D9B4; outline-offset: -2px; }
+    .search-icon { font-size: 20px; width: 20px; height: 20px; color: #44474F; flex-shrink: 0; }
+    .search-input {
+      flex: 1; border: none; background: transparent;
+      font-size: 14px; color: #1A1C1E; font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .search-input::placeholder { color: #6F7978; }
+
+    /* ── MD3 Icon buttons ────────────────────────── */
+    .icon-btn {
+      position: relative;
+      width: 40px; height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #44474F;
+      transition: background .12s;
+    }
+    .icon-btn:hover { background: #E8EAED; }
+    .icon-btn.bell-active { color: #7B4F00; background: #FFDDB0; }
+    .icon-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
+
+    .notif-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: #DC2626; color: #fff;
+      font-size: 9.5px; font-weight: 700;
+      padding: 1px 4px; border-radius: 20px;
+      min-width: 16px; text-align: center; line-height: 1.5;
+      border: 1.5px solid #fff;
     }
 
-    /* Bell dropdown custom */
-    .bell-wrapper { position: relative; }
-    .bell-dropdown {
-      position: absolute; top: calc(100% + 8px); right: 0;
-      width: 480px;
-      background: white;
-      border: 1px solid #e8ecf0;
+    /* ── Bell panel ─────────────────────────────── */
+    .bell-wrap { position: relative; }
+    .bell-panel {
+      position: absolute;
+      top: calc(100% + 8px); right: 0;
+      width: 400px;
+      background: #FFFBFE;
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 3px rgba(0,0,0,.25), 0 8px 12px 6px rgba(0,0,0,.12);
       z-index: 1000;
       overflow: hidden;
     }
 
-    .dropdown-section-header {
+    .bell-panel__head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px 8px;
-      background: #f8fafc;
-      border-bottom: 1px solid #f1f5f9;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #F0F2F8;
     }
-    .dropdown-section-title {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .dropdown-section-title mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .section-count { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: #fee2e2; color: #dc2626; }
-    .section-count.warn { background: #fff7ed; color: #c2410c; }
-
-    /* Scrollable list */
-    .notif-list { max-height: 240px; overflow-y: auto; }
-    .notif-list::-webkit-scrollbar { width: 4px; }
-    .notif-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-
-    /* Notification item */
-    .notif-item {
-      display: flex; align-items: center;
-      padding: 4px 12px 4px 16px; gap: 8px;
-      transition: background 0.12s;
-      min-height: 48px;
-    }
-    .notif-item:hover { background: #f8fafc; }
-    .notif-item.unread { background: #f5f3ff; }
-    .notif-item.unread:hover { background: #ede9fe; }
-    .notif-item.alert-row { cursor: pointer; }
-
-    .notif-item__clickable {
-      display: flex; align-items: center; gap: 10px;
-      flex: 1; min-width: 0; cursor: pointer; padding: 6px 0;
-    }
-    .notif-item__body { flex: 1; min-width: 0; }
-    .notif-item__msg { font-size: 13px; color: #374151; line-height: 1.4; white-space: normal; }
-    .notif-item__time { font-size: 11px; color: #cbd5e1; margin-top: 2px; }
-
-    .notif-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .notif-icon mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .notif-task_assigned   { background: #eef2ff; color: #6366f1; }
-    .notif-client_assigned { background: #f0fdf4; color: #15803d; }
-    .notif-team_assigned   { background: #fef3c7; color: #d97706; }
-
-    .notif-dismiss {
+    .bell-panel__title { font-size: 14px; font-weight: 700; color: #162351; }
+    .mark-all-btn {
+      font-size: 11.5px; font-weight: 500; color: #19D9B4;
       background: none; border: none; cursor: pointer;
-      padding: 4px; border-radius: 6px;
+      font-family: 'Inter', sans-serif; padding: 0;
+    }
+    .mark-all-btn:hover { text-decoration: underline; }
+
+    .bell-section {
+      display: flex; align-items: center; gap: 5px;
+      padding: 10px 16px 4px;
+      font-size: 10.5px; font-weight: 700;
+      color: #9BA6C2; text-transform: uppercase; letter-spacing: .5px;
+      pointer-events: none;
+    }
+    .bell-section mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    .alert-count {
+      margin-left: auto;
+      background: #FEE2E2; color: #DC2626;
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px;
+    }
+
+    .bell-sep { height: 1px; background: #F0F2F8; margin: 4px 0; }
+    .bell-list { max-height: 200px; overflow-y: auto; padding-bottom: 6px; }
+    .bell-list::-webkit-scrollbar { width: 4px; }
+    .bell-list::-webkit-scrollbar-thumb { background: #E4E7F0; border-radius: 4px; }
+
+    .bell-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px 9px 16px;
+      transition: background .12s;
+    }
+    .bell-item:hover { background: #F8F9FC; }
+    .bell-item.unread { background: #F0FBF9; }
+    .bell-item.unread:hover { background: #E6F9F5; }
+    .bell-item.alert-row { cursor: pointer; }
+
+    .bell-item__click {
+      display: flex; align-items: center; gap: 10px;
+      flex: 1; min-width: 0; cursor: pointer;
+    }
+
+    .bell-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      color: #d1d5db; flex-shrink: 0; width: 26px; height: 26px;
-      transition: color 0.15s, background 0.15s;
     }
-    .notif-dismiss mat-icon { font-size: 15px; width: 15px; height: 15px; }
-    .notif-dismiss:hover { color: #f87171; background: #fee2e2; }
+    .bell-icon mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .notif-task_assigned   { background: #E6FBF7; color: #0E9E83; }
+    .notif-client_assigned { background: #EEF0F8; color: #162351; }
+    .notif-team_assigned   { background: #F5F3FF; color: #7C3AED; }
+    .alert-icon            { background: #FFFBEB; color: #D97706; }
 
-    .empty-section { display: flex; align-items: center; gap: 6px; padding: 12px 16px; font-size: 12px; color: #94a3b8; }
-    .empty-section mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .bell-body { flex: 1; min-width: 0; }
+    .bell-msg  { font-size: 13px; color: #2D3A5E; line-height: 1.4; }
+    .bell-time { font-size: 11px; color: #9BA6C2; margin-top: 2px; }
 
-    .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
-    .badge-retard { background: #fff7ed; color: #c2410c; }
-    .badge-manquant { background: #fee2e2; color: #dc2626; }
-
-    /* User menu */
-    .header__user-btn {
-      display: flex !important; align-items: center !important; gap: 10px !important;
-      padding: 5px 10px 5px 6px !important; border-radius: 40px !important;
-      height: auto !important; border: 1px solid #e8ecf0 !important;
-      transition: all 0.15s !important; margin-left: 4px;
+    .dismiss-btn {
+      width: 26px; height: 26px; flex-shrink: 0;
+      border: none; background: none; cursor: pointer;
+      border-radius: 6px; color: #C9CEEA;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .12s; opacity: 0;
     }
-    .header__user-btn:hover { background: #f8fafc !important; }
+    .bell-item:hover .dismiss-btn { opacity: 1; }
+    .dismiss-btn:hover { background: #FEE2E2; color: #DC2626; }
+    .dismiss-btn mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    .bell-empty {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 16px;
+      font-size: 12.5px; color: #9BA6C2;
+      pointer-events: none;
+    }
+    .bell-empty mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    .status-pill { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; flex-shrink: 0; }
+    .pill-retard   { background: #FFF7ED; color: #C2410C; }
+    .pill-manquant { background: #FEF2F2; color: #DC2626; }
+
+    /* ── User button ────────────────────────────── */
+    .user-btn {
+      display: flex; align-items: center; gap: 9px;
+      padding: 4px 10px 4px 5px;
+      border: 1px solid #E4E7F0;
+      border-radius: 40px;
+      background: #fff;
+      cursor: pointer;
+      transition: all .15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .user-btn:hover { background: #F8F9FC; border-color: #C9CEEA; }
+
     .user-avatar {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg, #1e40af, #3730a3);
+      width: 30px; height: 30px; flex-shrink: 0;
+      background: linear-gradient(135deg, #19D9B4, #53DA85);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+      font-size: 11px; font-weight: 700; color: #162351;
     }
     .user-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-    .user-name { font-size: 13px; font-weight: 600; color: #1e293b; line-height: 1; }
-    .user-role-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; line-height: 1.4; }
-    .role-admin { background: #ede9fe; color: #7c3aed; }
-    .role-expert_comptable { background: #dbeafe; color: #1d4ed8; }
-    .role-collaborateur { background: #f0fdf4; color: #15803d; }
-    .chevron { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #94a3b8; }
+    .user-name  { font-size: 12.5px; font-weight: 600; color: #162351; line-height: 1; white-space: nowrap; }
+    .role-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; line-height: 1.5; }
+    .role-admin            { background: #E6FBF7; color: #0E9E83; }
+    .role-expert_comptable { background: #EEF0F8; color: #162351; }
+    .role-collaborateur    { background: #F0FDF4; color: #15803D; }
+    .user-caret { font-size: 16px !important; width: 16px !important; height: 16px !important; color: #9BA6C2; }
 
-    .menu-header { display: flex; align-items: center; gap: 12px; padding: 16px; pointer-events: none; }
+    /* User menu */
+    .menu-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; pointer-events: none; }
     .menu-avatar {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #1e40af, #3730a3);
-      border-radius: 10px;
+      width: 38px; height: 38px; flex-shrink: 0;
+      background: linear-gradient(135deg, #19D9B4, #53DA85);
+      border-radius: 9px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: white;
+      font-size: 13px; font-weight: 700; color: #162351;
     }
-    .menu-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-    .menu-email { font-size: 12px; color: #94a3b8; }
+    .menu-name  { font-size: 13.5px; font-weight: 600; color: #162351; }
+    .menu-email { font-size: 11.5px; color: #9BA6C2; margin-top: 2px; }
   `],
 })
 export class HeaderComponent implements OnInit, OnDestroy {
@@ -284,17 +357,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (!this.elRef.nativeElement.contains(event.target)) {
-      this.bellOpen = false;
-    }
+    if (!this.elRef.nativeElement.contains(event.target)) this.bellOpen = false;
   }
 
   toggleBell(event: MouseEvent) {
     event.stopPropagation();
     this.bellOpen = !this.bellOpen;
-    if (this.bellOpen) {
-      this.notifStream.markAllRead();
-    }
+    if (this.bellOpen) this.notifStream.markAllRead();
   }
 
   navigateTo(n: TaskNotification) {
@@ -313,15 +382,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.router.navigate(['/clients', clientId]);
   }
 
-  ngOnInit() {
-    this.alertes.startPolling();
-    this.notifStream.connect();
+  typeIcon(type: string): string {
+    if (type === 'TEAM_ASSIGNED')   return 'people';
+    if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
+    return 'task_alt';
   }
 
-  ngOnDestroy() {
-    this.alertes.stopPolling();
-    this.notifStream.disconnect();
-  }
+  ngOnInit()    { this.alertes.startPolling(); this.notifStream.connect(); }
+  ngOnDestroy() { this.alertes.stopPolling();  this.notifStream.disconnect(); }
 
   get initials(): string {
     const u = this.auth.currentUser();

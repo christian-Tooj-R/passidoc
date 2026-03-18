@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { ClientsService } from '../../../core/services/clients.service';
 import { Client } from '../../../core/models/client.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
@@ -33,6 +34,20 @@ interface TabGroup {
 @Component({
   selector: 'app-client-detail',
   standalone: true,
+  animations: [
+    trigger('tabFade', [
+      transition('* <=> *', [
+        style({ opacity: 0, transform: 'translateY(12px)' }),
+        animate('220ms cubic-bezier(0.4, 0, 0.2, 1)', style({ opacity: 1, transform: 'translateY(0)' })),
+      ]),
+    ]),
+    trigger('detailEnter', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(48px)' }),
+        animate('600ms cubic-bezier(0.4, 0, 0.2, 1)', style({ opacity: 1, transform: 'translateY(0)' })),
+      ]),
+    ]),
+  ],
   imports: [
     CommonModule, RouterLink,
     MatButtonModule, MatIconModule, MatTooltipModule,
@@ -44,99 +59,108 @@ interface TabGroup {
   ],
   template: `
     @if (client) {
-      <div class="detail">
+      <div class="detail" @detailEnter>
 
-        <!-- ── Hero ──────────────────────────────────── -->
-        <div class="detail-hero">
-          <div class="detail-hero__left">
-            <div class="breadcrumb">
-              <a routerLink="/clients">Dossiers</a>
-              <mat-icon>chevron_right</mat-icon>
-              <span>{{ client.nom }}</span>
-            </div>
-            <div class="detail-hero__title-row">
-              <div class="detail-avatar" (click)="triggerLogoUpload()">
-                @if (client.logoUrl) {
-                  <img [src]="client.logoUrl" [alt]="client.nom" class="logo-img" />
-                } @else {
-                  {{ getInitials(client.nom) }}
-                }
-                <div class="avatar-overlay">
-                  <mat-icon>photo_camera</mat-icon>
-                </div>
-              </div>
-              <input #logoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onLogoChange($event)" />
-              <div>
-                <h1>{{ client.nom }}</h1>
-                <span [class]="client.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
-                  {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
-                </span>
-              </div>
-            </div>
+        <!-- ══ TOP BAR ═════════════════════════════════ -->
+        <div class="topbar">
+          <div class="topbar__left">
+            <a routerLink="/clients" class="bc-back">
+              <mat-icon>arrow_back</mat-icon>
+              Dossiers
+            </a>
+            <mat-icon class="bc-sep">chevron_right</mat-icon>
+            <span class="bc-current">{{ client.nom }}</span>
           </div>
-          <div class="detail-hero__right">
-            <div class="score-widget">
-              <div class="score-widget__top">
-                <span class="score-widget__label">Santé de passation</span>
-                <span class="score-badge" [class]="getScoreBadgeClass(client.santePassation)">
-                  {{ getScoreStatus(client.santePassation) }}
-                </span>
-              </div>
-              <div [class]="getScoreColorClass(client.santePassation)">
-                {{ client.santePassation }}<span class="score-widget__pct">%</span>
-              </div>
-              <div class="score-bar-track">
-                <div class="score-bar-fill" [class]="getScoreBarClass(client.santePassation)"
-                     [style.width.%]="client.santePassation"></div>
-              </div>
-            </div>
-            <button mat-stroked-button class="btn-export" (click)="exportPdf()" matTooltip="Générer la note de passation PDF">
-              <mat-icon>picture_as_pdf</mat-icon> Note de passation
+          <div class="topbar__right">
+            <span class="score-chip score-chip--{{ getScoreChipClass(client.santePassation) }}">
+              <mat-icon class="score-chip__icon">{{ getScoreChipClass(client.santePassation) === 'ok' ? 'check_circle' : getScoreChipClass(client.santePassation) === 'partial' ? 'warning' : 'error' }}</mat-icon>
+              {{ client.santePassation }}% — {{ getScoreStatus(client.santePassation) }}
+            </span>
+            <button class="btn-pdf" (click)="exportPdf()">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Note de passation
             </button>
           </div>
         </div>
 
-        <!-- ── Body : panneau flottant + contenu ─────── -->
-        <div class="detail-body">
+        <!-- ══ LAYOUT ═══════════════════════════════════ -->
+        <div class="layout">
 
-          <!-- Panneau de navigation flottant -->
-          <aside class="float-panel">
-            <div class="panel-top">
-              <mat-icon class="panel-top-icon">view_sidebar</mat-icon>
-              <span>Navigation</span>
+          <!-- ── Sidebar ─────────────────────────────── -->
+          <aside class="sidebar">
+
+            <!-- Profile -->
+            <div class="profile">
+              <div class="profile__bg"></div>
+              <div class="profile__avatar" (click)="triggerLogoUpload()" matTooltip="Changer le logo">
+                @if (client.logoUrl) {
+                  <img [src]="client.logoUrl" [alt]="client.nom" class="profile__logo" />
+                } @else {
+                  <span class="profile__initials">{{ getInitials(client.nom) }}</span>
+                }
+                <div class="profile__overlay"><mat-icon>photo_camera</mat-icon></div>
+              </div>
+              <input #logoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onLogoChange($event)" />
+              <h2 class="profile__name">{{ client.nom }}</h2>
+              <span class="profile__site" [class]="client.site === 'REUNION' ? 'site--re' : 'site--mg'">
+                {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+              </span>
+
+              <!-- Score -->
+              <div class="profile__score-label">
+                <span>Santé de passation</span>
+                <span class="score-pct score-pct--{{ getScorePctClass(client.santePassation) }}">{{ client.santePassation }}%</span>
+              </div>
+              <div class="score-track">
+                <div class="score-fill score-fill--{{ getScoreBarClass(client.santePassation) }}" [style.width.%]="client.santePassation"></div>
+              </div>
             </div>
 
-            @for (group of TAB_GROUPS; track group.label) {
-              <div class="panel-group">
-                <div class="group-header">
-                  <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
-                  <span>{{ group.label }}</span>
+            <div class="sidebar__divider"></div>
+
+            <!-- Navigation -->
+            <nav class="sidenav">
+              @for (group of TAB_GROUPS; track group.label) {
+                <div class="sidenav__group">
+                  <span class="sidenav__label">
+                    <span class="sidenav__label-dot" [style.background]="groupStyle(group.label).color"></span>
+                    {{ group.label }}
+                  </span>
+                  @for (tab of group.tabs; track tab.id) {
+                    <button
+                      class="sidenav__item"
+                      [class.active]="activeTab() === tab.id"
+                      (click)="activeTab.set(tab.id)">
+                      <span class="sidenav__indicator" [style.background]="activeTab() === tab.id ? groupStyle(group.label).color : 'transparent'"></span>
+                      <mat-icon [style.color]="activeTab() === tab.id ? groupStyle(group.label).color : null">{{ tab.icon }}</mat-icon>
+                      <span>{{ tab.label }}</span>
+                    </button>
+                  }
                 </div>
-                @for (tab of group.tabs; track tab.id) {
-                  <button class="panel-item"
-                          [class.active]="activeTab() === tab.id"
-                          (click)="activeTab.set(tab.id)">
-                    <mat-icon class="item-icon">{{ tab.icon }}</mat-icon>
-                    <span class="item-label">{{ tab.label }}</span>
-                    @if (activeTab() === tab.id) {
-                      <mat-icon class="item-chevron">chevron_right</mat-icon>
-                    }
-                  </button>
-                }
-              </div>
-            }
+              }
+            </nav>
+
           </aside>
 
-          <!-- Zone de contenu active -->
-          <div class="content-area">
-            <div class="content-breadcrumb">
-              <mat-icon>{{ activeTabMeta()?.icon }}</mat-icon>
-              <span>{{ activeTabMeta()?.label }}</span>
+          <!-- ── Content ──────────────────────────────── -->
+          <div class="content">
+
+            <!-- Content header -->
+            <div class="content__header">
+              <div class="ch-icon" [style.background]="activeGroupStyle().bg">
+                <mat-icon [style.color]="activeGroupStyle().color">{{ activeTabMeta()?.icon }}</mat-icon>
+              </div>
+              <div class="ch-text">
+                <div class="ch-group" [style.color]="activeGroupStyle().color">{{ activeGroup()?.label }}</div>
+                <h3>{{ activeTabMeta()?.label }}</h3>
+              </div>
             </div>
-            <div class="tab-content">
+
+            <!-- Animated content body -->
+            <div class="content__body" [@tabFade]="activeTab()">
               @switch (activeTab()) {
                 @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" (typesChanged)="onTypesChanged($event)" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab  [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
+                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
                 @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
                 @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" /> }
@@ -156,205 +180,237 @@ interface TabGroup {
     }
   `,
   styles: [`
-    /* ─── Page wrapper ──────────────────────────────── */
-    .detail {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 28px 32px;
-    }
-
-    /* ─── Hero ──────────────────────────────────────── */
-    .detail-hero {
-      background: linear-gradient(135deg, #0f2040 0%, #1e3a8a 60%, #312e81 100%);
-      border-radius: 18px;
-      padding: 28px 32px;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-    .detail-hero::before {
-      content: '';
-      position: absolute;
-      top: -60px; right: -60px;
-      width: 220px; height: 220px;
-      background: rgba(255,255,255,.05);
-      border-radius: 50%;
-    }
-    .detail-hero__left { flex: 1; position: relative; z-index: 1; }
-    .breadcrumb {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 20px;
-    }
-    .breadcrumb a { color: #93c5fd; text-decoration: none; font-weight: 500; }
-    .breadcrumb a:hover { color: white; }
-    .breadcrumb mat-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(255,255,255,.3); }
-    .detail-hero__title-row { display: flex; align-items: center; gap: 16px; }
-    .detail-avatar {
-      width: 56px; height: 56px; border-radius: 14px;
-      background: rgba(255,255,255,.15);
-      border: 1px solid rgba(255,255,255,.25);
-      color: white; font-size: 18px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      position: relative; cursor: pointer; overflow: hidden;
-    }
-    .detail-avatar:hover .avatar-overlay { opacity: 1; }
-    .logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
-    .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.4); border-radius: 14px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
-    .avatar-overlay mat-icon { color: white; font-size: 20px; width: 20px; height: 20px; }
-    .detail-hero__title-row h1 {
-      font-size: 24px; font-weight: 800; color: white;
-      margin-bottom: 8px; letter-spacing: -.4px;
-    }
-    .badge-reunion    { display: inline-flex; align-items: center; background: rgba(219,234,254,.2); color: #93c5fd; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid rgba(147,197,253,.3); }
-    .badge-madagascar { display: inline-flex; align-items: center; background: rgba(220,252,231,.2); color: #86efac; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid rgba(134,239,172,.3); }
-
-    .detail-hero__right { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex-shrink: 0; position: relative; z-index: 1; }
-    .score-widget { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 14px; padding: 16px 20px; min-width: 210px; }
-    .score-widget__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .score-widget__label { font-size: 12px; color: rgba(255,255,255,.55); font-weight: 500; }
-    .score-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
-    .score-badge.ok      { background: rgba(220,252,231,.25); color: #86efac; border: 1px solid rgba(134,239,172,.3); }
-    .score-badge.partial { background: rgba(254,249,195,.2);  color: #fde047; border: 1px solid rgba(253,224,71,.25); }
-    .score-badge.alert   { background: rgba(254,226,226,.2);  color: #fca5a5; border: 1px solid rgba(252,165,165,.25); }
-    .score-widget__value { font-size: 38px; font-weight: 800; line-height: 1; margin-bottom: 12px; color: white; letter-spacing: -2px; }
-    .score-widget__pct   { font-size: 20px; font-weight: 600; }
-    .score-green  { color: #86efac; } .score-orange { color: #fde047; } .score-red { color: #fca5a5; }
-    .score-bar-track { height: 5px; background: rgba(255,255,255,.15); border-radius: 4px; overflow: hidden; }
-    .score-bar-fill { height: 100%; border-radius: 4px; }
-    .score-bar-fill.high   { background: linear-gradient(90deg, #4ade80, #22c55e); }
-    .score-bar-fill.medium { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-    .score-bar-fill.low    { background: linear-gradient(90deg, #f87171, #dc2626); }
-    .btn-export { border-radius: 10px !important; font-weight: 500; color: white !important; border-color: rgba(255,255,255,.3) !important; }
-    .btn-export:hover { background: rgba(255,255,255,.1) !important; }
-
-    /* ─── Detail body ────────────────────────────────── */
-    .detail-body {
-      display: flex;
-      gap: 24px;
-      align-items: flex-start;
-    }
-
-    /* ─── Floating nav panel ─────────────────────────── */
-    .float-panel {
-      width: 240px;
-      min-width: 240px;
-      position: sticky;
-      top: 0;
-      align-self: flex-start;
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e8ecf0;
-      box-shadow:
-        0 4px 24px rgba(15,23,42,.07),
-        0 1px 3px rgba(15,23,42,.04);
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .panel-top {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 16px 16px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-    }
-    .panel-top-icon { font-size: 15px; width: 15px; height: 15px; }
-
-    .panel-group {
-      padding: 10px 10px 6px;
-    }
-    .panel-group + .panel-group {
-      border-top: 1px solid #f1f5f9;
-      margin-top: 2px;
-    }
-    .group-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 8px 8px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #cbd5e1;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-    }
-    .group-icon { font-size: 13px; width: 13px; height: 13px; }
-
-    .panel-item {
+    /* ── Host + wrapper ──────────────────────────────── */
+    :host {
+      display: block;
       width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 10px;
-      border: none;
-      background: none;
-      cursor: pointer;
-      border-radius: 10px;
-      font-size: 13.5px;
-      font-weight: 500;
-      color: #64748b;
-      text-align: left;
-      transition: all .14s ease;
-      margin-bottom: 2px;
-    }
-    .panel-item:hover {
-      background: #f8fafc;
-      color: #1e293b;
-    }
-    .panel-item.active {
-      background: linear-gradient(135deg, #eef2ff, #f0f4ff);
-      color: #4f46e5;
-      font-weight: 600;
-      box-shadow: inset 3px 0 0 #6366f1;
-    }
-    .item-icon {
-      font-size: 17px;
-      width: 17px; height: 17px;
-      flex-shrink: 0;
-      color: inherit;
-      opacity: .7;
-    }
-    .panel-item.active .item-icon { opacity: 1; }
-    .item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-chevron {
-      font-size: 14px; width: 14px; height: 14px;
-      color: #818cf8; margin-left: auto; flex-shrink: 0;
-    }
-
-    /* ─── Content area ───────────────────────────────── */
-    .content-area {
-      flex: 1;
-      min-width: 0;
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e8ecf0;
-      box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
+      height: 100vh;
       overflow: hidden;
     }
-
-    .content-breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 24px;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 13px;
-      font-weight: 600;
-      color: #475569;
-      background: #fafbfc;
+    .detail {
+      display: flex; flex-direction: column;
+      height: 100%; overflow: hidden;
     }
-    .content-breadcrumb mat-icon { font-size: 16px; width: 16px; height: 16px; color: #6366f1; }
 
-    .tab-content { padding: 28px; }
+    /* ── Top bar ─────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 54px;
+      background: #FFFBFE;
+      border-bottom: 1px solid #E0E2EC;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      flex-shrink: 0; z-index: 10;
+    }
+    .topbar__left { display: flex; align-items: center; gap: 4px; }
+    .bc-back {
+      display: flex; align-items: center; gap: 2px;
+      color: #1565C0; text-decoration: none;
+      font-size: 13.5px; font-weight: 500;
+      padding: 6px 10px 6px 6px; border-radius: 20px;
+      transition: background .15s, transform .1s;
+    }
+    .bc-back:hover { background: #E8F0FE; }
+    .bc-back:active { transform: scale(.96); }
+    .bc-back mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .bc-sep { color: #C4C7CF; font-size: 18px; width: 18px; height: 18px; }
+    .bc-current { font-size: 14px; font-weight: 600; color: #1A1C1E; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .topbar__right { display: flex; align-items: center; gap: 10px; }
+
+    /* Score chip */
+    .score-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600;
+      padding: 5px 12px 5px 8px; border-radius: 20px;
+      transition: transform .15s;
+    }
+    .score-chip:hover { transform: scale(1.04); }
+    .score-chip__icon { font-size: 15px; width: 15px; height: 15px; }
+    .score-chip--ok      { background: #D7F5EC; color: #006B57; }
+    .score-chip--partial { background: #FFF3CD; color: #B45309; }
+    .score-chip--alert   { background: #FFDAD6; color: #BA1A1A; }
+
+    /* PDF button */
+    .btn-pdf {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: #1565C0; color: white;
+      border: none; border-radius: 20px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(21,101,192,.35);
+      transition: background .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-pdf:hover { background: #1976D2; box-shadow: 0 4px 14px rgba(21,101,192,.45); }
+    .btn-pdf:active { transform: scale(.97); }
+    .btn-pdf mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    /* ── Layout ──────────────────────────────────────── */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ══ SIDEBAR ═════════════════════════════════════════ */
+    .sidebar {
+      width: 248px; min-width: 248px;
+      background: #FFFBFE;
+      border-right: 1px solid #E0E2EC;
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+    }
+
+    /* ── Profile area ────────────────────────────────── */
+    .profile {
+      position: relative;
+      padding: 28px 16px 20px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      overflow: hidden;
+    }
+    .profile__bg {
+      position: absolute; top: 0; left: 0; right: 0; height: 72px;
+      background: linear-gradient(180deg, #E8F0FE 0%, rgba(232,240,254,0) 100%);
+    }
+
+    .profile__avatar {
+      position: relative; z-index: 1;
+      width: 80px; height: 80px; border-radius: 22px;
+      background: linear-gradient(135deg, #1565C0 0%, #42A5F5 100%);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; overflow: hidden; flex-shrink: 0;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(21,101,192,.30), 0 1px 4px rgba(0,0,0,.12);
+      transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow .2s;
+    }
+    .profile__avatar:hover {
+      transform: scale(1.06);
+      box-shadow: 0 8px 24px rgba(21,101,192,.40), 0 2px 6px rgba(0,0,0,.14);
+    }
+    .profile__initials { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+    .profile__logo { width: 100%; height: 100%; object-fit: cover; }
+    .profile__overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.38);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .18s;
+    }
+    .profile__avatar:hover .profile__overlay { opacity: 1; }
+    .profile__overlay mat-icon { color: white; font-size: 22px; width: 22px; height: 22px; }
+
+    .profile__name {
+      font-size: 14.5px; font-weight: 700; color: #1A1C1E;
+      margin: 0 0 8px; line-height: 1.25; width: 100%;
+    }
+    .profile__site {
+      font-size: 11.5px; font-weight: 600;
+      padding: 3px 12px; border-radius: 20px; margin-bottom: 18px;
+    }
+    .profile__site.site--re { background: #E8F0FE; color: #1565C0; }
+    .profile__site.site--mg { background: #D7F5EC; color: #006B57; }
+
+    .profile__score-label {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: #89909A; font-weight: 500; margin-bottom: 6px;
+    }
+    .score-track {
+      width: 100%; height: 7px;
+      background: #E8EAED; border-radius: 6px; overflow: hidden;
+    }
+    .score-fill {
+      height: 100%; border-radius: 6px;
+      transform-origin: left;
+      animation: growBar .9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes growBar {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+    .score-fill--high   { background: linear-gradient(90deg, #4ade80, #22c55e); }
+    .score-fill--medium { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+    .score-fill--low    { background: linear-gradient(90deg, #f87171, #dc2626); }
+
+    .score-pct { font-size: 12px; font-weight: 700; }
+    .score-pct--ok      { color: #006B57; }
+    .score-pct--partial { color: #B45309; }
+    .score-pct--alert   { color: #BA1A1A; }
+
+    .sidebar__divider { height: 1px; background: #E0E2EC; margin: 4px 16px 4px; flex-shrink: 0; }
+
+    /* ── Sidenav ─────────────────────────────────────── */
+    .sidenav { padding: 6px 8px 24px; flex: 1; }
+    .sidenav__group { margin-bottom: 6px; }
+
+    .sidenav__label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 700; color: #89909A;
+      text-transform: uppercase; letter-spacing: .9px;
+      padding: 10px 12px 5px;
+    }
+    .sidenav__label-dot {
+      width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+      transition: background .3s;
+    }
+
+    .sidenav__item {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; position: relative; overflow: hidden;
+      background: none; border: none; border-radius: 28px;
+      font-size: 13.5px; font-weight: 500; color: #44474F;
+      cursor: pointer; text-align: left;
+      transition: background .15s, color .15s, transform .1s;
+      margin-bottom: 1px;
+    }
+    .sidenav__item:hover { background: #F0F1F5; color: #1A1C1E; }
+    .sidenav__item:active { transform: scale(.98); }
+    .sidenav__item.active { background: #EEF2FB; color: #1A1C1E; font-weight: 600; }
+    .sidenav__item mat-icon {
+      font-size: 18px; width: 18px; height: 18px;
+      color: #89909A; flex-shrink: 0;
+      transition: color .15s;
+    }
+    .sidenav__item.active mat-icon { /* color set via inline style */ }
+    .sidenav__item:hover mat-icon { color: #44474F; }
+
+    .sidenav__indicator {
+      position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 18px; border-radius: 2px;
+      transition: background .2s, height .2s;
+    }
+    .sidenav__item.active .sidenav__indicator { height: 22px; }
+
+    /* ══ CONTENT ═════════════════════════════════════════ */
+    .content {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; min-width: 0; background: #F4F6FB;
+    }
+
+    .content__header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 24px;
+      background: #FFFBFE; border-bottom: 1px solid #E0E2EC;
+      flex-shrink: 0;
+    }
+    .ch-icon {
+      width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .25s;
+    }
+    .ch-icon mat-icon {
+      font-size: 22px; width: 22px; height: 22px;
+      transition: color .25s;
+    }
+    .ch-text { display: flex; flex-direction: column; gap: 1px; }
+    .ch-group {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .9px;
+      transition: color .25s;
+    }
+    .ch-text h3 { font-size: 15px; font-weight: 700; color: #1A1C1E; margin: 0; }
+
+    .content__body {
+      flex: 1; overflow-y: auto;
+      padding: 0;
+    }
+    .content__body > * {
+      display: block;
+      width: 100%;
+    }
   `],
 })
 export class ClientDetailComponent implements OnInit {
@@ -451,9 +507,28 @@ export class ClientDetailComponent implements OnInit {
     });
   }
 
+  private readonly GROUP_STYLE_MAP: Record<string, { color: string; bg: string }> = {
+    'Dossier':      { color: '#1565C0', bg: '#E8F0FE' },
+    'Comptabilité': { color: '#5E35B1', bg: '#EDE7F6' },
+    'Analyse':      { color: '#6A1B9A', bg: '#F3E5F5' },
+    'Ressources':   { color: '#00695C', bg: '#E0F2F1' },
+    'Intelligence': { color: '#E65100', bg: '#FBE9E7' },
+  };
+
+  groupStyle(label: string) { return this.GROUP_STYLE_MAP[label] ?? { color: '#1565C0', bg: '#E8F0FE' }; }
+
+  activeGroup() {
+    return this.TAB_GROUPS.find(g => g.tabs.some(t => t.id === this.activeTab())) ?? null;
+  }
+
+  activeGroupStyle() {
+    const g = this.activeGroup();
+    return g ? this.groupStyle(g.label) : { color: '#1565C0', bg: '#E8F0FE' };
+  }
+
   getInitials(nom: string) { return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
-  getScoreBadgeClass(s: number) { return s >= 80 ? 'score-badge ok' : s >= 50 ? 'score-badge partial' : 'score-badge alert'; }
   getScoreStatus(s: number) { return s >= 80 ? 'Transmissible' : s >= 50 ? 'Partiel' : 'Alerte'; }
-  getScoreColorClass(s: number) { return s >= 80 ? 'score-widget__value score-green' : s >= 50 ? 'score-widget__value score-orange' : 'score-widget__value score-red'; }
   getScoreBarClass(s: number) { return s >= 80 ? 'high' : s >= 50 ? 'medium' : 'low'; }
+  getScoreChipClass(s: number) { return s >= 80 ? 'ok' : s >= 50 ? 'partial' : 'alert'; }
+  getScorePctClass(s: number) { return s >= 80 ? 'ok' : s >= 50 ? 'partial' : 'alert'; }
 }

@@ -36,12 +36,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/clients/client-list/client-list.component').then((m) => m.ClientListComponent),
       },
       {
-        path: 'clients/:id',
-        loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
-      },
-      {
         path: 'tasks',
         loadComponent: () => import('./features/tasks/tasks-global.component').then((m) => m.TasksGlobalComponent),
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./features/documents/documents.component').then((m) => m.DocumentsComponent),
       },
       {
         path: 'equipes',
@@ -56,6 +56,18 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
+      },
+    ],
+  },
+  // ── Dossier plein écran (sans sidebar principale) ──────
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./layout/fullscreen-layout/fullscreen-layout.component').then((m) => m.FullscreenLayoutComponent),
+    children: [
+      {
+        path: 'clients/:id',
+        loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
       },
     ],
   },

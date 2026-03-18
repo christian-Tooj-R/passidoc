@@ -53,7 +53,7 @@ import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
     </div>
   `,
   styles: [`
-    .histo { padding: 0; }
+    .histo { padding: 24px; }
     .histo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .histo-header h3 { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0; }
     .count { font-size: 12px; color: #94a3b8; background: #f1f5f9; padding: 3px 10px; border-radius: 20px; }

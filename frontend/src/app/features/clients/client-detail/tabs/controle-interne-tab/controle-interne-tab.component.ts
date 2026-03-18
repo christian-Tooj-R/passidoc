@@ -32,16 +32,18 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
           <span>Process qui fonctionnent bien</span>
           <button mat-icon-button (click)="addProcessOk()"><mat-icon>add</mat-icon></button>
         </div>
-        @for (p of processOk; track $index) {
-          <div class="process-row process-row--green">
-            <input class="process-input" [(ngModel)]="p.description" placeholder="Description du process..." />
-            <input class="process-input" [(ngModel)]="p.raison" placeholder="Pourquoi ça fonctionne..." />
-            <button mat-icon-button (click)="removeProcessOk($index)"><mat-icon>remove_circle_outline</mat-icon></button>
-          </div>
-        }
-        @if (processOk.length === 0) {
-          <p class="empty-hint">Cliquez sur + pour ajouter un process</p>
-        }
+        <div class="process-rows">
+          @for (p of processOk; track $index) {
+            <div class="process-row process-row--green">
+              <input class="process-input" [(ngModel)]="p.description" placeholder="Description du process..." />
+              <input class="process-input" [(ngModel)]="p.raison" placeholder="Pourquoi ça fonctionne..." />
+              <button mat-icon-button (click)="removeProcessOk($index)"><mat-icon>remove_circle_outline</mat-icon></button>
+            </div>
+          }
+          @if (processOk.length === 0) {
+            <p class="empty-hint">Cliquez sur + pour ajouter un process</p>
+          }
+        </div>
       </div>
 
       <!-- Process défaillants -->
@@ -51,17 +53,19 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
           <span>Process qui font défaut</span>
           <button mat-icon-button (click)="addProcessKo()"><mat-icon>add</mat-icon></button>
         </div>
-        @for (p of processKo; track $index) {
-          <div class="process-row process-row--red">
-            <input class="process-input" [(ngModel)]="p.description" placeholder="Description du process..." />
-            <input class="process-input" [(ngModel)]="p.raison" placeholder="Pourquoi ça échoue..." />
-            <input class="process-input" [(ngModel)]="p.risques" placeholder="Risques associés..." />
-            <button mat-icon-button (click)="removeProcessKo($index)"><mat-icon>remove_circle_outline</mat-icon></button>
-          </div>
-        }
-        @if (processKo.length === 0) {
-          <p class="empty-hint">Cliquez sur + pour ajouter un process défaillant</p>
-        }
+        <div class="process-rows">
+          @for (p of processKo; track $index) {
+            <div class="process-row process-row--red">
+              <input class="process-input" [(ngModel)]="p.description" placeholder="Description du process..." />
+              <input class="process-input" [(ngModel)]="p.raison" placeholder="Pourquoi ça échoue..." />
+              <input class="process-input" [(ngModel)]="p.risques" placeholder="Risques associés..." />
+              <button mat-icon-button (click)="removeProcessKo($index)"><mat-icon>remove_circle_outline</mat-icon></button>
+            </div>
+          }
+          @if (processKo.length === 0) {
+            <p class="empty-hint">Cliquez sur + pour ajouter un process défaillant</p>
+          }
+        </div>
       </div>
 
       <!-- Outils de pilotage -->
@@ -71,16 +75,18 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
           <span>Outils & modes de pilotage du client</span>
           <button mat-icon-button (click)="addOutil()"><mat-icon>add</mat-icon></button>
         </div>
-        @for (o of outils; track $index) {
-          <div class="process-row process-row--blue">
-            <input class="process-input" [(ngModel)]="o.nom" placeholder="Nom de l'outil (ex: Tiime Apps)" />
-            <input class="process-input flex-2" [(ngModel)]="o.description" placeholder="Description de l'usage..." />
-            <button mat-icon-button (click)="removeOutil($index)"><mat-icon>remove_circle_outline</mat-icon></button>
-          </div>
-        }
-        @if (outils.length === 0) {
-          <p class="empty-hint">Cliquez sur + pour ajouter un outil</p>
-        }
+        <div class="process-rows">
+          @for (o of outils; track $index) {
+            <div class="process-row process-row--blue">
+              <input class="process-input" [(ngModel)]="o.nom" placeholder="Nom de l'outil (ex: Tiime Apps)" />
+              <input class="process-input flex-2" [(ngModel)]="o.description" placeholder="Description de l'usage..." />
+              <button mat-icon-button (click)="removeOutil($index)"><mat-icon>remove_circle_outline</mat-icon></button>
+            </div>
+          }
+          @if (outils.length === 0) {
+            <p class="empty-hint">Cliquez sur + pour ajouter un outil</p>
+          }
+        </div>
       </div>
 
       <!-- Note générale -->
@@ -129,6 +135,7 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
     .process-input:focus { outline: 1px solid #6366f1; background: white; }
     .flex-2 { flex: 2 !important; }
     .full-width { width: 100%; }
+    .process-rows { border: 1px solid rgba(0,0,0,0.06); border-top: none; border-radius: 0 0 10px 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .empty-hint { font-size: 13px; color: #94a3b8; padding: 8px 12px; margin: 0; }
   `],
 })

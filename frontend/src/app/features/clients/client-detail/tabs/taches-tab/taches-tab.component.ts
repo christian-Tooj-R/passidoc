@@ -316,12 +316,12 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     </div>
   `,
   styles: [`
-    .grille-page { padding: 20px 24px; }
+    .grille-page { padding: 24px; }
 
     /* ── En-tête ── */
-    .grille-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-    .year-nav { display: flex; align-items: center; gap: 4px; }
-    .year-label { font-size: 18px; font-weight: 800; color: #1e293b; min-width: 44px; text-align: center; }
+    .grille-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .year-nav { display: flex; align-items: center; gap: 8px; }
+    .year-label { font-size: 18px; font-weight: 800; color: #1e293b; min-width: 52px; text-align: center; }
     .global-progress { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 160px; }
     .gp-label { font-size: 12px; color: #64748b; white-space: nowrap; }
     .gp-bar-wrap { flex: 1; height: 8px; background: #e8ecf0; border-radius: 4px; overflow: hidden; }
@@ -335,8 +335,8 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     .btn-manage mat-icon { font-size: 15px; width: 15px; height: 15px; }
 
     /* ── KPI bar ── */
-    .kpi-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .kpi-item { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e8ecf0; border-radius: 10px; padding: 10px 18px; min-width: 80px; }
+    .kpi-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kpi-item { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e8ecf0; border-radius: 12px; padding: 12px 20px; min-width: 88px; }
     .kpi-val { font-size: 20px; font-weight: 800; line-height: 1.1; }
     .kpi-lbl { font-size: 10px; color: #94a3b8; font-weight: 500; margin-top: 2px; }
     .kpi-done { border-color: #bbf7d0; }
@@ -351,9 +351,9 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     .grille-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #e8ecf0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.04); margin-bottom: 14px; }
     .grille-table { width: 100%; border-collapse: collapse; }
     .grille-table thead tr { background: #f8fafc; border-bottom: 2px solid #e8ecf0; }
-    .grille-table th { padding: 8px 5px; text-align: center; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
-    .col-type { text-align: left !important; padding-left: 14px !important; min-width: 160px; }
-    .col-mois { width: 46px; }
+    .grille-table th { padding: 10px 6px; text-align: center; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+    .col-type { text-align: left !important; padding-left: 16px !important; min-width: 168px; }
+    .col-mois { width: 50px; }
     .col-mois-current { background: #f0f4ff; color: #4f46e5 !important; }
     .col-pct { width: 80px; }
     .col-fini { width: 36px; }
@@ -362,8 +362,8 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     /* ── Rows ── */
     .grille-row { border-bottom: 1px solid #f1f5f9; }
     .grille-row:hover { background: #fafbff; }
-    .grille-row td { padding: 6px 5px; vertical-align: middle; text-align: center; }
-    .grille-row td.col-type { text-align: left; padding-left: 14px; }
+    .grille-row td { padding: 8px 6px; vertical-align: middle; text-align: center; }
+    .grille-row td.col-type { text-align: left; padding-left: 16px; }
 
     /* ── Type cell ── */
     .type-cell { display: flex; align-items: center; gap: 8px; }

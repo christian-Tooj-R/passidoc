@@ -25,7 +25,7 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
         </button>
       </div>
 
-      <form [formGroup]="form">
+      <form [formGroup]="form" class="tab-form">
         <!-- Objectifs -->
         <div class="section-title"><mat-icon>flag</mat-icon> Objectifs du client</div>
         <div class="objectives-grid">
@@ -34,30 +34,36 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
               <mat-icon>calendar_today</mat-icon>
               <span>Dans les 12 prochains mois</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifs12mois"
-                placeholder="Ex: Acheter les locaux commerciaux..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifs12mois"
+                  placeholder="Ex: Acheter les locaux commerciaux..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
           <div class="objective-card">
             <div class="objective-card__header objective-card__header--indigo">
               <mat-icon>timeline</mat-icon>
               <span>Dans les 3 à 5 ans</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifs3a5ans"
-                placeholder="Ex: Structurer via une holding..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifs3a5ans"
+                  placeholder="Ex: Structurer via une holding..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
           <div class="objective-card">
             <div class="objective-card__header objective-card__header--purple">
               <mat-icon>rocket_launch</mat-icon>
               <span>Au-delà</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifsLongTerme"
-                placeholder="Vision long terme..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifsLongTerme"
+                  placeholder="Vision long terme..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
         </div>
 
@@ -135,6 +141,8 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
     .objective-card mat-form-field { width: 100%; }
     .ec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .ec-grid mat-form-field { width: 100%; }
+    .tab-form { display: flex; flex-direction: column; gap: 16px; }
+    .card-body { padding: 12px; }
   `],
 })
 export class ObjectifsTabComponent implements OnInit {

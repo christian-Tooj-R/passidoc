@@ -74,12 +74,14 @@ import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
   `,
   styles: [`
     .tab-content { padding: 24px; }
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .upload-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      background: #2563eb; color: white; padding: 8px 16px;
-      border-radius: 4px; cursor: pointer; font-size: 14px;
+      background: #1565C0; color: white; padding: 8px 20px;
+      border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600;
+      transition: background .15s;
     }
+    .upload-btn:hover { background: #0D47A1; }
     .full-width { width: 100%; }
     .file-icon { vertical-align: middle; font-size: 18px; color: #64748b; }
     .empty-state { text-align: center; padding: 48px; color: #94a3b8; }

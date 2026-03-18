@@ -237,16 +237,16 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
     .synthese-form { margin-bottom: 24px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 0; }
     .full-col { grid-column: 1 / -1; }
-    .form-actions { margin-top: 16px; display: flex; gap: 8px; }
-    .syntheses-list { display: flex; flex-direction: column; gap: 8px; }
-    .synthese-detail p { margin: 4px 0; font-size: 14px; }
+    .form-actions { margin-top: 20px; display: flex; gap: 12px; }
+    .syntheses-list { display: flex; flex-direction: column; gap: 12px; }
+    .synthese-detail p { margin: 8px 0; font-size: 14px; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 16px; }
     .kpi-field label { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .kpi-field mat-form-field { width: 100%; }
 
     .chips-section { display: flex; flex-direction: column; gap: 20px; padding: 16px 0; }
-    .chips-group { display: flex; flex-direction: column; gap: 8px; }
+    .chips-group { display: flex; flex-direction: column; gap: 12px; }
     .chips-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #374151; }
     .icon-success { color: #16a34a; font-size: 18px; width: 18px; height: 18px; }
     .icon-warn    { color: #d97706; font-size: 18px; width: 18px; height: 18px; }

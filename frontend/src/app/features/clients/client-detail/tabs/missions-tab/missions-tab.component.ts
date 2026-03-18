@@ -28,47 +28,49 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
       </div>
 
       @if (showForm) {
-        <div class="add-form">
-          <form [formGroup]="form" (ngSubmit)="submit()">
-            <div class="form-row">
-              <mat-form-field appearance="outline">
-                <mat-label>Type</mat-label>
-                <mat-select formControlName="type">
-                  <mat-option value="REALISEE">✅ Réalisée</mat-option>
-                  <mat-option value="REFUSEE">❌ Refusée</mat-option>
-                  <mat-option value="DETECTEE">🔍 Détectée</mat-option>
-                  <mat-option value="IA">🤖 Détectée par IA</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="flex-2">
-                <mat-label>Titre de la mission</mat-label>
-                <input matInput formControlName="titre" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Honoraires HT (€)</mat-label>
-                <input matInput type="number" formControlName="honoraires" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Année</mat-label>
-                <input matInput type="number" formControlName="annee" />
-              </mat-form-field>
-            </div>
-            <mat-form-field appearance="outline" class="full-width">
+        <div class="add-panel">
+          <div class="add-panel-title">
+            <mat-icon>assignment_add</mat-icon>
+            Nouvelle mission
+          </div>
+          <form [formGroup]="form" (ngSubmit)="submit()" class="add-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Type</mat-label>
+              <mat-select formControlName="type">
+                <mat-option value="REALISEE">✅ Réalisée</mat-option>
+                <mat-option value="REFUSEE">❌ Refusée</mat-option>
+                <mat-option value="DETECTEE">🔍 Détectée</mat-option>
+                <mat-option value="IA">🤖 Détectée par IA</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Titre de la mission</mat-label>
+              <input matInput formControlName="titre" placeholder="Ex : Mise en place d'une holding..." />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Honoraires HT (€)</mat-label>
+              <input matInput type="number" formControlName="honoraires" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Année</mat-label>
+              <input matInput type="number" formControlName="annee" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="span-full">
               <mat-label>Description / Présentation</mat-label>
               <textarea matInput rows="2" formControlName="description"></textarea>
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" class="span-full">
               <mat-label>Arguments</mat-label>
               <textarea matInput rows="2" formControlName="arguments"></textarea>
             </mat-form-field>
             @if (form.get('type')?.value === 'REFUSEE') {
-              <mat-form-field appearance="outline" class="full-width">
+              <mat-form-field appearance="outline" class="span-full">
                 <mat-label>Raison du refus</mat-label>
                 <textarea matInput rows="2" formControlName="raisonRefus"></textarea>
               </mat-form-field>
             }
-            <div class="form-actions">
-              <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">
+            <div class="form-actions span-full">
+              <button mat-flat-button class="btn-submit" type="submit" [disabled]="form.invalid">
                 <mat-icon>save</mat-icon> Enregistrer
               </button>
             </div>
@@ -135,15 +137,17 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
   styles: [`
     .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
-    .add-form {
-      background: #f8fafc; border: 1px solid #e2e8f0;
-      border-radius: 12px; padding: 20px; margin-bottom: 24px;
-    }
-    .form-row { display: flex; gap: 12px; margin-bottom: 8px; }
-    .form-row mat-form-field { flex: 1; }
-    .flex-2 { flex: 2 !important; }
-    .full-width { width: 100%; }
-    .form-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+    .add-panel { background: #F4F6FB; border: 1px solid #E0E2EC; border-radius: 16px; padding: 20px; }
+    .add-panel-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #1A1C1E; margin-bottom: 16px; }
+    .add-panel-title mat-icon { color: #1565C0; font-size: 20px; }
+    .add-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; align-items: start; }
+    .add-grid mat-form-field { width: 100%; }
+    .span-2 { grid-column: span 2; }
+    .span-full { grid-column: 1 / -1; }
+    .form-actions { display: flex; justify-content: flex-end; }
+    .btn-submit { background: #1565C0 !important; color: white !important; border-radius: 20px !important; }
+    .btn-submit:disabled { background: #E0E2EC !important; color: #89909A !important; }
 
     .mission-group { margin-bottom: 24px; }
     .group-header {

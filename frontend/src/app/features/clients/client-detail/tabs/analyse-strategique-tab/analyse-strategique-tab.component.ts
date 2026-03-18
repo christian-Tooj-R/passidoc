@@ -88,13 +88,13 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
     .tab { padding: 24px; }
     .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
-    .panel { margin-bottom: 12px; border-radius: 10px !important; }
+    .panel { margin-bottom: 16px; border-radius: 14px !important; }
     mat-panel-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
     mat-panel-title mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; }
     .full-width { width: 100%; }
 
     /* SWOT */
-    .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 0; }
+    .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px 0; }
     .swot-card { border-radius: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); }
     .swot-card__header {
       display: flex; align-items: center; gap: 8px;
@@ -118,10 +118,10 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
     .swot-menaces     .swot-card__header { background: #fecaca; color: #dc2626; }
 
     /* Porter */
-    .porter-grid { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+    .porter-grid { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; }
 
     /* BMC */
-    .bmc-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 12px; }
+    .bmc-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 16px; }
   `],
 })
 export class AnalyseStrategiqueTabComponent implements OnInit {

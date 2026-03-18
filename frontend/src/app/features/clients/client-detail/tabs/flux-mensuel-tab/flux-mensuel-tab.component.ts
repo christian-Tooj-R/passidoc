@@ -271,7 +271,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
     .pilotage-title h3 { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0; }
     .pilotage-title p  { font-size: 12px; color: #94a3b8; margin: 2px 0 0; }
 
-    .year-nav { display: flex; align-items: center; gap: 4px; }
+    .year-nav { display: flex; align-items: center; gap: 8px; }
     .year-btn { color: #64748b !important; }
     .year-label {
       font-size: 16px; font-weight: 700; color: #1e293b;
@@ -281,7 +281,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
     /* ── KPI ─────────────────────────────────────────── */
     .kpi-row {
       display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 12px; margin-bottom: 24px;
+      gap: 16px; margin-bottom: 24px;
     }
     .kpi-card {
       background: white; border-radius: 14px; padding: 14px 16px;
@@ -347,7 +347,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
     .type-icon { font-size: 17px; width: 17px; height: 17px; color: #94a3b8; }
     .type-cell span { font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; }
 
-    .td-cell { padding: 8px 4px; text-align: center; vertical-align: middle; }
+    .td-cell { padding: 10px 6px; text-align: center; vertical-align: middle; }
 
     /* ── Cellules ────────────────────────────────────── */
     .cell-btn {
@@ -428,8 +428,8 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
 
     /* ── Menu contextuel ─────────────────────────────── */
     .menu-header {
-      display: flex; flex-direction: column; gap: 3px;
-      padding: 10px 16px 8px; pointer-events: none;
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 12px 16px 10px; pointer-events: none;
       border-bottom: 1px solid #f1f5f9; margin-bottom: 4px;
     }
     .menu-header strong { font-size: 13px; font-weight: 700; color: #1e293b; }
