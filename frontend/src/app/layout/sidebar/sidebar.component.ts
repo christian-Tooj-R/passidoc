@@ -1,9 +1,10 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
+import { RolePermissionsService } from '../../core/services/role-permissions.service';
 import { filter } from 'rxjs/operators';
 
 type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin';
@@ -295,7 +296,13 @@ export class SidebarComponent implements OnInit {
 
   activeModule = signal<ModuleId>('apercu');
 
+  private rolePerms = inject(RolePermissionsService);
   constructor(public auth: AuthService, private router: Router) {}
+
+  canSeeMenu(id: string): boolean {
+    const role = this.auth.currentUser()?.role ?? '';
+    return this.rolePerms.canSee(role, id);
+  }
 
   ngOnInit() {
     this.syncFromRoute(this.router.url);
@@ -317,49 +324,50 @@ export class SidebarComponent implements OnInit {
     const isAdmin   = this.auth.isAdmin();
     const canPortef = this.auth.canManagePortefeuilles();
     return [
-      {
-        id: 'apercu', icon: 'space_dashboard', label: 'Aperçu',
+      ...(this.canSeeMenu('dashboard') ? [{
+        id: 'apercu' as ModuleId, icon: 'space_dashboard', label: 'Aperçu',
         color: '#0D9488', activeBg: '#CCFBF1',
         groups: [{ label: '', items: [
           { label: 'Tableau de bord', route: '/dashboard', icon: 'space_dashboard' },
         ]}],
-      },
-      {
-        id: 'dossiers', icon: 'folder_shared', label: 'Dossiers',
+      }] : []),
+      ...((this.canSeeMenu('clients') || this.canSeeMenu('portefeuilles')) ? [{
+        id: 'dossiers' as ModuleId, icon: 'folder_shared', label: 'Dossiers',
         color: '#1A73E8', activeBg: '#E8F0FE',
         groups: [{ label: '', items: [
-          { label: 'Tous les dossiers', route: '/clients', icon: 'folder_open' },
-          ...(canPortef ? [{ label: 'Portefeuilles', route: '/portefeuilles', icon: 'account_tree' }] : []),
+          ...(this.canSeeMenu('clients')       ? [{ label: 'Tous les dossiers', route: '/clients',       icon: 'folder_open'   }] : []),
+          ...(this.canSeeMenu('portefeuilles') && canPortef ? [{ label: 'Portefeuilles', route: '/portefeuilles', icon: 'account_tree' }] : []),
         ]}],
-      },
-      {
-        id: 'travail', icon: 'checklist_rtl', label: 'Travail',
+      }] : []),
+      ...(this.canSeeMenu('tasks') ? [{
+        id: 'travail' as ModuleId, icon: 'checklist_rtl', label: 'Travail',
         color: '#E8710A', activeBg: '#FEF3E2',
         groups: [{ label: '', items: [
           { label: 'Toutes les tâches', route: '/tasks', icon: 'task_alt' },
         ]}],
-      },
-      {
-        id: 'documents', icon: 'insert_drive_file', label: 'Documents',
+      }] : []),
+      ...(this.canSeeMenu('documents') ? [{
+        id: 'documents' as ModuleId, icon: 'insert_drive_file', label: 'Documents',
         color: '#C5221F', activeBg: '#FCE8E6',
         groups: [{ label: '', items: [
           { label: 'Tous les documents', route: '/documents', icon: 'folder_open' },
         ]}],
-      },
-      {
-        id: 'notes', icon: 'sticky_note_2', label: 'Notes',
+      }] : []),
+      ...(this.canSeeMenu('notes') ? [{
+        id: 'notes' as ModuleId, icon: 'sticky_note_2', label: 'Notes',
         color: '#D97706', activeBg: '#FEF3C7',
         groups: [{ label: '', items: [
           { label: 'Mes notes', route: '/notes', icon: 'edit_note' },
         ]}],
-      },
-      {
-        id: 'equipe', icon: 'groups', label: isAdmin ? 'Équipes' : 'Équipe',
+      }] : []),
+      ...(this.canSeeMenu('equipes') ? [{
+        id: 'equipe' as ModuleId, icon: 'groups', label: isAdmin ? 'Équipes' : 'Équipe',
         color: '#7C3AED', activeBg: '#EDE9FE',
         groups: [{ label: '', items: [
           { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
+          ...(isAdmin ? [{ label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' }] : []),
         ]}],
-      },
+      }] : []),
       ...(isAdmin ? [{
         id: 'admin' as ModuleId, icon: 'admin_panel_settings', label: 'Admin',
         color: '#B45309', activeBg: '#FEF3C7',

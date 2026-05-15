@@ -441,6 +441,9 @@ export class AdnTabComponent implements OnInit {
       this.sectoriel = s ?? {};
       if (s?.secteur) this.secteurSelectionne = s.secteur;
       this.takeSnapshot();
+    }).catch(() => {
+      this.snack.open('Erreur lors du chargement de l\'ADN', undefined, { duration: 3000 });
+    }).finally(() => {
       this.loading.set(false);
     });
   }

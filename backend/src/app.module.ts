@@ -27,6 +27,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 import { NotesModule } from './notes/notes.module';
 import { QuestionnaireAdnModule } from './questionnaire-adn/questionnaire-adn.module';
+import { RolePermissionsModule } from './role-permissions/role-permissions.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { QuestionnaireAdnModule } from './questionnaire-adn/questionnaire-adn.mo
     AuditModule,
     NotesModule,
     QuestionnaireAdnModule,
+    RolePermissionsModule,
   ],
   controllers: [AppController],
   providers: [

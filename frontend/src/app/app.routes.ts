@@ -52,7 +52,15 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/equipes.component').then((m) => m.EquipesComponent),
       },
       {
+        path: 'permissions-roles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('./features/admin/role-permissions.component').then((m) => m.RolePermissionsComponent),
+      },
+      {
         path: 'portefeuilles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'EXPERT_COMPTABLE', 'COLLABORATEUR'] },
         loadComponent: () => import('./features/admin/portefeuilles.component').then((m) => m.PortefeuillesComponent),
       },
       {

@@ -16,6 +16,7 @@ import { Client } from '../../../core/models/client.model';
 import { CreateClientWizardComponent } from './create-client-wizard.component';
 
 type SortKey = 'nom' | 'score' | 'site';
+interface CollabOption { id: number; label: string; }
 type ViewMode = 'grid' | 'list';
 
 @Component({
@@ -85,20 +86,41 @@ type ViewMode = 'grid' | 'list';
 
       <!-- ══ FILTER CHIPS ═══════════════════════════════════ -->
       <div class="filter-bar">
+
+        <!-- Complétude -->
         <button class="fchip" [class.fchip--active]="healthFilter()===''"        (click)="healthFilter.set('')">
           Tous <span class="fchip-count">{{ clients().length }}</span>
         </button>
         <button class="fchip fchip--green"  [class.fchip--active]="healthFilter()==='ok'"      (click)="healthFilter.set('ok')">
-          <span class="fdot fdot--green"></span> Transmissible <span class="fchip-count">{{ countByHealth('ok') }}</span>
+          <span class="fdot fdot--green"></span> Complet <span class="fchip-count">{{ countByHealth('ok') }}</span>
         </button>
         <button class="fchip fchip--orange" [class.fchip--active]="healthFilter()==='partial'" (click)="healthFilter.set('partial')">
           <span class="fdot fdot--orange"></span> En cours <span class="fchip-count">{{ countByHealth('partial') }}</span>
         </button>
         <button class="fchip fchip--red"    [class.fchip--active]="healthFilter()==='alert'"   (click)="healthFilter.set('alert')">
-          <span class="fdot fdot--red"></span> Alerte <span class="fchip-count">{{ countByHealth('alert') }}</span>
+          <span class="fdot fdot--red"></span> Incomplet <span class="fchip-count">{{ countByHealth('alert') }}</span>
+        </button>
+
+        <div class="fchip-sep"></div>
+
+        <!-- Mes dossiers -->
+        <button class="fchip fchip--me" [class.fchip--active]="mesDossiers()" (click)="toggleMesDossiers()">
+          <mat-icon>person</mat-icon> Mes dossiers
         </button>
 
         @if (auth.isAdmin()) {
+          <!-- Filtre collaborateur -->
+          <div class="collab-select-wrap">
+            <mat-icon class="collab-icon">group</mat-icon>
+            <select class="collab-select" [value]="collabFilter() ?? ''"
+                    (change)="setCollabFilter(+$any($event.target).value || null)">
+              <option value="">Tous les collaborateurs</option>
+              @for (u of uniqueCollabs(); track u.id) {
+                <option [value]="u.id">{{ u.label }}</option>
+              }
+            </select>
+          </div>
+
           <div class="fchip-sep"></div>
           <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
             <mat-icon>public</mat-icon> Tous les sites
@@ -124,28 +146,56 @@ type ViewMode = 'grid' | 'list';
             @for (c of filteredClients(); track c.id) {
               <div class="folder-item" matRipple [routerLink]="['/clients', c.id]">
 
-                <!-- Folder icon zone -->
-                <div class="folder-icon">
-                  <div class="folder-icon__tab"></div>
-                  <div class="folder-icon__body">
-                    <mat-icon class="folder-icon__mat">folder</mat-icon>
-                    <span class="folder-icon__score">{{ c.santePassation }}%</span>
-                  </div>
+                <!-- Sector illustration -->
+                <div class="folder-illus" [style.background]="getSectorConfig(c.secteurActivite).bg">
+                  <img class="folder-illus__img"
+                       [src]="getSectorConfig(c.secteurActivite).imgSrc"
+                       [alt]="getSectorConfig(c.secteurActivite).label"
+                       onerror="this.style.display='none'" />
+                  <mat-icon class="folder-illus__fallback" [style.color]="getSectorConfig(c.secteurActivite).accent">
+                    {{ getSectorConfig(c.secteurActivite).icon }}
+                  </mat-icon>
                 </div>
 
                 <!-- Name & meta -->
                 <div class="folder-meta">
                   <span class="folder-name">{{ c.nom }}</span>
+                  @if (c.secteurActivite) {
+                    <span class="folder-sector-pill"
+                          [style.background]="getSectorConfig(c.secteurActivite).bg"
+                          [style.color]="getSectorConfig(c.secteurActivite).accent">
+                      {{ getSectorConfig(c.secteurActivite).label }}
+                    </span>
+                  }
                   <span class="folder-sub" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
                     {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                   </span>
-                  @if (c.responsable) {
-                    <span class="folder-resp">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                  }
+
+                  <!-- Complétude compacte -->
+                  <div class="completude-row">
+                    <div class="ring-wrap">
+                      <svg class="ring-svg" viewBox="0 0 52 52">
+                        <circle cx="26" cy="26" r="20" fill="none" stroke="#E8EAED" stroke-width="4.5"/>
+                        <circle cx="26" cy="26" r="20" fill="none"
+                                [attr.stroke]="ringColor(score(c))"
+                                stroke-width="4.5" stroke-linecap="round"
+                                stroke-dasharray="125.7"
+                                [attr.stroke-dashoffset]="ringOffset(score(c))"
+                                transform="rotate(-90 26 26)"/>
+                      </svg>
+                      <div class="ring-center">
+                        <span class="ring-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
+                      </div>
+                    </div>
+                    <div class="completude-info">
+                      <span class="completude-status" [style.color]="ringColor(score(c))">{{ getStatusLabel(score(c)) }}</span>
+                      <span class="completude-lbl">ADN Complétude</span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Status dot -->
-                <span class="folder-status" [class]="statusDotClass(c.santePassation)" [matTooltip]="getStatusLabel(c.santePassation)"></span>
+                <span class="folder-status" [class]="statusDotClass(score(c))" [matTooltip]="getStatusLabel(score(c))"></span>
 
               </div>
             }
@@ -161,7 +211,7 @@ type ViewMode = 'grid' | 'list';
             <span class="lh-name">Nom</span>
             <span class="lh-site">Site</span>
             <span class="lh-resp">Responsable</span>
-            <span class="lh-score">Santé</span>
+            <span class="lh-score">Complétude</span>
             <span class="lh-status">Statut</span>
             <span class="lh-action"></span>
           </div>
@@ -178,8 +228,10 @@ type ViewMode = 'grid' | 'list';
 
               <!-- Icon + name -->
               <div class="lr-name">
-                <div class="lr-icon">
-                  <mat-icon>folder</mat-icon>
+                <div class="lr-icon" [style.background]="getSectorConfig(c.secteurActivite).bg">
+                  <mat-icon [style.color]="getSectorConfig(c.secteurActivite).accent">
+                    {{ getSectorConfig(c.secteurActivite).icon }}
+                  </mat-icon>
                 </div>
                 <span class="lr-label">{{ c.nom }}</span>
               </div>
@@ -202,13 +254,13 @@ type ViewMode = 'grid' | 'list';
               <!-- Score -->
               <div class="lr-score">
                 <div class="score-track">
-                  <div class="score-fill" [class]="scoreBarClass(c.santePassation)" [style.width.%]="c.santePassation"></div>
+                  <div class="score-fill" [class]="scoreBarClass(score(c))" [style.width.%]="score(c)"></div>
                 </div>
-                <span class="score-pct" [class]="scoreTxtClass(c.santePassation)">{{ c.santePassation }}%</span>
+                <span class="score-pct" [class]="scoreTxtClass(score(c))">{{ score(c) }}%</span>
               </div>
 
               <!-- Status -->
-              <span class="lr-status" [class]="statusPillClass(c.santePassation)">{{ getStatusLabel(c.santePassation) }}</span>
+              <span class="lr-status" [class]="statusPillClass(score(c))">{{ getStatusLabel(score(c)) }}</span>
 
               <!-- Arrow -->
               <mat-icon class="lr-arrow">chevron_right</mat-icon>
@@ -312,6 +364,27 @@ type ViewMode = 'grid' | 'list';
     .fdot--orange { background: #7B4F00; }
     .fdot--red    { background: #BA1A1A; }
     .fchip-sep { width: 1px; height: 20px; background: #E0E2EC; margin: 0 2px; }
+    .fchip--me.fchip--active { background: #E3F2FD !important; border-color: #1565C0; color: #1565C0; }
+    /* Sélecteur collaborateur */
+    .collab-select-wrap {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid #C8C6CA; border-radius: 8px; padding: 5px 10px;
+      background: transparent; transition: border-color .12s;
+    }
+    .collab-select-wrap:focus-within { border-color: #1565C0; }
+    .collab-icon { font-size: 14px; width: 14px; height: 14px; color: #44474F; }
+    .collab-select {
+      border: none; background: transparent; outline: none;
+      font-size: 12.5px; font-weight: 500; color: #44474F;
+      font-family: 'Inter', sans-serif; cursor: pointer;
+    }
+    /* Barre de complétude sur les folder cards */
+    .folder-completude { width: 100%; margin-top: 6px; }
+    .fc-track { height: 3px; background: #E8EAED; border-radius: 2px; overflow: hidden; }
+    .fc-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+    .fc--high { background: #386A20; }
+    .fc--mid  { background: #7B4F00; }
+    .fc--low  { background: #BA1A1A; }
 
     /* ══ EMPTY ════════════════════════════════════════════ */
     .empty {
@@ -324,7 +397,7 @@ type ViewMode = 'grid' | 'list';
     /* ══ GRID VIEW ════════════════════════════════════════ */
     .file-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
       padding: 24px;
       overflow-y: auto;
@@ -332,57 +405,53 @@ type ViewMode = 'grid' | 'list';
     }
 
     .folder-item {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 12px 8px;
+      display: flex; flex-direction: column;
+      background: #fff;
       border-radius: 16px;
+      border: 1px solid #E8EAED;
+      box-shadow: 0 2px 6px rgba(0,0,0,.06);
+      overflow: hidden;
       cursor: pointer;
-      position: relative; text-align: center;
-      background: transparent;
-      border: 2px solid transparent;
-      transition: background .12s;
+      position: relative;
+      transition: box-shadow .15s, transform .15s;
     }
-    .folder-item:hover { background: rgba(21,101,192,.06); }
-    .folder-item:active { background: rgba(21,101,192,.12); }
+    .folder-item:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); transform: translateY(-2px); }
+    .folder-item:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,.06); }
 
-    /* Folder icon — style iOS Files agrandi */
-    .folder-icon {
-      width: 100px; height: 82px;
-      position: relative; margin-bottom: 14px;
-      filter: drop-shadow(0 3px 6px rgba(21,101,192,.25));
+    /* Sector illustration zone */
+    .folder-illus {
+      width: 100%; height: 120px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; flex-shrink: 0; overflow: hidden;
     }
-    .folder-icon__tab {
-      position: absolute; top: 0; left: 10px;
-      width: 36px; height: 14px; border-radius: 6px 6px 0 0;
-    }
-    .folder-icon__body {
-      position: absolute; bottom: 0; left: 0; right: 0; top: 10px;
-      border-radius: 10px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    .folder-icon__mat { font-size: 56px; width: 56px; height: 56px; opacity: .85; }
-    .folder-icon__score {
-      position: absolute; bottom: 6px; right: 6px;
-      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
-      background: rgba(255,255,255,.75);
-    }
+    .folder-illus__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; box-sizing: border-box; }
+    .folder-illus__fallback { font-size: 48px; width: 48px; height: 48px; opacity: .7; }
 
-    /* Couleur unique pour tous les dossiers */
-    .folder-icon .folder-icon__tab  { background: #1565C0; }
-    .folder-icon .folder-icon__body { background: #BBDEFB; }
-    .folder-icon .folder-icon__mat  { color: #1565C0; }
-    .folder-icon .folder-icon__score { color: #1565C0; }
-
-    .folder-meta { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
-    .folder-name { font-size: 13px; font-weight: 600; color: #1A1C1E; line-height: 1.35; word-break: break-word; text-align: center; }
-    .folder-sub  { font-size: 11px; font-weight: 500; }
+    .folder-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px 12px; width: 100%; box-sizing: border-box; }
+    .folder-name { font-size: 13px; font-weight: 700; color: #1A1C1E; line-height: 1.3; word-break: break-word; }
+    .folder-sector-pill {
+      font-size: 10.5px; font-weight: 700;
+      padding: 2px 8px; border-radius: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .folder-sub { font-size: 11px; font-weight: 500; }
     .sub--re { color: #006B57; }
     .sub--mg { color: #162351; }
-    .folder-resp { font-size: 11px; color: #6F7978; }
+
+    /* Complétude compacte */
+    .completude-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; width: 100%; }
+    .ring-wrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+    .ring-svg { width: 100%; height: 100%; }
+    .ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .ring-pct { font-size: 11px; font-weight: 800; line-height: 1; }
+    .completude-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .completude-status { font-size: 12.5px; font-weight: 700; }
+    .completude-lbl { font-size: 10px; color: #94a3b8; font-weight: 500; }
 
     .folder-status {
-      position: absolute; top: 12px; right: 12px;
+      position: absolute; top: 10px; right: 10px;
       width: 9px; height: 9px; border-radius: 50%;
-      border: 2px solid #FFFBFE;
+      border: 2px solid rgba(255,255,255,.75);
     }
     .fs--high { background: #386A20; }
     .fs--mid  { background: #7B4F00; }
@@ -427,10 +496,8 @@ type ViewMode = 'grid' | 'list';
     }
     .lr-icon mat-icon { font-size: 22px; width: 22px; height: 22px; }
 
-    /* Couleur unique pour tous les dossiers (liste) */
-    .lr-icon { background: #BBDEFB; }
-    .lr-icon::before { background: #1565C0; }
-    .lr-icon mat-icon { color: #1565C0; }
+    /* List icon — sector color applied via [style] binding */
+    .lr-icon::before { display: none; }
 
     .lr-label { font-size: 14px; font-weight: 600; color: #1A1C1E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -472,6 +539,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
   searchQuery  = signal('');
   healthFilter = signal('');
   siteFilter   = signal('');
+  mesDossiers  = signal(false);
+  collabFilter = signal<number | null>(null);
   sortKey      = signal<SortKey>('nom');
   sortDir      = signal<'asc'|'desc'>('asc');
   viewMode     = signal<ViewMode>('grid');
@@ -482,25 +551,47 @@ export class ClientListComponent implements OnInit, OnDestroy {
   private notifStream = inject(NotificationStreamService);
   private sub         = new Subscription();
 
+  uniqueCollabs = computed<CollabOption[]>(() => {
+    const seen = new Set<number>();
+    const out: CollabOption[] = [];
+    for (const c of this.clients()) {
+      for (const u of [c.responsable, c.collaborateurMg]) {
+        if (u && !seen.has(u.id)) {
+          seen.add(u.id);
+          out.push({ id: u.id, label: `${u.firstName} ${u.lastName}` });
+        }
+      }
+    }
+    return out.sort((a, b) => a.label.localeCompare(b.label));
+  });
+
   filteredClients = computed(() => {
-    const s    = this.searchQuery().toLowerCase();
-    const h    = this.healthFilter();
-    const site = this.siteFilter();
-    const k    = this.sortKey();
-    const d    = this.sortDir() === 'asc' ? 1 : -1;
+    const s      = this.searchQuery().toLowerCase();
+    const h      = this.healthFilter();
+    const site   = this.siteFilter();
+    const mes    = this.mesDossiers();
+    const collab = this.collabFilter();
+    const meId   = this.auth.currentUser()?.id;
+    const k      = this.sortKey();
+    const d      = this.sortDir() === 'asc' ? 1 : -1;
 
     let list = this.clients().filter(c => {
+      const score = c.completude || c.santePassation;
       if (s && !c.nom.toLowerCase().includes(s)) return false;
       if (site && c.site !== site) return false;
-      if (h === 'ok'      && c.santePassation < 80)  return false;
-      if (h === 'partial' && (c.santePassation < 50 || c.santePassation >= 80)) return false;
-      if (h === 'alert'   && c.santePassation >= 50) return false;
+      if (h === 'ok'      && score < 80)                    return false;
+      if (h === 'partial' && (score < 50 || score >= 80))   return false;
+      if (h === 'alert'   && score >= 50)                   return false;
+      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId) return false;
+      if (collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab)  return false;
       return true;
     });
 
     return [...list].sort((a, b) => {
+      const sa = a.completude || a.santePassation;
+      const sb = b.completude || b.santePassation;
       if (k === 'nom')   return d * a.nom.localeCompare(b.nom);
-      if (k === 'score') return d * (a.santePassation - b.santePassation);
+      if (k === 'score') return d * (sa - sb);
       if (k === 'site')  return d * a.site.localeCompare(b.site);
       return 0;
     });
@@ -539,10 +630,28 @@ export class ClientListComponent implements OnInit, OnDestroy {
     });
   }
 
+  score(c: Client) { return c.completude || c.santePassation; }
+
+  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
+    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
+      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration',   imgSrc: 'sectors/restauration.svg' },
+      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP',            imgSrc: 'sectors/btp.svg' },
+      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association',    imgSrc: 'sectors/association.svg' },
+      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding',        imgSrc: 'sectors/holding.svg' },
+      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale', imgSrc: 'sectors/profession_liberale.svg' },
+      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI',            imgSrc: 'sectors/sci.svg' },
+    };
+    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg' };
+  }
+
+  getScoreLevel(s: number): string { return s >= 80 ? 'high' : s >= 50 ? 'mid' : 'low'; }
+  ringColor(s: number): string  { return s >= 80 ? '#4CAF50' : s >= 50 ? '#FF9800' : '#F44336'; }
+  ringOffset(s: number): number { return 125.7 * (1 - s / 100); }
+
   countByHealth(h: string) {
-    if (h === 'ok')      return this.clients().filter(c => c.santePassation >= 80).length;
-    if (h === 'partial') return this.clients().filter(c => c.santePassation >= 50 && c.santePassation < 80).length;
-    return this.clients().filter(c => c.santePassation < 50).length;
+    if (h === 'ok')      return this.clients().filter(c => this.score(c) >= 80).length;
+    if (h === 'partial') return this.clients().filter(c => this.score(c) >= 50 && this.score(c) < 80).length;
+    return this.clients().filter(c => this.score(c) < 50).length;
   }
 
   folderColorClass(s: number) { return s >= 80 ? 'fc--high' : s >= 50 ? 'fc--mid' : 'fc--low'; }
@@ -550,6 +659,15 @@ export class ClientListComponent implements OnInit, OnDestroy {
   scoreBarClass(s: number)    { return s >= 80 ? 'score-fill sf--high' : s >= 50 ? 'score-fill sf--mid' : 'score-fill sf--low'; }
   scoreTxtClass(s: number)    { return s >= 80 ? 'score-pct sp--high' : s >= 50 ? 'score-pct sp--mid' : 'score-pct sp--low'; }
   statusPillClass(s: number)  { return s >= 80 ? 'lr-status stp--high' : s >= 50 ? 'lr-status stp--mid' : 'lr-status stp--low'; }
-  getStatusLabel(s: number)   { return s >= 80 ? 'Transmissible' : s >= 50 ? 'En cours' : 'Alerte'; }
+  getStatusLabel(s: number)   { return s >= 80 ? 'Complet' : s >= 50 ? 'En cours' : 'Incomplet'; }
   getInitials(nom: string)    { return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+
+  toggleMesDossiers() {
+    this.mesDossiers.update(v => !v);
+    if (!this.mesDossiers()) this.collabFilter.set(null);
+  }
+  setCollabFilter(id: number | null) {
+    this.collabFilter.set(id);
+    if (id !== null) this.mesDossiers.set(false);
+  }
 }
