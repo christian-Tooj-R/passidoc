@@ -15,7 +15,6 @@ export class SyntheseCloureService {
   async create(clientId: number, dto: CreateSyntheseCloture) {
     const synthese = this.repo.create({ ...dto, client: { id: clientId } });
     const saved = await this.repo.save(synthese);
-    await this.clientsService.updateSantePassation(clientId);
     return saved;
   }
 

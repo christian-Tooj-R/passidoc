@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { ObjectifsService } from '../../../../../core/services/objectifs.service';
 
 @Component({
@@ -14,7 +14,7 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
   imports: [
     CommonModule, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSnackBarModule,
+    MatInputModule,
   ],
   template: `
     <div class="tab">
@@ -25,7 +25,7 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
         </button>
       </div>
 
-      <form [formGroup]="form">
+      <form [formGroup]="form" class="tab-form">
         <!-- Objectifs -->
         <div class="section-title"><mat-icon>flag</mat-icon> Objectifs du client</div>
         <div class="objectives-grid">
@@ -34,35 +34,41 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
               <mat-icon>calendar_today</mat-icon>
               <span>Dans les 12 prochains mois</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifs12mois"
-                placeholder="Ex: Acheter les locaux commerciaux..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifs12mois"
+                  placeholder="Ex: Acheter les locaux commerciaux..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
           <div class="objective-card">
             <div class="objective-card__header objective-card__header--indigo">
               <mat-icon>timeline</mat-icon>
               <span>Dans les 3 à 5 ans</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifs3a5ans"
-                placeholder="Ex: Structurer via une holding..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifs3a5ans"
+                  placeholder="Ex: Structurer via une holding..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
           <div class="objective-card">
             <div class="objective-card__header objective-card__header--purple">
               <mat-icon>rocket_launch</mat-icon>
               <span>Au-delà</span>
             </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <textarea matInput rows="4" formControlName="objectifsLongTerme"
-                placeholder="Vision long terme..."></textarea>
-            </mat-form-field>
+            <div class="card-body">
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput rows="4" formControlName="objectifsLongTerme"
+                  placeholder="Vision long terme..."></textarea>
+              </mat-form-field>
+            </div>
           </div>
         </div>
 
         <!-- Mission EC -->
-        <div class="section-title"><mat-icon>handshake</mat-icon> Mission de l'expert-comptable</div>
+        <div class="section-title" style="margin-top:12px"><mat-icon>handshake</mat-icon> Mission de l'expert-comptable</div>
         <div class="ec-grid">
           <mat-form-field appearance="outline">
             <mat-label>Client chez AFYM depuis</mat-label>
@@ -87,39 +93,89 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
           <textarea matInput rows="2" formControlName="recommandationsFaites"
             placeholder="Ex: A recommandé nos services à son frère..."></textarea>
         </mat-form-field>
+
+        <!-- Relation par pôle -->
+        <div class="section-title" style="margin-top:12px"><mat-icon>groups</mat-icon> Qualité de la relation par pôle</div>
+        <div class="ec-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le collaborateur en charge</mat-label>
+            <textarea matInput rows="2" formControlName="relationCollaborateur"
+              placeholder="Ex: Relation de confiance, échanges réguliers..."></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le pôle social</mat-label>
+            <textarea matInput rows="2" formControlName="relationPoleSocial"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le pôle juridique</mat-label>
+            <textarea matInput rows="2" formControlName="relationPoleJuridique"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Avec le directeur d'antenne / l'EC</mat-label>
+            <textarea matInput rows="2" formControlName="relationDirecteur"></textarea>
+          </mat-form-field>
+        </div>
       </form>
     </div>
   `,
   styles: [`
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
+    :host { display: block; padding: 24px; }
+
+    .tab-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 28px;
+    }
+    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
+
+    .tab-form { display: flex; flex-direction: column; gap: 0; }
+
+    /* ── Section titles ─────────────────────────────── */
     .section-title {
       display: flex; align-items: center; gap: 8px;
-      font-size: 15px; font-weight: 700; color: #1e293b;
-      margin: 24px 0 16px;
+      font-size: 14px; font-weight: 700; color: #1e293b;
+      margin: 0 0 16px;
+      padding: 10px 14px;
+      background: #F4F6FB; border-radius: 10px;
+      border-left: 3px solid #6366f1;
     }
     .section-title mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; }
-    .full-width { width: 100%; }
-    .objectives-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .objective-card { border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+
+    /* ── Objectives grid ────────────────────────────── */
+    .objectives-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-bottom: 28px;
+    }
+    .objective-card {
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    }
     .objective-card__header {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; font-size: 13px; font-weight: 600;
+      padding: 12px 16px; font-size: 13px; font-weight: 600;
     }
     .objective-card__header mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .objective-card__header--blue { background: #dbeafe; color: #1d4ed8; }
+    .objective-card__header--blue   { background: #dbeafe; color: #1d4ed8; }
     .objective-card__header--indigo { background: #e0e7ff; color: #4338ca; }
     .objective-card__header--purple { background: #f3e8ff; color: #7c3aed; }
+    .card-body { padding: 16px 16px 4px; }
     .objective-card mat-form-field { width: 100%; }
-    .ec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── EC / Relation grids ────────────────────────── */
+    .ec-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0 20px; margin-bottom: 0;
+    }
     .ec-grid mat-form-field { width: 100%; }
+
+    .full-width { width: 100%; }
   `],
 })
 export class ObjectifsTabComponent implements OnInit {
   @Input() clientId!: number;
   private fb = inject(FormBuilder);
   private service = inject(ObjectifsService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
 
   form = this.fb.group({
     objectifs12mois: [''],
@@ -130,6 +186,10 @@ export class ObjectifsTabComponent implements OnInit {
     qualiteRelation: [''],
     axesAmelioration: [''],
     recommandationsFaites: [''],
+    relationCollaborateur: [''],
+    relationPoleSocial: [''],
+    relationPoleJuridique: [''],
+    relationDirecteur: [''],
   });
 
   ngOnInit() {
@@ -140,7 +200,7 @@ export class ObjectifsTabComponent implements OnInit {
 
   save() {
     this.service.save(this.clientId, this.form.value).subscribe(() => {
-      this.snack.open('Objectifs enregistrés', 'OK', { duration: 2500 });
+      this.toast.success('Objectifs enregistrés');
     });
   }
 }

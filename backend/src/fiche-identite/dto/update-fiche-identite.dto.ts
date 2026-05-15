@@ -13,4 +13,9 @@ export class UpdateFicheIdentiteDto {
   @ApiPropertyOptional() @IsOptional() @IsString() telephoneContact?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() gerants?: any[];
   @ApiPropertyOptional() @IsOptional() @IsArray() salaries?: any[];
+  @ApiPropertyOptional() @IsOptional() @IsString() siteWeb?: string;
+  @ApiPropertyOptional() @IsOptional() @IsArray() reseauxSociaux?: string[];
+  @ApiPropertyOptional() @IsOptional() @IsNumber() nbConcurrentsQuartier?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() nbConcurrentsCommune?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() evolutionSecteur?: string;
 }

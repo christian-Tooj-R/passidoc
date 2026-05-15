@@ -31,6 +31,7 @@ async function seed() {
       lastName: 'Admin',
       role: UserRole.ADMIN,
       site: UserSite.REUNION,
+      timezone: 'Indian/Reunion',
       password: 'Admin2024!',
     },
     {
@@ -39,6 +40,7 @@ async function seed() {
       lastName: 'Martin',
       role: UserRole.EXPERT_COMPTABLE,
       site: UserSite.REUNION,
+      timezone: 'Indian/Reunion',
       password: 'Expert2024!',
     },
     {
@@ -47,6 +49,7 @@ async function seed() {
       lastName: 'Dupont',
       role: UserRole.COLLABORATEUR,
       site: UserSite.REUNION,
+      timezone: 'Indian/Reunion',
       password: 'Collab2024!',
     },
     {
@@ -55,6 +58,7 @@ async function seed() {
       lastName: 'Rakoto',
       role: UserRole.EXPERT_COMPTABLE,
       site: UserSite.MADAGASCAR,
+      timezone: 'Indian/Antananarivo',
       password: 'Expert2024!',
     },
     {
@@ -63,6 +67,7 @@ async function seed() {
       lastName: 'Lefevre',
       role: UserRole.COLLABORATEUR,
       site: UserSite.REUNION,
+      timezone: 'Indian/Reunion',
       password: 'Marie2024!',
     },
     {
@@ -71,6 +76,7 @@ async function seed() {
       lastName: 'Berger',
       role: UserRole.EXPERT_COMPTABLE,
       site: UserSite.REUNION,
+      timezone: 'Indian/Reunion',
       password: 'Thomas2024!',
     },
     {
@@ -79,6 +85,7 @@ async function seed() {
       lastName: 'Andriamaro',
       role: UserRole.ADMIN,
       site: UserSite.MADAGASCAR,
+      timezone: 'Indian/Antananarivo',
       password: 'Romuald2024!',
     },
   ];
@@ -127,7 +134,7 @@ async function seed() {
         { type: TypeFlux.RELEVE_BANCAIRE, mois: 3, annee: 2025, statut: StatutDepot.MANQUANT },
         { type: TypeFlux.RAPPORT_VENTE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
         { type: TypeFlux.RAPPORT_VENTE, mois: 2, annee: 2025, statut: StatutDepot.EN_RETARD },
-        { type: TypeFlux.RAPPORT_REGLEMENT, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
+        { type: TypeFlux.TVA_MENSUELLE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
       ],
       fournisseurs: [
         { nom: 'Grands Moulins de Paris', email: 'commandes@gmp.fr', telephone: '0262112233', categorie: 'Farine' },
@@ -169,8 +176,8 @@ async function seed() {
         { type: TypeFlux.RELEVE_BANCAIRE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
         { type: TypeFlux.RELEVE_BANCAIRE, mois: 2, annee: 2025, statut: StatutDepot.DEPOSE },
         { type: TypeFlux.RELEVE_BANCAIRE, mois: 3, annee: 2025, statut: StatutDepot.DEPOSE },
-        { type: TypeFlux.RAPPORT_REGLEMENT, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
-        { type: TypeFlux.RAPPORT_REGLEMENT, mois: 2, annee: 2025, statut: StatutDepot.DEPOSE },
+        { type: TypeFlux.TVA_MENSUELLE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
+        { type: TypeFlux.TVA_MENSUELLE, mois: 2, annee: 2025, statut: StatutDepot.DEPOSE },
       ],
       fournisseurs: [
         { nom: 'Mediline Réunion', email: 'pro@mediline.re', telephone: '0262778899', categorie: 'Matériel médical' },
@@ -210,7 +217,7 @@ async function seed() {
         { type: TypeFlux.RELEVE_BANCAIRE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
         { type: TypeFlux.RAPPORT_VENTE, mois: 1, annee: 2025, statut: StatutDepot.DEPOSE },
         { type: TypeFlux.RAPPORT_VENTE, mois: 2, annee: 2025, statut: StatutDepot.MANQUANT },
-        { type: TypeFlux.RAPPORT_REGLEMENT, mois: 1, annee: 2025, statut: StatutDepot.EN_RETARD },
+        { type: TypeFlux.TVA_MENSUELLE, mois: 1, annee: 2025, statut: StatutDepot.EN_RETARD },
       ],
       fournisseurs: [
         { nom: 'Metro Cash & Carry', email: 'pro.reunion@metro.fr', telephone: '0262556677', categorie: 'Alimentaire' },

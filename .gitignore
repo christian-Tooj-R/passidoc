@@ -35,3 +35,12 @@ coverage/
 
 # TypeORM migrations generated
 backend/src/migrations/*.js
+
+# Fichiers locaux racine (documents de travail)
+*.xlsm
+*.xlsx
+*.xls
+*.docx
+*.pdf
+ETAT_AVANCEMENT.md
+frontend/PRESENTATION_PROJET.md

@@ -55,6 +55,15 @@ export class FluxMensuelController {
     return this.service.update(id, clientId, dto);
   }
 
+  @Post('init-annee')
+  @ApiOperation({ summary: 'Initialiser tous les flux de l\'année comme MANQUANT' })
+  initAnnee(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Body('annee') annee: number,
+  ) {
+    return this.service.initAnnee(clientId, annee);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Supprimer un flux' })
   remove(@Param('clientId', ParseIntPipe) clientId: number, @Param('id', ParseIntPipe) id: number) {

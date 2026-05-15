@@ -35,14 +35,21 @@ export class UsersController {
     return this.usersService.getAssignable(req.user);
   }
 
+  @Get('my-team')
+  @ApiOperation({ summary: 'Mon équipe (référent ou collaborateurs MG)' })
+  getMyTeam(@Req() req: any) {
+    return this.usersService.getMyTeam(req.user);
+  }
+
   @Patch(':id/referent')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Définir le collaborateur Réunion d\'un utilisateur Madagascar' })
   setReferent(
     @Param('id', ParseIntPipe) id: number,
     @Body('referentId') referentId: number | null,
+    @Req() req: any,
   ) {
-    return this.usersService.setReferent(id, referentId);
+    return this.usersService.setReferent(id, referentId, req.user.id);
   }
 
   @Get(':id')

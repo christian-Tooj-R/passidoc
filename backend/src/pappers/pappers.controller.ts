@@ -13,7 +13,7 @@ export class PappersController {
   @Get('search')
   @ApiOperation({ summary: 'Rechercher une entreprise par nom ou SIREN' })
   search(@Query('q') q: string) {
-    if (!q || q.trim().length < 2) return [];
+    if (!q || q.trim().length < 1) return [];
     return this.service.search(q.trim());
   }
 }

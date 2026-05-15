@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160">
+  <!-- Warm yellow background blob -->
+  <circle cx="100" cy="85" r="70" fill="#FFF8E1" opacity="0.9"/>
+  <ellipse cx="100" cy="90" rx="78" ry="58" fill="#FFF3E0" opacity="0.7"/>
+
+  <!-- === BUILDING SILHOUETTES (background) === -->
+  <!-- Left building -->
+  <rect x="8" y="55" width="38" height="90" rx="2" fill="#78909C"/>
+  <!-- Left building windows -->
+  <rect x="13" y="62" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="24" y="62" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="35" y="62" width="6" height="7" rx="1" fill="#78909C"/>
+  <rect x="13" y="74" width="8" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="24" y="74" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.6"/>
+  <rect x="35" y="74" width="6" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="13" y="86" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.7"/>
+  <rect x="24" y="86" width="8" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="13" y="98" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.5"/>
+  <rect x="24" y="98" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="35" y="98" width="6" height="7" rx="1" fill="#B3E5FC" opacity="0.6"/>
+
+  <!-- Left building 2 (narrower, taller) -->
+  <rect x="18" y="38" width="20" height="20" rx="2" fill="#607D8B"/>
+  <rect x="22" y="42" width="5" height="5" rx="1" fill="#B3E5FC" opacity="0.7"/>
+  <rect x="29" y="42" width="5" height="5" rx="1" fill="#B3E5FC" opacity="0.6"/>
+
+  <!-- Right building -->
+  <rect x="154" y="42" width="42" height="103" rx="2" fill="#78909C"/>
+  <!-- Right building windows -->
+  <rect x="159" y="50" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="170" y="50" width="8" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="181" y="50" width="9" height="7" rx="1" fill="#B3E5FC" opacity="0.7"/>
+  <rect x="159" y="62" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.6"/>
+  <rect x="170" y="62" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="181" y="62" width="9" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="159" y="74" width="8" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="170" y="74" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.7"/>
+  <rect x="181" y="74" width="9" height="7" rx="1" fill="#B3E5FC" opacity="0.5"/>
+  <rect x="159" y="86" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="170" y="86" width="8" height="7" rx="1" fill="#90A4AE"/>
+  <rect x="159" y="98" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.6"/>
+  <rect x="170" y="98" width="8" height="7" rx="1" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="181" y="98" width="9" height="7" rx="1" fill="#B3E5FC" opacity="0.7"/>
+
+  <!-- Ground line -->
+  <rect x="0" y="143" width="200" height="17" rx="0" fill="#ECEFF1"/>
+  <line x1="0" y1="143" x2="200" y2="143" stroke="#CFD8DC" stroke-width="1.5"/>
+
+  <!-- === WRENCH (diagonal, behind hat) === -->
+  <!-- Drop shadow -->
+  <ellipse cx="85" cy="138" rx="28" ry="6" fill="#000" opacity="0.10"/>
+  <!-- Wrench body (diagonal) -->
+  <g transform="rotate(-35, 82, 100)">
+    <!-- Wrench handle -->
+    <rect x="58" y="95" width="14" height="50" rx="7" fill="#616161"/>
+    <!-- Wrench head top jaw -->
+    <ellipse cx="65" cy="92" rx="14" ry="10" fill="#757575"/>
+    <ellipse cx="65" cy="92" rx="9" ry="6" fill="#616161"/>
+    <!-- Wrench jaw cutout -->
+    <rect x="58" y="85" width="14" height="8" rx="2" fill="#9E9E9E"/>
+    <rect x="60" y="83" width="10" height="5" rx="1" fill="#FFF8E1"/>
+    <!-- Wrench head bottom jaw -->
+    <ellipse cx="65" cy="148" rx="14" ry="10" fill="#757575"/>
+    <ellipse cx="65" cy="148" rx="9" ry="6" fill="#616161"/>
+    <rect x="58" y="147" width="14" height="8" rx="2" fill="#9E9E9E"/>
+    <rect x="60" y="148" width="10" height="5" rx="1" fill="#FFF8E1"/>
+    <!-- Highlight on handle -->
+    <rect x="61" y="100" width="4" height="38" rx="2" fill="#9E9E9E" opacity="0.5"/>
+  </g>
+
+  <!-- === HARD HAT (foreground center) === -->
+  <!-- Hat drop shadow -->
+  <ellipse cx="103" cy="138" rx="44" ry="7" fill="#000" opacity="0.13"/>
+
+  <!-- Hat dome main shape (yellow) -->
+  <ellipse cx="103" cy="100" rx="44" ry="32" fill="#FFC107"/>
+  <!-- Hat dome clip (hide bottom half of ellipse to get dome shape) -->
+  <rect x="55" y="100" width="96" height="35" fill="#FFF8E1" opacity="0"/>
+  <!-- Real dome: use a path -->
+  <path d="M59,110 Q59,70 103,68 Q147,70 147,110 Z" fill="#FFC107"/>
+  <!-- Dome highlight -->
+  <path d="M72,92 Q80,72 103,70 Q125,72 132,88" stroke="#FFD54F" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Red logo band across middle of dome -->
+  <path d="M62,105 Q103,98 144,105" stroke="#E65100" stroke-width="7" fill="none" stroke-linecap="round"/>
+
+  <!-- Hat brim (orange, wide) -->
+  <ellipse cx="103" cy="112" rx="50" ry="9" fill="#F57F17"/>
+  <!-- Brim underside shadow -->
+  <ellipse cx="103" cy="116" rx="48" ry="6" fill="#E65100" opacity="0.4"/>
+  <!-- Brim top highlight -->
+  <ellipse cx="103" cy="110" rx="48" ry="5" fill="#FFB300" opacity="0.5"/>
+
+  <!-- Inner band / sweatband inside brim -->
+  <rect x="69" y="109" width="68" height="5" rx="2" fill="#E65100" opacity="0.6"/>
+
+  <!-- Decorative dots -->
+  <circle cx="26" cy="28" r="5" fill="#FFF3E0" opacity="0.8"/>
+  <circle cx="174" cy="25" r="7" fill="#FFF8E1" opacity="0.7"/>
+  <circle cx="170" cy="138" r="4" fill="#FFF3E0" opacity="0.6"/>
+</svg>

@@ -10,4 +10,7 @@ export class CreateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsString() dateEcheance?: string;
   @ApiPropertyOptional() @IsOptional() @IsNumber() assigneeId?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() semaine?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() mois?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() annee?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() commentaire?: string;
 }

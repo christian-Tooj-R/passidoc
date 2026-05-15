@@ -100,6 +100,7 @@ import { AiAssistantService, ChatMessage } from '../../../../../core/services/ai
     .ai-tab {
       display: flex; flex-direction: column;
       height: calc(100vh - 280px); min-height: 500px;
+      padding: 20px 24px;
     }
 
     /* Header */
@@ -143,8 +144,8 @@ import { AiAssistantService, ChatMessage } from '../../../../../core/services/ai
 
     /* Messages */
     .messages {
-      flex: 1; overflow-y: auto; padding: 4px 0;
-      display: flex; flex-direction: column; gap: 16px;
+      flex: 1; overflow-y: auto; padding: 8px 0;
+      display: flex; flex-direction: column; gap: 20px;
       scroll-behavior: smooth;
     }
     .message {
@@ -193,7 +194,7 @@ import { AiAssistantService, ChatMessage } from '../../../../../core/services/ai
     }
 
     /* Input */
-    .ai-input-wrap { padding-top: 16px; border-top: 1px solid #f1f5f9; margin-top: 8px; }
+    .ai-input-wrap { padding-top: 16px; border-top: 1px solid #f1f5f9; margin-top: 16px; }
     .ai-input {
       display: flex; align-items: flex-end; gap: 8px;
       background: white; border: 1.5px solid #e2e8f0;

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -25,8 +26,9 @@ export class ClientsController {
   @Get()
   @ApiOperation({ summary: 'Liste des dossiers clients (filtrée par responsable pour non-admin)' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  findAll(@Req() req: any, @Query('site') site?: string) {
-    return this.clientsService.findAll(req.user, site);
+  @ApiQuery({ name: 'collaborateurId', required: false, type: Number })
+  findAll(@Req() req: any, @Query('site') site?: string, @Query('collaborateurId') collaborateurId?: number) {
+    return this.clientsService.findAll(req.user, site, collaborateurId ? +collaborateurId : undefined);
   }
 
   @Get(':id')
@@ -45,8 +47,8 @@ export class ClientsController {
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Assigner un responsable Réunion à un dossier (ADMIN uniquement)' })
-  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number) {
-    return this.clientsService.assign(id, responsableId);
+  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number, @Req() req: any) {
+    return this.clientsService.assign(id, responsableId, req.user.id);
   }
 
   @Patch(':id/assign-mg')
@@ -57,6 +59,13 @@ export class ClientsController {
     @Req() req: any,
   ) {
     return this.clientsService.assignMg(id, collaborateurMgId, req.user);
+  }
+
+  @Post(':id/logo')
+  @UseInterceptors(FileInterceptor('logo'))
+  @ApiOperation({ summary: 'Upload logo du client' })
+  uploadLogo(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
+    return this.clientsService.uploadLogo(id, file);
   }
 
   @Delete(':id')

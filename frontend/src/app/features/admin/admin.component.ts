@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../core/services/toast.service';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../../core/services/users.service';
@@ -108,7 +108,7 @@ export class CreateUserDialogComponent {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule, MatSnackBarModule,
+  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule,
     MatDialogModule, MatTooltipModule],
   template: `
     <div class="page">
@@ -284,7 +284,7 @@ export class CreateUserDialogComponent {
 })
 export class AdminComponent implements OnInit {
   private usersService = inject(UsersService);
-  private snack = inject(MatSnackBar);
+  private toast = inject(ToastService);
   private dialog = inject(MatDialog);
 
   users: User[] = [];
@@ -301,7 +301,7 @@ export class AdminComponent implements OnInit {
       if (result) {
         this.usersService.create(result).subscribe(() => {
           this.loadUsers();
-          this.snack.open('Utilisateur créé avec succès', 'OK', { duration: 3000 });
+          this.toast.success('Utilisateur créé avec succès');
         });
       }
     });
@@ -311,7 +311,7 @@ export class AdminComponent implements OnInit {
     if (!confirm(`Désactiver le compte de ${u.firstName} ${u.lastName} ?`)) return;
     this.usersService.delete(u.id).subscribe(() => {
       this.loadUsers();
-      this.snack.open('Utilisateur désactivé', 'OK', { duration: 2500 });
+      this.toast.success('Utilisateur désactivé');
     });
   }
 
