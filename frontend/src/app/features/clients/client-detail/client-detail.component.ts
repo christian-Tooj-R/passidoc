@@ -195,6 +195,99 @@ interface TabGroup {
           <!-- ── Content ──────────────────────────────── -->
           <div class="content">
 
+            <!-- ── Hero cards ─────────────────────────── -->
+            <div class="hero">
+
+              <!-- Card 1 : illustration secteur -->
+              <div class="hero-card hc-sector" [style.background]="getSectorConfig(client.secteurActivite).bg">
+                <img class="hc-sector__img"
+                     [src]="getSectorConfig(client.secteurActivite).imgSrc"
+                     [alt]="getSectorConfig(client.secteurActivite).label"
+                     onerror="this.style.display='none'" />
+                <div class="hc-sector__body">
+                  <span class="hc-sector__name">{{ client.nom }}</span>
+                  <span class="hc-sector__pill" [style.background]="getSectorConfig(client.secteurActivite).accent + '22'"
+                        [style.color]="getSectorConfig(client.secteurActivite).accent">
+                    <mat-icon>{{ getSectorConfig(client.secteurActivite).icon }}</mat-icon>
+                    {{ getSectorConfig(client.secteurActivite).label }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Card 2 : ADN complétude -->
+              <div class="hero-card hc-adn">
+                <div class="hc-adn__ring-wrap">
+                  <svg viewBox="0 0 80 80" width="76" height="76">
+                    <circle cx="40" cy="40" r="30" fill="none" stroke="#E8EAED" stroke-width="7"/>
+                    <circle cx="40" cy="40" r="30" fill="none"
+                            [attr.stroke]="ringColor(client.completude)"
+                            stroke-width="7" stroke-linecap="round"
+                            stroke-dasharray="188.5"
+                            [attr.stroke-dashoffset]="188.5 * (1 - client.completude / 100)"
+                            transform="rotate(-90 40 40)"/>
+                  </svg>
+                  <div class="hc-adn__pct" [style.color]="ringColor(client.completude)">{{ client.completude }}%</div>
+                </div>
+                <div class="hc-adn__info">
+                  <span class="hc-adn__title">ADN Complétude</span>
+                  <span class="hc-adn__status" [style.color]="ringColor(client.completude)">{{ getScoreStatus(client.completude) }}</span>
+                  <button class="hc-adn__btn" (click)="activeTab.set('adn')">
+                    <mat-icon>edit_note</mat-icon> Compléter
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 3 : infos clés -->
+              <div class="hero-card hc-info">
+                <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
+                  {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                </div>
+                @if (client.responsable) {
+                  <div class="hc-info__row">
+                    <div class="hc-info__ico-wrap hc-info__ico-wrap--blue">
+                      <mat-icon>person</mat-icon>
+                    </div>
+                    <div class="hc-info__text">
+                      <span class="hc-info__lbl">Expert-comptable</span>
+                      <span class="hc-info__val">{{ client.responsable.firstName }} {{ client.responsable.lastName }}</span>
+                    </div>
+                  </div>
+                }
+                @if (client.collaborateurMg) {
+                  <div class="hc-info__row">
+                    <div class="hc-info__ico-wrap hc-info__ico-wrap--teal">
+                      <mat-icon>supervisor_account</mat-icon>
+                    </div>
+                    <div class="hc-info__text">
+                      <span class="hc-info__lbl">Collaborateur</span>
+                      <span class="hc-info__val">{{ client.collaborateurMg.firstName }} {{ client.collaborateurMg.lastName }}</span>
+                    </div>
+                  </div>
+                }
+                <div class="hc-info__row">
+                  <div class="hc-info__ico-wrap hc-info__ico-wrap--grey">
+                    <mat-icon>calendar_today</mat-icon>
+                  </div>
+                  <div class="hc-info__text">
+                    <span class="hc-info__lbl">Créé le</span>
+                    <span class="hc-info__val">{{ client.createdAt | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                </div>
+                @if (client.ficheIdentite?.siren) {
+                  <div class="hc-info__row">
+                    <div class="hc-info__ico-wrap hc-info__ico-wrap--grey">
+                      <mat-icon>fingerprint</mat-icon>
+                    </div>
+                    <div class="hc-info__text">
+                      <span class="hc-info__lbl">SIREN</span>
+                      <span class="hc-info__val">{{ client.ficheIdentite!.siren }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+            </div>
+
             <!-- Content header -->
             <div class="content__header">
               <div class="ch-icon" [style.background]="activeGroupStyle().bg">
@@ -463,6 +556,128 @@ interface TabGroup {
       width: 100%;
     }
 
+    /* ══ HERO SECTION ═══════════════════════════════════ */
+    .hero {
+      display: flex; gap: 14px;
+      padding: 14px 16px;
+      flex-shrink: 0;
+      background: #F4F6FB;
+      border-bottom: 1px solid #E0E2EC;
+    }
+    .hero-card {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08), 0 3px 12px rgba(0,0,0,.04);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .hero-card:hover {
+      box-shadow: 0 4px 18px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.06);
+      transform: translateY(-2px);
+    }
+
+    /* Card 1 — Sector illustration */
+    .hc-sector {
+      flex: 1.2;
+      position: relative;
+      display: flex; flex-direction: column;
+      min-height: 158px;
+    }
+    .hc-sector__img {
+      position: absolute; top: 0; right: 0;
+      height: 100%; width: 60%;
+      object-fit: contain;
+      padding: 12px 16px 12px 0;
+      opacity: .92;
+    }
+    .hc-sector__body {
+      position: relative; z-index: 1;
+      padding: 18px 20px; margin-top: auto;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hc-sector__name {
+      font-size: 15px; font-weight: 700; color: #1A1C1E;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    .hc-sector__pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11.5px; font-weight: 600;
+      padding: 4px 10px 4px 8px; border-radius: 20px;
+      width: fit-content;
+    }
+    .hc-sector__pill mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    /* Card 2 — ADN ring */
+    .hc-adn {
+      flex: 1;
+      background: #FFFBFE;
+      display: flex; align-items: center; justify-content: center; gap: 18px;
+      padding: 16px 20px;
+    }
+    .hc-adn__ring-wrap {
+      position: relative; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hc-adn__pct {
+      position: absolute;
+      font-size: 15px; font-weight: 800;
+      letter-spacing: -.5px;
+    }
+    .hc-adn__info {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .hc-adn__title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: #89909A;
+    }
+    .hc-adn__status {
+      font-size: 16px; font-weight: 700;
+    }
+    .hc-adn__btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 6px; padding: 5px 12px 5px 8px;
+      background: #E8F0FE; color: #1565C0;
+      border: none; border-radius: 20px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background .15s, transform .1s;
+      width: fit-content;
+    }
+    .hc-adn__btn:hover { background: #D0E4FF; }
+    .hc-adn__btn:active { transform: scale(.97); }
+    .hc-adn__btn mat-icon { font-size: 15px; width: 15px; height: 15px; }
+
+    /* Card 3 — Infos clés */
+    .hc-info {
+      flex: 1;
+      background: #FFFBFE;
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 16px 18px;
+    }
+    .hc-info__site {
+      font-size: 12.5px; font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      width: fit-content; margin-bottom: 2px;
+    }
+    .hc-info__site.site--re { background: #E8F0FE; color: #1565C0; }
+    .hc-info__site.site--mg { background: #D7F5EC; color: #006B57; }
+    .hc-info__row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .hc-info__ico-wrap {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hc-info__ico-wrap mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .hc-info__ico-wrap--blue { background: #E8F0FE; }
+    .hc-info__ico-wrap--blue mat-icon { color: #1565C0; }
+    .hc-info__ico-wrap--teal { background: #D7F5EC; }
+    .hc-info__ico-wrap--teal mat-icon { color: #006B57; }
+    .hc-info__ico-wrap--grey { background: #F0F1F5; }
+    .hc-info__ico-wrap--grey mat-icon { color: #89909A; }
+    .hc-info__text { display: flex; flex-direction: column; }
+    .hc-info__lbl { font-size: 10px; font-weight: 600; color: #89909A; text-transform: uppercase; letter-spacing: .6px; }
+    .hc-info__val { font-size: 13px; font-weight: 600; color: #1A1C1E; }
+
     /* ══ SKELETON LOADER ═════════════════════════════════ */
     @keyframes shimmer {
       0%   { background-position: -600px 0; }
@@ -689,4 +904,18 @@ export class ClientDetailComponent implements OnInit {
   getScoreBarClass(s: number) { return s >= 80 ? 'high' : s >= 50 ? 'medium' : 'low'; }
   getScoreChipClass(s: number) { return s >= 80 ? 'ok' : s >= 50 ? 'partial' : 'alert'; }
   getScorePctClass(s: number) { return s >= 80 ? 'ok' : s >= 50 ? 'partial' : 'alert'; }
+
+  ringColor(s: number): string { return s >= 80 ? '#4CAF50' : s >= 50 ? '#FF9800' : '#F44336'; }
+
+  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
+    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
+      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration',   imgSrc: 'sectors/restauration.svg' },
+      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP',            imgSrc: 'sectors/btp.svg' },
+      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association',    imgSrc: 'sectors/association.svg' },
+      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding',        imgSrc: 'sectors/holding.svg' },
+      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale', imgSrc: 'sectors/profession_liberale.svg' },
+      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI',            imgSrc: 'sectors/sci.svg' },
+    };
+    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg' };
+  }
 }
