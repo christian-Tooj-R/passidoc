@@ -27,7 +27,7 @@ export class AuthController {
     if (count > 0) throw new ConflictException('Des utilisateurs existent déjà');
     const hash = await bcrypt.hash('Afym2026!', 10);
     const user = this.userRepo.create({
-      nom: 'Admin', prenom: 'AFYM', email: 'admin@afym.re',
+      firstName: 'Admin', lastName: 'AFYM', email: 'admin@afym.re',
       password: hash, role: 'ADMIN' as any, site: 'REUNION' as any, isActive: true,
     });
     await this.userRepo.save(user);
