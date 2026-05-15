@@ -35,18 +35,26 @@ import { RolePermissionsModule } from './role-permissions/role-permissions.modul
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'mysql',
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        username: config.get<string>('DB_USER'),
-        password: config.get<string>('DB_PASSWORD'),
-        database: config.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get<string>('NODE_ENV') !== 'production' || config.get<string>('DB_SYNC') === 'true',
-        logging: config.get<string>('NODE_ENV') === 'development',
-        ssl: config.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
-      }),
+      useFactory: (config: ConfigService) => {
+        const dbType = config.get<string>('DB_TYPE') || 'mysql';
+        const common = {
+          type: dbType as any,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: config.get<string>('NODE_ENV') !== 'production' || config.get<string>('DB_SYNC') === 'true',
+          logging: config.get<string>('NODE_ENV') === 'development',
+        };
+        if (dbType === 'postgres') {
+          return { ...common, url: config.get<string>('DATABASE_URL'), ssl: { rejectUnauthorized: false } };
+        }
+        return {
+          ...common,
+          host: config.get<string>('DB_HOST'),
+          port: config.get<number>('DB_PORT'),
+          username: config.get<string>('DB_USER'),
+          password: config.get<string>('DB_PASSWORD'),
+          database: config.get<string>('DB_NAME'),
+        };
+      },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     AuthModule,
