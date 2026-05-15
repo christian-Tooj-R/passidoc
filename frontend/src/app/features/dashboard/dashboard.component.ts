@@ -140,7 +140,7 @@ const TYPE_LABELS: Record<string, string> = {
                   <div class="chart-card__sub">{{ selectedCollabData.total }} tâche(s) assignée(s)</div>
                   <div class="chart-wrap chart-wrap--donut">
                     <canvas baseChart
-                      [data]="doughnutData"
+                      [data]="_doughnutData"
                       [options]="doughnutOptions"
                       type="doughnut">
                     </canvas>
@@ -153,7 +153,7 @@ const TYPE_LABELS: Record<string, string> = {
                   <div class="chart-card__sub">Top {{ selectedCollabData.dossiers.length }} dossier(s)</div>
                   <div class="chart-wrap" [style.height.px]="Math.max(180, selectedCollabData.dossiers.length * 36)">
                     <canvas baseChart
-                      [data]="dossierBarData"
+                      [data]="_dossierBarData"
                       [options]="dossierBarOptions"
                       type="bar">
                     </canvas>
@@ -514,6 +514,31 @@ export class DashboardComponent implements OnInit {
   Math = Math;
 
   get selectedCollabData() { return this.collabStats.find(s => s.name === this.selectedCollab) ?? null; }
+
+  // données graphes cachées — recalculées uniquement sur selectCollab(), pas à chaque change detection
+  _doughnutData: ChartData<'doughnut'> = { labels: [], datasets: [] };
+  _dossierBarData: ChartData<'bar'>    = { labels: [], datasets: [] };
+
+  private buildDetailChartData() {
+    const s = this.selectedCollabData;
+    if (!s) { this._doughnutData = { labels: [], datasets: [] }; this._dossierBarData = { labels: [], datasets: [] }; return; }
+    const restantes = s.total - s.terminees - s.enCours;
+    this._doughnutData = {
+      labels: ['Terminées', 'En cours', 'Restantes / non faites'],
+      datasets: [{ data: [s.terminees, s.enCours, restantes],
+        backgroundColor: ['rgba(34,197,94,.85)', 'rgba(245,158,11,.85)', 'rgba(226,232,240,.9)'],
+        borderColor: ['#16a34a', '#d97706', '#cbd5e1'], borderWidth: 1, hoverOffset: 6 }],
+    };
+    const top = s.dossiers.slice(0, 10);
+    this._dossierBarData = {
+      labels: top.map(d => d.nom),
+      datasets: [
+        { label: 'Terminées',  data: top.map(d => d.terminees),                         backgroundColor: 'rgba(34,197,94,.85)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
+        { label: 'En cours',   data: top.map(d => d.enCours),                           backgroundColor: 'rgba(245,158,11,.85)', borderColor: '#d97706', borderWidth: 1, borderRadius: 4 },
+        { label: 'Restantes',  data: top.map(d => d.total - d.terminees - d.enCours),   backgroundColor: 'rgba(226,232,240,.9)', borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 4 },
+      ],
+    };
+  }
   get totalTasksCount()    { return this.collabStats.reduce((sum, s) => sum + s.total, 0); }
 
   // ── Chart.js : vue d'ensemble équipe ────────────────────
@@ -552,6 +577,7 @@ export class DashboardComponent implements OnInit {
   teamBarOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 16, boxWidth: 12, boxHeight: 12 } },
       tooltip: { mode: 'index', intersect: false },
@@ -562,75 +588,22 @@ export class DashboardComponent implements OnInit {
     },
   };
 
-  // ── Chart.js : doughnut statuts collab sélectionné ─────
-  get doughnutData(): ChartData<'doughnut'> {
-    const s = this.selectedCollabData;
-    if (!s) return { labels: [], datasets: [] };
-    const restantes = s.total - s.terminees - s.enCours;
-    return {
-      labels: ['Terminées', 'En cours', 'Restantes / non faites'],
-      datasets: [{
-        data: [s.terminees, s.enCours, restantes],
-        backgroundColor: ['rgba(34,197,94,.85)', 'rgba(245,158,11,.85)', 'rgba(226,232,240,.9)'],
-        borderColor: ['#16a34a', '#d97706', '#cbd5e1'],
-        borderWidth: 1,
-        hoverOffset: 6,
-      }],
-    };
-  }
-
   doughnutOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     cutout: '68%',
     plugins: {
       legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
-      tooltip: { callbacks: {
-        label: (ctx) => ` ${ctx.label}: ${ctx.parsed} tâche(s)`,
-      }},
+      tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} tâche(s)` } },
     },
   };
-
-  // ── Chart.js : horizontal bar dossiers ─────────────────
-  get dossierBarData(): ChartData<'bar'> {
-    const s = this.selectedCollabData;
-    if (!s) return { labels: [], datasets: [] };
-    const top = s.dossiers.slice(0, 10);
-    return {
-      labels: top.map(d => d.nom),
-      datasets: [
-        {
-          label: 'Terminées',
-          data: top.map(d => d.terminees),
-          backgroundColor: 'rgba(34,197,94,.85)',
-          borderColor: '#16a34a',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'En cours',
-          data: top.map(d => d.enCours),
-          backgroundColor: 'rgba(245,158,11,.85)',
-          borderColor: '#d97706',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Restantes',
-          data: top.map(d => d.total - d.terminees - d.enCours),
-          backgroundColor: 'rgba(226,232,240,.9)',
-          borderColor: '#cbd5e1',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    };
-  }
 
   dossierBarOptions: ChartConfiguration['options'] = {
     indexAxis: 'y' as const,
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
       tooltip: { mode: 'index', intersect: false },
@@ -711,9 +684,10 @@ export class DashboardComponent implements OnInit {
       .sort((a, b) => b.taux - a.taux);
 
     if (this.collabStats.length > 0) this.selectedCollab = this.collabStats[0].name;
+    this.buildDetailChartData();
   }
 
-  selectCollab(name: string) { this.selectedCollab = name; }
+  selectCollab(name: string) { this.selectedCollab = name; this.buildDetailChartData(); }
 
   filterSite(site: string) {
     this.siteFilter = site;
