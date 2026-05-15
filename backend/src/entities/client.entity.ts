@@ -16,10 +16,21 @@ import { Mission } from './mission.entity';
 import { ObjectifsClient } from './objectifs-client.entity';
 import { ControleInterne } from './controle-interne.entity';
 import { Task } from './task.entity';
+import { QuestionnaireAdnGlobal } from './questionnaire-adn-global.entity';
+import { QuestionnaireAdnSectoriel } from './questionnaire-adn-sectoriel.entity';
 
 export enum ClientSite {
   REUNION = 'REUNION',
   MADAGASCAR = 'MADAGASCAR',
+}
+
+export enum SecteurActivite {
+  RESTAURATION = 'RESTAURATION',
+  BTP = 'BTP',
+  ASSOCIATION = 'ASSOCIATION',
+  HOLDING = 'HOLDING',
+  PROFESSION_LIBERALE = 'PROFESSION_LIBERALE',
+  SCI = 'SCI',
 }
 
 @Entity('clients')
@@ -35,6 +46,9 @@ export class Client {
 
   @Column({ type: 'enum', enum: ClientSite })
   site: ClientSite;
+
+  @Column({ type: 'enum', enum: SecteurActivite, nullable: true })
+  secteurActivite: SecteurActivite;
 
   santePassation: number = 0;
 
@@ -110,6 +124,12 @@ export class Client {
 
   @OneToMany(() => Task, (t) => t.client, { cascade: true })
   tasks: Task[];
+
+  @OneToOne(() => QuestionnaireAdnGlobal, { cascade: true })
+  questionnaireAdnGlobal: QuestionnaireAdnGlobal;
+
+  @OneToOne(() => QuestionnaireAdnSectoriel, { cascade: true })
+  questionnaireAdnSectoriel: QuestionnaireAdnSectoriel;
 
   @CreateDateColumn()
   createdAt: Date;

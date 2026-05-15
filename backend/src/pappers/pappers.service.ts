@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as https from 'https';
 
 export interface PappersResult {
   siren: string;
@@ -11,25 +12,53 @@ export interface PappersResult {
 
 @Injectable()
 export class PappersService {
-  private readonly API = 'https://recherche-entreprises.api.gouv.fr';
+  private readonly HOST = 'recherche-entreprises.api.gouv.fr';
+
+  private get(path: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const options: https.RequestOptions = {
+        hostname: this.HOST,
+        path,
+        family: 4, // forcer IPv4 (Node 22 essaie IPv6 en premier, bloqué sur ce serveur)
+        headers: { 'User-Agent': 'passidoc/1.0' },
+        timeout: 8000,
+      };
+      const req = https.get(options, (res) => {
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        let raw = '';
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try { resolve(JSON.parse(raw)); }
+          catch (e) { reject(e); }
+        });
+      });
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      req.on('error', reject);
+    });
+  }
 
   async search(q: string): Promise<PappersResult[]> {
-    const url = `${this.API}/search?q=${encodeURIComponent(q)}&page=1&per_page=8&is_open=true`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-
-    const data: any = await res.json();
-    return (data.results || []).map((r: any) => this.mapResult(r));
+    const path = `/search?q=${encodeURIComponent(q)}&page=1&per_page=10&is_open=true`;
+    try {
+      const data = await this.get(path);
+      return (data.results || []).map((r: any) => this.mapResult(r));
+    } catch {
+      return [];
+    }
   }
 
   async getBySiren(siren: string): Promise<PappersResult | null> {
-    const url = `${this.API}/search?q=${siren}&page=1&per_page=1`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-
-    const data: any = await res.json();
-    const r = data.results?.[0];
-    return r ? this.mapResult(r) : null;
+    const path = `/search?q=${encodeURIComponent(siren)}&page=1&per_page=1`;
+    try {
+      const data = await this.get(path);
+      const r = data.results?.[0];
+      return r ? this.mapResult(r) : null;
+    } catch {
+      return null;
+    }
   }
 
   private mapResult(r: any): PappersResult {

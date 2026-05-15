@@ -13,7 +13,7 @@ import { NotificationStreamService } from '../../../core/services/notification-s
 import { ClientsService } from '../../../core/services/clients.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Client } from '../../../core/models/client.model';
-import { CreateClientDialogComponent } from './create-client-dialog.component';
+import { CreateClientWizardComponent } from './create-client-wizard.component';
 
 type SortKey = 'nom' | 'score' | 'site';
 type ViewMode = 'grid' | 'list';
@@ -527,10 +527,15 @@ export class ClientListComponent implements OnInit, OnDestroy {
   }
 
   openCreateDialog() {
-    const ref = this.dialog.open(CreateClientDialogComponent, { panelClass: 'rounded-dialog' });
-    ref.afterClosed().subscribe(result => {
-      if (result?.nom && result?.site)
-        this.clientsService.create({ nom: result.nom, site: result.site, ficheData: result.ficheData }).subscribe(() => this.load());
+    const ref = this.dialog.open(CreateClientWizardComponent, {
+      panelClass: ['rounded-dialog', 'no-pad-dialog'],
+      maxWidth: '700px',
+      width: '700px',
+      height: '90vh',
+      maxHeight: '90vh',
+    });
+    ref.afterClosed().subscribe(client => {
+      if (client?.id) this.load();
     });
   }
 

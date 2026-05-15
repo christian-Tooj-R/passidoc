@@ -1,11 +1,12 @@
 import { IsEnum, IsString, IsOptional, IsObject, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ClientSite } from '../../entities/client.entity';
+import { ClientSite, SecteurActivite } from '../../entities/client.entity';
 import { TypeFlux } from '../../entities/flux-mensuel.entity';
 
 export class CreateClientDto {
   @ApiProperty() @IsString() nom: string;
   @ApiProperty({ enum: ClientSite }) @IsEnum(ClientSite) site: ClientSite;
+  @ApiPropertyOptional({ enum: SecteurActivite }) @IsOptional() @IsEnum(SecteurActivite) secteurActivite?: SecteurActivite;
   @ApiPropertyOptional() @IsOptional() @IsArray() typesFluxActifs?: TypeFlux[];
   @ApiPropertyOptional() @IsOptional() @IsObject() ficheData?: {
     raisonSociale?: string;

@@ -1,5 +1,46 @@
 export type ClientSite = 'REUNION' | 'MADAGASCAR';
 
+export type SecteurActivite =
+  | 'RESTAURATION'
+  | 'BTP'
+  | 'ASSOCIATION'
+  | 'HOLDING'
+  | 'PROFESSION_LIBERALE'
+  | 'SCI';
+
+export const SECTEURS_LABELS: Record<SecteurActivite, string> = {
+  RESTAURATION: 'Hôtellerie-Restauration & Métiers de bouche',
+  BTP: 'BTP',
+  ASSOCIATION: 'Association',
+  HOLDING: 'Holding & Groupes',
+  PROFESSION_LIBERALE: 'Profession Libérale',
+  SCI: 'SCI (Société Civile Immobilière)',
+};
+
+export interface QuestionnaireAdnGlobal {
+  id?: number;
+  mission?: string;
+  visionActivite?: string;
+  valeurCle?: string;
+  placeExploitation?: string;
+  ambianceEquipe?: string;
+  enjeuxRH?: string;
+  canauxAcquisition?: string[];
+  principalConcurrent?: string;
+  saisonnalite?: string;
+  caillouChaussure?: string;
+  projetsInvestissement?: string[];
+  niveauNumerique?: number;
+  updatedAt?: string;
+}
+
+export interface QuestionnaireAdnSectoriel {
+  id?: number;
+  secteur?: SecteurActivite;
+  reponses?: Record<string, any>;
+  updatedAt?: string;
+}
+
 export interface Responsable {
   id: number;
   firstName: string;
@@ -12,6 +53,7 @@ export interface Client {
   nom: string;
   logoUrl?: string;
   site: ClientSite;
+  secteurActivite?: SecteurActivite;
   santePassation: number;
   isActive: boolean;
   typesFluxActifs?: TypeFlux[];

@@ -19,9 +19,10 @@ import { ControleInterneTabComponent } from './tabs/controle-interne-tab/control
 import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-tab.component';
 import { TachesTabComponent } from './tabs/taches-tab/taches-tab.component';
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
+import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 
 type TabId =
-  | 'fiche' | 'pilotage' | 'fournisseurs' | 'synthese'
+  | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
   | 'documents' | 'taches' | 'ia' | 'historique';
 
@@ -56,6 +57,7 @@ interface TabGroup {
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
     AiAssistantTabComponent, TachesTabComponent, HistoriqueTabComponent,
+    AdnTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -208,6 +210,7 @@ interface TabGroup {
             <div class="content__body" [@tabFade]="activeTab()">
               @switch (activeTab()) {
                 @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" (typesChanged)="onTypesChanged($event)" /> }
+                @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" /> }
                 @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
                 @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
@@ -571,6 +574,7 @@ export class ClientDetailComponent implements OnInit {
       icon: 'folder',
       tabs: [
         { id: 'fiche', icon: 'badge', label: 'Fiche Identité' },
+        { id: 'adn', icon: 'fingerprint', label: 'ADN Entreprise' },
       ],
     },
     {

@@ -26,6 +26,7 @@ import { StorageModule } from './storage/storage.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 import { NotesModule } from './notes/notes.module';
+import { QuestionnaireAdnModule } from './questionnaire-adn/questionnaire-adn.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { NotesModule } from './notes/notes.module';
     StorageModule,
     AuditModule,
     NotesModule,
+    QuestionnaireAdnModule,
   ],
   controllers: [AppController],
   providers: [

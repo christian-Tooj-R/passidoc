@@ -339,6 +339,10 @@ a { text-decoration: none; }
 .rounded-dialog .mat-mdc-dialog-container { border-radius: var(--r-2xl) !important; overflow: hidden; padding: 0 !important; }
 .rounded-dialog .mdc-dialog__surface { border-radius: var(--r-2xl) !important; box-shadow: var(--shadow-lg) !important; }
 .mat-mdc-dialog-surface { font-family: 'Inter', sans-serif !important; }
+/* Wizard — supprime le padding interne Material et force height: 100% sur la surface */
+.no-pad-dialog .mdc-dialog__surface { padding: 0 !important; height: 100% !important; display: flex !important; flex-direction: column !important; }
+.no-pad-dialog .mat-mdc-dialog-container { height: 100% !important; }
+.no-pad-dialog app-create-client-wizard { flex: 1; display: flex; flex-direction: column; }
 
 /* Buttons */
 .mat-mdc-raised-button,
