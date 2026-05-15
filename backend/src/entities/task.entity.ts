@@ -58,10 +58,10 @@ export class Task {
   dateEcheance: string;
 
   // Suivi du temps
-  @Column({ nullable: true, type: 'datetime' })
+  @Column({ nullable: true, type: 'timestamp' })
   heureDebut: Date;
 
-  @Column({ nullable: true, type: 'datetime' })
+  @Column({ nullable: true, type: 'timestamp' })
   heureFin: Date;
 
   @Column({ nullable: true, type: 'float', default: 0 })
