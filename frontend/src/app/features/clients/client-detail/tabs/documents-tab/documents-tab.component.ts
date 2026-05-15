@@ -1,17 +1,19 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DocumentsService } from '../../../../../core/services/documents.service';
 import { ClientDocument } from '../../../../../core/models/client.model';
+import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
 
 @Component({
   selector: 'app-documents-tab',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatProgressBarModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule, LocalDatePipe],
   template: `
     <div class="tab-content">
       <div class="tab-header">
@@ -46,7 +48,7 @@ import { ClientDocument } from '../../../../../core/models/client.model';
         </ng-container>
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let d">{{ d.createdAt | date:'dd/MM/yyyy' }}</td>
+          <td mat-cell *matCellDef="let d">{{ d.createdAt | localDate:'dd/MM/yyyy' }}</td>
         </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
@@ -73,12 +75,14 @@ import { ClientDocument } from '../../../../../core/models/client.model';
   `,
   styles: [`
     .tab-content { padding: 24px; }
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .upload-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      background: #2563eb; color: white; padding: 8px 16px;
-      border-radius: 4px; cursor: pointer; font-size: 14px;
+      background: #1565C0; color: white; padding: 8px 20px;
+      border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600;
+      transition: background .15s;
     }
+    .upload-btn:hover { background: #0D47A1; }
     .full-width { width: 100%; }
     .file-icon { vertical-align: middle; font-size: 18px; color: #64748b; }
     .empty-state { text-align: center; padding: 48px; color: #94a3b8; }
@@ -91,7 +95,9 @@ export class DocumentsTabComponent implements OnInit {
   columns = ['nom', 'taille', 'uploadePar', 'date', 'actions'];
   uploading = false;
 
-  constructor(private service: DocumentsService, private snack: MatSnackBar) {}
+  private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
+  constructor(private service: DocumentsService) {}
   ngOnInit() { this.load(); }
   load() { this.service.getAll(this.clientId).subscribe((d) => (this.documents = d)); }
 
@@ -100,8 +106,8 @@ export class DocumentsTabComponent implements OnInit {
     if (!file) return;
     this.uploading = true;
     this.service.upload(this.clientId, file).subscribe({
-      next: () => { this.load(); this.uploading = false; this.snack.open('Fichier uploadé', 'OK', { duration: 2000 }); },
-      error: () => { this.uploading = false; this.snack.open('Erreur upload', 'OK', { duration: 3000 }); },
+      next: () => { this.load(); this.uploading = false; this.toast.success('Fichier uploadé'); },
+      error: () => { this.uploading = false; this.toast.error('Erreur upload'); },
     });
   }
 
@@ -115,9 +121,12 @@ export class DocumentsTabComponent implements OnInit {
   }
 
   delete(doc: ClientDocument) {
-    this.service.delete(this.clientId, doc.id).subscribe(() => {
-      this.load();
-      this.snack.open('Document supprimé', 'OK', { duration: 2000 });
+    this.confirm.confirm(`Supprimer "${doc.nom}" ?`).subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(this.clientId, doc.id).subscribe(() => {
+        this.load();
+        this.toast.success('Document supprimé');
+      });
     });
   }
 

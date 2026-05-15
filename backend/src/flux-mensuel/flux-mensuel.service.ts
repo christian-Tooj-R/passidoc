@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FluxMensuel, StatutDepot } from '../entities/flux-mensuel.entity';
+import { FluxMensuel, StatutDepot, TypeFlux } from '../entities/flux-mensuel.entity';
 import { ClientsService } from '../clients/clients.service';
 import { CreateFluxDto } from './dto/create-flux.dto';
 import { UpdateFluxDto } from './dto/update-flux.dto';
@@ -16,7 +16,6 @@ export class FluxMensuelService {
   async create(clientId: number, dto: CreateFluxDto) {
     const flux = this.repo.create({ ...dto, client: { id: clientId } });
     const saved = await this.repo.save(flux);
-    await this.clientsService.updateSantePassation(clientId);
     return saved;
   }
 
@@ -43,13 +42,43 @@ export class FluxMensuelService {
     const flux = await this.repo.findOne({ where: { id, client: { id: clientId } } });
     if (!flux) throw new NotFoundException('Flux introuvable');
 
-    if (dto.statut === StatutDepot.DEPOSE) {
-      await this.repo.update(id, { ...dto, dateDepot: new Date() });
-    } else {
-      await this.repo.update(id, dto);
+    const patch: Partial<FluxMensuel> = { ...dto } as any;
+    if (dto.statut === StatutDepot.DEPOSE && !flux.dateDepot) {
+      patch.dateDepot = new Date();
     }
-    await this.clientsService.updateSantePassation(clientId);
+    if (dto.statut === StatutDepot.MANQUANT || dto.statut === StatutDepot.EN_RETARD) {
+      patch.dateRelance = new Date(); // noter la date de dernière relance
+    }
+    await this.repo.update(id, patch);
     return this.repo.findOne({ where: { id } });
+  }
+
+  // Initialise tous les types × 12 mois de l'année comme MANQUANT (si pas déjà existants)
+  async initAnnee(clientId: number, annee: number) {
+    const types = Object.values(TypeFlux);
+    const existing = await this.repo.find({ where: { client: { id: clientId } } });
+    const toCreate: Partial<FluxMensuel>[] = [];
+    for (const type of types) {
+      for (let mois = 1; mois <= 12; mois++) {
+        const already = existing.find(f => f.type === type && f.mois === mois && f.annee === annee);
+        if (!already) {
+          toCreate.push({ type, mois, annee, statut: StatutDepot.MANQUANT, client: { id: clientId } as any });
+        }
+      }
+    }
+    if (toCreate.length > 0) await this.repo.save(this.repo.create(toCreate as any[]));
+    return { created: toCreate.length };
+  }
+
+  async getAlertesGlobales() {
+    return this.repo.find({
+      where: [
+        { statut: StatutDepot.MANQUANT },
+        { statut: StatutDepot.EN_RETARD },
+      ],
+      relations: ['client'],
+      order: { annee: 'DESC', mois: 'DESC' },
+    });
   }
 
   async remove(id: number, clientId: number) {

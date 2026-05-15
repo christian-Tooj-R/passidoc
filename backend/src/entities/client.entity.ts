@@ -1,18 +1,36 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn,
-  OneToOne, OneToMany,
+  OneToOne, OneToMany, ManyToOne, JoinColumn, AfterLoad,
 } from 'typeorm';
+import { TypeFlux } from './flux-mensuel.entity';
+import { User } from './user.entity';
 import { FicheIdentite } from './fiche-identite.entity';
 import { FluxMensuel } from './flux-mensuel.entity';
 import { Fournisseur } from './fournisseur.entity';
 import { SyntheseCloture } from './synthese-cloture.entity';
 import { Document } from './document.entity';
 import { ConversationIA } from './conversation-ia.entity';
+import { AnalyseStrategique } from './analyse-strategique.entity';
+import { Mission } from './mission.entity';
+import { ObjectifsClient } from './objectifs-client.entity';
+import { ControleInterne } from './controle-interne.entity';
+import { Task } from './task.entity';
+import { QuestionnaireAdnGlobal } from './questionnaire-adn-global.entity';
+import { QuestionnaireAdnSectoriel } from './questionnaire-adn-sectoriel.entity';
 
 export enum ClientSite {
   REUNION = 'REUNION',
   MADAGASCAR = 'MADAGASCAR',
+}
+
+export enum SecteurActivite {
+  RESTAURATION = 'RESTAURATION',
+  BTP = 'BTP',
+  ASSOCIATION = 'ASSOCIATION',
+  HOLDING = 'HOLDING',
+  PROFESSION_LIBERALE = 'PROFESSION_LIBERALE',
+  SCI = 'SCI',
 }
 
 @Entity('clients')
@@ -29,16 +47,55 @@ export class Client {
   @Column({ type: 'enum', enum: ClientSite })
   site: ClientSite;
 
-  @Column({ default: 0 })
-  santePassation: number; // Score de 0 à 100
+  @Column({ type: 'enum', enum: SecteurActivite, nullable: true })
+  secteurActivite: SecteurActivite;
+
+  santePassation: number = 0;
+
+  @AfterLoad()
+  computeSantePassation() {
+    let score = 0;
+    const fiche = (this as any).ficheIdentite;
+    if (fiche?.raisonSociale) score += 10;
+    if (fiche?.siren) score += 5;
+    if (fiche?.gerants?.length > 0) score += 10;
+    if (fiche?.salaries?.length > 0) score += 5;
+    if (fiche?.emailContact || fiche?.telephoneContact) score += 5;
+    if ((this as any).fluxMensuels?.length > 0) score += 10;
+    if ((this as any).fournisseurs?.length > 0) score += 10;
+    if ((this as any).synthesesCloture?.length > 0) score += 15;
+    if ((this as any).documents?.length > 0) score += 5;
+    if ((this as any).analyseStrategique?.forces?.length > 0 || (this as any).analyseStrategique?.ca) score += 10;
+    if ((this as any).missions?.length > 0) score += 10;
+    if ((this as any).controleInterne?.noteGenerale || (this as any).controleInterne?.processOk?.length > 0) score += 5;
+    this.santePassation = Math.min(score, 100);
+  }
 
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToOne(() => FicheIdentite, (fiche) => fiche.client, { cascade: true })
+  @Column({ type: 'simple-json', nullable: true })
+  typesFluxActifs: TypeFlux[];
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'responsableId' })
+  responsable: User;
+
+  @Column({ nullable: true })
+  responsableId: number;
+
+  // Collaborateur Madagascar qui traite ce dossier (sous-assignation du portefeuille Réunion)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'collaborateurMgId' })
+  collaborateurMg: User;
+
+  @Column({ nullable: true })
+  collaborateurMgId: number;
+
+  @OneToOne(() => FicheIdentite, (f) => f.client, { cascade: true })
   ficheIdentite: FicheIdentite;
 
-  @OneToMany(() => FluxMensuel, (flux) => flux.client, { cascade: true })
+  @OneToMany(() => FluxMensuel, (f) => f.client, { cascade: true })
   fluxMensuels: FluxMensuel[];
 
   @OneToMany(() => Fournisseur, (f) => f.client, { cascade: true })
@@ -52,6 +109,27 @@ export class Client {
 
   @OneToMany(() => ConversationIA, (c) => c.client, { cascade: true })
   conversationsIA: ConversationIA[];
+
+  @OneToOne(() => AnalyseStrategique, (a) => a.client, { cascade: true })
+  analyseStrategique: AnalyseStrategique;
+
+  @OneToMany(() => Mission, (m) => m.client, { cascade: true })
+  missions: Mission[];
+
+  @OneToOne(() => ObjectifsClient, (o) => o.client, { cascade: true })
+  objectifs: ObjectifsClient;
+
+  @OneToOne(() => ControleInterne, (c) => c.client, { cascade: true })
+  controleInterne: ControleInterne;
+
+  @OneToMany(() => Task, (t) => t.client, { cascade: true })
+  tasks: Task[];
+
+  @OneToOne(() => QuestionnaireAdnGlobal, { cascade: true })
+  questionnaireAdnGlobal: QuestionnaireAdnGlobal;
+
+  @OneToOne(() => QuestionnaireAdnSectoriel, { cascade: true })
+  questionnaireAdnSectoriel: QuestionnaireAdnSectoriel;
 
   @CreateDateColumn()
   createdAt: Date;
