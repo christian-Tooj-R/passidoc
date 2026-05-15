@@ -1,0 +1,40 @@
+services:
+  # ── Backend NestJS ──────────────────────────────────────────────────────────
+  - type: web
+    name: passidoc-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/main
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false          # db4free.net host
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true  # Render génère automatiquement
+      - key: FRONTEND_URL
+        sync: false          # ex: https://passidoc-app.onrender.com
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  # ── Frontend Angular ────────────────────────────────────────────────────────
+  - type: static
+    name: passidoc-app
+    rootDir: frontend
+    buildCommand: npm ci && npm run build -- --configuration=render
+    staticPublishPath: dist/frontend/browser
+    pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
