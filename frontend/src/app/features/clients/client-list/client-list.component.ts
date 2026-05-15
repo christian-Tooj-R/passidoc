@@ -160,11 +160,13 @@ type ViewMode = 'grid' | 'list';
                 <!-- Name & meta -->
                 <div class="folder-meta">
                   <span class="folder-name">{{ c.nom }}</span>
-                  <span class="folder-sector-pill"
-                        [style.background]="getSectorConfig(c.secteurActivite).bg"
-                        [style.color]="getSectorConfig(c.secteurActivite).accent">
-                    {{ getSectorConfig(c.secteurActivite).label }}
-                  </span>
+                  @if (c.secteurActivite) {
+                    <span class="folder-sector-pill"
+                          [style.background]="getSectorConfig(c.secteurActivite).bg"
+                          [style.color]="getSectorConfig(c.secteurActivite).accent">
+                      {{ getSectorConfig(c.secteurActivite).label }}
+                    </span>
+                  }
                   <span class="folder-sub" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
                     {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                   </span>
@@ -574,7 +576,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const d      = this.sortDir() === 'asc' ? 1 : -1;
 
     let list = this.clients().filter(c => {
-      const score = c.completude ?? c.santePassation;
+      const score = c.completude || c.santePassation;
       if (s && !c.nom.toLowerCase().includes(s)) return false;
       if (site && c.site !== site) return false;
       if (h === 'ok'      && score < 80)                    return false;
@@ -586,8 +588,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
     });
 
     return [...list].sort((a, b) => {
-      const sa = a.completude ?? a.santePassation;
-      const sb = b.completude ?? b.santePassation;
+      const sa = a.completude || a.santePassation;
+      const sb = b.completude || b.santePassation;
       if (k === 'nom')   return d * a.nom.localeCompare(b.nom);
       if (k === 'score') return d * (sa - sb);
       if (k === 'site')  return d * a.site.localeCompare(b.site);
@@ -628,7 +630,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     });
   }
 
-  score(c: Client) { return c.completude ?? c.santePassation; }
+  score(c: Client) { return c.completude || c.santePassation; }
 
   getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
     const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
