@@ -1,4 +1,7 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, HttpCode, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -11,7 +14,25 @@ import { User } from '../entities/user.entity';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    @InjectRepository(User) private userRepo: Repository<User>,
+  ) {}
+
+  // Endpoint de bootstrap — créé le premier admin si aucun user n'existe
+  @Post('seed')
+  @HttpCode(201)
+  async seed() {
+    const count = await this.userRepo.count();
+    if (count > 0) throw new ConflictException('Des utilisateurs existent déjà');
+    const hash = await bcrypt.hash('Afym2026!', 10);
+    const user = this.userRepo.create({
+      nom: 'Admin', prenom: 'AFYM', email: 'admin@afym.re',
+      password: hash, role: 'ADMIN' as any, site: 'REUNION' as any, isActive: true,
+    });
+    await this.userRepo.save(user);
+    return { message: 'Admin créé : admin@afym.re / Afym2026!' };
+  }
 
   @Post('login')
   @HttpCode(200)
