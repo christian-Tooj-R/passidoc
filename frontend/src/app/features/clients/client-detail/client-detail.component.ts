@@ -568,6 +568,7 @@ export class ClientDetailComponent implements OnInit {
   loading = signal(true);
   activeTab = signal<TabId>('fiche');
 
+
   readonly TAB_GROUPS: TabGroup[] = [
     {
       label: 'Dossier',
@@ -630,6 +631,7 @@ export class ClientDetailComponent implements OnInit {
   onTypesChanged(types: any[]) {
     if (this.client) this.client = { ...this.client, typesFluxActifs: types };
   }
+
 
   activeTabMeta() {
     for (const g of this.TAB_GROUPS) {

@@ -148,27 +148,46 @@ type ViewMode = 'grid' | 'list';
 
                 <!-- Sector illustration -->
                 <div class="folder-illus" [style.background]="getSectorConfig(c.secteurActivite).bg">
-                  <mat-icon class="folder-illus__icon" [style.color]="getSectorConfig(c.secteurActivite).accent">
+                  <img class="folder-illus__img"
+                       [src]="getSectorConfig(c.secteurActivite).imgSrc"
+                       [alt]="getSectorConfig(c.secteurActivite).label"
+                       onerror="this.style.display='none'" />
+                  <mat-icon class="folder-illus__fallback" [style.color]="getSectorConfig(c.secteurActivite).accent">
                     {{ getSectorConfig(c.secteurActivite).icon }}
                   </mat-icon>
-                  <span class="folder-illus__score" [class]="'score-badge--' + getScoreLevel(score(c))">{{ score(c) }}%</span>
                 </div>
 
                 <!-- Name & meta -->
                 <div class="folder-meta">
                   <span class="folder-name">{{ c.nom }}</span>
-                  <span class="folder-sector" [style.color]="getSectorConfig(c.secteurActivite).accent">
+                  <span class="folder-sector-pill"
+                        [style.background]="getSectorConfig(c.secteurActivite).bg"
+                        [style.color]="getSectorConfig(c.secteurActivite).accent">
                     {{ getSectorConfig(c.secteurActivite).label }}
                   </span>
                   <span class="folder-sub" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
                     {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                   </span>
-                  @if (c.responsable) {
-                    <span class="folder-resp">{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                  }
-                  <div class="folder-completude">
-                    <div class="fc-track">
-                      <div class="fc-fill" [class]="folderColorClass(score(c))" [style.width.%]="score(c)"></div>
+
+                  <!-- Complétude compacte -->
+                  <div class="completude-row">
+                    <div class="ring-wrap">
+                      <svg class="ring-svg" viewBox="0 0 52 52">
+                        <circle cx="26" cy="26" r="20" fill="none" stroke="#E8EAED" stroke-width="4.5"/>
+                        <circle cx="26" cy="26" r="20" fill="none"
+                                [attr.stroke]="ringColor(score(c))"
+                                stroke-width="4.5" stroke-linecap="round"
+                                stroke-dasharray="125.7"
+                                [attr.stroke-dashoffset]="ringOffset(score(c))"
+                                transform="rotate(-90 26 26)"/>
+                      </svg>
+                      <div class="ring-center">
+                        <span class="ring-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
+                      </div>
+                    </div>
+                    <div class="completude-info">
+                      <span class="completude-status" [style.color]="ringColor(score(c))">{{ getStatusLabel(score(c)) }}</span>
+                      <span class="completude-lbl">ADN Complétude</span>
                     </div>
                   </div>
                 </div>
@@ -376,7 +395,7 @@ type ViewMode = 'grid' | 'list';
     /* ══ GRID VIEW ════════════════════════════════════════ */
     .file-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
       padding: 24px;
       overflow-y: auto;
@@ -399,27 +418,33 @@ type ViewMode = 'grid' | 'list';
 
     /* Sector illustration zone */
     .folder-illus {
-      width: 100%; height: 96px;
+      width: 100%; height: 120px;
       display: flex; align-items: center; justify-content: center;
-      position: relative; flex-shrink: 0;
+      position: relative; flex-shrink: 0; overflow: hidden;
     }
-    .folder-illus__icon { font-size: 52px; width: 52px; height: 52px; opacity: .82; }
-    .folder-illus__score {
-      position: absolute; bottom: 8px; right: 8px;
-      font-size: 10px; font-weight: 700;
-      padding: 2px 8px; border-radius: 10px;
-    }
-    .score-badge--high { background: rgba(56,106,32,.15);  color: #386A20; }
-    .score-badge--mid  { background: rgba(123,79,0,.15);   color: #7B4F00; }
-    .score-badge--low  { background: rgba(186,26,26,.15);  color: #BA1A1A; }
+    .folder-illus__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; box-sizing: border-box; }
+    .folder-illus__fallback { font-size: 48px; width: 48px; height: 48px; opacity: .7; }
 
-    .folder-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px 12px; width: 100%; box-sizing: border-box; }
-    .folder-name   { font-size: 13px; font-weight: 700; color: #1A1C1E; line-height: 1.3; word-break: break-word; }
-    .folder-sector { font-size: 11px; font-weight: 600; }
-    .folder-sub    { font-size: 11px; font-weight: 500; }
+    .folder-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px 12px; width: 100%; box-sizing: border-box; }
+    .folder-name { font-size: 13px; font-weight: 700; color: #1A1C1E; line-height: 1.3; word-break: break-word; }
+    .folder-sector-pill {
+      font-size: 10.5px; font-weight: 700;
+      padding: 2px 8px; border-radius: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .folder-sub { font-size: 11px; font-weight: 500; }
     .sub--re { color: #006B57; }
     .sub--mg { color: #162351; }
-    .folder-resp { font-size: 11px; color: #6F7978; }
+
+    /* Complétude compacte */
+    .completude-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; width: 100%; }
+    .ring-wrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+    .ring-svg { width: 100%; height: 100%; }
+    .ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .ring-pct { font-size: 11px; font-weight: 800; line-height: 1; }
+    .completude-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .completude-status { font-size: 12.5px; font-weight: 700; }
+    .completude-lbl { font-size: 10px; color: #94a3b8; font-weight: 500; }
 
     .folder-status {
       position: absolute; top: 10px; right: 10px;
@@ -605,19 +630,21 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   score(c: Client) { return c.completude ?? c.santePassation; }
 
-  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string } {
-    const m: Record<string, { bg: string; accent: string; icon: string; label: string }> = {
-      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration' },
-      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP' },
-      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association' },
-      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding' },
-      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale' },
-      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI' },
+  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
+    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
+      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration',   imgSrc: 'sectors/restauration.svg' },
+      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP',            imgSrc: 'sectors/btp.svg' },
+      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association',    imgSrc: 'sectors/association.svg' },
+      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding',        imgSrc: 'sectors/holding.svg' },
+      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale', imgSrc: 'sectors/profession_liberale.svg' },
+      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI',            imgSrc: 'sectors/sci.svg' },
     };
-    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre' };
+    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg' };
   }
 
   getScoreLevel(s: number): string { return s >= 80 ? 'high' : s >= 50 ? 'mid' : 'low'; }
+  ringColor(s: number): string  { return s >= 80 ? '#4CAF50' : s >= 50 ? '#FF9800' : '#F44336'; }
+  ringOffset(s: number): number { return 125.7 * (1 - s / 100); }
 
   countByHealth(h: string) {
     if (h === 'ok')      return this.clients().filter(c => this.score(c) >= 80).length;
