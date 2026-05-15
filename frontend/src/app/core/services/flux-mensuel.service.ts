@@ -30,4 +30,12 @@ export class FluxMensuelService {
   delete(clientId: number, fluxId: number) {
     return this.http.delete(`${this.api(clientId)}/${fluxId}`);
   }
+
+  initAnnee(clientId: number, annee: number) {
+    return this.http.post<{ created: number }>(`${this.api(clientId)}/init-annee`, { annee });
+  }
+
+  getAlertesGlobales() {
+    return this.http.get<any[]>(`${environment.apiUrl}/alertes`);
+  }
 }

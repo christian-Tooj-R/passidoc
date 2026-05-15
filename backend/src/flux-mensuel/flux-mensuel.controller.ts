@@ -5,6 +5,20 @@ import { CreateFluxDto } from './dto/create-flux.dto';
 import { UpdateFluxDto } from './dto/update-flux.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+@ApiTags('Alertes')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('api/alertes')
+export class AlertesGlobalesController {
+  constructor(private service: FluxMensuelService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Toutes les alertes flux manquants/en retard (tous clients)' })
+  getAll() {
+    return this.service.getAlertesGlobales();
+  }
+}
+
 @ApiTags('Flux Mensuels')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -39,6 +53,15 @@ export class FluxMensuelController {
     @Body() dto: UpdateFluxDto,
   ) {
     return this.service.update(id, clientId, dto);
+  }
+
+  @Post('init-annee')
+  @ApiOperation({ summary: 'Initialiser tous les flux de l\'année comme MANQUANT' })
+  initAnnee(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Body('annee') annee: number,
+  ) {
+    return this.service.initAnnee(clientId, annee);
   }
 
   @Delete(':id')

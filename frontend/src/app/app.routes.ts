@@ -36,14 +36,50 @@ export const routes: Routes = [
         loadComponent: () => import('./features/clients/client-list/client-list.component').then((m) => m.ClientListComponent),
       },
       {
-        path: 'clients/:id',
-        loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
+        path: 'tasks',
+        loadComponent: () => import('./features/tasks/tasks-global.component').then((m) => m.TasksGlobalComponent),
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./features/documents/documents.component').then((m) => m.DocumentsComponent),
+      },
+      {
+        path: 'notes',
+        loadComponent: () => import('./features/notes/notes.component').then((m) => m.NotesComponent),
+      },
+      {
+        path: 'equipes',
+        loadComponent: () => import('./features/admin/equipes.component').then((m) => m.EquipesComponent),
+      },
+      {
+        path: 'permissions-roles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('./features/admin/role-permissions.component').then((m) => m.RolePermissionsComponent),
+      },
+      {
+        path: 'portefeuilles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'EXPERT_COMPTABLE', 'COLLABORATEUR'] },
+        loadComponent: () => import('./features/admin/portefeuilles.component').then((m) => m.PortefeuillesComponent),
       },
       {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
+      },
+    ],
+  },
+  // ── Dossier plein écran (sans sidebar principale) ──────
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./layout/fullscreen-layout/fullscreen-layout.component').then((m) => m.FullscreenLayoutComponent),
+    children: [
+      {
+        path: 'clients/:id',
+        loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
       },
     ],
   },

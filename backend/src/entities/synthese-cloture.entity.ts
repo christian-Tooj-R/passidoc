@@ -12,6 +12,25 @@ export class SyntheseCloture {
   @Column()
   exercice: number; // ex: 2024
 
+  // KPIs financiers
+  @Column({ type: 'float', nullable: true })
+  ca: number;
+
+  @Column({ type: 'float', nullable: true })
+  caPrecedent: number;
+
+  @Column({ type: 'float', nullable: true })
+  ebe: number;
+
+  @Column({ type: 'float', nullable: true })
+  resultatNet: number;
+
+  @Column({ type: 'float', nullable: true })
+  fluxTresorerie: number;
+
+  @Column({ type: 'text', nullable: true })
+  commentaireFinancier: string;
+
   // Analyse financière N-1
   @Column({ type: 'text', nullable: true })
   pointsIS: string;

@@ -15,7 +15,6 @@ export class FournisseursService {
   async create(clientId: number, dto: CreateFournisseurDto) {
     const f = this.repo.create({ ...dto, client: { id: clientId } });
     const saved = await this.repo.save(f);
-    await this.clientsService.updateSantePassation(clientId);
     return saved;
   }
 

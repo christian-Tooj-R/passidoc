@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160">
+  <!-- Background blobs -->
+  <circle cx="90" cy="80" r="72" fill="#E8EAF6" opacity="0.85"/>
+  <ellipse cx="95" cy="90" rx="80" ry="58" fill="#C5CAE9" opacity="0.45"/>
+
+  <!-- Green ground strip -->
+  <rect x="0" y="130" width="200" height="30" rx="6" fill="#A5D6A7"/>
+  <ellipse cx="100" cy="130" rx="95" ry="6" fill="#81C784" opacity="0.6"/>
+
+  <!-- === PERSON 1 (left, navy) === -->
+  <!-- Person 1 drop shadow -->
+  <ellipse cx="62" cy="136" rx="18" ry="5" fill="#000" opacity="0.10"/>
+  <!-- Person 1 body -->
+  <rect x="50" y="100" width="24" height="34" rx="10" fill="#1A237E"/>
+  <!-- Person 1 head -->
+  <circle cx="62" cy="90" r="14" fill="#1A237E"/>
+  <!-- Person 1 left arm (raised) -->
+  <path d="M50,108 Q32,90 28,75" stroke="#1A237E" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- Person 1 right arm (raised) -->
+  <path d="M74,108 Q82,95 86,82" stroke="#1A237E" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- Person 1 legs -->
+  <rect x="51" y="130" width="9" height="10" rx="4" fill="#0D47A1"/>
+  <rect x="64" y="130" width="9" height="10" rx="4" fill="#0D47A1"/>
+
+  <!-- === PERSON 2 (center-right, mid blue) === -->
+  <!-- Person 2 drop shadow -->
+  <ellipse cx="118" cy="136" rx="18" ry="5" fill="#000" opacity="0.10"/>
+  <!-- Person 2 body -->
+  <rect x="106" y="100" width="24" height="34" rx="10" fill="#0D47A1"/>
+  <!-- Person 2 head -->
+  <circle cx="118" cy="90" r="14" fill="#0D47A1"/>
+  <!-- Person 2 left arm (raised) -->
+  <path d="M106,108 Q94,93 90,78" stroke="#0D47A1" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- Person 2 right arm (raised) -->
+  <path d="M130,108 Q142,92 148,78" stroke="#0D47A1" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- Person 2 legs -->
+  <rect x="107" y="130" width="9" height="10" rx="4" fill="#1565C0"/>
+  <rect x="120" y="130" width="9" height="10" rx="4" fill="#1565C0"/>
+
+  <!-- === RED HEART (above center, between figures) === -->
+  <path d="M90,64 C90,55 78,50 78,60 C78,70 90,78 90,78 C90,78 102,70 102,60 C102,50 90,55 90,64 Z" fill="#EF5350"/>
+  <!-- Heart highlight -->
+  <ellipse cx="84" cy="59" rx="4" ry="3" fill="#EF9A9A" opacity="0.7"/>
+
+  <!-- === PALM TREE (far right) === -->
+  <!-- Palm trunk shadow -->
+  <ellipse cx="168" cy="137" rx="10" ry="4" fill="#000" opacity="0.10"/>
+  <!-- Palm curved trunk -->
+  <path d="M165,135 Q163,115 158,95 Q154,78 162,62" stroke="#795548" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Palm fronds (green paths radiating from top) -->
+  <path d="M162,62 Q145,48 132,52" stroke="#388E3C" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M162,62 Q150,42 148,30" stroke="#388E3C" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M162,62 Q172,40 185,38" stroke="#388E3C" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M162,62 Q178,52 190,55" stroke="#388E3C" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M162,62 Q155,55 145,62" stroke="#2E7D32" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Frond tips (leaf spread) -->
+  <path d="M132,52 Q126,58 130,64" stroke="#43A047" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M148,30 Q142,26 136,32" stroke="#43A047" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M185,38 Q192,35 190,42" stroke="#43A047" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Coconuts -->
+  <circle cx="162" cy="70" r="5" fill="#5D4037"/>
+  <circle cx="156" cy="66" r="4" fill="#6D4C41"/>
+
+  <!-- Decorative dots -->
+  <circle cx="22" cy="38" r="6" fill="#C5CAE9" opacity="0.7"/>
+  <circle cx="178" cy="148" r="4" fill="#A5D6A7" opacity="0.6"/>
+  <circle cx="30" cy="148" r="5" fill="#C5CAE9" opacity="0.5"/>
+</svg>
