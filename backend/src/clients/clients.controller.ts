@@ -26,8 +26,9 @@ export class ClientsController {
   @Get()
   @ApiOperation({ summary: 'Liste des dossiers clients (filtrée par responsable pour non-admin)' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  findAll(@Req() req: any, @Query('site') site?: string) {
-    return this.clientsService.findAll(req.user, site);
+  @ApiQuery({ name: 'collaborateurId', required: false, type: Number })
+  findAll(@Req() req: any, @Query('site') site?: string, @Query('collaborateurId') collaborateurId?: number) {
+    return this.clientsService.findAll(req.user, site, collaborateurId ? +collaborateurId : undefined);
   }
 
   @Get(':id')

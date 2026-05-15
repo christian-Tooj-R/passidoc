@@ -55,6 +55,7 @@ export interface Client {
   site: ClientSite;
   secteurActivite?: SecteurActivite;
   santePassation: number;
+  completude: number;
   isActive: boolean;
   typesFluxActifs?: TypeFlux[];
   responsable?: Responsable;

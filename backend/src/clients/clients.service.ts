@@ -48,20 +48,30 @@ export class ClientsService {
     return this.findOne(saved.id);
   }
 
-  async findAll(currentUser: User, site?: string) {
+  async findAll(currentUser: User, site?: string, collaborateurId?: number) {
     const query = this.repo.createQueryBuilder('client')
       .leftJoinAndSelect('client.ficheIdentite', 'fiche')
       .leftJoinAndSelect('client.responsable', 'responsable')
       .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
+      .leftJoinAndSelect('client.questionnaireAdnGlobal', 'adnGlobal')
+      .leftJoinAndSelect('client.questionnaireAdnSectoriel', 'adnSectoriel')
+      .leftJoinAndSelect('client.missions', 'missions')
+      .leftJoinAndSelect('client.fluxMensuels', 'fluxMensuels')
+      .leftJoinAndSelect('client.objectifs', 'objectifs')
       .where('client.isActive = :active', { active: true });
 
     if (currentUser.role !== UserRole.ADMIN) {
       if (currentUser.site === UserSite.REUNION) {
         query.andWhere('client.responsableId = :userId', { userId: currentUser.id });
       } else {
-        // Collaborateur Madagascar : uniquement ses dossiers sous-assignés
         query.andWhere('client.collaborateurMgId = :userId', { userId: currentUser.id });
       }
+    } else if (collaborateurId) {
+      // ADMIN filtre par collaborateur spécifique
+      query.andWhere(
+        '(client.responsableId = :cid OR client.collaborateurMgId = :cid)',
+        { cid: collaborateurId },
+      );
     }
 
     if (site) query.andWhere('client.site = :site', { site });

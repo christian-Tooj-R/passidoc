@@ -1,9 +1,10 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
+import { RolePermissionsService } from './role-permissions.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -11,9 +12,14 @@ export class AuthService {
   private _user = signal<User | null>(null);
   private _token = signal<string | null>(localStorage.getItem('token'));
 
+  private rolePerms = inject(RolePermissionsService);
+
   constructor(private http: HttpClient, private router: Router) {
     const stored = localStorage.getItem('user');
-    if (stored) this._user.set(JSON.parse(stored));
+    if (stored) {
+      this._user.set(JSON.parse(stored));
+      this.rolePerms.load();
+    }
   }
 
   login(email: string, password: string) {
@@ -53,12 +59,13 @@ export class AuthService {
   isExpert(): boolean { return this._user()?.role === 'EXPERT_COMPTABLE'; }
   isReunion(): boolean { return this._user()?.site === 'REUNION'; }
   isMadagascar(): boolean { return this._user()?.site === 'MADAGASCAR'; }
-  canManagePortefeuilles(): boolean { return this.isAdmin() || this.isReunion(); }
+  canManagePortefeuilles(): boolean { return this.isAdmin() || this.isExpert() || this.isReunion(); }
 
   private setSession(res: any) {
     localStorage.setItem('token', res.access_token);
     localStorage.setItem('user', JSON.stringify(res.user));
     this._token.set(res.access_token);
     this._user.set(res.user);
+    this.rolePerms.load();
   }
 }
