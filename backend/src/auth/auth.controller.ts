@@ -23,9 +23,12 @@ export class AuthController {
   @Post('seed')
   @HttpCode(201)
   async seed() {
-    const count = await this.userRepo.count();
-    if (count > 0) throw new ConflictException('Des utilisateurs existent déjà');
     const hash = await bcrypt.hash('admin', 10);
+    const existing = await this.userRepo.findOne({ where: { email: 'admin@passidoc.com' } });
+    if (existing) {
+      await this.userRepo.update(existing.id, { password: hash });
+      return { message: 'Mot de passe réinitialisé : admin@passidoc.com / admin' };
+    }
     const user = this.userRepo.create({
       firstName: 'Admin', lastName: 'Passidoc', email: 'admin@passidoc.com',
       password: hash, role: 'ADMIN' as any, site: 'REUNION' as any, isActive: true,
