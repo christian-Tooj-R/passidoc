@@ -46,7 +46,7 @@ export class QuestionnaireAdnGlobal {
   @Column({ type: 'simple-json', nullable: true })
   projetsInvestissement: string[];
 
-  @Column({ type: 'tinyint', nullable: true })
+  @Column({ type: 'smallint', nullable: true })
   niveauNumerique: number; // 1 à 5
 
   @UpdateDateColumn()
