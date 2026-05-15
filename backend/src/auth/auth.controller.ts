@@ -25,13 +25,13 @@ export class AuthController {
   async seed() {
     const count = await this.userRepo.count();
     if (count > 0) throw new ConflictException('Des utilisateurs existent déjà');
-    const hash = await bcrypt.hash('Afym2026!', 10);
+    const hash = await bcrypt.hash('admin', 10);
     const user = this.userRepo.create({
-      firstName: 'Admin', lastName: 'AFYM', email: 'admin@afym.re',
+      firstName: 'Admin', lastName: 'Passidoc', email: 'admin@passidoc.com',
       password: hash, role: 'ADMIN' as any, site: 'REUNION' as any, isActive: true,
     });
     await this.userRepo.save(user);
-    return { message: 'Admin créé : admin@afym.re / Afym2026!' };
+    return { message: 'Admin créé : admin@passidoc.com / admin' };
   }
 
   @Post('login')
