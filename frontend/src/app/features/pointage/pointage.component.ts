@@ -53,26 +53,6 @@ const TOTAL_MINUTES = (HEURE_FIN - HEURE_DEBUT) * 60;
     </div>
   </div>
 
-  <!-- ── KPI cards ─────────────────────────────────────────── -->
-  <div class="kpi-row">
-    <div class="kpi-card kpi-present">
-      <span class="kpi-val">{{ presents() }}</span>
-      <span class="kpi-label">Présents</span>
-    </div>
-    <div class="kpi-card kpi-absent">
-      <span class="kpi-val">{{ absents() }}</span>
-      <span class="kpi-label">Absents</span>
-    </div>
-    <div class="kpi-card kpi-parti">
-      <span class="kpi-val">{{ partis() }}</span>
-      <span class="kpi-label">Partis</span>
-    </div>
-    <div class="kpi-card kpi-total">
-      <span class="kpi-val">{{ entrees().length }}</span>
-      <span class="kpi-label">Total équipe</span>
-    </div>
-  </div>
-
   <!-- ── Timeline ──────────────────────────────────────────── -->
   <div class="timeline-wrapper">
 
