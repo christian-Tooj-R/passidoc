@@ -1,0 +1,299 @@
+// ── Palette ──────────────────────────────────────────────────
+$amber:   #F97316;   // identité dossier (chaud, document)
+$emerald: #059669;   // action principale (créer, ajouter)
+$indigo:  #6366F1;   // empty state, accents secondaires
+$teal:    #0D9488;   // drop zone, navigation
+$gray:    #64748B;
+$light:   #F8FAFC;
+
+// ── Layout ───────────────────────────────────────────────────
+.page { padding: 0 0 56px; max-width: 1280px; }
+
+// ── Page header ───────────────────────────────────────────────
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.page-header__left { display: flex; align-items: center; gap: 16px; }
+
+// Icône de la page → amber/orange (couleur "document")
+.page-icon {
+  width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
+  background: linear-gradient(135deg, #EA580C 0%, $amber 100%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(249,115,22,.30);
+}
+.page-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: white; }
+.page-title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -.5px; }
+.page-sub   { font-size: 13px; color: $gray; margin: 3px 0 0; }
+
+// Bouton principal → emerald (créer / ajouter)
+.btn-new {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px;
+  background: linear-gradient(135deg, #047857 0%, $emerald 100%);
+  color: white; border-radius: 28px; border: none;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(5,150,105,.28);
+  transition: transform .15s, box-shadow .15s;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  &:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5,150,105,.38); }
+  &--lg { font-size: 15px; padding: 13px 28px; margin-top: 8px; }
+  &--loading { opacity: .7; cursor: not-allowed; transform: none; }
+}
+
+
+// ── Grille espaces ────────────────────────────────────────────
+.spaces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+// ── Carte espace ──────────────────────────────────────────────
+.space-card {
+  background: white; border-radius: 20px; overflow: hidden; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
+  transition: box-shadow .2s, transform .2s;
+  display: flex; flex-direction: column;
+
+  &:hover {
+    box-shadow: 0 8px 28px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
+    transform: translateY(-3px);
+  }
+
+  &--skel {
+    height: 200px; cursor: default;
+    background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s infinite;
+    &:hover { transform: none; box-shadow: none; }
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.space-card__head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; flex-shrink: 0;
+}
+.space-avatar {
+  width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px;
+  background: rgba(255,255,255,.3); border: 1.5px solid rgba(255,255,255,.5);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.space-meta { flex: 1; min-width: 0; }
+.space-name {
+  font-size: 14px; font-weight: 700; color: white;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.space-count-label {
+  font-size: 11.5px; color: rgba(255,255,255,.8); margin-top: 2px;
+}
+.space-delete-btn {
+  width: 32px; height: 32px; flex-shrink: 0; border: none;
+  border-radius: 8px; background: rgba(255,255,255,.18); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.85); transition: background .15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &:hover { background: rgba(255,59,59,.40); }
+}
+
+// Confirmation suppression
+.space-confirm {
+  padding: 14px 16px; background: #FEF2F2; border-top: 1px solid #FECACA;
+  display: flex; flex-direction: column; gap: 10px;
+
+  span { font-size: 12.5px; color: #991B1B; font-weight: 500; }
+}
+.space-confirm__btns { display: flex; gap: 8px; }
+.confirm-btn {
+  padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; font-family: inherit;
+  transition: background .15s;
+
+  &--danger { background: #DC2626; color: white; &:hover { background: #B91C1C; } }
+  &--cancel { background: #F1F5F9; color: $gray; border: 1px solid #E2E8F0; &:hover { background: #E2E8F0; } }
+}
+
+// Aperçu docs dans la carte
+.space-empty-body {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px; padding: 24px 16px; color: #94A3B8;
+
+  mat-icon { font-size: 28px; width: 28px; height: 28px; opacity: .5; }
+  span { font-size: 12px; }
+}
+
+.space-body { padding: 6px 0; flex: 1; }
+
+.space-doc-preview {
+  display: flex; align-items: center; gap: 8px; padding: 7px 16px;
+}
+.doc-icon-sm {
+  width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+.space-doc-name {
+  flex: 1; font-size: 12px; font-weight: 500; color: #334155;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.space-doc-size { font-size: 11px; color: #94A3B8; white-space: nowrap; flex-shrink: 0; }
+.space-doc-more { padding: 4px 16px 8px; font-size: 11.5px; color: #94A3B8; font-style: italic; }
+
+// Hint "Ouvrir" en bas de carte → teal, neutre et distinct
+.space-open-hint {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-top: 1px solid #F1F5F9;
+  font-size: 12px; font-weight: 600; color: $teal;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+// ── Empty state ───────────────────────────────────────────────
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 80px 24px; gap: 14px; text-align: center;
+}
+// Icône empty → indigo/violet (différent de tout le reste)
+.empty-icon {
+  width: 72px; height: 72px; border-radius: 22px;
+  background: linear-gradient(135deg, $indigo 0%, #818CF8 100%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(99,102,241,.28);
+
+  mat-icon { font-size: 34px; width: 34px; height: 34px; color: white; }
+  &--sm { width: 56px; height: 56px; border-radius: 16px; mat-icon { font-size: 26px; width: 26px; height: 26px; } }
+}
+.empty-state h3 { font-size: 17px; font-weight: 700; color: #0F172A; margin: 0; }
+.empty-state p  { font-size: 13.5px; color: $gray; max-width: 300px; margin: 0; }
+.empty-state--docs { padding: 40px 24px; }
+
+// ── Vue espace ouvert ─────────────────────────────────────────
+.space-view-header { margin-bottom: 8px; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: none; cursor: pointer; padding: 6px 10px 6px 6px;
+  border-radius: 8px; font-size: 13.5px; font-weight: 600; color: $gray;
+  font-family: inherit; transition: background .15s, color .15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &:hover { background: #F1F5F9; color: #0F172A; }
+}
+
+.space-view-avatar {
+  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: white;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  text-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+// Zone de drop → teal quand active
+.drop-zone {
+  border: 2px dashed #CBD5E1; border-radius: 14px;
+  padding: 20px; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: #94A3B8; font-size: 13.5px; transition: border-color .15s, background .15s;
+
+  mat-icon { font-size: 22px; width: 22px; height: 22px; }
+  &--active { border-color: $teal; background: #F0FDFA; color: $teal; }
+}
+
+// ── Liste de documents ────────────────────────────────────────
+.docs-list { display: flex; flex-direction: column; gap: 8px; }
+
+.doc-row {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border-radius: 14px; padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+  transition: box-shadow .15s;
+
+  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.04); }
+  &--skel {
+    height: 64px;
+    background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
+    background-size: 400% 100%; animation: shimmer 1.5s infinite;
+  }
+}
+
+.doc-icon-wrap {
+  width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+}
+
+.doc-info { flex: 1; min-width: 0; }
+.doc-name {
+  display: block; font-size: 13.5px; font-weight: 600; color: #1E293B;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.doc-meta { font-size: 11.5px; color: #94A3B8; margin-top: 2px; display: block; }
+
+.doc-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 3px 9px; border-radius: 20px; flex-shrink: 0; white-space: nowrap;
+}
+
+.doc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.doc-btn {
+  width: 34px; height: 34px; border: none; border-radius: 8px;
+  background: $light; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: $gray; transition: background .15s, color .15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &:hover { background: #F0FDFA; color: $teal; }           // teal au lieu de bleu
+  &--danger:hover { background: #FEE2E2; color: #DC2626; }
+}
+
+// ── Couleurs icônes / badges ──────────────────────────────────
+.di-pdf   { background: #FEE2E2; mat-icon { color: #DC2626; } }
+.di-xlsx, .di-xls { background: #DCFCE7; mat-icon { color: #16A34A; } }
+.di-docx, .di-doc { background: #DBEAFE; mat-icon { color: #2563EB; } }
+.di-jpg, .di-jpeg, .di-png, .di-gif, .di-webp { background: #F3E8FF; mat-icon { color: #7C3AED; } }
+.di-file  { background: #FFF7ED; mat-icon { color: $amber; } }  // amber pour les "autres"
+
+.badge-pdf   { background: #FEE2E2; color: #DC2626; }
+.badge-xlsx, .badge-xls { background: #DCFCE7; color: #16A34A; }
+.badge-docx, .badge-doc { background: #DBEAFE; color: #2563EB; }
+.badge-jpg, .badge-jpeg, .badge-png, .badge-gif, .badge-webp { background: #F3E8FF; color: #7C3AED; }
+.badge-file  { background: #FFF7ED; color: $amber; }
+
+// ── Palette couleur ───────────────────────────────────────────
+.space-color-btn {
+  width: 32px; height: 32px; flex-shrink: 0; border: none;
+  border-radius: 8px; background: rgba(255,255,255,.18); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.85); transition: background .15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &:hover { background: rgba(255,255,255,.32); }
+}
+
+.palette-panel {
+  padding: 10px 14px;
+  background: white;
+  border-top: 1px solid #F1F5F9;
+}
+
+.palette-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+
+.palette-swatch {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 2.5px solid transparent;
+  cursor: pointer; padding: 0;
+  transition: transform .12s, border-color .12s;
+
+  &:hover { transform: scale(1.15); }
+  &--active { border-color: #0F172A; transform: scale(1.1); }
+}

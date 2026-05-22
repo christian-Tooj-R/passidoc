@@ -431,3 +431,12 @@ a { text-decoration: none; }
   margin-bottom: 8px; padding: 0 4px;
 }
 .section-title mat-icon { font-size: 13px; width: 13px; height: 13px; }
+
+/* ─────────────────────────────────────────────
+   Dialog espace — supprime padding par défaut
+───────────────────────────────────────────── */
+.aro-create-dialog .mat-mdc-dialog-surface {
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
