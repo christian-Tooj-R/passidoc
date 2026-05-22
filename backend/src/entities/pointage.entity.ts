@@ -23,6 +23,12 @@ export class Pointage {
   heureArrivee: Date;
 
   @Column({ type: 'timestamp', nullable: true })
+  heureDebutPause: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  heureFinPause: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
   heureDepart: Date;
 
   @CreateDateColumn()

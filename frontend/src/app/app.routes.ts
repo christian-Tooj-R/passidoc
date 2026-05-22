@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { pointageGuard } from './core/guards/pointage.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -24,7 +25,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
       {
@@ -78,7 +79,7 @@ export const routes: Routes = [
   // ── Dossier plein écran (sans sidebar principale) ──────
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./layout/fullscreen-layout/fullscreen-layout.component').then((m) => m.FullscreenLayoutComponent),
     children: [
       {

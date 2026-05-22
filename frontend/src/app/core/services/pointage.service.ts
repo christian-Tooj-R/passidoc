@@ -6,8 +6,10 @@ export interface Pointage {
   id: number;
   userId: number;
   date: string;
-  heureArrivee: string;
-  heureDepart: string | null;
+  heureArrivee:    string;
+  heureDebutPause: string | null;
+  heureFinPause:   string | null;
+  heureDepart:     string | null;
 }
 
 export interface EntreeJournee {
@@ -21,10 +23,17 @@ export interface EntreeJournee {
   pointage: Pointage | null;
 }
 
+export type EtatPointage = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
+
 export interface MonStatut {
-  pointage: Pointage | null;
-  estPointe: boolean;
-  estParti: boolean;
+  pointage:      Pointage | null;
+  etat:          EtatPointage;
+  estPointe:     boolean;
+  enPause:       boolean;
+  estRevenu:     boolean;
+  estParti:      boolean;
+  dureeNetteMin: number;
+  dureePauseMin: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,5 +59,13 @@ export class PointageService {
 
   getHistorique() {
     return this.http.get<Pointage[]>(`${this.api}/historique`);
+  }
+
+  getHistoriqueAll(site?: string) {
+    const params: Record<string, string> = {};
+    if (site) params['site'] = site;
+    return this.http.get<(Pointage & { user: { firstName: string; lastName: string; site: string } })[]>(
+      `${this.api}/historique/all`, { params }
+    );
   }
 }

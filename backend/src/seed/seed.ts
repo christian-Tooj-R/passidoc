@@ -9,16 +9,18 @@ import { FicheIdentite } from '../entities/fiche-identite.entity';
 import { FluxMensuel, TypeFlux, StatutDepot } from '../entities/flux-mensuel.entity';
 import { Fournisseur } from '../entities/fournisseur.entity';
 import { SyntheseCloture } from '../entities/synthese-cloture.entity';
+import { Pointage } from '../entities/pointage.entity';
 
 async function seed() {
   const app = await NestFactory.createApplicationContext(AppModule);
 
-  const userRepo = app.get<Repository<User>>(getRepositoryToken(User));
-  const clientRepo = app.get<Repository<Client>>(getRepositoryToken(Client));
-  const ficheRepo = app.get<Repository<FicheIdentite>>(getRepositoryToken(FicheIdentite));
-  const fluxRepo = app.get<Repository<FluxMensuel>>(getRepositoryToken(FluxMensuel));
+  const userRepo      = app.get<Repository<User>>(getRepositoryToken(User));
+  const clientRepo    = app.get<Repository<Client>>(getRepositoryToken(Client));
+  const ficheRepo     = app.get<Repository<FicheIdentite>>(getRepositoryToken(FicheIdentite));
+  const fluxRepo      = app.get<Repository<FluxMensuel>>(getRepositoryToken(FluxMensuel));
   const fournisseurRepo = app.get<Repository<Fournisseur>>(getRepositoryToken(Fournisseur));
-  const syntheseRepo = app.get<Repository<SyntheseCloture>>(getRepositoryToken(SyntheseCloture));
+  const syntheseRepo  = app.get<Repository<SyntheseCloture>>(getRepositoryToken(SyntheseCloture));
+  const pointageRepo  = app.get<Repository<Pointage>>(getRepositoryToken(Pointage));
 
   console.log('🌱 Démarrage du seed...\n');
 
@@ -97,14 +99,17 @@ async function seed() {
       await userRepo.save(userRepo.create({ ...u, password: hashed }));
       console.log(`✅ User créé : ${u.email} (${u.role}) — password: ${u.password}`);
     } else {
-      console.log(`⏭  User déjà existant : ${u.email}`);
+      // Réinitialiser le mot de passe à chaque seed
+      const hashed = await bcrypt.hash(u.password, 10);
+      await userRepo.update(exists.id, { password: hashed });
+      console.log(`⏭  User existant (mdp réinitialisé) : ${u.email}`);
     }
   }
 
   // ── Résolution des responsables ──────────────────────────────────────────
-  const marie = await userRepo.findOne({ where: { email: 'marie@afym.re' } });
+  const marie  = await userRepo.findOne({ where: { email: 'marie@afym.re' } });
   const thomas = await userRepo.findOne({ where: { email: 'thomas@afym.re' } });
-  const hery = await userRepo.findOne({ where: { email: 'expert@afym.mg' } });
+  const hery   = await userRepo.findOne({ where: { email: 'expert@afym.mg' } });
 
   // ── Clients ────────────────────────────────────────────────────────────────
 
@@ -281,17 +286,14 @@ async function seed() {
       continue;
     }
 
-    // Créer le client avec responsable
     const client = await clientRepo.save(clientRepo.create({
       nom: data.nom,
       site: data.site,
       responsable: data.responsable ?? undefined,
     }));
 
-    // Fiche identité
     await ficheRepo.save(ficheRepo.create({ ...data.fiche, client }));
 
-    // Flux mensuels
     for (const f of data.flux) {
       await fluxRepo.save(fluxRepo.create({
         ...f,
@@ -300,34 +302,185 @@ async function seed() {
       }));
     }
 
-    // Fournisseurs
     for (const f of data.fournisseurs) {
       await fournisseurRepo.save(fournisseurRepo.create({ ...f, client }));
     }
 
-    // Synthèse clôture
     await syntheseRepo.save(syntheseRepo.create({ ...data.synthese, client }));
 
-    // Recalculer le score de passation
-    const updated = await clientRepo.findOne({
-      where: { id: client.id },
-      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents'],
-    });
-    let score = 0;
-    if (updated) {
-      const fiche = updated.ficheIdentite;
-      if (fiche?.raisonSociale) score += 15;
-      if (fiche?.siren) score += 10;
-      if (fiche?.gerants?.length > 0) score += 15;
-      if (fiche?.salaries?.length > 0) score += 10;
-      if (updated.fluxMensuels?.length > 0) score += 15;
-      if (updated.fournisseurs?.length > 0) score += 10;
-      if (updated.synthesesCloture?.length > 0) score += 15;
-    }
-    await clientRepo.update(client.id, { santePassation: Math.min(score, 100) });
-
-    console.log(`✅ Client créé : ${data.nom} (score: ${Math.min(score, 100)}%)`);
+    console.log(`✅ Client créé : ${data.nom}`);
   }
+
+  // ── Pointages ──────────────────────────────────────────────────────────────
+  console.log('\n📅 Ajout des pointages de test...');
+
+  const allUsers = await userRepo.find();
+  const uid = (email: string) => allUsers.find(u => u.email === email)!.id;
+
+  const adminId   = uid('admin@afym.re');
+  const sophieId  = uid('expert@afym.re');
+  const jeanId    = uid('collab@afym.re');
+  const heryId    = uid('expert@afym.mg');
+  const marieId   = uid('marie@afym.re');
+  const thomasId  = uid('thomas@afym.re');
+  const romualdId = uid('romuald@afym.mg');
+
+  const addP = async (
+    userId: number, date: string,
+    arrivee: string, debutPause?: string, finPause?: string, depart?: string,
+  ) => {
+    const exists = await pointageRepo.findOne({ where: { userId, date } });
+    if (exists) return;
+    await pointageRepo.save(pointageRepo.create({
+      userId, date,
+      heureArrivee:    new Date(arrivee),
+      heureDebutPause: debutPause ? new Date(debutPause) : undefined,
+      heureFinPause:   finPause   ? new Date(finPause)   : undefined,
+      heureDepart:     depart     ? new Date(depart)     : undefined,
+    }));
+  };
+
+  // ── Semaine -2 : 2026-05-04 au 2026-05-08 ────────────────────
+  // Thomas Admin
+  await addP(adminId,   '2026-05-04', '2026-05-04T07:45:00', '2026-05-04T12:00:00', '2026-05-04T13:30:00', '2026-05-04T17:30:00');
+  await addP(adminId,   '2026-05-05', '2026-05-05T07:50:00', '2026-05-05T12:00:00', '2026-05-05T13:15:00', '2026-05-05T17:45:00');
+  await addP(adminId,   '2026-05-06', '2026-05-06T08:00:00', '2026-05-06T12:30:00', '2026-05-06T13:30:00', '2026-05-06T18:00:00');
+  await addP(adminId,   '2026-05-07', '2026-05-07T07:55:00', '2026-05-07T12:00:00', '2026-05-07T13:00:00', '2026-05-07T17:30:00');
+  await addP(adminId,   '2026-05-08', '2026-05-08T08:00:00', '2026-05-08T12:00:00', '2026-05-08T13:00:00', '2026-05-08T17:00:00');
+  // Sophie Martin
+  await addP(sophieId,  '2026-05-04', '2026-05-04T08:15:00', '2026-05-04T12:30:00', '2026-05-04T13:00:00', '2026-05-04T17:15:00');
+  await addP(sophieId,  '2026-05-05', '2026-05-05T08:20:00', '2026-05-05T12:30:00', '2026-05-05T13:00:00', '2026-05-05T17:00:00');
+  await addP(sophieId,  '2026-05-06', '2026-05-06T08:15:00', '2026-05-06T12:30:00', '2026-05-06T13:00:00', '2026-05-06T17:30:00');
+  // Sophie absente jeudi
+  await addP(sophieId,  '2026-05-08', '2026-05-08T08:10:00', '2026-05-08T12:00:00', '2026-05-08T13:00:00', '2026-05-08T17:00:00');
+  // Jean Dupont
+  await addP(jeanId,    '2026-05-04', '2026-05-04T07:30:00', '2026-05-04T12:30:00', '2026-05-04T13:30:00', '2026-05-04T16:30:00');
+  await addP(jeanId,    '2026-05-05', '2026-05-05T07:35:00', '2026-05-05T12:30:00', '2026-05-05T13:30:00', '2026-05-05T16:45:00');
+  // Jean absent mercredi
+  await addP(jeanId,    '2026-05-07', '2026-05-07T07:30:00', '2026-05-07T12:30:00', '2026-05-07T13:30:00', '2026-05-07T16:30:00');
+  await addP(jeanId,    '2026-05-08', '2026-05-08T07:40:00', '2026-05-08T12:00:00', '2026-05-08T13:00:00', '2026-05-08T16:45:00');
+  // Marie Lefevre
+  await addP(marieId,   '2026-05-04', '2026-05-04T08:30:00', '2026-05-04T12:30:00', '2026-05-04T13:30:00', '2026-05-04T17:30:00');
+  await addP(marieId,   '2026-05-05', '2026-05-05T08:45:00', '2026-05-05T12:30:00', '2026-05-05T13:30:00', '2026-05-05T17:45:00');
+  await addP(marieId,   '2026-05-06', '2026-05-06T08:30:00', '2026-05-06T12:30:00', '2026-05-06T13:30:00', '2026-05-06T17:30:00');
+  // Marie absente jeudi
+  await addP(marieId,   '2026-05-08', '2026-05-08T08:30:00', '2026-05-08T12:30:00', '2026-05-08T13:30:00', '2026-05-08T17:00:00');
+  // Thomas Berger
+  await addP(thomasId,  '2026-05-04', '2026-05-04T08:00:00', '2026-05-04T13:00:00', '2026-05-04T14:00:00', '2026-05-04T18:00:00');
+  await addP(thomasId,  '2026-05-05', '2026-05-05T08:00:00', '2026-05-05T13:00:00', '2026-05-05T14:00:00', '2026-05-05T18:30:00');
+  await addP(thomasId,  '2026-05-06', '2026-05-06T08:00:00', '2026-05-06T13:00:00', '2026-05-06T14:00:00', '2026-05-06T18:00:00');
+  await addP(thomasId,  '2026-05-07', '2026-05-07T08:00:00', '2026-05-07T13:00:00', '2026-05-07T14:00:00', '2026-05-07T18:00:00');
+  await addP(thomasId,  '2026-05-08', '2026-05-08T08:00:00', '2026-05-08T12:30:00', '2026-05-08T13:30:00', '2026-05-08T17:30:00');
+  // Hery Rakoto
+  await addP(heryId,    '2026-05-04', '2026-05-04T08:30:00', '2026-05-04T12:00:00', '2026-05-04T13:00:00', '2026-05-04T17:00:00');
+  await addP(heryId,    '2026-05-05', '2026-05-05T08:30:00', '2026-05-05T12:00:00', '2026-05-05T13:00:00', '2026-05-05T17:00:00');
+  await addP(heryId,    '2026-05-06', '2026-05-06T08:30:00', '2026-05-06T12:00:00', '2026-05-06T13:00:00', '2026-05-06T17:00:00');
+  await addP(heryId,    '2026-05-07', '2026-05-07T08:30:00', '2026-05-07T12:00:00', '2026-05-07T13:00:00', '2026-05-07T17:00:00');
+  await addP(heryId,    '2026-05-08', '2026-05-08T08:30:00', '2026-05-08T12:00:00', '2026-05-08T13:00:00', '2026-05-08T17:00:00');
+  // Romuald Andriamaro
+  await addP(romualdId, '2026-05-04', '2026-05-04T09:00:00', undefined, undefined, '2026-05-04T17:30:00');
+  // Romuald absent mardi
+  await addP(romualdId, '2026-05-06', '2026-05-06T09:00:00', '2026-05-06T12:30:00', '2026-05-06T13:30:00', '2026-05-06T17:30:00');
+  await addP(romualdId, '2026-05-07', '2026-05-07T09:00:00', '2026-05-07T12:30:00', '2026-05-07T13:30:00', '2026-05-07T17:30:00');
+  await addP(romualdId, '2026-05-08', '2026-05-08T09:00:00', undefined, undefined, '2026-05-08T17:00:00');
+
+  // ── Semaine -1 : 2026-05-11 au 2026-05-15 ────────────────────
+  // Thomas Admin
+  await addP(adminId,   '2026-05-11', '2026-05-11T07:45:00', '2026-05-11T12:00:00', '2026-05-11T13:30:00', '2026-05-11T17:30:00');
+  await addP(adminId,   '2026-05-12', '2026-05-12T07:50:00', '2026-05-12T12:00:00', '2026-05-12T13:00:00', '2026-05-12T17:45:00');
+  await addP(adminId,   '2026-05-13', '2026-05-13T08:00:00', '2026-05-13T12:30:00', '2026-05-13T13:30:00', '2026-05-13T18:00:00');
+  await addP(adminId,   '2026-05-14', '2026-05-14T07:55:00', '2026-05-14T12:00:00', '2026-05-14T13:00:00', '2026-05-14T17:30:00');
+  await addP(adminId,   '2026-05-15', '2026-05-15T08:00:00', '2026-05-15T12:00:00', '2026-05-15T13:00:00', '2026-05-15T17:00:00');
+  // Sophie
+  await addP(sophieId,  '2026-05-11', '2026-05-11T08:15:00', '2026-05-11T12:30:00', '2026-05-11T13:00:00', '2026-05-11T17:00:00');
+  // Sophie absente mardi
+  await addP(sophieId,  '2026-05-13', '2026-05-13T08:20:00', '2026-05-13T12:30:00', '2026-05-13T13:00:00', '2026-05-13T17:15:00');
+  await addP(sophieId,  '2026-05-14', '2026-05-14T08:15:00', '2026-05-14T12:30:00', '2026-05-14T13:00:00', '2026-05-14T17:00:00');
+  await addP(sophieId,  '2026-05-15', '2026-05-15T08:10:00', '2026-05-15T12:00:00', '2026-05-15T13:00:00', '2026-05-15T17:00:00');
+  // Jean
+  await addP(jeanId,    '2026-05-11', '2026-05-11T07:30:00', '2026-05-11T12:30:00', '2026-05-11T13:30:00', '2026-05-11T16:30:00');
+  await addP(jeanId,    '2026-05-12', '2026-05-12T07:35:00', '2026-05-12T12:30:00', '2026-05-12T13:30:00', '2026-05-12T16:45:00');
+  await addP(jeanId,    '2026-05-13', '2026-05-13T07:30:00', '2026-05-13T12:00:00', '2026-05-13T13:00:00', '2026-05-13T16:30:00');
+  await addP(jeanId,    '2026-05-14', '2026-05-14T07:40:00', '2026-05-14T12:30:00', '2026-05-14T13:30:00', '2026-05-14T16:30:00');
+  // Jean absent vendredi
+  // Marie
+  await addP(marieId,   '2026-05-11', '2026-05-11T08:30:00', '2026-05-11T12:30:00', '2026-05-11T13:30:00', '2026-05-11T17:30:00');
+  await addP(marieId,   '2026-05-12', '2026-05-12T08:45:00', '2026-05-12T12:30:00', '2026-05-12T13:30:00', '2026-05-12T17:45:00');
+  await addP(marieId,   '2026-05-13', '2026-05-13T08:30:00', '2026-05-13T12:30:00', '2026-05-13T13:30:00', '2026-05-13T17:30:00');
+  await addP(marieId,   '2026-05-14', '2026-05-14T08:30:00', '2026-05-14T12:30:00', '2026-05-14T13:30:00', '2026-05-14T17:30:00');
+  await addP(marieId,   '2026-05-15', '2026-05-15T08:30:00', '2026-05-15T12:30:00', '2026-05-15T13:30:00', '2026-05-15T17:00:00');
+  // Thomas Berger
+  // Absent lundi
+  await addP(thomasId,  '2026-05-12', '2026-05-12T08:00:00', '2026-05-12T13:00:00', '2026-05-12T14:00:00', '2026-05-12T18:30:00');
+  await addP(thomasId,  '2026-05-13', '2026-05-13T08:00:00', '2026-05-13T13:00:00', '2026-05-13T14:00:00', '2026-05-13T18:00:00');
+  await addP(thomasId,  '2026-05-14', '2026-05-14T08:00:00', '2026-05-14T13:00:00', '2026-05-14T14:00:00', '2026-05-14T18:00:00');
+  await addP(thomasId,  '2026-05-15', '2026-05-15T08:00:00', '2026-05-15T12:30:00', '2026-05-15T13:30:00', '2026-05-15T17:30:00');
+  // Hery
+  await addP(heryId,    '2026-05-11', '2026-05-11T08:30:00', '2026-05-11T12:00:00', '2026-05-11T13:00:00', '2026-05-11T17:00:00');
+  await addP(heryId,    '2026-05-12', '2026-05-12T08:30:00', '2026-05-12T12:00:00', '2026-05-12T13:00:00', '2026-05-12T17:00:00');
+  await addP(heryId,    '2026-05-13', '2026-05-13T08:30:00', '2026-05-13T12:00:00', '2026-05-13T13:00:00', '2026-05-13T17:00:00');
+  await addP(heryId,    '2026-05-14', '2026-05-14T08:30:00', '2026-05-14T12:00:00', '2026-05-14T13:00:00', '2026-05-14T17:00:00');
+  await addP(heryId,    '2026-05-15', '2026-05-15T08:30:00', '2026-05-15T12:00:00', '2026-05-15T13:00:00', '2026-05-15T17:00:00');
+  // Romuald
+  await addP(romualdId, '2026-05-11', '2026-05-11T09:00:00', '2026-05-11T12:30:00', '2026-05-11T13:30:00', '2026-05-11T17:30:00');
+  await addP(romualdId, '2026-05-12', '2026-05-12T09:00:00', undefined, undefined, '2026-05-12T17:00:00');
+  // Romuald absent mercredi
+  await addP(romualdId, '2026-05-14', '2026-05-14T09:00:00', '2026-05-14T12:30:00', '2026-05-14T13:30:00', '2026-05-14T17:30:00');
+  await addP(romualdId, '2026-05-15', '2026-05-15T09:00:00', undefined, undefined, '2026-05-15T17:00:00');
+
+  // ── Semaine courante : 2026-05-18 au 2026-05-22 ───────────────
+  // Lundi 18
+  await addP(adminId,   '2026-05-18', '2026-05-18T07:45:00', '2026-05-18T12:00:00', '2026-05-18T13:30:00', '2026-05-18T17:30:00');
+  await addP(sophieId,  '2026-05-18', '2026-05-18T08:15:00', '2026-05-18T12:30:00', '2026-05-18T13:00:00', '2026-05-18T17:00:00');
+  await addP(jeanId,    '2026-05-18', '2026-05-18T07:30:00', '2026-05-18T12:30:00', '2026-05-18T13:30:00', '2026-05-18T16:30:00');
+  await addP(marieId,   '2026-05-18', '2026-05-18T08:30:00', '2026-05-18T12:30:00', '2026-05-18T13:30:00', '2026-05-18T17:30:00');
+  await addP(thomasId,  '2026-05-18', '2026-05-18T08:00:00', '2026-05-18T13:00:00', '2026-05-18T14:00:00', '2026-05-18T18:00:00');
+  await addP(heryId,    '2026-05-18', '2026-05-18T08:30:00', '2026-05-18T12:00:00', '2026-05-18T13:00:00', '2026-05-18T17:00:00');
+  // Romuald absent lundi
+
+  // Mardi 19
+  await addP(adminId,   '2026-05-19', '2026-05-19T07:50:00', '2026-05-19T12:00:00', '2026-05-19T13:15:00', '2026-05-19T17:45:00');
+  await addP(sophieId,  '2026-05-19', '2026-05-19T08:20:00', '2026-05-19T12:30:00', '2026-05-19T13:00:00', '2026-05-19T17:00:00');
+  // Jean absent mardi
+  await addP(marieId,   '2026-05-19', '2026-05-19T08:45:00', '2026-05-19T12:30:00', '2026-05-19T13:30:00', '2026-05-19T17:45:00');
+  await addP(thomasId,  '2026-05-19', '2026-05-19T08:00:00', '2026-05-19T13:00:00', '2026-05-19T14:00:00', '2026-05-19T18:30:00');
+  await addP(heryId,    '2026-05-19', '2026-05-19T08:30:00', '2026-05-19T12:00:00', '2026-05-19T13:00:00', '2026-05-19T17:00:00');
+  await addP(romualdId, '2026-05-19', '2026-05-19T09:00:00', '2026-05-19T12:30:00', '2026-05-19T13:30:00', '2026-05-19T17:30:00');
+
+  // Mercredi 20
+  await addP(adminId,   '2026-05-20', '2026-05-20T08:00:00', '2026-05-20T12:30:00', '2026-05-20T13:30:00', '2026-05-20T18:00:00');
+  await addP(sophieId,  '2026-05-20', '2026-05-20T08:15:00', '2026-05-20T12:30:00', '2026-05-20T13:00:00', '2026-05-20T17:30:00');
+  await addP(jeanId,    '2026-05-20', '2026-05-20T07:30:00', '2026-05-20T12:00:00', '2026-05-20T13:00:00', '2026-05-20T16:30:00');
+  // Marie absente mercredi
+  await addP(thomasId,  '2026-05-20', '2026-05-20T08:00:00', '2026-05-20T13:00:00', '2026-05-20T14:00:00', '2026-05-20T18:00:00');
+  await addP(heryId,    '2026-05-20', '2026-05-20T08:30:00', '2026-05-20T12:00:00', '2026-05-20T13:00:00', '2026-05-20T17:00:00');
+  await addP(romualdId, '2026-05-20', '2026-05-20T09:00:00', undefined, undefined, '2026-05-20T17:00:00');
+
+  // Jeudi 21
+  await addP(adminId,   '2026-05-21', '2026-05-21T07:55:00', '2026-05-21T12:00:00', '2026-05-21T13:00:00', '2026-05-21T17:30:00');
+  await addP(sophieId,  '2026-05-21', '2026-05-21T08:15:00', '2026-05-21T12:30:00', '2026-05-21T13:00:00', '2026-05-21T17:00:00');
+  await addP(jeanId,    '2026-05-21', '2026-05-21T07:40:00', '2026-05-21T12:30:00', '2026-05-21T13:30:00', '2026-05-21T16:45:00');
+  await addP(marieId,   '2026-05-21', '2026-05-21T08:30:00', '2026-05-21T12:30:00', '2026-05-21T13:30:00', '2026-05-21T17:30:00');
+  await addP(thomasId,  '2026-05-21', '2026-05-21T08:00:00', '2026-05-21T13:00:00', '2026-05-21T14:00:00', '2026-05-21T18:00:00');
+  await addP(heryId,    '2026-05-21', '2026-05-21T08:30:00', '2026-05-21T12:00:00', '2026-05-21T13:00:00', '2026-05-21T17:00:00');
+  await addP(romualdId, '2026-05-21', '2026-05-21T09:00:00', '2026-05-21T12:30:00', '2026-05-21T13:30:00', '2026-05-21T17:30:00');
+
+  // Vendredi 22 (aujourd'hui) — états variés
+  // Thomas Admin : journée complète (parti)
+  await addP(adminId,   '2026-05-22', '2026-05-22T07:45:00', '2026-05-22T12:00:00', '2026-05-22T13:30:00', '2026-05-22T17:30:00');
+  // Sophie : en pause (pause commencée, pas encore revenue)
+  await addP(sophieId,  '2026-05-22', '2026-05-22T08:15:00', '2026-05-22T12:30:00');
+  // Jean : present (arrivé, pas de pause)
+  await addP(jeanId,    '2026-05-22', '2026-05-22T07:30:00');
+  // Marie : parti (journée complète)
+  await addP(marieId,   '2026-05-22', '2026-05-22T08:30:00', '2026-05-22T12:30:00', '2026-05-22T13:30:00', '2026-05-22T17:00:00');
+  // Thomas Berger : revenu (pause terminée, encore au travail)
+  await addP(thomasId,  '2026-05-22', '2026-05-22T08:00:00', '2026-05-22T13:00:00', '2026-05-22T14:00:00');
+  // Hery : parti
+  await addP(heryId,    '2026-05-22', '2026-05-22T08:30:00', '2026-05-22T12:00:00', '2026-05-22T13:00:00', '2026-05-22T17:00:00');
+  // Romuald : absent
+
+  console.log('✅ Pointages de test ajoutés (3 semaines × 7 employés)');
 
   console.log('\n✨ Seed terminé avec succès !');
   console.log('\n📋 Comptes disponibles :');
