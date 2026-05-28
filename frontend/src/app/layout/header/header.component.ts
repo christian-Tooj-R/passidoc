@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -8,14 +8,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService, TaskNotification } from '../../core/services/notification-stream.service';
-import { filter } from 'rxjs/operators';
-
-interface PageInfo {
-  icon:   string;
-  title:  string;
-  sub:    string;
-  iconBg: string;
-}
 
 @Component({
   selector: 'app-header',
@@ -27,20 +19,15 @@ interface PageInfo {
   template: `
     <header class="topbar">
 
-      <!-- ── Contexte de page ─────────────────────── -->
-      <div class="page-ctx">
-        <div class="page-ctx__icon" [style.background]="page().iconBg">
-          <mat-icon>{{ page().icon }}</mat-icon>
-        </div>
-        <div class="page-ctx__text">
-          <span class="page-ctx__title">{{ page().title }}</span>
-          @if (page().sub) {
-            <span class="page-ctx__sub">{{ page().sub }}</span>
-          }
-        </div>
+      <!-- ── Recherche globale ───────────────────── -->
+      <div class="search-bar" [class.search-bar--focused]="searchFocused">
+        <mat-icon class="search-bar__icon">search</mat-icon>
+        <input class="search-bar__input"
+               type="text"
+               placeholder="Rechercher client, dossier, document…"
+               (focus)="searchFocused = true"
+               (blur)="searchFocused = false" />
       </div>
-
-      <div class="topbar__spacer"></div>
 
       <!-- ── Right ────────────────────────────────── -->
       <div class="topbar__right">
@@ -161,52 +148,57 @@ interface PageInfo {
   styles: [`
     /* ── Topbar ─────────────────────────────────── */
     .topbar {
-      height: 64px;
+      height: 52px;
       background: var(--page-header-bg, #FFFBFE);
       border-bottom: 1px solid var(--page-header-border, #E0E2EC);
       backdrop-filter: var(--panel-backdrop, none);
       -webkit-backdrop-filter: var(--panel-backdrop, none);
-      box-shadow: 0 1px 2px rgba(0,0,0,.08);
+      box-shadow: 0 1px 2px rgba(0,0,0,.06);
       display: flex;
       align-items: center;
-      padding: 0 28px 0 30px;
+      padding: 0 24px;
       flex-shrink: 0;
       gap: 12px;
     }
-    .topbar__spacer { flex: 1; }
-    .topbar__right  { display: flex; align-items: center; gap: 8px; }
+    .topbar__right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
-    /* ── Contexte de page ────────────────────────── */
-    .page-ctx {
-      display: flex; align-items: center; gap: 12px;
+    /* ── Recherche globale ───────────────────────── */
+    .search-bar {
+      flex: 1;
+      max-width: 520px;
+      display: flex; align-items: center; gap: 10px;
+      height: 34px;
+      background: #F1F5F9;
+      border-radius: 10px;
+      border: 1.5px solid transparent;
+      padding: 0 12px;
+      transition: border-color .18s, background .18s, box-shadow .18s;
+      cursor: text;
     }
-    .page-ctx__icon {
-      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,.14);
-      transition: box-shadow .2s;
+    .search-bar--focused {
+      background: #fff;
+      border-color: #6366F1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,.10);
     }
-    .page-ctx__icon mat-icon {
-      font-size: 20px; width: 20px; height: 20px; color: white;
+    .search-bar__icon {
+      font-size: 18px; width: 18px; height: 18px;
+      color: #94A3B8; flex-shrink: 0; transition: color .18s;
     }
-    .page-ctx__text {
-      display: flex; flex-direction: column; gap: 1px;
+    .search-bar--focused .search-bar__icon { color: #6366F1; }
+    .search-bar__input {
+      flex: 1; border: none; background: transparent; outline: none;
+      font-size: 13.5px; font-family: 'Inter', sans-serif;
+      color: #1A1F36;
     }
-    .page-ctx__title {
-      font-size: 15px; font-weight: 700; color: var(--panel-title, #0F172A); line-height: 1.2;
-      letter-spacing: -.2px;
-    }
-    .page-ctx__sub {
-      font-size: 12px; color: var(--panel-label, #64748B); line-height: 1.2;
-    }
+    .search-bar__input::placeholder { color: #94A3B8; }
 
     /* ── MD3 Icon buttons ────────────────────────── */
     .icon-btn {
       position: relative;
-      width: 40px; height: 40px;
+      width: 34px; height: 34px;
       border: none;
       background: transparent;
-      border-radius: 50%;
+      border-radius: 8px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       color: var(--panel-text, #44474F);
@@ -214,7 +206,7 @@ interface PageInfo {
     }
     .icon-btn:hover { background: var(--panel-hover-bg, #E8EAED); }
     .icon-btn.bell-active { color: #7B4F00; background: #FFDDB0; }
-    .icon-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .icon-btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
 
     .notif-badge {
       position: absolute; top: -5px; right: -5px;
@@ -325,8 +317,8 @@ interface PageInfo {
 
     /* ── User button ────────────────────────────── */
     .user-btn {
-      display: flex; align-items: center; gap: 9px;
-      padding: 4px 10px 4px 5px;
+      display: flex; align-items: center; gap: 7px;
+      padding: 3px 8px 3px 4px;
       border: 1px solid var(--panel-border, #E4E7F0);
       border-radius: 40px;
       background: var(--page-card-bg, #fff);
@@ -337,11 +329,11 @@ interface PageInfo {
     .user-btn:hover { background: var(--panel-hover-bg, #F8F9FC); border-color: var(--panel-border, #C9CEEA); }
 
     .user-avatar {
-      width: 30px; height: 30px; flex-shrink: 0;
+      width: 26px; height: 26px; flex-shrink: 0;
       background: linear-gradient(135deg, #19D9B4, #53DA85);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #162351;
+      font-size: 10px; font-weight: 700; color: #162351;
     }
     .user-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
     .user-name  { font-size: 12.5px; font-weight: 600; color: var(--panel-title, #162351); line-height: 1; white-space: nowrap; }
@@ -365,9 +357,8 @@ interface PageInfo {
   `],
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  bellOpen = false;
-
-  page = signal<PageInfo>({ icon: 'space_dashboard', title: 'Tableau de bord', sub: '', iconBg: 'linear-gradient(135deg,#0D9488,#34D399)' });
+  bellOpen     = false;
+  searchFocused = false;
 
   constructor(
     public auth: AuthService,
@@ -382,84 +373,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.alertes.startPolling();
     this.notifStream.connect();
-    // Sync initial route
-    this.syncPage(this.router.url);
-    // Sync on navigation
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e: any) => this.syncPage(e.urlAfterRedirects));
   }
 
   ngOnDestroy() {
     this.alertes.stopPolling();
     this.notifStream.disconnect();
-  }
-
-  private syncPage(url: string) {
-    this.page.set(this.resolvePageInfo(url));
-  }
-
-  private resolvePageInfo(url: string): PageInfo {
-    const u = this.auth.currentUser();
-    const prenom = u?.firstName ?? '';
-
-    if (url.startsWith('/dashboard'))
-      return { icon: 'space_dashboard', title: 'Tableau de bord',
-               sub: `Bonjour ${prenom} · ${this.frenchDate()}`,
-               iconBg: 'linear-gradient(135deg,#0D9488,#34D399)' };
-
-    if (url.match(/^\/clients\/\d+/))
-      return { icon: 'folder_open', title: 'Dossier client', sub: '',
-               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
-
-    if (url.startsWith('/clients'))
-      return { icon: 'folder_shared', title: 'Dossiers clients', sub: '',
-               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
-
-    if (url.startsWith('/portefeuilles'))
-      return { icon: 'account_tree', title: 'Portefeuilles', sub: '',
-               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
-
-    if (url.startsWith('/tasks'))
-      return { icon: 'checklist_rtl', title: 'Mes tâches', sub: '',
-               iconBg: 'linear-gradient(135deg,#C2410C,#FB923C)' };
-
-    if (url.startsWith('/documents'))
-      return { icon: 'insert_drive_file', title: 'Documents', sub: '',
-               iconBg: 'linear-gradient(135deg,#B91C1C,#F87171)' };
-
-    if (url.startsWith('/notes'))
-      return { icon: 'sticky_note_2', title: 'Notes', sub: '',
-               iconBg: 'linear-gradient(135deg,#B45309,#FCD34D)' };
-
-    if (url.startsWith('/equipes'))
-      return { icon: 'groups', title: 'Équipes', sub: '',
-               iconBg: 'linear-gradient(135deg,#4C1D95,#A78BFA)' };
-
-    if (url.startsWith('/permissions-roles'))
-      return { icon: 'security', title: "Permissions des rôles", sub: '',
-               iconBg: 'linear-gradient(135deg,#4C1D95,#A78BFA)' };
-
-    if (url.startsWith('/pointage'))
-      return { icon: 'fingerprint', title: 'Pointage', sub: this.frenchDate(),
-               iconBg: 'linear-gradient(135deg,#064E3B,#059669)' };
-
-    if (url.startsWith('/personnalisation'))
-      return { icon: 'palette', title: 'Personnalisation', sub: "Thème et apparence de l'interface",
-               iconBg: 'linear-gradient(135deg,#6D28D9,#A78BFA)' };
-
-    if (url.startsWith('/admin'))
-      return { icon: 'admin_panel_settings', title: 'Administration', sub: 'Gestion des utilisateurs',
-               iconBg: 'linear-gradient(135deg,#92400E,#F59E0B)' };
-
-    return { icon: 'space_dashboard', title: 'Passidoc', sub: '',
-             iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
-  }
-
-  private frenchDate(): string {
-    const d = new Date();
-    const jours   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-    const mois    = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-    return `${jours[d.getDay()]} ${d.getDate()} ${mois[d.getMonth()]} ${d.getFullYear()}`;
   }
 
   @HostListener('document:click', ['$event'])

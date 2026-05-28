@@ -205,7 +205,7 @@ export class CreateUserDialogComponent {
     </div>
   `,
   styles: [`
-    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
+    .page { padding: 32px 36px; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .page-header__left { display: flex; align-items: center; gap: 16px; }
     .page-icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }

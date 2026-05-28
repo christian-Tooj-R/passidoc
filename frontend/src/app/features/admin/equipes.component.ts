@@ -198,7 +198,7 @@ import { User } from '../../core/models/user.model';
 </div>
   `,
   styles: [`
-    .page { padding: 0 0 56px; max-width: 960px; }
+    .page { padding: 32px 36px; }
 
     /* ── Header ──────────────────────────────────────────────── */
     .page-header  { margin-bottom: 20px; }

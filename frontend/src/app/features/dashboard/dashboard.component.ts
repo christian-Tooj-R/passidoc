@@ -260,7 +260,7 @@ const TYPE_LABELS: Record<string, string> = {
     </div>
   `,
   styles: [`
-    .dash { max-width: 1300px; }
+    .dash { padding: 32px 36px; }
 
     /* ── Hero ──────────────────────────────────────── */
     .hero {

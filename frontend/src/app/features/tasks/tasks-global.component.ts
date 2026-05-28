@@ -1006,7 +1006,7 @@ export class TaskDetailDialogComponent {
     </div>
   `,
   styles: [`
-    .page { padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+    .page { padding: 32px 36px; }
 
     /* Header */
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }

@@ -337,7 +337,7 @@ import { AuthService } from '../../core/services/auth.service';
   `,
   styles: [`
     /* ── Page ────────────────────────────────────────────────────── */
-    .page { padding: 0 0 64px; }
+    .page { padding: 32px 36px 64px; }
 
     .page-header {
       display: flex; align-items: center; gap: 16px; margin-bottom: 28px;

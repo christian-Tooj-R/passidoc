@@ -155,35 +155,31 @@ body.theme-dark {
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
 }
 
-/* ── Sidebar panel — dark mode : règles directes, sans CSS vars ──
-   On force tout explicitement pour éviter tout fallback noir.
-──────────────────────────────────────────────────────────────── */
+/* ── Sidebar panel — dark mode ────────────────────────────────── */
 
-/* Fond et bordures du panel */
 body.theme-dark app-sidebar .panel {
-  background: #1E293B !important;
-  border-color: rgba(255,255,255,.12) !important;
-}
-body.theme-dark app-sidebar .panel-header {
+  background: #141E2F !important;
   border-color: rgba(255,255,255,.08) !important;
 }
 body.theme-dark app-sidebar .panel-footer {
-  border-color: rgba(255,255,255,.08) !important;
+  border-color: rgba(255,255,255,.07) !important;
 }
 
-/* Titres et labels du panel */
+/* Textes */
 body.theme-dark app-sidebar .panel-header__title { color: #F1F5F9 !important; }
-body.theme-dark app-sidebar .panel-group-label   { color: #64748B !important; }
+body.theme-dark app-sidebar .panel-header__count { color: #3D4E68 !important; }
+body.theme-dark app-sidebar .panel-group-label   { color: #3D4E68 !important; }
 body.theme-dark app-sidebar .panel-user__name    { color: #F1F5F9 !important; }
-body.theme-dark app-sidebar .panel-user__role    { color: #64748B !important; }
-body.theme-dark app-sidebar .panel-org           { color: #64748B !important; }
-body.theme-dark app-sidebar .panel-user:hover    { background: rgba(255,255,255,.07) !important; }
+body.theme-dark app-sidebar .panel-user__role    { color: #4D6080 !important; }
+body.theme-dark app-sidebar .panel-org           { color: #3D4E68 !important; }
+body.theme-dark app-sidebar .panel-user:hover    { background: rgba(255,255,255,.06) !important; }
+body.theme-dark app-sidebar .panel-user__status  { border-color: #141E2F !important; }
 
-/* Items — couleur explicite (CSS vars non résolues par ViewEncapsulation dans ce contexte) */
-body.theme-dark app-sidebar .panel-item:not(.active)              { color: #CBD5E1 !important; }
-body.theme-dark app-sidebar .panel-item:not(.active) mat-icon     { color: #64748B !important; }
-body.theme-dark app-sidebar .panel-item:not(.active):hover        { background: #1E293B !important; color: #F1F5F9 !important; }
-body.theme-dark app-sidebar .panel-item:not(.active):hover mat-icon { color: #94A3B8 !important; }
+/* Items */
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active) { color: #B8C5D9 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active) .panel-item__icon { color: #4D6080 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active):hover { background: rgba(255,255,255,.07) !important; color: #E2EAF4 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active):hover .panel-item__icon { color: #94A3B8 !important; }
 
 /* ── Zone de contenu principal ────────────────────────────
    Tous les overrides !important appliqués ici pour couvrir

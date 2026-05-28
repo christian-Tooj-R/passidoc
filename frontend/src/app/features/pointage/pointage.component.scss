@@ -8,16 +8,13 @@ $light:  #F9FAFB;
 
 // ── Layout ──────────────────────────────────────────────────
 .pt-page {
-  padding: 24px;
-  max-width: 860px;
-  margin: 0 auto;
+  padding: 32px 36px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 
   // ── Mode admin : 2 colonnes ──────────────────────────────
   &--admin {
-    max-width: 1440px;
     display: grid;
     grid-template-columns: 380px 1fr;
     grid-template-areas: "collab listing";

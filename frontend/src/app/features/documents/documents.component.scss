@@ -1,33 +1,33 @@
-// ── Palette ──────────────────────────────────────────────────
-$amber:   #F97316;   // identité dossier (chaud, document)
-$emerald: #059669;   // action principale (créer, ajouter)
-$indigo:  #6366F1;   // empty state, accents secondaires
-$teal:    #0D9488;   // drop zone, navigation
+// ── Variables ────────────────────────────────────────────────
+$amber:   #F97316;
+$emerald: #059669;
+$indigo:  #6366F1;
+$teal:    #0D9488;
 $gray:    #64748B;
 $light:   #F8FAFC;
 
 // ── Layout ───────────────────────────────────────────────────
-.page { padding: 0 0 56px; max-width: 1280px; }
+// padding défini en inline styles dans le .ts pour garantir le hot-reload
 
 // ── Page header ───────────────────────────────────────────────
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+  gap: 16px; margin-bottom: 28px; flex-wrap: wrap;
 }
 .page-header__left { display: flex; align-items: center; gap: 16px; }
 
-// Icône de la page → amber/orange (couleur "document")
 .page-icon {
   width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
   background: linear-gradient(135deg, #EA580C 0%, $amber 100%);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 16px rgba(249,115,22,.30);
+  mat-icon { font-size: 26px; width: 26px; height: 26px; color: white; }
 }
-.page-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: white; }
+
 .page-title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -.5px; }
 .page-sub   { font-size: 13px; color: $gray; margin: 3px 0 0; }
 
-// Bouton principal → emerald (créer / ajouter)
+// ── Bouton principal ──────────────────────────────────────────
 .btn-new {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 11px 22px;
@@ -40,34 +40,36 @@ $light:   #F8FAFC;
   mat-icon { font-size: 20px; width: 20px; height: 20px; }
   &:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5,150,105,.38); }
   &--lg { font-size: 15px; padding: 13px 28px; margin-top: 8px; }
+  &--sm { padding: 9px 18px; font-size: 13px; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
   &--loading { opacity: .7; cursor: not-allowed; transform: none; }
 }
-
 
 // ── Grille espaces ────────────────────────────────────────────
 .spaces-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
 // ── Carte espace ──────────────────────────────────────────────
 .space-card {
-  background: white; border-radius: 20px; overflow: hidden; cursor: pointer;
+  background: var(--surface, white); border-radius: 18px; overflow: hidden; cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
   transition: box-shadow .2s, transform .2s;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; position: relative;
 
   &:hover {
-    box-shadow: 0 8px 28px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
-    transform: translateY(-3px);
+    box-shadow: 0 10px 32px rgba(0,0,0,.13), 0 0 0 1px rgba(0,0,0,.04);
+    transform: translateY(-4px);
+
+    .sc-open   { opacity: 1; }
+    .sc-actions { opacity: 1; }
   }
 
   &--skel {
-    height: 200px; cursor: default;
+    height: 190px; cursor: default;
     background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
-    background-size: 400% 100%;
-    animation: shimmer 1.5s infinite;
+    background-size: 400% 100%; animation: shimmer 1.5s infinite;
     &:hover { transform: none; box-shadow: none; }
   }
 }
@@ -77,41 +79,83 @@ $light:   #F8FAFC;
   100% { background-position: -200% 0; }
 }
 
-.space-card__head {
-  display: flex; align-items: center; gap: 12px;
-  padding: 16px 18px; flex-shrink: 0;
+// Cover gradient
+.space-card__cover {
+  height: 110px; position: relative; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: flex-end; padding: 14px 16px 12px;
+  overflow: hidden;
 }
-.space-avatar {
-  width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px;
-  background: rgba(255,255,255,.3); border: 1.5px solid rgba(255,255,255,.5);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 800; color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,.2);
-}
-.space-meta { flex: 1; min-width: 0; }
-.space-name {
-  font-size: 14px; font-weight: 700; color: white;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0,0,0,.15);
-}
-.space-count-label {
-  font-size: 11.5px; color: rgba(255,255,255,.8); margin-top: 2px;
-}
-.space-delete-btn {
-  width: 32px; height: 32px; flex-shrink: 0; border: none;
-  border-radius: 8px; background: rgba(255,255,255,.18); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.85); transition: background .15s;
 
-  mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  &:hover { background: rgba(255,59,59,.40); }
+.sc-initials {
+  position: absolute; top: 14px; left: 16px;
+  width: 52px; height: 52px; border-radius: 14px;
+  background: rgba(255,255,255,.20);
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(255,255,255,.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: white;
+  text-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+
+.sc-name {
+  position: absolute; bottom: 30px; left: 78px; right: 52px;
+  font-size: 14px; font-weight: 700; color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,.3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+// Bouton ouvrir (overlay bas)
+.sc-open {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,.18); padding: 6px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  color: white; font-size: 12.5px; font-weight: 600;
+  opacity: 0; transition: opacity .2s;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+// Boutons actions (top-right)
+.sc-actions {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; gap: 4px;
+  opacity: 0; transition: opacity .2s;
+}
+
+.sc-action-btn {
+  width: 30px; height: 30px; border: none; border-radius: 8px;
+  background: rgba(255,255,255,.22); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.90); transition: background .15s;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  &:hover { background: rgba(255,255,255,.38); }
+  &--del:hover { background: rgba(220,38,38,.45); }
+}
+
+// Body carte
+.space-card__body {
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+
+.sc-stats { display: flex; align-items: baseline; gap: 8px; }
+.sc-stat-count { font-size: 13px; font-weight: 700; color: #1E293B; }
+.sc-stat-size  { font-size: 12px; color: #94A3B8; }
+
+.sc-type-dots { display: flex; gap: 5px; align-items: center; }
+.sc-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  &--pdf   { background: #DC2626; }
+  &--excel { background: #16A34A; }
+  &--word  { background: #2563EB; }
+  &--image { background: #7C3AED; }
+  &--other { background: $amber; }
 }
 
 // Confirmation suppression
 .space-confirm {
   padding: 14px 16px; background: #FEF2F2; border-top: 1px solid #FECACA;
   display: flex; flex-direction: column; gap: 10px;
-
   span { font-size: 12.5px; color: #991B1B; font-weight: 500; }
 }
 .space-confirm__btns { display: flex; gap: 8px; }
@@ -119,43 +163,8 @@ $light:   #F8FAFC;
   padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
   font-size: 12.5px; font-weight: 600; font-family: inherit;
   transition: background .15s;
-
   &--danger { background: #DC2626; color: white; &:hover { background: #B91C1C; } }
   &--cancel { background: #F1F5F9; color: $gray; border: 1px solid #E2E8F0; &:hover { background: #E2E8F0; } }
-}
-
-// Aperçu docs dans la carte
-.space-empty-body {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 6px; padding: 24px 16px; color: #94A3B8;
-
-  mat-icon { font-size: 28px; width: 28px; height: 28px; opacity: .5; }
-  span { font-size: 12px; }
-}
-
-.space-body { padding: 6px 0; flex: 1; }
-
-.space-doc-preview {
-  display: flex; align-items: center; gap: 8px; padding: 7px 16px;
-}
-.doc-icon-sm {
-  width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  mat-icon { font-size: 14px; width: 14px; height: 14px; }
-}
-.space-doc-name {
-  flex: 1; font-size: 12px; font-weight: 500; color: #334155;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.space-doc-size { font-size: 11px; color: #94A3B8; white-space: nowrap; flex-shrink: 0; }
-.space-doc-more { padding: 4px 16px 8px; font-size: 11.5px; color: #94A3B8; font-style: italic; }
-
-// Hint "Ouvrir" en bas de carte → teal, neutre et distinct
-.space-open-hint {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; border-top: 1px solid #F1F5F9;
-  font-size: 12px; font-weight: 600; color: $teal;
-  mat-icon { font-size: 15px; width: 15px; height: 15px; }
 }
 
 // ── Empty state ───────────────────────────────────────────────
@@ -163,13 +172,11 @@ $light:   #F8FAFC;
   display: flex; flex-direction: column; align-items: center;
   padding: 80px 24px; gap: 14px; text-align: center;
 }
-// Icône empty → indigo/violet (différent de tout le reste)
 .empty-icon {
   width: 72px; height: 72px; border-radius: 22px;
   background: linear-gradient(135deg, $indigo 0%, #818CF8 100%);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 20px rgba(99,102,241,.28);
-
   mat-icon { font-size: 34px; width: 34px; height: 34px; color: white; }
   &--sm { width: 56px; height: 56px; border-radius: 16px; mat-icon { font-size: 26px; width: 26px; height: 26px; } }
 }
@@ -177,58 +184,184 @@ $light:   #F8FAFC;
 .empty-state p  { font-size: 13.5px; color: $gray; max-width: 300px; margin: 0; }
 .empty-state--docs { padding: 40px 24px; }
 
-// ── Vue espace ouvert ─────────────────────────────────────────
-.space-view-header { margin-bottom: 8px; }
+// ── Toolbar vue espace ouvert ─────────────────────────────────
+.fm-toolbar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+
 .back-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border: none; background: none; cursor: pointer; padding: 6px 10px 6px 6px;
   border-radius: 8px; font-size: 13.5px; font-weight: 600; color: $gray;
-  font-family: inherit; transition: background .15s, color .15s;
-
+  font-family: inherit; transition: background .15s, color .15s; flex-shrink: 0;
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
   &:hover { background: #F1F5F9; color: #0F172A; }
 }
 
+.fm-toolbar__space {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+}
 .space-view-avatar {
-  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 800; color: white;
-  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  font-size: 14px; font-weight: 800; color: white;
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
   text-shadow: 0 1px 3px rgba(0,0,0,.2);
 }
+.fm-toolbar__info { min-width: 0; }
+.fm-space-name {
+  display: block; font-size: 15px; font-weight: 700; color: #0F172A;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fm-space-meta { font-size: 12px; color: $gray; }
 
-// Zone de drop → teal quand active
+.fm-toolbar__controls {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;
+}
+
+// Barre de recherche
+.fm-search {
+  display: flex; align-items: center; gap: 6px;
+  background: #F1F5F9; border-radius: 10px; padding: 7px 12px;
+  border: 1.5px solid transparent; transition: border-color .15s, background .15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0; }
+  input {
+    border: none; background: none; outline: none; font-family: inherit;
+    font-size: 13px; color: #1E293B; width: 160px;
+    &::placeholder { color: #94A3B8; }
+  }
+  &:focus-within { border-color: $teal; background: white; }
+}
+
+// Toggle liste/grille
+.fm-view-toggle { display: flex; border-radius: 10px; overflow: hidden; border: 1.5px solid #E2E8F0; }
+.fm-view-btn {
+  width: 36px; height: 36px; border: none; background: white; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #94A3B8;
+  transition: background .15s, color .15s;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &--active { background: $teal; color: white; }
+  &:not(&--active):hover { background: #F0FDFA; color: $teal; }
+}
+
+// ── Zone de drop ──────────────────────────────────────────────
 .drop-zone {
-  border: 2px dashed #CBD5E1; border-radius: 14px;
-  padding: 20px; margin-bottom: 20px;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  color: #94A3B8; font-size: 13.5px; transition: border-color .15s, background .15s;
-
-  mat-icon { font-size: 22px; width: 22px; height: 22px; }
+  height: 40px; border: 2px dashed #CBD5E1; border-radius: 10px;
+  margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: #94A3B8; font-size: 13px; transition: border-color .15s, background .15s, color .15s;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
   &--active { border-color: $teal; background: #F0FDFA; color: $teal; }
 }
 
-// ── Liste de documents ────────────────────────────────────────
-.docs-list { display: flex; flex-direction: column; gap: 8px; }
+// ── Vue liste de documents ────────────────────────────────────
+.fm-list { display: flex; flex-direction: column; }
 
-.doc-row {
-  display: flex; align-items: center; gap: 12px;
-  background: white; border-radius: 14px; padding: 12px 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
-  transition: box-shadow .15s;
+.fm-header {
+  display: grid;
+  grid-template-columns: 36px 1fr 80px 80px 90px 80px;
+  align-items: center; gap: 10px;
+  padding: 6px 14px; margin-bottom: 4px;
 
-  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.04); }
+  span {
+    font-size: 10.5px; font-weight: 700; color: #94A3B8;
+    text-transform: uppercase; letter-spacing: .6px;
+  }
+  .fmh-size, .fmh-date { text-align: right; }
+  .fmh-actions { width: 80px; }
+}
+
+.fm-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 80px 80px 90px 80px;
+  align-items: center; gap: 10px;
+  background: var(--surface, white); border-radius: 12px; padding: 10px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+  transition: box-shadow .15s, background .15s;
+  margin-bottom: 6px;
+
+  &:hover {
+    box-shadow: 0 3px 10px rgba(0,0,0,.09), 0 0 0 1px rgba(0,0,0,.04);
+    background: #F8FAFC;
+    .fm-row__actions { opacity: 1; }
+  }
+
   &--skel {
-    height: 64px;
+    height: 58px;
     background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
     background-size: 400% 100%; animation: shimmer 1.5s infinite;
+    box-shadow: none; border-radius: 12px; margin-bottom: 6px;
+    display: block;
   }
 }
 
+.fm-row__icon { grid-column: 1; }
+.fm-row__info { grid-column: 2; min-width: 0; }
+.fm-row__type { grid-column: 3; }
+.fm-row__size { grid-column: 4; font-size: 12px; color: #94A3B8; text-align: right; }
+.fm-row__date { grid-column: 5; font-size: 12px; color: #94A3B8; text-align: right; white-space: nowrap; }
+.fm-row__actions {
+  grid-column: 6; display: flex; gap: 4px; justify-content: flex-end;
+  opacity: 0; transition: opacity .15s;
+}
+
+// ── Vue grille de documents ───────────────────────────────────
+.fm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.fm-card {
+  background: var(--surface, white); border-radius: 14px; padding: 18px 14px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: default; position: relative; overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+
+  &:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.04);
+    transform: translateY(-2px);
+    .fm-card__overlay { opacity: 1; }
+  }
+
+  &--skel {
+    height: 140px;
+    background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
+    background-size: 400% 100%; animation: shimmer 1.5s infinite;
+    box-shadow: none;
+  }
+}
+
+.fm-card__icon { margin-bottom: 4px; }
+
+.fm-card__name {
+  font-size: 12.5px; font-weight: 600; color: #1E293B; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.4; width: 100%;
+}
+
+.fm-card__size { font-size: 11px; color: #94A3B8; }
+.fm-card__date { font-size: 10.5px; color: #CBD5E1; }
+
+.fm-card__overlay {
+  position: absolute; inset: 0;
+  background: rgba(15,23,42,.50);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  opacity: 0; transition: opacity .2s;
+}
+
+// ── Icônes et info documents ──────────────────────────────────
 .doc-icon-wrap {
-  width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px;
+  width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &--lg {
+    width: 48px; height: 48px; border-radius: 12px;
+    mat-icon { font-size: 26px; width: 26px; height: 26px; }
+  }
 }
 
 .doc-info { flex: 1; min-width: 0; }
@@ -248,52 +381,37 @@ $light:   #F8FAFC;
   width: 34px; height: 34px; border: none; border-radius: 8px;
   background: $light; cursor: pointer; display: flex; align-items: center; justify-content: center;
   color: $gray; transition: background .15s, color .15s;
-
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  &:hover { background: #F0FDFA; color: $teal; }           // teal au lieu de bleu
+  &:hover { background: #F0FDFA; color: $teal; }
   &--danger:hover { background: #FEE2E2; color: #DC2626; }
 }
 
-// ── Couleurs icônes / badges ──────────────────────────────────
-.di-pdf   { background: #FEE2E2; mat-icon { color: #DC2626; } }
-.di-xlsx, .di-xls { background: #DCFCE7; mat-icon { color: #16A34A; } }
-.di-docx, .di-doc { background: #DBEAFE; mat-icon { color: #2563EB; } }
+// ── Couleurs icônes ───────────────────────────────────────────
+.di-pdf                                      { background: #FEE2E2; mat-icon { color: #DC2626; } }
+.di-xlsx, .di-xls                            { background: #DCFCE7; mat-icon { color: #16A34A; } }
+.di-docx, .di-doc                            { background: #DBEAFE; mat-icon { color: #2563EB; } }
 .di-jpg, .di-jpeg, .di-png, .di-gif, .di-webp { background: #F3E8FF; mat-icon { color: #7C3AED; } }
-.di-file  { background: #FFF7ED; mat-icon { color: $amber; } }  // amber pour les "autres"
+.di-file                                     { background: #FFF7ED; mat-icon { color: $amber; } }
 
-.badge-pdf   { background: #FEE2E2; color: #DC2626; }
-.badge-xlsx, .badge-xls { background: #DCFCE7; color: #16A34A; }
-.badge-docx, .badge-doc { background: #DBEAFE; color: #2563EB; }
+// ── Badges ────────────────────────────────────────────────────
+.badge-pdf                                         { background: #FEE2E2; color: #DC2626; }
+.badge-xlsx, .badge-xls                            { background: #DCFCE7; color: #16A34A; }
+.badge-docx, .badge-doc                            { background: #DBEAFE; color: #2563EB; }
 .badge-jpg, .badge-jpeg, .badge-png, .badge-gif, .badge-webp { background: #F3E8FF; color: #7C3AED; }
-.badge-file  { background: #FFF7ED; color: $amber; }
+.badge-file                                        { background: #FFF7ED; color: $amber; }
 
 // ── Palette couleur ───────────────────────────────────────────
-.space-color-btn {
-  width: 32px; height: 32px; flex-shrink: 0; border: none;
-  border-radius: 8px; background: rgba(255,255,255,.18); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.85); transition: background .15s;
-
-  mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  &:hover { background: rgba(255,255,255,.32); }
-}
-
 .palette-panel {
   padding: 10px 14px;
-  background: white;
+  background: var(--surface, white);
   border-top: 1px solid #F1F5F9;
 }
-
-.palette-row {
-  display: flex; flex-wrap: wrap; gap: 6px;
-}
-
+.palette-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .palette-swatch {
   width: 28px; height: 28px; border-radius: 8px;
   border: 2.5px solid transparent;
   cursor: pointer; padding: 0;
   transition: transform .12s, border-color .12s;
-
   &:hover { transform: scale(1.15); }
   &--active { border-color: #0F172A; transform: scale(1.1); }
 }

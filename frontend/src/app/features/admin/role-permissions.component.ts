@@ -91,7 +91,7 @@ import { ToastService } from '../../core/services/toast.service';
     </div>
   `,
   styles: [`
-    .page { padding: 32px; max-width: 900px; margin: 0 auto; }
+    .page { padding: 32px 36px; }
 
     /* Header */
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,13 +23,16 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
   <!-- ══ VUE LISTE DES ESPACES ════════════════════════════════ -->
   @if (!espaceOuvert()) {
 
-    <!-- Header -->
     <div class="page-header">
       <div class="page-header__left">
         <div class="page-icon"><mat-icon>folder_open</mat-icon></div>
         <div>
           <h1 class="page-title">Mes documents</h1>
-          <p class="page-sub">{{ espaces().length }} espace{{ espaces().length > 1 ? 's' : '' }}</p>
+          <p class="page-sub">
+            {{ espaces().length }} espace{{ espaces().length > 1 ? 's' : '' }}
+            · {{ totalDocs() }} document{{ totalDocs() > 1 ? 's' : '' }}
+            · {{ fmtSize(totalSize()) }} total
+          </p>
         </div>
       </div>
       <button class="btn-new" matRipple (click)="ouvrirCreation()">
@@ -38,7 +41,6 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
       </button>
     </div>
 
-    <!-- Chargement -->
     @if (loading()) {
       <div class="spaces-grid">
         @for (i of [1,2,3]; track i) {
@@ -47,11 +49,10 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
       </div>
     }
 
-    <!-- Empty state -->
     @else if (espaces().length === 0) {
       <div class="empty-state">
         <div class="empty-icon"><mat-icon>folder_open</mat-icon></div>
-        <h3>Aucun espace pour l'instant</h3>
+        <h3>Aucun espace</h3>
         <p>Créez un espace pour organiser et stocker vos documents.</p>
         <button class="btn-new btn-new--lg" matRipple (click)="ouvrirCreation()">
           <mat-icon>add</mat-icon>
@@ -60,30 +61,37 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
       </div>
     }
 
-    <!-- Grille des espaces -->
     @else {
       <div class="spaces-grid">
         @for (esp of espaces(); track esp.id) {
           <div class="space-card" (click)="ouvrirEspace(esp)">
-            <!-- En-tête dégradé -->
-            <div class="space-card__head" [style.background]="gradient(esp)">
-              <div class="space-avatar">{{ initiales(esp.nom) }}</div>
-              <div class="space-meta">
-                <div class="space-name">{{ esp.nom }}</div>
-                <div class="space-count-label">
-                  {{ esp.documents.length }} document{{ esp.documents.length > 1 ? 's' : '' }}
+
+            <!-- Cover gradient -->
+            <div class="space-card__cover" [style.background]="gradient(esp)">
+              <div class="sc-initials">{{ initiales(esp.nom) }}</div>
+              <span class="sc-name">{{ esp.nom }}</span>
+
+              <!-- Bouton ouvrir overlay -->
+              @if (confirmerSuppr() !== esp.id && paletteOuvertId() !== esp.id) {
+                <div class="sc-open">
+                  <span>Ouvrir</span>
+                  <mat-icon>arrow_forward</mat-icon>
                 </div>
+              }
+
+              <!-- Actions top-right -->
+              <div class="sc-actions" (click)="$event.stopPropagation()">
+                <button class="sc-action-btn"
+                        matTooltip="Changer la couleur"
+                        (click)="togglePalette(esp.id)">
+                  <mat-icon>palette</mat-icon>
+                </button>
+                <button class="sc-action-btn sc-action-btn--del"
+                        matTooltip="Supprimer l'espace"
+                        (click)="demanderSuppression(esp.id)">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
               </div>
-              <button class="space-color-btn"
-                      matTooltip="Changer la couleur"
-                      (click)="$event.stopPropagation(); togglePalette(esp.id)">
-                <mat-icon>palette</mat-icon>
-              </button>
-              <button class="space-delete-btn"
-                      matTooltip="Supprimer l'espace"
-                      (click)="$event.stopPropagation(); demanderSuppression(esp.id)">
-                <mat-icon>delete_outline</mat-icon>
-              </button>
             </div>
 
             <!-- Palette couleur -->
@@ -102,7 +110,7 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
               </div>
             }
 
-            <!-- Confirmation suppression inline -->
+            <!-- Confirmation suppression -->
             @else if (confirmerSuppr() === esp.id) {
               <div class="space-confirm" (click)="$event.stopPropagation()">
                 <span>Supprimer cet espace et ses {{ esp.documents.length }} document(s) ?</span>
@@ -113,35 +121,31 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
               </div>
             }
 
-            <!-- Aperçu docs -->
-            @else if (esp.documents.length === 0) {
-              <div class="space-empty-body">
-                <mat-icon>upload_file</mat-icon>
-                <span>Aucun document</span>
+            <!-- Body -->
+            <div class="space-card__body">
+              <div class="sc-stats">
+                <span class="sc-stat-count">{{ esp.documents.length }} doc{{ esp.documents.length > 1 ? 's' : '' }}</span>
+                <span class="sc-stat-size">{{ docsSize(esp) }}</span>
               </div>
-            } @else {
-              <div class="space-body">
-                @for (doc of esp.documents.slice(0, 4); track doc.id) {
-                  <div class="space-doc-preview">
-                    <div class="doc-icon-sm" [class]="'di-' + ext(doc.nom)">
-                      <mat-icon>{{ docIcon(doc.nom) }}</mat-icon>
-                    </div>
-                    <span class="space-doc-name">{{ doc.nom }}</span>
-                    <span class="space-doc-size">{{ fmtSize(doc.taille) }}</span>
-                  </div>
+              <div class="sc-type-dots">
+                @if (countType(esp, 'pdf') > 0) {
+                  <span class="sc-dot sc-dot--pdf" [title]="'PDF (' + countType(esp, 'pdf') + ')'"></span>
                 }
-                @if (esp.documents.length > 4) {
-                  <div class="space-doc-more">+ {{ esp.documents.length - 4 }} autres</div>
+                @if (countType(esp, 'excel') > 0) {
+                  <span class="sc-dot sc-dot--excel" [title]="'Excel (' + countType(esp, 'excel') + ')'"></span>
+                }
+                @if (countType(esp, 'word') > 0) {
+                  <span class="sc-dot sc-dot--word" [title]="'Word (' + countType(esp, 'word') + ')'"></span>
+                }
+                @if (countType(esp, 'image') > 0) {
+                  <span class="sc-dot sc-dot--image" [title]="'Images (' + countType(esp, 'image') + ')'"></span>
+                }
+                @if (countType(esp, 'other') > 0) {
+                  <span class="sc-dot sc-dot--other" [title]="'Autres (' + countType(esp, 'other') + ')'"></span>
                 }
               </div>
-            }
+            </div>
 
-            @if (confirmerSuppr() !== esp.id && paletteOuvertId() !== esp.id) {
-              <div class="space-open-hint">
-                <span>Ouvrir l'espace</span>
-                <mat-icon>arrow_forward</mat-icon>
-              </div>
-            }
           </div>
         }
       </div>
@@ -151,55 +155,86 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
   <!-- ══ VUE ESPACE OUVERT ═════════════════════════════════════ -->
   @if (espaceOuvert()) {
 
-    <!-- Breadcrumb + header -->
-    <div class="space-view-header">
+    <!-- Toolbar compacte -->
+    <div class="fm-toolbar">
       <button class="back-btn" matRipple (click)="fermerEspace()">
         <mat-icon>arrow_back</mat-icon>
         Mes documents
       </button>
-    </div>
-
-    <div class="page-header">
-      <div class="page-header__left">
+      <div class="fm-toolbar__space">
         <div class="space-view-avatar" [style.background]="gradient(espaceOuvert()!)">
           {{ initiales(espaceOuvert()!.nom) }}
         </div>
-        <div>
-          <h1 class="page-title">{{ espaceOuvert()!.nom }}</h1>
-          <p class="page-sub">
-            {{ docsEspace().length }} document{{ docsEspace().length > 1 ? 's' : '' }}
-          </p>
+        <div class="fm-toolbar__info">
+          <span class="fm-space-name">{{ espaceOuvert()!.nom }}</span>
+          <span class="fm-space-meta">
+            {{ docsEspace().length }} doc{{ docsEspace().length > 1 ? 's' : '' }}
+            @if (docsEspace().length > 0) { · {{ fmtSize(docsEspace().reduce((s, d) => s + (d.taille || 0), 0)) }} }
+          </span>
         </div>
       </div>
-      <label class="btn-new" matRipple [class.btn-new--loading]="uploading()">
-        <mat-icon>{{ uploading() ? 'hourglass_empty' : 'upload_file' }}</mat-icon>
-        {{ uploading() ? 'Envoi…' : 'Ajouter un document' }}
-        <input type="file" multiple hidden
-               [disabled]="uploading()"
-               (change)="onFilesSelected($event)" />
-      </label>
+      <div class="fm-toolbar__controls">
+        <div class="fm-search">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Rechercher…"
+                 [value]="search()"
+                 (input)="search.set($any($event.target).value)" />
+        </div>
+        <div class="fm-view-toggle">
+          <button class="fm-view-btn" [class.fm-view-btn--active]="viewMode() === 'list'"
+                  matTooltip="Vue liste" (click)="viewMode.set('list')">
+            <mat-icon>view_list</mat-icon>
+          </button>
+          <button class="fm-view-btn" [class.fm-view-btn--active]="viewMode() === 'grid'"
+                  matTooltip="Vue grille" (click)="viewMode.set('grid')">
+            <mat-icon>grid_view</mat-icon>
+          </button>
+        </div>
+        <label class="btn-new btn-new--sm" matRipple [class.btn-new--loading]="uploading()">
+          <mat-icon>{{ uploading() ? 'hourglass_empty' : 'upload_file' }}</mat-icon>
+          {{ uploading() ? 'Envoi…' : 'Ajouter' }}
+          <input type="file" multiple hidden
+                 [disabled]="uploading()"
+                 (change)="onFilesSelected($event)" />
+        </label>
+      </div>
     </div>
 
-    <!-- Zone drop -->
+    <!-- Drop zone -->
     <div class="drop-zone"
          [class.drop-zone--active]="dragOver()"
          (dragover)="$event.preventDefault(); dragOver.set(true)"
          (dragleave)="dragOver.set(false)"
          (drop)="onDrop($event)">
       <mat-icon>cloud_upload</mat-icon>
-      <span>Glissez vos fichiers ici ou cliquez sur « Ajouter »</span>
+      <span>Glissez vos fichiers ici</span>
     </div>
 
     <!-- Chargement docs -->
     @if (loadingDocs()) {
-      <div class="docs-list">
-        @for (i of [1,2,3]; track i) {
-          <div class="doc-row doc-row--skel"></div>
-        }
-      </div>
+      @if (viewMode() === 'list') {
+        <div class="fm-list">
+          <div class="fm-header">
+            <span class="fmh-name">Nom</span>
+            <span class="fmh-type">Type</span>
+            <span class="fmh-size">Taille</span>
+            <span class="fmh-date">Date</span>
+            <span class="fmh-actions"></span>
+          </div>
+          @for (i of [1,2,3]; track i) {
+            <div class="fm-row fm-row--skel"></div>
+          }
+        </div>
+      } @else {
+        <div class="fm-grid">
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <div class="fm-card fm-card--skel"></div>
+          }
+        </div>
+      }
     }
 
-    <!-- Liste docs vide -->
+    <!-- Vide -->
     @else if (docsEspace().length === 0) {
       <div class="empty-state empty-state--docs">
         <div class="empty-icon empty-icon--sm"><mat-icon>upload_file</mat-icon></div>
@@ -208,20 +243,64 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
       </div>
     }
 
-    <!-- Liste docs -->
-    @else {
-      <div class="docs-list">
-        @for (doc of docsEspace(); track doc.id) {
-          <div class="doc-row">
-            <div class="doc-icon-wrap" [class]="'di-' + ext(doc.nom)">
+    <!-- Aucun résultat de recherche -->
+    @else if (docsFiltered().length === 0) {
+      <div class="empty-state empty-state--docs">
+        <div class="empty-icon empty-icon--sm"><mat-icon>search_off</mat-icon></div>
+        <h3>Aucun résultat</h3>
+        <p>Aucun document ne correspond à « {{ search() }} ».</p>
+      </div>
+    }
+
+    <!-- Vue liste -->
+    @else if (viewMode() === 'list') {
+      <div class="fm-list">
+        <div class="fm-header">
+          <span class="fmh-name">Nom</span>
+          <span class="fmh-type">Type</span>
+          <span class="fmh-size">Taille</span>
+          <span class="fmh-date">Date</span>
+          <span class="fmh-actions"></span>
+        </div>
+        @for (doc of docsFiltered(); track doc.id) {
+          <div class="fm-row">
+            <div class="fm-row__icon doc-icon-wrap" [class]="'di-' + ext(doc.nom)">
               <mat-icon>{{ docIcon(doc.nom) }}</mat-icon>
             </div>
-            <div class="doc-info">
+            <div class="fm-row__info">
               <span class="doc-name">{{ doc.nom }}</span>
               <span class="doc-meta">{{ fmtSize(doc.taille) }} · {{ fmtDate(doc.createdAt) }}</span>
             </div>
-            <div class="doc-badge" [class]="'badge-' + ext(doc.nom)">{{ typeLabel(doc.nom) }}</div>
-            <div class="doc-actions">
+            <div class="fm-row__type">
+              <span class="doc-badge" [class]="'badge-' + ext(doc.nom)">{{ typeLabel(doc.nom) }}</span>
+            </div>
+            <div class="fm-row__size">{{ fmtSize(doc.taille) }}</div>
+            <div class="fm-row__date">{{ fmtDate(doc.createdAt) }}</div>
+            <div class="fm-row__actions">
+              <button class="doc-btn" matTooltip="Télécharger" (click)="downloadDoc(doc)">
+                <mat-icon>download</mat-icon>
+              </button>
+              <button class="doc-btn doc-btn--danger" matTooltip="Supprimer" (click)="supprimerDoc(doc)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Vue grille -->
+    @else {
+      <div class="fm-grid">
+        @for (doc of docsFiltered(); track doc.id) {
+          <div class="fm-card">
+            <div class="fm-card__icon doc-icon-wrap doc-icon-wrap--lg" [class]="'di-' + ext(doc.nom)">
+              <mat-icon>{{ docIcon(doc.nom) }}</mat-icon>
+            </div>
+            <span class="fm-card__name">{{ doc.nom }}</span>
+            <span class="fm-card__size">{{ fmtSize(doc.taille) }}</span>
+            <span class="fm-card__date">{{ fmtDate(doc.createdAt) }}</span>
+            <div class="fm-card__overlay">
               <button class="doc-btn" matTooltip="Télécharger" (click)="downloadDoc(doc)">
                 <mat-icon>download</mat-icon>
               </button>
@@ -237,6 +316,7 @@ import { EspacesCreateDialogComponent } from './espaces-create-dialog.component'
 
 </div>
   `,
+  styles: [`.page { padding: 32px 36px; }`],
   styleUrl: './documents.component.scss',
 })
 export class DocumentsComponent implements OnInit {
@@ -250,6 +330,20 @@ export class DocumentsComponent implements OnInit {
   confirmerSuppr  = signal<number | null>(null);
   paletteOuvertId = signal<number | null>(null);
   dragOver        = signal(false);
+  search          = signal('');
+  viewMode        = signal<'list' | 'grid'>('list');
+
+  docsFiltered = computed(() =>
+    this.docsEspace().filter(d => d.nom.toLowerCase().includes(this.search().toLowerCase()))
+  );
+
+  totalSize = computed(() =>
+    this.espaces().reduce((s, e) => s + e.documents.reduce((ss, d) => ss + (d.taille || 0), 0), 0)
+  );
+
+  totalDocs = computed(() =>
+    this.espaces().reduce((s, e) => s + e.documents.length, 0)
+  );
 
   readonly PALETTES = [
     { label: 'Océan',   val: 'linear-gradient(135deg, #1565C0 0%, #42A5F5 100%)' },
@@ -282,7 +376,6 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Création ─────────────────────────────────────────────────
   ouvrirCreation() {
     const ref = this.dialog.open(EspacesCreateDialogComponent, {
       width: '440px',
@@ -301,7 +394,6 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Suppression espace ────────────────────────────────────────
   demanderSuppression(id: number) {
     this.confirmerSuppr.set(id);
     this.paletteOuvertId.set(null);
@@ -318,7 +410,6 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Couleur ───────────────────────────────────────────────────
   togglePalette(id: number) {
     this.paletteOuvertId.set(this.paletteOuvertId() === id ? null : id);
     this.confirmerSuppr.set(null);
@@ -334,9 +425,9 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Navigation ─────────────────────────────────────────────────
   ouvrirEspace(espace: Espace) {
     this.paletteOuvertId.set(null);
+    this.search.set('');
     this.espaceOuvert.set(espace);
     this.loadingDocs.set(true);
     this.svc.getDocs(espace.id).subscribe({
@@ -348,10 +439,10 @@ export class DocumentsComponent implements OnInit {
   fermerEspace() {
     this.espaceOuvert.set(null);
     this.docsEspace.set([]);
+    this.search.set('');
     this.charger();
   }
 
-  // ── Upload ─────────────────────────────────────────────────────
   onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
@@ -387,7 +478,6 @@ export class DocumentsComponent implements OnInit {
     }
   }
 
-  // ── Téléchargement ─────────────────────────────────────────────
   downloadDoc(doc: EspaceDoc) {
     const espace = this.espaceOuvert();
     if (!espace) return;
@@ -399,7 +489,6 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Suppression doc ───────────────────────────────────────────
   supprimerDoc(doc: EspaceDoc) {
     const espace = this.espaceOuvert();
     if (!espace) return;
@@ -412,7 +501,6 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
   gradient(esp: Espace) {
     return esp.couleur || this.PALETTES[esp.id % this.PALETTES.length].val;
   }
@@ -450,5 +538,22 @@ export class DocumentsComponent implements OnInit {
 
   fmtDate(d: string) {
     return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
+  }
+
+  docsSize(esp: Espace): string {
+    const total = esp.documents.reduce((s, d) => s + (d.taille || 0), 0);
+    return this.fmtSize(total);
+  }
+
+  countType(esp: Espace, type: string): number {
+    return esp.documents.filter(d => {
+      const e = this.ext(d.nom);
+      if (type === 'pdf')   return e === 'pdf';
+      if (type === 'excel') return ['xls','xlsx'].includes(e);
+      if (type === 'word')  return ['doc','docx'].includes(e);
+      if (type === 'image') return ['jpg','jpeg','png','gif','webp'].includes(e);
+      if (type === 'other') return !['pdf','xls','xlsx','doc','docx','jpg','jpeg','png','gif','webp'].includes(e);
+      return false;
+    }).length;
   }
 }

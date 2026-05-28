@@ -21,7 +21,7 @@ import { HeaderComponent } from '../header/header.component';
   styles: [`
     .layout { display: flex; height: 100vh; overflow: hidden; background: var(--page-bg, #F4F6FB); }
     .layout__content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-    .layout__main { flex: 1; overflow-y: auto; background: var(--page-bg, #F4F6FB); padding: 28px 32px; }
+    .layout__main { flex: 1; overflow-y: auto; background: var(--page-bg, #F4F6FB); padding: 0; }
   `],
 })
 export class MainLayoutComponent {}

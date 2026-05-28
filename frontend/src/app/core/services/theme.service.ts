@@ -168,12 +168,12 @@ export class ThemeService {
 
     // ── Couleurs des items panel (hover inclus) ────────────────
     const pd = p.panelStyleId;
-    root.style.setProperty('--pi-color',  pd === 'dark'  ? '#CBD5E1' : '#3C4043');
-    root.style.setProperty('--pi-icon',   pd === 'dark'  ? '#64748B' : '#80868B');
-    root.style.setProperty('--ph-bg',     pd === 'dark'  ? '#1E293B'
-                                        : pd === 'glass' ? 'rgba(255,255,255,.55)' : '#E2E9F8');
-    root.style.setProperty('--ph-color',  pd === 'dark'  ? '#F1F5F9' : '#202124');
-    root.style.setProperty('--ph-icon',   pd === 'dark'  ? '#94A3B8' : '#202124');
+    root.style.setProperty('--pi-color',  pd === 'dark'  ? '#B8C5D9' : '#3C4555');
+    root.style.setProperty('--pi-icon',   pd === 'dark'  ? '#4D6080' : '#8B93A9');
+    root.style.setProperty('--ph-bg',     pd === 'dark'  ? 'rgba(255,255,255,.07)'
+                                        : pd === 'glass' ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.055)');
+    root.style.setProperty('--ph-color',  pd === 'dark'  ? '#E2EAF4' : '#1A1F36');
+    root.style.setProperty('--ph-icon',   pd === 'dark'  ? '#94A3B8' : '#4B5563');
 
     // ── Mode sombre sur <body> ─────────────────────────────────
     document.body.classList.toggle('theme-dark',  p.panelStyleId === 'dark');
