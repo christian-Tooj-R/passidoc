@@ -1556,3 +1556,60 @@ body.theme-dark app-client-detail {
   /* Relation client section */
   .ec-grid mat-form-field { color: #F1F5F9 !important; }
 }
+
+/* ── NOTES — dark mode : cartes et champs ─────────────────── */
+body.theme-dark app-notes {
+
+  /* Fond de page */
+  .notes-page { background: transparent !important; }
+
+  /* Cartes — le fond pastel (inline style) est écrasé par !important.
+     La bordure colorée reste depuis [style.border-color] et suffit
+     à distinguer les notes visuellement. */
+  .note-card {
+    background: #1A2535 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25) !important;
+  }
+  .note-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.35) !important; }
+
+  /* Champs de saisie */
+  .note-title {
+    color: #F1F5F9 !important;
+    background: transparent !important;
+  }
+  .note-title::placeholder { color: #4D6080 !important; }
+
+  .note-body {
+    color: #CBD5E1 !important;
+    background: transparent !important;
+  }
+  .note-body::placeholder { color: #4D6080 !important; }
+
+  /* Footer */
+  .note-footer {
+    color: #64748B !important;
+    border-top-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Boutons d'action */
+  .action-btn { color: #4D6080 !important; }
+  .action-btn:hover { color: #94A3B8 !important; }
+  .action-btn mat-icon.pinned { color: #F59E0B !important; }
+  .delete-btn:hover { color: #F87171 !important; }
+
+  /* Dot couleur sélectionné */
+  .color-dot.selected { border-color: rgba(255,255,255,.6) !important; }
+
+  /* Skeletons */
+  .skeleton-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .sk-line {
+    background: linear-gradient(90deg, #1A2535 25%, #253348 50%, #1A2535 75%) !important;
+    background-size: 400% 100% !important;
+  }
+
+  /* Labels de section (Épinglées / Autres) */
+  .section-label { color: #64748B !important; }
+}
