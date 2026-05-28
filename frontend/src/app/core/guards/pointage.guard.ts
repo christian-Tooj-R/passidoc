@@ -20,8 +20,8 @@ export const pointageGuard: CanActivateFn = () => {
       if (!dejaOuvert) {
         const ref = dialog.open(PointageModalComponent, {
           disableClose: true,
-          hasBackdrop: true,
-          panelClass: 'pointage-dialog',
+          hasBackdrop: false,   // pas de backdrop : la sidebar reste visible
+          panelClass:    'pointage-dialog',
           width: '360px',
         });
 
@@ -32,8 +32,8 @@ export const pointageGuard: CanActivateFn = () => {
               if (!s.estPointe && dialog.openDialogs.length === 0) {
                 dialog.open(PointageModalComponent, {
                   disableClose: true,
-                  hasBackdrop: true,
-                  panelClass: 'pointage-dialog',
+                  hasBackdrop: false,
+                  panelClass:    'pointage-dialog',
                   width: '360px',
                 });
               }
@@ -41,9 +41,8 @@ export const pointageGuard: CanActivateFn = () => {
           }
         });
       }
-      // Laisser la navigation : le modal bloque visuellement toute interaction
       return true;
     }),
-    catchError(() => of(true)), // En cas d'erreur réseau, ne pas bloquer l'app
+    catchError(() => of(true)),
   );
 };

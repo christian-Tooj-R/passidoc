@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -8,6 +8,14 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService, TaskNotification } from '../../core/services/notification-stream.service';
+import { filter } from 'rxjs/operators';
+
+interface PageInfo {
+  icon:   string;
+  title:  string;
+  sub:    string;
+  iconBg: string;
+}
 
 @Component({
   selector: 'app-header',
@@ -19,10 +27,17 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
   template: `
     <header class="topbar">
 
-      <!-- ── Search bar MD3 ────────────────────────── -->
-      <div class="search-bar">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input class="search-input" type="text" placeholder="Rechercher un dossier, une tâche…" />
+      <!-- ── Contexte de page ─────────────────────── -->
+      <div class="page-ctx">
+        <div class="page-ctx__icon" [style.background]="page().iconBg">
+          <mat-icon>{{ page().icon }}</mat-icon>
+        </div>
+        <div class="page-ctx__text">
+          <span class="page-ctx__title">{{ page().title }}</span>
+          @if (page().sub) {
+            <span class="page-ctx__sub">{{ page().sub }}</span>
+          }
+        </div>
       </div>
 
       <div class="topbar__spacer"></div>
@@ -147,9 +162,11 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
     /* ── Topbar ─────────────────────────────────── */
     .topbar {
       height: 64px;
-      background: #FFFBFE;
-      border-bottom: 1px solid #E0E2EC;
-      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      background: var(--page-header-bg, #FFFBFE);
+      border-bottom: 1px solid var(--page-header-border, #E0E2EC);
+      backdrop-filter: var(--panel-backdrop, none);
+      -webkit-backdrop-filter: var(--panel-backdrop, none);
+      box-shadow: 0 1px 2px rgba(0,0,0,.08);
       display: flex;
       align-items: center;
       padding: 0 28px 0 30px;
@@ -159,24 +176,29 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
     .topbar__spacer { flex: 1; }
     .topbar__right  { display: flex; align-items: center; gap: 8px; }
 
-    /* ── MD3 Search bar ──────────────────────────── */
-    .search-bar {
-      display: flex; align-items: center; gap: 8px;
-      background: #E8EAED;
-      border-radius: 28px;
-      padding: 0 16px;
-      height: 40px;
-      width: 320px;
-      transition: background .12s;
+    /* ── Contexte de page ────────────────────────── */
+    .page-ctx {
+      display: flex; align-items: center; gap: 12px;
     }
-    .search-bar:focus-within { background: #FFFBFE; outline: 2px solid #19D9B4; outline-offset: -2px; }
-    .search-icon { font-size: 20px; width: 20px; height: 20px; color: #44474F; flex-shrink: 0; }
-    .search-input {
-      flex: 1; border: none; background: transparent;
-      font-size: 14px; color: #1A1C1E; font-family: 'Inter', sans-serif;
-      outline: none;
+    .page-ctx__icon {
+      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.14);
+      transition: box-shadow .2s;
     }
-    .search-input::placeholder { color: #6F7978; }
+    .page-ctx__icon mat-icon {
+      font-size: 20px; width: 20px; height: 20px; color: white;
+    }
+    .page-ctx__text {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .page-ctx__title {
+      font-size: 15px; font-weight: 700; color: var(--panel-title, #0F172A); line-height: 1.2;
+      letter-spacing: -.2px;
+    }
+    .page-ctx__sub {
+      font-size: 12px; color: var(--panel-label, #64748B); line-height: 1.2;
+    }
 
     /* ── MD3 Icon buttons ────────────────────────── */
     .icon-btn {
@@ -187,10 +209,10 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
       border-radius: 50%;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      color: #44474F;
-      transition: background .12s;
+      color: var(--panel-text, #44474F);
+      transition: background .12s, color .12s;
     }
-    .icon-btn:hover { background: #E8EAED; }
+    .icon-btn:hover { background: var(--panel-hover-bg, #E8EAED); }
     .icon-btn.bell-active { color: #7B4F00; background: #FFDDB0; }
     .icon-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
 
@@ -305,14 +327,14 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
     .user-btn {
       display: flex; align-items: center; gap: 9px;
       padding: 4px 10px 4px 5px;
-      border: 1px solid #E4E7F0;
+      border: 1px solid var(--panel-border, #E4E7F0);
       border-radius: 40px;
-      background: #fff;
+      background: var(--page-card-bg, #fff);
       cursor: pointer;
       transition: all .15s;
       font-family: 'Inter', sans-serif;
     }
-    .user-btn:hover { background: #F8F9FC; border-color: #C9CEEA; }
+    .user-btn:hover { background: var(--panel-hover-bg, #F8F9FC); border-color: var(--panel-border, #C9CEEA); }
 
     .user-avatar {
       width: 30px; height: 30px; flex-shrink: 0;
@@ -322,7 +344,7 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
       font-size: 11px; font-weight: 700; color: #162351;
     }
     .user-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-    .user-name  { font-size: 12.5px; font-weight: 600; color: #162351; line-height: 1; white-space: nowrap; }
+    .user-name  { font-size: 12.5px; font-weight: 600; color: var(--panel-title, #162351); line-height: 1; white-space: nowrap; }
     .role-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; line-height: 1.5; }
     .role-admin            { background: #E6FBF7; color: #0E9E83; }
     .role-expert_comptable { background: #EEF0F8; color: #162351; }
@@ -345,6 +367,8 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
 export class HeaderComponent implements OnInit, OnDestroy {
   bellOpen = false;
 
+  page = signal<PageInfo>({ icon: 'space_dashboard', title: 'Tableau de bord', sub: '', iconBg: 'linear-gradient(135deg,#0D9488,#34D399)' });
+
   constructor(
     public auth: AuthService,
     public alertes: AlertesService,
@@ -354,6 +378,89 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ) {}
 
   totalCount = computed(() => this.alertes.count() + this.notifStream.unreadCount());
+
+  ngOnInit() {
+    this.alertes.startPolling();
+    this.notifStream.connect();
+    // Sync initial route
+    this.syncPage(this.router.url);
+    // Sync on navigation
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => this.syncPage(e.urlAfterRedirects));
+  }
+
+  ngOnDestroy() {
+    this.alertes.stopPolling();
+    this.notifStream.disconnect();
+  }
+
+  private syncPage(url: string) {
+    this.page.set(this.resolvePageInfo(url));
+  }
+
+  private resolvePageInfo(url: string): PageInfo {
+    const u = this.auth.currentUser();
+    const prenom = u?.firstName ?? '';
+
+    if (url.startsWith('/dashboard'))
+      return { icon: 'space_dashboard', title: 'Tableau de bord',
+               sub: `Bonjour ${prenom} · ${this.frenchDate()}`,
+               iconBg: 'linear-gradient(135deg,#0D9488,#34D399)' };
+
+    if (url.match(/^\/clients\/\d+/))
+      return { icon: 'folder_open', title: 'Dossier client', sub: '',
+               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
+
+    if (url.startsWith('/clients'))
+      return { icon: 'folder_shared', title: 'Dossiers clients', sub: '',
+               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
+
+    if (url.startsWith('/portefeuilles'))
+      return { icon: 'account_tree', title: 'Portefeuilles', sub: '',
+               iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
+
+    if (url.startsWith('/tasks'))
+      return { icon: 'checklist_rtl', title: 'Mes tâches', sub: '',
+               iconBg: 'linear-gradient(135deg,#C2410C,#FB923C)' };
+
+    if (url.startsWith('/documents'))
+      return { icon: 'insert_drive_file', title: 'Documents', sub: '',
+               iconBg: 'linear-gradient(135deg,#B91C1C,#F87171)' };
+
+    if (url.startsWith('/notes'))
+      return { icon: 'sticky_note_2', title: 'Notes', sub: '',
+               iconBg: 'linear-gradient(135deg,#B45309,#FCD34D)' };
+
+    if (url.startsWith('/equipes'))
+      return { icon: 'groups', title: 'Équipes', sub: '',
+               iconBg: 'linear-gradient(135deg,#4C1D95,#A78BFA)' };
+
+    if (url.startsWith('/permissions-roles'))
+      return { icon: 'security', title: "Permissions des rôles", sub: '',
+               iconBg: 'linear-gradient(135deg,#4C1D95,#A78BFA)' };
+
+    if (url.startsWith('/pointage'))
+      return { icon: 'fingerprint', title: 'Pointage', sub: this.frenchDate(),
+               iconBg: 'linear-gradient(135deg,#064E3B,#059669)' };
+
+    if (url.startsWith('/personnalisation'))
+      return { icon: 'palette', title: 'Personnalisation', sub: "Thème et apparence de l'interface",
+               iconBg: 'linear-gradient(135deg,#6D28D9,#A78BFA)' };
+
+    if (url.startsWith('/admin'))
+      return { icon: 'admin_panel_settings', title: 'Administration', sub: 'Gestion des utilisateurs',
+               iconBg: 'linear-gradient(135deg,#92400E,#F59E0B)' };
+
+    return { icon: 'space_dashboard', title: 'Passidoc', sub: '',
+             iconBg: 'linear-gradient(135deg,#1565C0,#42A5F5)' };
+  }
+
+  private frenchDate(): string {
+    const d = new Date();
+    const jours   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+    const mois    = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    return `${jours[d.getDay()]} ${d.getDate()} ${mois[d.getMonth()]} ${d.getFullYear()}`;
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -387,9 +494,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
     return 'task_alt';
   }
-
-  ngOnInit()    { this.alertes.startPolling(); this.notifStream.connect(); }
-  ngOnDestroy() { this.alertes.stopPolling();  this.notifStream.disconnect(); }
 
   get initials(): string {
     const u = this.auth.currentUser();

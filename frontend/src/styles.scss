@@ -84,6 +84,10 @@ html { @include mat.all-component-themes($passidoc-theme); }
 }
 
 /* ─────────────────────────────────────────────
+   DEBUG TEMPORAIRE — À supprimer après test
+───────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────
    Reset & base
 ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -108,6 +112,321 @@ h1, h2, h3, h4, h5, h6 {
 }
 p { margin: 0; }
 a { text-decoration: none; }
+
+/* ─────────────────────────────────────────────
+   Thème adaptatif — cards & texte global
+───────────────────────────────────────────── */
+
+/* Toutes les "section-card" (utilisées dans les pages admin/collab) */
+.section-card {
+  background:   var(--page-card-bg,     #FFFFFF) !important;
+  border-color: var(--page-card-border, #E8ECF0) !important;
+}
+
+/* Titres et textes globaux qui doivent suivre le thème */
+body {
+  color: var(--panel-text, var(--text-2));
+}
+
+/* ─────────────────────────────────────────────
+   Mode sombre global — tokens + overrides massifs
+   Stratégie : CSS vars pour les composants qui
+   les utilisent, sélecteurs !important pour tous
+   les hex hardcodés dans les composants Angular.
+───────────────────────────────────────────── */
+body.theme-dark {
+
+  /* ── Redéfinition des tokens CSS ─────────────────────── */
+  --text-1:            #F1F5F9;
+  --text-2:            #CBD5E1;
+  --text-3:            #94A3B8;
+  --text-4:            #64748B;
+  --surface:           var(--page-card-bg,  #1E293B);
+  --surface-2:         #1E293B;
+  --surface-container: #1E293B;
+  --bg:                var(--page-bg, #0F172A);
+  --border:            rgba(255,255,255,.08);
+  --border-strong:     rgba(255,255,255,.12);
+  --navy-light:        #1E293B;
+  --navy-border:       rgba(255,255,255,.12);
+
+  /* ── Scrollbar ────────────────────────────────────────── */
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+}
+
+/* ── Sidebar panel — dark mode : règles directes, sans CSS vars ──
+   On force tout explicitement pour éviter tout fallback noir.
+──────────────────────────────────────────────────────────────── */
+
+/* Fond et bordures du panel */
+body.theme-dark app-sidebar .panel {
+  background: #1E293B !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+body.theme-dark app-sidebar .panel-header {
+  border-color: rgba(255,255,255,.08) !important;
+}
+body.theme-dark app-sidebar .panel-footer {
+  border-color: rgba(255,255,255,.08) !important;
+}
+
+/* Titres et labels du panel */
+body.theme-dark app-sidebar .panel-header__title { color: #F1F5F9 !important; }
+body.theme-dark app-sidebar .panel-group-label   { color: #64748B !important; }
+body.theme-dark app-sidebar .panel-user__name    { color: #F1F5F9 !important; }
+body.theme-dark app-sidebar .panel-user__role    { color: #64748B !important; }
+body.theme-dark app-sidebar .panel-org           { color: #64748B !important; }
+body.theme-dark app-sidebar .panel-user:hover    { background: rgba(255,255,255,.07) !important; }
+
+/* Items — couleur explicite (CSS vars non résolues par ViewEncapsulation dans ce contexte) */
+body.theme-dark app-sidebar .panel-item:not(.active)              { color: #CBD5E1 !important; }
+body.theme-dark app-sidebar .panel-item:not(.active) mat-icon     { color: #64748B !important; }
+body.theme-dark app-sidebar .panel-item:not(.active):hover        { background: #1E293B !important; color: #F1F5F9 !important; }
+body.theme-dark app-sidebar .panel-item:not(.active):hover mat-icon { color: #94A3B8 !important; }
+
+/* ── Zone de contenu principal ────────────────────────────
+   Tous les overrides !important appliqués ici pour couvrir
+   les hex hardcodés dans les composants Angular encapsulés.
+──────────────────────────────────────────────────────────── */
+body.theme-dark .layout__main {
+
+  /* ── Fonds de page ──────────────────────────────────── */
+  background: var(--page-bg) !important;
+  color: #CBD5E1 !important;
+
+  /* Wrappers de page (*-page, *-wrapper, *-content) */
+  [class$="-page"], [class*="-page "],
+  [class$="-wrapper"], [class$="-content"]:not([class*="mat-"]) {
+    background: var(--page-bg, #0F172A) !important;
+  }
+
+  /* ── Surfaces / cards / sections ───────────────────── */
+  /* On cible les classes typiques sans cibler les badges
+     ni les éléments à couleur intentionnelle */
+  [class$="-section"],  [class*="-section "]:not([class*="badge"]),
+  [class$="-card"]:not([class*="note-card"]):not([class*="badge"]),
+  [class*=" -card"]:not([class*="badge"]),
+  [class$="-block"],    [class*="-block "],
+  [class$="-kpi"],
+  [class$="-box"],
+  [class$="-panel"]:not([class*="mat-"]),
+  [class$="-wrap"]:not([class*="chart"]):not([class*="mat-"]):not([class*="prog"]) {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Hero dashboard */
+  .hero { background: #0D2B25 !important; border-color: rgba(255,255,255,.08) !important; }
+  .hero__stats { background: rgba(255,255,255,.07) !important; }
+  .h-stat__div  { background: rgba(255,255,255,.12) !important; }
+
+  /* Alertes — fond rouge → version dark */
+  .alertes { background: #2D0A0A !important; }
+
+  /* Chart cards */
+  .chart-card { background: #111827 !important; border-color: rgba(255,255,255,.08) !important; }
+
+  /* Collab tabs */
+  .ctab { background: #1E293B !important; border-color: rgba(255,255,255,.10) !important; }
+  .ctab:hover { background: #263548 !important; }
+  .ctab--active { background: #1E1B4B !important; border-color: rgba(99,102,241,.40) !important; }
+  .ctab-name { color: #F1F5F9 !important; }
+
+  /* Filter chips / vue-toggle */
+  [class*="fchip"]:not([class*="fchip--active"]) {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .fchip-count { background: #263548 !important; color: #94A3B8 !important; }
+  .fchip-sep   { background: rgba(255,255,255,.10) !important; }
+  .tb-sort { background: #1E293B !important; }
+  [class*="vt-btn"]:not([class*="vt-active"]) {
+    color: #94A3B8 !important;
+  }
+  [class*="vt-btn"]:hover { background: #1E293B !important; color: #F1F5F9 !important; }
+  [class*="vt-active"] { background: #263548 !important; color: #F1F5F9 !important; }
+  [class*="tb-search"] {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+  }
+  [class*="tb-search"] input { color: #F1F5F9 !important; background: transparent !important; }
+
+  /* ── Textes — titres ────────────────────────────────── */
+  h1, h2, h3, h4, h5, h6 { color: #F1F5F9 !important; }
+
+  [class*="__title"],  [class*="-title"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__name"],   [class*="-name"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__heading"], [class*="-heading"],
+  [class*="__val"]:not([class*="val--"]),  /* kpi values */
+  [class*="kpi__val"],
+  .bc-current { color: #F1F5F9 !important; }
+
+  /* ── Textes — secondaire ────────────────────────────── */
+  [class*="__sub"],    [class*="-sub"]:not([class*="mat-"]),
+  [class*="__date"],   [class*="-date"]:not([class*="badge"]),
+  [class*="__lbl"],    [class*="__label"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__eyebrow"],[class*="-meta"],
+  [class*="__role"],   [class*="-role"],
+  [class*="section-label"],
+  [class*="__kpi"] [class*="__lbl"],
+  .bc-home, .bc-sep   { color: #94A3B8 !important; }
+
+  /* Texte courant */
+  p:not([class*="badge"]) { color: #CBD5E1 !important; }
+
+  /* ── Séparateurs / lignes ───────────────────────────── */
+  [class*="__div"],  [class*="-sep"],
+  [class*="-divider"]:not([class*="mat-"]) {
+    background: rgba(255,255,255,.10) !important;
+  }
+
+  /* ── Tables ─────────────────────────────────────────── */
+  table  { background: transparent !important; color: #CBD5E1 !important; }
+  thead  { background: rgba(255,255,255,.03) !important; }
+  th     { color: #94A3B8 !important; border-color: rgba(255,255,255,.08) !important;
+           background: transparent !important; }
+  td     { color: #CBD5E1 !important; border-color: rgba(255,255,255,.06) !important; }
+  tr:hover td { background: rgba(255,255,255,.04) !important; }
+
+  /* Material table */
+  .mat-mdc-table          { background: var(--page-card-bg, #1E293B) !important; }
+  .mat-mdc-header-cell    { color: #94A3B8 !important; border-color: rgba(255,255,255,.08) !important;
+                             background: rgba(255,255,255,.03) !important; }
+  .mat-mdc-cell           { color: #CBD5E1 !important; border-color: rgba(255,255,255,.06) !important; }
+  .mat-mdc-row:hover .mat-mdc-cell { background: rgba(255,255,255,.04) !important; }
+
+  /* ── Inputs / formulaires natifs ───────────────────── */
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea, select {
+    background: #1E293B !important;
+    color: #F1F5F9 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+  input::placeholder, textarea::placeholder { color: #64748B !important; }
+
+  /* Material form fields */
+  .mat-mdc-text-field-wrapper    { background: #1E293B !important; }
+  .mat-mdc-form-field input,
+  .mat-mdc-form-field textarea   { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text     { color: #F1F5F9 !important; }
+
+  /* ── Tabs Material ──────────────────────────────────── */
+  .mat-mdc-tab-group .mat-mdc-tab-header {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-mdc-tab .mdc-tab__text-label       { color: #94A3B8 !important; }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: #F1F5F9 !important; }
+  .mat-mdc-tab-body-wrapper               { background: transparent !important; }
+
+  /* ── Expansion panels ───────────────────────────────── */
+  .mat-expansion-panel {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-expansion-panel-header-title       { color: #F1F5F9 !important; }
+  .mat-expansion-panel-header-description { color: #94A3B8 !important; }
+
+  /* ── Cards Material & globales ──────────────────────── */
+  .card, .mat-mdc-card, .section-card {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.07) !important;
+  }
+  .card-title { color: #F1F5F9 !important; }
+
+  /* ── Boutons secondaires ────────────────────────────── */
+  .btn-secondary {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+  .btn-secondary:hover { background: #263548 !important; }
+  .btn-ghost { color: #94A3B8 !important; }
+  .btn-ghost:hover { background: rgba(255,255,255,.07) !important; color: #F1F5F9 !important; }
+
+  /* ── Badges (adaptés en dark) ───────────────────────── */
+  .badge-gray   { background: #1E293B; color: #94A3B8;  border-color: rgba(255,255,255,.10); }
+  .badge-navy   { background: #1E293B; color: #93C5FD;  border-color: rgba(147,197,253,.20); }
+  .badge-blue   { background: #172554; color: #93C5FD;  border-color: rgba(147,197,253,.25); }
+  .badge-green  { background: #052E16; color: #86EFAC;  border-color: rgba(134,239,172,.25); }
+  .badge-red    { background: #2E0202; color: #FCA5A5;  border-color: rgba(252,165,165,.25); }
+  .badge-orange { background: #2C1503; color: #FCD34D;  border-color: rgba(252,211,77,.25);  }
+  .badge-purple { background: #1E0646; color: #C4B5FD;  border-color: rgba(196,181,253,.25); }
+
+  /* ── Menus / popovers ───────────────────────────────── */
+  .mat-mdc-menu-panel {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .mat-mdc-menu-item { color: #CBD5E1 !important; }
+  .mat-mdc-menu-item .mat-icon { color: #94A3B8 !important; }
+  .mat-mdc-menu-item:hover { background: rgba(255,255,255,.07) !important; }
+
+  /* ── Progress bars ──────────────────────────────────── */
+  [class*="prog"]:not([class*="-fill"]):not([class*="mat-"]) {
+    background: rgba(255,255,255,.12) !important;
+  }
+
+  /* ── Divers ─────────────────────────────────────────── */
+  .empty-state h3 { color: #CBD5E1 !important; }
+  .empty-state p  { color: #94A3B8 !important; }
+  .empty-state mat-icon { color: #475569 !important; }
+}
+
+/* ── Dialogs (CDK overlay, hors layout__main) ─────────────
+   Les dialogs sont rendus dans .cdk-overlay-container,
+   pas dans .layout__main, donc override séparé.
+──────────────────────────────────────────────────────────── */
+body.theme-dark .cdk-overlay-container {
+  .mdc-dialog__surface,
+  .mat-mdc-dialog-surface {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6     { color: #F1F5F9 !important; }
+  p                            { color: #CBD5E1 !important; }
+  [class*="__title"], [class*="-title"]:not([class*="mat-"]) { color: #F1F5F9 !important; }
+  [class*="__sub"], [class*="-sub"]   { color: #94A3B8 !important; }
+
+  [class$="-section"]:not([class*="cdk-"]),
+  [class$="-card"]:not([class*="note-card"]):not([class*="cdk-"]),
+  [class$="-block"]:not([class*="cdk-"]),
+  [class$="-box"]:not([class*="cdk-"]) {
+    background: #111827 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  .mat-mdc-text-field-wrapper  { background: #1E293B !important; }
+  .mat-mdc-form-field input,
+  .mat-mdc-form-field textarea { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text     { color: #F1F5F9 !important; }
+
+  .mat-mdc-tab-group .mat-mdc-tab-header {
+    background: #162032 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-mdc-tab .mdc-tab__text-label { color: #94A3B8 !important; }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: #F1F5F9 !important; }
+
+  .btn-secondary {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+}
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -433,10 +752,96 @@ a { text-decoration: none; }
 .section-title mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
 /* ─────────────────────────────────────────────
+   Accessibilité — réduire les animations
+───────────────────────────────────────────── */
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0ms !important;
+  transition-duration: 0ms !important;
+}
+
+/* ─────────────────────────────────────────────
    Dialog espace — supprime padding par défaut
 ───────────────────────────────────────────── */
 .aro-create-dialog .mat-mdc-dialog-surface {
   padding: 0 !important;
   border-radius: 20px !important;
   overflow: hidden !important;
+}
+
+/* ─────────────────────────────────────────────
+   Dialog pointage — sans backdrop, ombre forte
+   pour faire ressortir le modal sur la page
+───────────────────────────────────────────── */
+.pointage-dialog .mat-mdc-dialog-container {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.32),
+    0 2px 8px rgba(0,0,0,.20) !important;
+}
+
+/* ─────────────────────────────────────────────
+   Page Personnalisation — dark mode
+   (les composants utilisent des couleurs
+   hardcodées light non couvertes par les règles
+   génériques body.theme-dark .layout__main)
+───────────────────────────────────────────── */
+body.theme-dark .layout__main {
+
+  /* Boutons thème sidebar (background: white dans composant) */
+  .t-sw {
+    background: #0F172A !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .t-sw__label { color: #94A3B8 !important; }
+  .t-sw--on .t-sw__label { color: #A5B4FC !important; }
+  .t-sw__check { background: #1E293B !important; }
+
+  /* Boutons style panneau */
+  .ps-card {
+    background: #0F172A !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .ps-card__foot {
+    background: #1E293B !important;
+    color: #94A3B8 !important;
+  }
+
+  /* Constructeur dégradé personnalisé */
+  .cg-builder {
+    background: rgba(99,102,241,.08) !important;
+    border-color: rgba(99,102,241,.20) !important;
+  }
+  .cg-title { color: #A5B4FC !important; }
+  .cp-wrap {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .cp-hex, .cp-field__label, .cg-angles__label { color: #64748B !important; }
+  .angle-btn {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    span, mat-icon { color: #94A3B8 !important; }
+  }
+  .angle-btn--on, .angle-btn--on:hover {
+    background: #6366F1 !important;
+    border-color: #6366F1 !important;
+    span, mat-icon { color: white !important; }
+  }
+
+  /* Bouton reset */
+  .btn-reset {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #94A3B8 !important;
+  }
+
+  /* Colonne preview sticky */
+  .pv-sticky {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .pv-label { color: #64748B !important; }
 }

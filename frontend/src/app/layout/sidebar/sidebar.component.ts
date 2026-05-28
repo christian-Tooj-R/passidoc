@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { RolePermissionsService } from '../../core/services/role-permissions.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { filter } from 'rxjs/operators';
 
 type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin' | 'pointage';
@@ -47,13 +48,13 @@ interface AppModule {
               [matTooltip]="m.label" matTooltipPosition="right"
               (click)="selectModule(m.id)">
               <div class="rail-item__pill"
-                   [style.background]="activeModule() === m.id ? 'rgba(147,197,253,0.22)' : 'transparent'">
-                <mat-icon [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.50)'">
+                   [style.background]="activeModule() === m.id ? 'var(--rail-active-bg, rgba(147,197,253,0.22))' : 'transparent'">
+                <mat-icon [style.color]="activeModule() === m.id ? 'var(--rail-active-color, #93c5fd)' : 'var(--rail-text-dim)'">
                   {{ m.icon }}
                 </mat-icon>
               </div>
               <span class="rail-item__label"
-                    [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.45)'">
+                    [style.color]="activeModule() === m.id ? 'var(--rail-active-color, #93c5fd)' : 'var(--rail-text-dim)'">
                 {{ m.label }}
               </span>
             </button>
@@ -62,6 +63,14 @@ interface AppModule {
 
         <div class="rail-spacer"></div>
         <div class="rail-divider"></div>
+
+        <!-- Personnalisation (tous les utilisateurs) -->
+        <a routerLink="/personnalisation"
+           routerLinkActive="rail-settings--active"
+           class="rail-settings"
+           matTooltip="Personnalisation" matTooltipPosition="right">
+          <mat-icon>palette</mat-icon>
+        </a>
 
         <!-- Avatar -->
         <button class="rail-avatar" [matTooltip]="fullName()" matTooltipPosition="right">
@@ -72,13 +81,14 @@ interface AppModule {
       </aside>
 
       <!-- ══ PANEL ══════════════════════════════════════ -->
-      <aside class="panel">
+      <!-- panel--dark rajouté directement via signal, sans CSS vars -->
+      <aside class="panel" [class.panel--dark]="isDark()">
 
         @if (currentModule(); as mod) {
 
           <!-- Header -->
           <div class="panel-header">
-            <div class="panel-header__icon" [style.background]="mod.activeBg">
+            <div class="panel-header__icon" [style.background]="isDark() ? 'rgba(255,255,255,.09)' : mod.activeBg">
               <mat-icon [style.color]="mod.color">{{ mod.icon }}</mat-icon>
             </div>
             <span class="panel-header__title">{{ mod.label }}</span>
@@ -93,11 +103,12 @@ interface AppModule {
               @for (item of group.items; track item.route) {
                 <a [routerLink]="item.route"
                    routerLinkActive="active"
+                   [routerLinkActiveOptions]="{ exact: true }"
                    #rla="routerLinkActive"
                    class="panel-item"
-                   [style.background]="rla.isActive ? mod.activeBg : ''"
-                   [style.color]="rla.isActive ? mod.color : ''">
-                  <mat-icon [style.color]="rla.isActive ? mod.color : '#5F6368'">{{ item.icon }}</mat-icon>
+                   [style.background]="rla.isActive ? activeBg(mod) : null"
+                   [style.color]="rla.isActive ? mod.color : null">
+                  <mat-icon [style.color]="rla.isActive ? mod.color : null">{{ item.icon }}</mat-icon>
                   <span>{{ item.label }}</span>
                   @if (item.badge) {
                     <span class="panel-item__badge">{{ item.badge }}</span>
@@ -113,6 +124,9 @@ interface AppModule {
 
         <!-- Footer -->
         <div class="panel-footer">
+          @if (theme.prefs().orgName) {
+            <div class="panel-org">{{ theme.prefs().orgName }}</div>
+          }
           <div class="panel-user">
             <div class="panel-user__av">{{ initials() }}</div>
             <div class="panel-user__info">
@@ -134,7 +148,7 @@ interface AppModule {
     /* ══ RAIL ════════════════════════════════════════════ */
     .rail {
       width: 72px; height: 100vh; flex-shrink: 0;
-      background: linear-gradient(180deg, #0c1a3a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      background: var(--sidebar-gradient, linear-gradient(180deg, #0c1a3a 0%, #1e3a8a 50%, #1d4ed8 100%));
       border-right: none;
       display: flex; flex-direction: column; align-items: center;
       padding: 14px 0 18px;
@@ -154,7 +168,7 @@ interface AppModule {
     .rail-logo:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(96,165,250,.45); }
     .rail-logo mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
 
-    .rail-divider { width: 36px; height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; flex-shrink: 0; }
+    .rail-divider { width: 36px; height: 1px; background: var(--rail-divider, rgba(255,255,255,.08)); margin: 6px 0; flex-shrink: 0; }
     .rail-spacer  { flex: 1; }
 
     /* Rail items */
@@ -166,7 +180,7 @@ interface AppModule {
       padding: 6px 0 8px; border-radius: 16px;
       transition: background .12s;
     }
-    .rail-item:hover { background: rgba(255,255,255,.07); }
+    .rail-item:hover { background: var(--rail-hover, rgba(255,255,255,.07)); }
 
     .rail-item__pill {
       width: 48px; height: 32px; border-radius: 16px;
@@ -174,7 +188,7 @@ interface AppModule {
       transition: background .18s, box-shadow .18s;
     }
     .rail-item.active .rail-item__pill {
-      box-shadow: 0 2px 12px rgba(96,165,250,.30), inset 0 0 0 1px rgba(147,197,253,.50);
+      box-shadow: 0 2px 12px var(--rail-active-bg, rgba(96,165,250,.30)), inset 0 0 0 1px var(--rail-active-color, rgba(147,197,253,.50));
     }
     .rail-item__pill mat-icon {
       font-size: 22px; width: 22px; height: 22px;
@@ -185,6 +199,24 @@ interface AppModule {
       font-size: 10px; font-weight: 600; letter-spacing: .2px;
       line-height: 1; text-align: center;
       transition: color .18s;
+    }
+
+    /* Icône personnalisation en bas */
+    .rail-settings {
+      width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; margin-bottom: 8px;
+      color: var(--rail-text-dim, rgba(255,255,255,.45));
+      transition: background .15s, color .15s;
+      mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    }
+    .rail-settings:hover {
+      background: var(--rail-hover, rgba(255,255,255,.07));
+      color: var(--rail-text, rgba(255,255,255,.90));
+    }
+    .rail-settings--active {
+      background: var(--rail-active-bg, rgba(147,197,253,0.22));
+      color: var(--rail-active-color, #93c5fd) !important;
     }
 
     /* Avatar */
@@ -204,12 +236,20 @@ interface AppModule {
       background: #34A853; border: 2px solid #fff;
     }
 
-    /* ══ PANEL ════════════════════════════════════════════ */
+    /* ══ PANEL — fond via CSS var (glass/light), couleurs hardcodées ══ */
     .panel {
       width: 220px; height: 100vh; flex-shrink: 0;
-      background: #F0F4FF;
-      border-right: 1px solid #DDE3F0;
+      background: var(--panel-bg, #F0F4FF);
+      border-right: 1px solid var(--panel-border, #DDE3F0);
       display: flex; flex-direction: column; overflow: hidden;
+      backdrop-filter: var(--panel-backdrop, none);
+      -webkit-backdrop-filter: var(--panel-backdrop, none);
+    }
+
+    /* ── Dark override (classe ajoutée via signal Angular) ── */
+    .panel--dark {
+      background: #131C2E;
+      border-color: rgba(255,255,255,.09);
     }
 
     /* Header */
@@ -218,21 +258,21 @@ interface AppModule {
       padding: 18px 16px 14px; flex-shrink: 0;
       border-bottom: 1px solid #DDE3F0;
     }
+    .panel--dark .panel-header { border-color: rgba(255,255,255,.08); }
+
     .panel-header__icon {
       width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     .panel-header__icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .panel-header__title {
-      font-size: 15px; font-weight: 700; color: #202124; letter-spacing: -.2px;
-    }
+    .panel-header__title { font-size: 15px; font-weight: 700; color: #202124; letter-spacing: -.2px; }
+    .panel--dark .panel-header__title { color: #F1F5F9; }
 
     /* Nav */
     .panel-nav {
       padding: 8px 8px 4px;
       display: flex; flex-direction: column; gap: 1px;
-      overflow-y: auto; flex: 1;
-      scrollbar-width: none;
+      overflow-y: auto; flex: 1; scrollbar-width: none;
     }
     .panel-nav::-webkit-scrollbar { display: none; }
 
@@ -241,21 +281,30 @@ interface AppModule {
       text-transform: uppercase; letter-spacing: .8px;
       padding: 12px 8px 5px; display: block;
     }
+    .panel--dark .panel-group-label { color: #64748B; }
 
+    /* ── Items — couleurs via CSS vars injectées par ThemeService ── */
     .panel-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 0 12px; height: 38px;
-      border-radius: 20px; text-decoration: none;
-      font-size: 13.5px; font-weight: 500; color: #3C4043;
-      transition: background .12s, color .12s;
+      padding: 0 12px; height: 36px;
+      border-radius: 8px; text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      color: var(--pi-color, #3C4043);
+      transition: background .12s, color .12s, box-shadow .12s;
     }
-    .panel-item:hover { background: #E2E9F8; color: #202124; }
-    .panel-item.active { font-weight: 600; }
-    .panel-item mat-icon {
-      font-size: 19px; width: 19px; height: 19px; flex-shrink: 0;
-      transition: color .12s;
+
+    /* hover : CSS var → 100% contrôlé par ThemeService, pas par Angular */
+    .panel-item:not(.active):hover {
+      background: var(--ph-bg, rgba(0,0,0,.06)) !important;
+      color: var(--ph-color, inherit) !important;
     }
-    .panel-item:hover mat-icon { color: #3C4043; }
+    .panel-item:not(.active):hover mat-icon { color: var(--ph-icon, currentColor) !important; }
+
+    .panel-item.active { font-weight: 600; box-shadow: inset 3px 0 0 currentColor; }
+
+    /* Icônes */
+    .panel-item mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; color: var(--pi-icon, #80868B); transition: color .12s; }
+
     .panel-item span { flex: 1; }
     .panel-item__badge {
       font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
@@ -266,17 +315,25 @@ interface AppModule {
     .panel-spacer { flex: 1; }
 
     /* Footer */
-    .panel-footer {
-      padding: 8px 10px 12px;
-      border-top: 1px solid #DDE3F0;
-      flex-shrink: 0;
+    .panel-org {
+      font-size: 10.5px; font-weight: 700; color: #80868B;
+      text-transform: uppercase; letter-spacing: .7px;
+      padding: 8px 18px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .panel--dark .panel-org { color: #64748B; }
+
+    .panel-footer {
+      padding: 0 10px 12px; border-top: 1px solid #DDE3F0; flex-shrink: 0;
+    }
+    .panel--dark .panel-footer { border-color: rgba(255,255,255,.08); }
+
     .panel-user {
       display: flex; align-items: center; gap: 9px;
-      padding: 8px 10px; border-radius: 12px;
-      transition: background .12s; cursor: default;
+      padding: 8px 10px; border-radius: 12px; transition: background .12s; cursor: default;
     }
     .panel-user:hover { background: #E2E9F8; }
+    .panel--dark .panel-user:hover { background: rgba(255,255,255,.07); }
+
     .panel-user__av {
       width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
       background: linear-gradient(135deg, #1565C0, #42A5F5);
@@ -288,15 +345,18 @@ interface AppModule {
       font-size: 12px; font-weight: 600; color: #202124;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .panel--dark .panel-user__name { color: #F1F5F9; }
     .panel-user__role { font-size: 10.5px; color: #80868B; text-transform: capitalize; }
+    .panel--dark .panel-user__role { color: #64748B; }
     .panel-user__flag { font-size: 15px; flex-shrink: 0; }
   `],
 })
 export class SidebarComponent implements OnInit {
 
-  activeModule = signal<ModuleId>('apercu');
+  activeModule = signal<ModuleId | null>('apercu');
 
   private rolePerms = inject(RolePermissionsService);
+  theme = inject(ThemeService);
   constructor(public auth: AuthService, private router: Router) {}
 
   canSeeMenu(id: string): boolean {
@@ -311,14 +371,17 @@ export class SidebarComponent implements OnInit {
   }
 
   private syncFromRoute(url: string) {
-    if      (url.startsWith('/dashboard'))                                this.activeModule.set('apercu');
-    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles')) this.activeModule.set('dossiers');
-    else if (url.startsWith('/tasks'))                                    this.activeModule.set('travail');
-    else if (url.startsWith('/documents'))                                this.activeModule.set('documents');
-    else if (url.startsWith('/notes'))                                    this.activeModule.set('notes');
-    else if (url.startsWith('/equipes'))                                  this.activeModule.set('equipe');
-    else if (url.startsWith('/admin'))                                    this.activeModule.set('admin');
-    else if (url.startsWith('/pointage'))                                 this.activeModule.set('pointage');
+    if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
+    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles'))      this.activeModule.set('dossiers');
+    else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
+    else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
+    else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
+    else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles'))  this.activeModule.set('equipe');
+    else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
+    else if (url.startsWith('/admin'))                                            this.activeModule.set('admin');
+    // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
+    // Routes inconnues : panel vide
+    else if (!url.startsWith('/personnalisation'))                                 this.activeModule.set(null);
   }
 
   get allModules(): AppModule[] {
@@ -388,6 +451,14 @@ export class SidebarComponent implements OnInit {
 
   visibleModules() { return this.allModules; }
   currentModule()  { return this.allModules.find(m => m.id === this.activeModule()) ?? null; }
+
+  /** True si le panel est en mode sombre */
+  isDark(): boolean { return this.theme.prefs().panelStyleId === 'dark'; }
+
+  /** Background de l'item actif : tint subtil en dark, couleur pastel en clair */
+  activeBg(mod: AppModule): string {
+    return this.isDark() ? 'rgba(255,255,255,.09)' : mod.activeBg;
+  }
 
   selectModule(id: ModuleId) {
     this.activeModule.set(id);

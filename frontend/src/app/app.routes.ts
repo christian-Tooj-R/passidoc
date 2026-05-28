@@ -74,6 +74,10 @@ export const routes: Routes = [
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
       },
+      {
+        path: 'personnalisation',
+        loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
+      },
     ],
   },
   // ── Dossier plein écran (sans sidebar principale) ──────
