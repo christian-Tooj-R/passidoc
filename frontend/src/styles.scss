@@ -1651,37 +1651,37 @@ body.theme-glass .layout__main {
 /* ── VERRE — recette : opacité 18-28%, blur 20px, border blanche ── */
 body.theme-glass .layout__main {
 
-  /* Cartes / panneaux */
+  /* ── Cartes / panneaux — opacité réduite pour laisser passer le gradient */
   .card, .section-card,
-  [class$="-card"]:not([class*="note-card"]):not([class*="badge"])
-                  :not([class*="score-chip"]):not([class*="hero-card"]),
-  .table-card, .stat-card, .collab-card, .perm-card, .task-card,
-  .kpi-card, .kpi-item, .grid-wrap, .listing-table-wrap,
+  [class$="-card"]:not([class*="note-card"]):not([class*="badge"]):not([class*="score-chip"]):not([class*="hero-card"]),
+  .table-card, .table-wrap, .stat-card, .collab-card, .perm-card, .task-card,
+  .kpi-card, .kpi-item, .grid-wrap, .listing-table-wrap, .hist-table-wrap,
   .listing-section, .hist-section, .semaine-card,
   .adn-card, .process-rows, .objective-card, .space-card,
   .folder-item, .member-card, .dossier-card, .role-tab,
   .fm-row, .fm-card, .info-banner, .filter-bar, .toolbar {
-    background: rgba(255,255,255,.22) !important;
-    backdrop-filter: blur(20px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(220%) !important;
     border: 1.5px solid rgba(255,255,255,.45) !important;
     box-shadow: 0 8px 32px rgba(80,60,180,.12),
-                inset 0 1px 0 rgba(255,255,255,.6) !important;
+                inset 0 1px 0 rgba(255,255,255,.60) !important;
   }
 
-  /* Toolbars, search */
+  /* Toolbars, search, chips */
   .tb-search, .search-bar, .fm-search,
-  .filter-chip:not(.fchip--active), .fchip:not(.fchip--active) {
-    background: rgba(255,255,255,.28) !important;
+  .filter-chip:not(.fchip--active), .fchip:not(.fchip--active),
+  .stat-chip, .assign-chip, .fchip-count {
+    background: rgba(255,255,255,.22) !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     border-color: rgba(255,255,255,.45) !important;
   }
 
-  /* Tables */
-  table  { background: transparent !important; }
-  thead, thead tr { background: rgba(255,255,255,.20) !important; }
-  tr:hover td { background: rgba(255,255,255,.15) !important; }
+  /* Tables — cellules et lignes explicitement transparentes */
+  table, tbody, tbody tr, td { background: transparent !important; }
+  thead, thead tr { background: rgba(255,255,255,.18) !important; }
+  tr:hover, tr:hover td { background: rgba(255,255,255,.18) !important; }
 
   /* Inputs / formulaires */
   input:not([type="color"]):not([type="checkbox"])
@@ -1780,5 +1780,278 @@ body.theme-glass .cdk-overlay-container {
     -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
     border: 1.5px solid rgba(255,255,255,.55) !important;
     box-shadow: 0 16px 48px rgba(80,60,180,.20) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE — overrides spécifiques par composant
+   (éléments non couverts par les règles génériques)
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Tâches ──────────────────────────────────────────────────── */
+body.theme-glass app-tasks-global {
+
+  /* Zone kanban principale — le plus visible */
+  .kanban-board { background: transparent !important; }
+
+  /* Colonnes kanban */
+  .kanban-col {
+    background: rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Cartes de tâche */
+  .task-card {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.08),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* Drag handle */
+  .card-drag-handle {
+    background: rgba(255,255,255,.20) !important;
+    border-color: rgba(255,255,255,.20) !important;
+  }
+
+  /* Barre de filtre + boutons */
+  .filter-bar {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .prio-btn, .prio-chip, .type-chip {
+    background: rgba(255,255,255,.35) !important;
+    backdrop-filter: blur(6px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .td-btn-del {
+    background: rgba(255,255,255,.30) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+
+  /* Petits badges inline */
+  .td-id, .prio-static, .time-badge, .tl-id {
+    background: rgba(255,255,255,.30) !important;
+    border: none !important;
+  }
+
+  /* Dialogs synthèse & création — cartes internes */
+  .sd-kpi, .sd-card {
+    background: rgba(255,255,255,.30) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .ct-title-input, .ct-select, .ct-date-input {
+    background: rgba(255,255,255,.38) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+}
+
+/* ── Documents ───────────────────────────────────────────────── */
+body.theme-glass app-documents {
+
+  /* Vue espace ouvert — zone de fichiers */
+  .space-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.60) !important;
+  }
+  .space-card__body { background: transparent !important; }
+
+  /* Lignes et cartes de fichiers */
+  .fm-row, .fm-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(14px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+
+  /* Toolbar file manager */
+  .fm-toolbar, .space-toolbar {
+    background: rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .fm-search, .fm-view-btn {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .fm-view-btn--active {
+    background: rgba(255,255,255,.55) !important;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    background: rgba(255,255,255,.15) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .drop-zone--active {
+    background: rgba(255,255,255,.35) !important;
+  }
+
+  /* Palette et confirmation */
+  .palette-panel, .space-confirm {
+    background: rgba(255,255,255,.55) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+}
+
+/* ── Pointage ────────────────────────────────────────────────── */
+body.theme-glass app-pointage {
+
+  /* Cartes principales */
+  .semaine-card, .listing-section, .hist-section, .main-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* KPI cards (.kpi est différent de .kpi-item) */
+  .kpi {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(14px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+
+  /* Tables */
+  .listing-table-wrap, .hist-table-wrap {
+    background: rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .listing-table thead tr, .hist-table thead tr {
+    background: rgba(255,255,255,.20) !important;
+  }
+  .listing-table tbody tr:hover td, .hist-table tbody tr:hover td {
+    background: rgba(255,255,255,.15) !important;
+  }
+
+  /* Pagination et navigation */
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.30) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .btn-today, .btn-export {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+
+  /* Carte principale (avec gradient — on préserve le gradient mais en glass) */
+  .main-card {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    background: inherit !important;
+    border: 1px solid rgba(255,255,255,.30) !important;
+  }
+
+  /* Badges jour */
+  .jour-badge { background: rgba(255,255,255,.25) !important; }
+  .jour-badge--present { background: rgba(22,163,74,.25) !important; }
+  .jour-badge--absent  { background: rgba(220,38,38,.25) !important; }
+  .jour-badge--parti   { background: rgba(37,99,235,.25) !important; }
+
+  /* Tables pointage — cellules transparentes */
+  .listing-table, .hist-table,
+  .listing-table tbody, .hist-table tbody,
+  .listing-table tbody tr, .hist-table tbody tr,
+  .listing-table td, .hist-table td { background: transparent !important; }
+}
+
+/* ── Admin (liste utilisateurs) ──────────────────────────────── */
+body.theme-glass app-admin {
+
+  /* Chips de stats */
+  .stat-chip {
+    background: rgba(255,255,255,.30) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+
+  /* Tableau */
+  .table-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .users-table, .users-table tbody, .users-table tbody tr,
+  .users-table td { background: transparent !important; }
+  .users-table thead th {
+    background: rgba(255,255,255,.18) !important;
+    border-color: rgba(255,255,255,.30) !important;
+  }
+  .table-row:hover td { background: rgba(255,255,255,.18) !important; }
+
+  /* Chips filtres */
+  .stat-chip {
+    background: rgba(255,255,255,.20) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255,255,255,.40) !important;
+  }
+}
+
+/* ── Tables globales en mode verre — toutes les td/tr transparents ── */
+body.theme-glass .layout__main {
+  tbody tr, tbody tr td,
+  .tr-main td, .tr-panel td,
+  .tl-table td, .grille-table td,
+  .dr-etape-row td, .dr-separator td { background: transparent !important; }
+  .tr-main:hover td { background: rgba(255,255,255,.18) !important; }
+}
+
+/* ── Info-banner et assign-chip en mode verre ────────────────── */
+body.theme-glass .layout__main {
+  .info-banner {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    color: #2D3A5E !important;
+  }
+  .info-banner mat-icon { color: #4F46E5 !important; }
+}
+
+/* ── Équipes — tableau ──────────────────────────────────────── */
+body.theme-glass app-equipes {
+  .table-wrap {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .table, .table tbody, .table tbody tr, .table td { background: transparent !important; }
+  .table thead th {
+    background: rgba(255,255,255,.18) !important;
+    border-color: rgba(255,255,255,.30) !important;
+    color: #475569 !important;
+  }
+  .tr-main { border-color: rgba(255,255,255,.20) !important; }
+  .tr-main:hover td { background: rgba(255,255,255,.18) !important; }
+  .tr-main--open td { background: rgba(99,102,241,.12) !important; }
+  .tr-panel td {
+    background: rgba(99,102,241,.10) !important;
+    border-color: rgba(255,255,255,.20) !important;
+  }
+  .assign-chip {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .btn-action {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.35) !important;
   }
 }
