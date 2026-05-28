@@ -1505,3 +1505,54 @@ body.theme-dark app-client-detail {
   .process-row:hover td { background: rgba(255,255,255,.04) !important; }
   .process-note { background: rgba(255,255,255,.06) !important; color: #F1F5F9 !important; border-color: rgba(255,255,255,.10) !important; }
 }
+
+/* ── CLIENT DETAIL — contrôle interne + objectifs ─────────── */
+body.theme-dark app-client-detail {
+
+  /* ── Contrôle interne ───────────────────────────────────── */
+  /* Conteneur des lignes de process (background: white) */
+  .process-rows {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  /* Lignes individuelles */
+  .process-row {
+    border-color: rgba(255,255,255,.08) !important;
+    color: #CBD5E1 !important;
+  }
+  .process-row--green { background: rgba(22,163,74,.08) !important; }
+  .process-row--red   { background: rgba(220,38,38,.08) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.08) !important; }
+  .process-input {
+    color: #F1F5F9 !important;
+    background: transparent !important;
+  }
+  .process-input:focus {
+    background: rgba(255,255,255,.06) !important;
+    outline-color: #6366F1 !important;
+  }
+  .process-input::placeholder { color: #4D6080 !important; }
+  .empty-hint { color: #4D6080 !important; }
+
+  /* Textarea note générale (Material) */
+  .full-width .mat-mdc-text-field-wrapper { background: rgba(255,255,255,.06) !important; }
+
+  /* ── Objectifs ──────────────────────────────────────────── */
+  /* Section title */
+  .section-title {
+    background: rgba(99,102,241,.10) !important;
+    color: #F1F5F9 !important;
+    border-left-color: #6366F1 !important;
+  }
+  .section-title mat-icon { color: #818CF8 !important; }
+
+  /* Cartes objectifs (fond blanc implicite) */
+  .objective-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .card-body { background: #1A2535 !important; }
+
+  /* Relation client section */
+  .ec-grid mat-form-field { color: #F1F5F9 !important; }
+}
