@@ -84,6 +84,22 @@ interface AppModule {
       <!-- ══ PANEL ══════════════════════════════════════ -->
       <aside class="panel" [class.panel--dark]="isDark()">
 
+        <!-- Header spécial Personnalisation -->
+        @if (isPersonnalisation()) {
+          <div class="panel-header">
+            <div class="panel-header__icon"
+                 [style.background]="isDark() ? 'rgba(255,255,255,.10)' : '#EDE9FE'"
+                 [style.box-shadow]="isDark() ? 'none' : '0 2px 8px #7C3AED33'">
+              <mat-icon style="color:#7C3AED">palette</mat-icon>
+            </div>
+            <div class="panel-header__text">
+              <span class="panel-header__title">Personnalisation</span>
+              <span class="panel-header__count">Thème et apparence</span>
+            </div>
+          </div>
+          <div class="panel-sep" style="background:linear-gradient(90deg,#7C3AED40 0%,transparent 100%)"></div>
+        }
+
         @if (currentModule(); as mod) {
 
           <!-- Header module -->
@@ -418,7 +434,8 @@ interface AppModule {
 })
 export class SidebarComponent implements OnInit {
 
-  activeModule = signal<ModuleId | null>('apercu');
+  activeModule      = signal<ModuleId | null>('apercu');
+  isPersonnalisation = signal(false);
 
   private rolePerms = inject(RolePermissionsService);
   theme = inject(ThemeService);
@@ -445,8 +462,9 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
     else if (url.startsWith('/admin'))                                            this.activeModule.set('admin');
     // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
-    // Routes inconnues : panel vide
-    else if (!url.startsWith('/personnalisation'))                                 this.activeModule.set(null);
+    else if (url.startsWith('/personnalisation'))                                   this.activeModule.set(null);
+    else                                                                           this.activeModule.set(null);
+    this.isPersonnalisation.set(url.startsWith('/personnalisation'));
   }
 
   get allModules(): AppModule[] {
