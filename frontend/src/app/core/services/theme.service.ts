@@ -19,6 +19,21 @@ export const ACCENT_COLORS = [
   { id: 'custom',  label: 'Personnalisé', start: '',        end: '',        hover: '',        light: '',        border: '',        railColor: '',        railBg: ''                        },
 ];
 
+// ── Couleurs du fond verre ─────────────────────────────────────
+export const GLASS_COLORS = [
+  { id: 'aurora',  label: 'Aurora',  swatch: '#a78bfa',
+    gradient: 'radial-gradient(ellipse at 15% 25%,rgba(139,92,246,.35) 0%,transparent 55%),radial-gradient(ellipse at 85% 15%,rgba(59,130,246,.30) 0%,transparent 50%),radial-gradient(ellipse at 50% 80%,rgba(16,185,129,.25) 0%,transparent 55%),radial-gradient(ellipse at 80% 65%,rgba(245,158,11,.20) 0%,transparent 45%),linear-gradient(135deg,#c7d8ff 0%,#dcd0ff 35%,#c8e8ff 65%,#d0c8ff 100%)' },
+  { id: 'ocean',   label: 'Océan',   swatch: '#22d3ee',
+    gradient: 'radial-gradient(ellipse at 20% 30%,rgba(6,182,212,.35) 0%,transparent 55%),radial-gradient(ellipse at 80% 20%,rgba(14,165,233,.30) 0%,transparent 50%),radial-gradient(ellipse at 50% 75%,rgba(34,211,238,.25) 0%,transparent 55%),linear-gradient(135deg,#bae6fd 0%,#cffafe 35%,#b2e8f7 65%,#d0f4ff 100%)' },
+  { id: 'sunset',  label: 'Coucher', swatch: '#fb923c',
+    gradient: 'radial-gradient(ellipse at 20% 25%,rgba(239,68,68,.30) 0%,transparent 55%),radial-gradient(ellipse at 80% 30%,rgba(251,146,60,.30) 0%,transparent 50%),radial-gradient(ellipse at 45% 80%,rgba(236,72,153,.25) 0%,transparent 55%),linear-gradient(135deg,#fecdd3 0%,#fed7aa 35%,#fce7f3 65%,#fde68a 100%)' },
+  { id: 'forest',  label: 'Forêt',   swatch: '#34d399',
+    gradient: 'radial-gradient(ellipse at 15% 25%,rgba(5,150,105,.30) 0%,transparent 55%),radial-gradient(ellipse at 80% 20%,rgba(16,185,129,.25) 0%,transparent 50%),radial-gradient(ellipse at 50% 75%,rgba(6,182,212,.22) 0%,transparent 55%),linear-gradient(135deg,#a7f3d0 0%,#d1fae5 35%,#c6f6f0 65%,#b2f5ea 100%)' },
+  { id: 'rose',    label: 'Rosé',    swatch: '#f0abfc',
+    gradient: 'radial-gradient(ellipse at 15% 25%,rgba(232,121,249,.35) 0%,transparent 55%),radial-gradient(ellipse at 85% 20%,rgba(244,114,182,.30) 0%,transparent 50%),radial-gradient(ellipse at 50% 75%,rgba(167,139,250,.25) 0%,transparent 55%),linear-gradient(135deg,#f9d0e6 0%,#e9d5ff 35%,#fce7f3 65%,#f0e4ff 100%)' },
+  { id: 'custom',  label: 'Perso',   swatch: '', gradient: '' },
+];
+
 // ── Styles du panel ────────────────────────────────────────────
 export const PANEL_STYLES = [
   { id: 'light', label: 'Clair',  icon: 'light_mode',  bg: '#F0F4FF',               border: '#DDE3F0',               text: '#3C4043', titleColor: '#202124', labelColor: '#80868B', hoverBg: '#E2E9F8',              userHover: '#E2E9F8',              backdrop: 'none',
@@ -37,6 +52,8 @@ export interface ThemePrefs {
   accentId:          string;
   customAccentColor: string;
   panelStyleId:      string;
+  glassColorId:      string;
+  customGlassColor:  string;
   orgName:           string;
   reducedMotion:     boolean;
 }
@@ -51,6 +68,8 @@ const DEFAULTS: ThemePrefs = {
   accentId:          'teal',
   customAccentColor: '#6366F1',
   panelStyleId:      'light',
+  glassColorId:      'aurora',
+  customGlassColor:  '#a78bfa',
   orgName:           '',
   reducedMotion:     false,
 };
@@ -175,9 +194,32 @@ export class ThemeService {
     root.style.setProperty('--ph-color',  pd === 'dark'  ? '#E2EAF4' : '#1A1F36');
     root.style.setProperty('--ph-icon',   pd === 'dark'  ? '#94A3B8' : '#4B5563');
 
+    // ── Gradient fond verre ───────────────────────────────────
+    if (p.panelStyleId === 'glass') {
+      const glassGrad = p.glassColorId === 'custom'
+        ? this.glassGradientFromColor(p.customGlassColor)
+        : (GLASS_COLORS.find(g => g.id === p.glassColorId)?.gradient ?? GLASS_COLORS[0].gradient);
+      root.style.setProperty('--glass-bg', glassGrad);
+    }
+
     // ── Mode sombre sur <body> ─────────────────────────────────
     document.body.classList.toggle('theme-dark',  p.panelStyleId === 'dark');
     document.body.classList.toggle('theme-glass', p.panelStyleId === 'glass');
+  }
+
+  private glassGradientFromColor(hex: string): string {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    const li = (v: number) => Math.min(255, v + 90).toString(16).padStart(2, '0');
+    const light = `#${li(r)}${li(g)}${li(b)}`;
+    const comp  = `#${li(g)}${li(b)}${li(r)}`;
+    return [
+      `radial-gradient(ellipse at 15% 25%,rgba(${r},${g},${b},.35) 0%,transparent 55%)`,
+      `radial-gradient(ellipse at 85% 15%,rgba(${g},${r},${b},.28) 0%,transparent 50%)`,
+      `radial-gradient(ellipse at 50% 80%,rgba(${b},${g},${r},.22) 0%,transparent 55%)`,
+      `linear-gradient(135deg,${light} 0%,${comp} 40%,${light} 70%,${comp} 100%)`,
+    ].join(',');
   }
 
   /** Retourne le gradient calculé (pour usage dans les templates) */

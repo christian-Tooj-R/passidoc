@@ -3,14 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ThemeService, SIDEBAR_THEMES, ACCENT_COLORS, PANEL_STYLES } from '../../core/services/theme.service';
+import { ThemeService, SIDEBAR_THEMES, ACCENT_COLORS, PANEL_STYLES, GLASS_COLORS } from '../../core/services/theme.service';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-personnalisation',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatRippleModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatRippleModule, MatTooltipModule, MatSnackBarModule],
   template: `
 <div class="page">
 
@@ -126,11 +127,9 @@ import { AuthService } from '../../core/services/auth.service';
                     [class.ps-card--on]="theme.prefs().panelStyleId === ps.id"
                     matRipple
                     (click)="setPanelStyle(ps.id)">
-              <!-- Faux fond représentant le style -->
               <div class="ps-card__bg"
                    [style.background]="ps.bg"
                    [style.border-color]="ps.border">
-                <!-- Faux items dans le mini-panel -->
                 <div class="ps-fake-header" [style.border-color]="ps.border">
                   <div class="ps-fh-dot" [style.background]="ps.titleColor"></div>
                   <div class="ps-fh-bar" [style.background]="ps.titleColor"></div>
@@ -146,7 +145,6 @@ import { AuthService } from '../../core/services/auth.service';
                   </div>
                 }
               </div>
-              <!-- Nom + icône -->
               <div class="ps-card__foot">
                 <mat-icon>{{ ps.icon }}</mat-icon>
                 <span>{{ ps.label }}</span>
@@ -157,6 +155,36 @@ import { AuthService } from '../../core/services/auth.service';
             </button>
           }
         </div>
+
+        <!-- Teinte verre — inline compact, visible seulement quand Verre sélectionné -->
+        @if (theme.prefs().panelStyleId === 'glass') {
+          <div class="gc-row">
+            <span class="gc-row__label">
+              <mat-icon>blur_on</mat-icon>
+              Teinte
+            </span>
+            <div class="gc-row__dots">
+              @for (gc of GLASS_COLORS; track gc.id) {
+                @if (gc.id === 'custom') {
+                  <label class="gc-btn" [class.gc-btn--on]="theme.prefs().glassColorId === 'custom'"
+                         [matTooltip]="gc.label">
+                    <div class="gc-circle" [style.background]="theme.prefs().customGlassColor">
+                      <mat-icon>palette</mat-icon>
+                    </div>
+                    <input type="color" [value]="theme.prefs().customGlassColor"
+                           (input)="setCustomGlass($any($event.target).value)" />
+                  </label>
+                } @else {
+                  <button class="gc-btn" [class.gc-btn--on]="theme.prefs().glassColorId === gc.id"
+                          [matTooltip]="gc.label"
+                          (click)="setGlassColor(gc.id)">
+                    <div class="gc-circle" [style.background]="gc.swatch"></div>
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        }
       </div>
 
       <!-- ── 3 · Couleur d'accent ──────────────────────────────── -->
@@ -377,6 +405,7 @@ import { AuthService } from '../../core/services/auth.service';
     .ci-blue   { background: linear-gradient(135deg, #1565C0, #42A5F5); }
     .ci-slate  { background: linear-gradient(135deg, #334155, #64748B); }
     .ci-teal   { background: linear-gradient(135deg, #00695C, #26A69A); }
+    .ci-glass  { background: linear-gradient(135deg, #7C3AED, #93C5FD); }
     .card-title { font-size: 14.5px; font-weight: 700; color: #0F172A; margin: 0; }
     .card-sub   { font-size: 12px;   color: #64748B;  margin: 3px 0 0; }
 
@@ -403,10 +432,10 @@ import { AuthService } from '../../core/services/auth.service';
     }
     .t-sw--on .t-sw__label { color: #4338CA; }
     .t-sw__check {
-      position: absolute; top: -7px; right: -7px;
-      font-size: 18px !important; width: 18px !important; height: 18px !important;
+      position: absolute; top: -10px; right: -10px;
+      font-size: 22px !important; width: 22px !important; height: 22px !important;
       color: #6366F1 !important; background: white; border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      box-shadow: 0 0 0 3px white, 0 0 0 4.5px #6366F1, 0 3px 10px rgba(99,102,241,.35);
     }
 
     /* ── Constructeur dégradé ────────────────────────────────────── */
@@ -500,10 +529,10 @@ import { AuthService } from '../../core/services/auth.service';
       mat-icon { font-size: 15px; width: 15px; height: 15px; color: #6366F1; }
     }
     .ps-check {
-      position: absolute; top: -7px; right: -7px;
-      font-size: 18px !important; width: 18px !important; height: 18px !important;
+      position: absolute; top: -10px; right: -10px;
+      font-size: 22px !important; width: 22px !important; height: 22px !important;
       color: #6366F1 !important; background: white; border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      box-shadow: 0 0 0 3px white, 0 0 0 4.5px #6366F1, 0 3px 10px rgba(99,102,241,.35);
     }
 
     /* ── Accent colors ───────────────────────────────────────────── */
@@ -565,6 +594,38 @@ import { AuthService } from '../../core/services/auth.service';
       box-shadow: 0 1px 3px rgba(0,0,0,.2);
     }
     .ap-link { font-size: 12.5px; font-weight: 600; }
+
+    /* ── Sélecteur couleur verre (inline compact) ───────────────── */
+    .gc-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .gc-row__label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 11.5px; font-weight: 600; color: #64748B;
+      flex-shrink: 0; white-space: nowrap;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+    .gc-row__dots { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+    .gc-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: none; background: transparent; cursor: pointer; padding: 2px;
+      position: relative; transition: transform .12s;
+      &:hover { transform: scale(1.18); }
+    }
+    .gc-btn--on { transform: scale(1.18); }
+    .gc-btn--on .gc-circle {
+      box-shadow: 0 0 0 2.5px white, 0 0 0 4px #6366F1 !important;
+    }
+    .gc-circle {
+      width: 24px; height: 24px; border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,.18);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gc-circle mat-icon { font-size: 12px !important; width: 12px !important; height: 12px !important; color: rgba(255,255,255,.85); }
+    label.gc-btn { cursor: pointer; }
+    label.gc-btn input[type=color] { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 
     /* ── Footer ──────────────────────────────────────────────────── */
     .page-footer {
@@ -707,6 +768,7 @@ export class PersonnalisationComponent {
   readonly SIDEBAR_THEMES = SIDEBAR_THEMES;
   readonly ACCENT_COLORS  = ACCENT_COLORS;
   readonly PANEL_STYLES   = PANEL_STYLES;
+  readonly GLASS_COLORS   = GLASS_COLORS;
 
   readonly ANGLES = [
     { deg: 90,  label: '90°'  },
@@ -718,6 +780,8 @@ export class PersonnalisationComponent {
   setSidebar(id: string)    { this.theme.update({ sidebarThemeId: id }); }
   setAccent(id: string)     { this.theme.update({ accentId: id });       }
   setPanelStyle(id: string) { this.theme.update({ panelStyleId: id });   }
+  setGlassColor(id: string) { this.theme.update({ glassColorId: id });   }
+  setCustomGlass(v: string) { this.theme.update({ glassColorId: 'custom', customGlassColor: v }); }
   setCustomStart(v: string)       { this.theme.update({ customStart: v });            }
   setCustomEnd(v: string)         { this.theme.update({ customEnd: v });              }
   setAccentCustom(v: string) { this.theme.update({ accentId: 'custom', customAccentColor: v }); }

@@ -1621,13 +1621,13 @@ body.theme-dark app-notes {
 
 /* ── Fond aurora : gradient coloré + orbes ─────────────────── */
 body.theme-glass {
-  background:
+  background: var(--glass-bg,
     radial-gradient(ellipse at 15% 25%, rgba(139,92,246,.35) 0%, transparent 55%),
     radial-gradient(ellipse at 85% 15%, rgba(59,130,246,.30) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 80%, rgba(16,185,129,.25) 0%, transparent 55%),
     radial-gradient(ellipse at 80% 65%, rgba(245,158,11,.20) 0%, transparent 45%),
     linear-gradient(135deg, #c7d8ff 0%, #dcd0ff 35%, #c8e8ff 65%, #d0c8ff 100%)
-    !important;
+  ) !important;
   background-attachment: fixed !important;
 }
 
