@@ -1615,40 +1615,43 @@ body.theme-dark app-notes {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODE VERRE (body.theme-glass) — glassmorphism complet
-   
-   Principes :
-   1. Le gradient --page-bg est déjà sur .layout et .layout__main
-      (via var(--page-bg) dans main-layout.component.ts)
-   2. Le panel sidebar et le header ont déjà backdrop-filter
-      via --panel-backdrop (réglé par ThemeService)
-   3. Il faut rendre semi-transparents tous les fonds hardcodés
-      des composants + appliquer backdrop-filter sur les cartes
+   MODE VERRE — glassmorphism
+   Fond vibrant fixe + cartes ultra-transparentes + blur fort
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Fond de page ─────────────────────────────────────────── */
+/* ── Fond aurora : gradient coloré + orbes ─────────────────── */
 body.theme-glass {
-  background: var(--page-bg) !important;
+  background:
+    radial-gradient(ellipse at 15% 25%, rgba(139,92,246,.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, rgba(59,130,246,.30) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(16,185,129,.25) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 65%, rgba(245,158,11,.20) 0%, transparent 45%),
+    linear-gradient(135deg, #c7d8ff 0%, #dcd0ff 35%, #c8e8ff 65%, #d0c8ff 100%)
+    !important;
+  background-attachment: fixed !important;
 }
 
-/* ── Containers de page → transparents (laisse passer le gradient) */
+/* ── Tous les layouts → transparents (fond passe à travers) ── */
+body.theme-glass .layout,
+body.theme-glass .layout__content,
 body.theme-glass .layout__main {
   background: transparent !important;
 }
 
-/* Page containers */
+/* ── Containers de page → transparents ───────────────────── */
 body.theme-glass .layout__main {
   .dash, .notes-page, .pt-page, .explorer, .file-grid,
+  .content,
   [class$="-page"]:not([class*="badge"]),
   [class$="-wrapper"]:not([class*="mat-"]) {
     background: transparent !important;
   }
 }
 
-/* ── Cartes et panneaux → verre dépoli ───────────────────── */
+/* ── VERRE — recette : opacité 18-28%, blur 20px, border blanche ── */
 body.theme-glass .layout__main {
 
-  /* Toutes les cartes */
+  /* Cartes / panneaux */
   .card, .section-card,
   [class$="-card"]:not([class*="note-card"]):not([class*="badge"])
                   :not([class*="score-chip"]):not([class*="hero-card"]),
@@ -1657,141 +1660,125 @@ body.theme-glass .layout__main {
   .listing-section, .hist-section, .semaine-card,
   .adn-card, .process-rows, .objective-card, .space-card,
   .folder-item, .member-card, .dossier-card, .role-tab,
-  .fm-row, .fm-card, .perm-card, .info-banner {
-    background: rgba(255,255,255,.68) !important;
-    backdrop-filter: blur(12px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
-    border-color: rgba(255,255,255,.55) !important;
-    box-shadow: 0 4px 20px rgba(100,120,200,.10),
-                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  .fm-row, .fm-card, .info-banner, .filter-bar, .toolbar {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.12),
+                inset 0 1px 0 rgba(255,255,255,.6) !important;
   }
 
-  /* Filter bars, toolbars, search */
-  .filter-bar, .toolbar, .tb-search, .search-bar,
-  .fm-search, .filter-chip, .fchip {
-    background: rgba(255,255,255,.60) !important;
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    border-color: rgba(255,255,255,.50) !important;
+  /* Toolbars, search */
+  .tb-search, .search-bar, .fm-search,
+  .filter-chip:not(.fchip--active), .fchip:not(.fchip--active) {
+    background: rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
   }
 
-  /* Thead tables */
-  thead, thead tr { background: rgba(255,255,255,.40) !important; }
-  table { background: transparent !important; }
+  /* Tables */
+  table  { background: transparent !important; }
+  thead, thead tr { background: rgba(255,255,255,.20) !important; }
+  tr:hover td { background: rgba(255,255,255,.15) !important; }
 
-  /* Inputs/formulaires */
+  /* Inputs / formulaires */
   input:not([type="color"]):not([type="checkbox"])
         :not([type="radio"]):not([type="range"]):not([type="file"]),
   textarea, select {
-    background: rgba(255,255,255,.65) !important;
+    background: rgba(255,255,255,.38) !important;
     border-color: rgba(255,255,255,.50) !important;
-    backdrop-filter: blur(4px) !important;
-    -webkit-backdrop-filter: blur(4px) !important;
-  }
-
-  /* Kanban */
-  .kanban-col {
-    background: rgba(255,255,255,.45) !important;
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(255,255,255,.50) !important;
-  }
-
-  /* Section client-detail */
-  .topbar, .content__header, .hc-adn, .hc-info,
-  .sidebar, .content {
-    background: rgba(255,255,255,.75) !important;
-    backdrop-filter: blur(16px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    border-color: rgba(255,255,255,.55) !important;
-  }
-  .hero { background: rgba(255,255,255,.30) !important; border-color: rgba(255,255,255,.4) !important; }
-
-  /* Boutons secondaires */
-  .btn-secondary, .btn-ghost, .doc-btn, .btn-action,
-  .nav-btn, .page-btn, .icon-btn {
-    background: rgba(255,255,255,.65) !important;
     backdrop-filter: blur(6px) !important;
-    border-color: rgba(255,255,255,.50) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
   }
 
-  /* Notes cards — inline style background écrasé */
+  /* Kanban colonnes */
+  .kanban-col {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Client-detail sidebar, header interne */
+  .topbar, .content__header, .hc-adn, .hc-info, .sidebar {
+    background: rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .hero { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.30) !important; }
+
+  /* Notes cards */
   .note-card {
-    background: rgba(255,255,255,.70) !important;
-    backdrop-filter: blur(12px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
-    box-shadow: 0 4px 20px rgba(100,120,200,.12),
-                inset 0 1px 0 rgba(255,255,255,.7) !important;
+    background: rgba(255,255,255,.25) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.12),
+                inset 0 1px 0 rgba(255,255,255,.65) !important;
   }
 
-  /* Cellules de statut Pilotage */
-  .cell-empty  { background: rgba(255,255,255,.45) !important; }
-  .cell-depose { background: rgba(22,163,74,.25) !important; }
-  .cell-retard { background: rgba(217,119,6,.25) !important; }
-  .cell-manquant { background: rgba(220,38,38,.25) !important; }
-
-  /* Badges statut */
-  .statut-a_faire   { background: rgba(37,99,235,.18) !important; }
-  .statut-en_cours  { background: rgba(217,119,6,.18) !important; }
-  .statut-terminee  { background: rgba(22,163,74,.18) !important; }
-  .statut-non_fait  { background: rgba(225,29,72,.18) !important; }
-  .statut-en_attente { background: rgba(124,58,237,.18) !important; }
-
-  /* Expansion panels (Material) */
+  /* Expansion panels */
   .mat-expansion-panel {
-    background: rgba(255,255,255,.68) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255,255,255,.5) !important;
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.08) !important;
   }
-  .mat-expansion-panel-header {
-    background: rgba(255,255,255,.75) !important;
-  }
+  .mat-expansion-panel-header { background: rgba(255,255,255,.15) !important; }
 
   /* Mat-form-fields */
   .mat-mdc-text-field-wrapper {
-    background: rgba(255,255,255,.65) !important;
-    backdrop-filter: blur(4px) !important;
+    background: rgba(255,255,255,.35) !important;
+    backdrop-filter: blur(6px) !important;
   }
 
-  /* Menus Material */
-  .mat-mdc-menu-panel {
-    background: rgba(255,255,255,.85) !important;
-    backdrop-filter: blur(20px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-    border: 1px solid rgba(255,255,255,.6) !important;
+  /* Boutons */
+  .btn-secondary, .btn-ghost, .doc-btn, .btn-action,
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.32) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.45) !important;
   }
 }
 
-/* ── Header app en mode verre (hors layout__main) ────────── */
-/* Déjà géré via --page-header-bg et --panel-backdrop dans le service,
-   on renforce juste l'effet */
+/* ── Header ──────────────────────────────────────────────── */
 body.theme-glass app-header .topbar {
-  backdrop-filter: blur(20px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,.6),
-              0 2px 16px rgba(100,120,200,.08) !important;
+  background: rgba(255,255,255,.30) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255,255,255,.50) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.55),
+              0 4px 20px rgba(80,60,180,.08) !important;
 }
-
-/* Search bar en verre dans le header */
 body.theme-glass app-header .search-bar {
-  background: rgba(255,255,255,.60) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background: rgba(255,255,255,.35) !important;
+  backdrop-filter: blur(10px) !important;
   border-color: rgba(255,255,255,.50) !important;
 }
 body.theme-glass app-header .user-btn {
-  background: rgba(255,255,255,.65) !important;
-  backdrop-filter: blur(8px) !important;
-  border-color: rgba(255,255,255,.55) !important;
+  background: rgba(255,255,255,.35) !important;
+  backdrop-filter: blur(10px) !important;
+  border-color: rgba(255,255,255,.50) !important;
 }
 
-/* ── Dialogs en mode verre ───────────────────────────────── */
+/* ── Menus Material ──────────────────────────────────────── */
 body.theme-glass .cdk-overlay-container {
-  .mdc-dialog__surface, .mat-mdc-dialog-surface {
-    background: rgba(255,255,255,.85) !important;
+  .mat-mdc-menu-panel {
+    background: rgba(255,255,255,.40) !important;
     backdrop-filter: blur(24px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
-    border: 1px solid rgba(255,255,255,.6) !important;
+    border: 1.5px solid rgba(255,255,255,.55) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.15) !important;
+  }
+  .mdc-dialog__surface, .mat-mdc-dialog-surface {
+    background: rgba(255,255,255,.38) !important;
+    backdrop-filter: blur(28px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
+    border: 1.5px solid rgba(255,255,255,.55) !important;
+    box-shadow: 0 16px 48px rgba(80,60,180,.20) !important;
   }
 }

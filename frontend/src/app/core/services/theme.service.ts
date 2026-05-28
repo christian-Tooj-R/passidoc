@@ -25,8 +25,8 @@ export const PANEL_STYLES = [
     pageBg: '#F4F6FB',          pageHeaderBg: '#FFFBFE',                  pageHeaderBorder: '#E0E2EC',              pageCardBg: '#FFFFFF',          pageCardBorder: '#E8ECF0' },
   { id: 'dark',  label: 'Sombre', icon: 'dark_mode',   bg: '#1E293B',               border: 'rgba(255,255,255,.12)', text: '#CBD5E1', titleColor: '#F1F5F9', labelColor: '#94A3B8', hoverBg: '#2D3F55',               userHover: 'rgba(255,255,255,.08)', backdrop: 'none',
     pageBg: '#0F172A',          pageHeaderBg: '#1A2540',                  pageHeaderBorder: 'rgba(255,255,255,.10)', pageCardBg: '#1E293B',          pageCardBorder: 'rgba(255,255,255,.15)' },
-  { id: 'glass', label: 'Verre',  icon: 'blur_linear', bg: 'rgba(240,244,255,.82)',  border: 'rgba(255,255,255,.6)',  text: '#3C4043', titleColor: '#202124', labelColor: '#80868B', hoverBg: 'rgba(255,255,255,.55)', userHover: 'rgba(255,255,255,.55)', backdrop: 'blur(18px) saturate(180%)',
-    pageBg: 'linear-gradient(135deg,#EAF0FF 0%,#F0F5FF 50%,#E8EDFF 100%)', pageHeaderBg: 'rgba(248,250,255,.88)', pageHeaderBorder: 'rgba(200,215,255,.5)', pageCardBg: 'rgba(255,255,255,.75)', pageCardBorder: 'rgba(255,255,255,.6)' },
+  { id: 'glass', label: 'Verre',  icon: 'blur_linear', bg: 'rgba(255,255,255,.22)',  border: 'rgba(255,255,255,.45)', text: '#2D3A5E', titleColor: '#1A1F36', labelColor: '#64748B', hoverBg: 'rgba(255,255,255,.30)', userHover: 'rgba(255,255,255,.30)', backdrop: 'blur(20px) saturate(200%)',
+    pageBg: 'linear-gradient(135deg,#c7d8ff 0%,#dcd0ff 35%,#c8e8ff 65%,#d0c8ff 100%)', pageHeaderBg: 'rgba(255,255,255,.30)', pageHeaderBorder: 'rgba(255,255,255,.50)', pageCardBg: 'rgba(255,255,255,.22)', pageCardBorder: 'rgba(255,255,255,.45)' },
 ];
 
 export interface ThemePrefs {
