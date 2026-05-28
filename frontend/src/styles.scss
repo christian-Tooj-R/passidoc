@@ -2055,3 +2055,179 @@ body.theme-glass app-equipes {
     border-color: rgba(255,255,255,.35) !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE — Detail de dossier (app-client-detail + onglets)
+═══════════════════════════════════════════════════════════════ */
+body.theme-glass app-client-detail {
+
+  /* ── Topbar ────────────────────────────────────────────────── */
+  .topbar {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    box-shadow: 0 1px 0 rgba(255,255,255,.50) !important;
+  }
+  .bc-current { color: #1A1F36 !important; }
+  .bc-sep { color: rgba(0,0,0,.30) !important; }
+
+  /* ── Sidebar ───────────────────────────────────────────────── */
+  .sidebar {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .profile__bg { background: linear-gradient(180deg, rgba(99,102,241,.15) 0%, transparent 100%) !important; }
+  .score-track { background: rgba(255,255,255,.25) !important; }
+  .sidebar__divider { background: rgba(0,0,0,.08) !important; }
+  .sidenav__item { color: #2D3A5E !important; }
+  .sidenav__item:hover { background: rgba(255,255,255,.30) !important; }
+  .sidenav__item mat-icon { color: rgba(0,0,0,.35) !important; }
+  .sidenav__label { color: rgba(0,0,0,.40) !important; }
+
+  /* ── Content ───────────────────────────────────────────────── */
+  .content { background: transparent !important; }
+  .content__header {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+
+  /* ── Hero section ──────────────────────────────────────────── */
+  .hero { background: transparent !important; border-color: rgba(255,255,255,.30) !important; }
+  .hc-adn, .hc-info {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+    box-shadow: 0 4px 20px rgba(80,60,180,.08), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .hc-info__ico-wrap--grey,
+  .hc-info__ico-wrap--blue,
+  .hc-info__ico-wrap--teal { backdrop-filter: blur(4px) !important; }
+
+  /* ── Onglets — cartes et panneaux ──────────────────────────── */
+  .adn-card, .kpi-item, .mode-bar, .flux-type-item,
+  .add-panel, .objective-card, .section-area,
+  .process-rows, .fournisseur-card, .fournisseur-item {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.06), inset 0 1px 0 rgba(255,255,255,.50) !important;
+  }
+
+  /* ── Material expansion panels ─────────────────────────────── */
+  .mat-expansion-panel {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.06) !important;
+  }
+  .mat-expansion-panel-header { background: rgba(255,255,255,.14) !important; }
+  .mat-expansion-panel-header-title, mat-panel-title { color: #1A1F36 !important; }
+
+  /* ── Inputs / formulaires ──────────────────────────────────── */
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.50) !important;
+    color: #1A1F36 !important;
+  }
+  .mat-mdc-text-field-wrapper { background: rgba(255,255,255,.30) !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.50) !important; }
+
+  /* ── Tables dans tous les onglets ─────────────────────────── */
+  table, tbody, tbody tr, td, th { background: transparent !important; }
+  thead tr { background: rgba(255,255,255,.18) !important; }
+  tr:hover td { background: rgba(255,255,255,.18) !important; }
+  th { color: #475569 !important; border-color: rgba(0,0,0,.08) !important; }
+  td { border-color: rgba(0,0,0,.06) !important; color: #2D3A5E !important; }
+
+  /* ── Boutons et petits éléments ────────────────────────────── */
+  .hc-adn__btn, .flux-type-active,
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+  .process-input {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.35) !important;
+    color: #1A1F36 !important;
+  }
+  .process-rows {
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+  }
+
+  /* ── Section titles / objectifs ────────────────────────────── */
+  .section-title {
+    background: rgba(99,102,241,.12) !important;
+    border-left-color: #6366F1 !important;
+    color: #1A1F36 !important;
+  }
+  .objective-card__header--blue   { background: rgba(37,99,235,.18) !important; }
+  .objective-card__header--indigo { background: rgba(67,56,202,.18) !important; }
+  .objective-card__header--purple { background: rgba(124,58,237,.18) !important; }
+  .card-body { background: transparent !important; }
+
+  /* ── SWOT ──────────────────────────────────────────────────── */
+  .swot-forces       { background: rgba(22,163,74,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-faiblesses   { background: rgba(249,115,22,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-opportunites { background: rgba(37,99,235,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-menaces      { background: rgba(220,38,38,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-forces .swot-card__header       { background: rgba(22,163,74,.20) !important; }
+  .swot-faiblesses .swot-card__header   { background: rgba(249,115,22,.20) !important; }
+  .swot-opportunites .swot-card__header { background: rgba(37,99,235,.20) !important; }
+  .swot-menaces .swot-card__header      { background: rgba(220,38,38,.20) !important; }
+
+  /* ── Section contrôle interne ──────────────────────────────── */
+  .section-header--green { background: rgba(22,163,74,.18) !important; }
+  .section-header--red   { background: rgba(220,38,38,.18) !important; }
+  .section-header--blue  { background: rgba(37,99,235,.18) !important; }
+  .section-header--gray  { background: rgba(255,255,255,.18) !important; }
+  .process-row--green { background: rgba(22,163,74,.08) !important; }
+  .process-row--red   { background: rgba(220,38,38,.08) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.08) !important; }
+
+  /* ── Pilotage — grille flux mensuel ────────────────────────── */
+  .kpi-card, .grid-wrap {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+  }
+  .th-type, .th-month, .th-progress { background: rgba(255,255,255,.18) !important; color: #475569 !important; }
+  .th-month.th-current { background: rgba(99,102,241,.18) !important; color: #4338CA !important; }
+  .cell-empty   { background: rgba(255,255,255,.25) !important; border-color: rgba(0,0,0,.10) !important; }
+  .cell-depose  { background: rgba(22,163,74,.22) !important; }
+  .cell-retard  { background: rgba(217,119,6,.22) !important; }
+  .cell-manquant { background: rgba(220,38,38,.22) !important; }
+  .kpi-bar-track, .row-bar-track { background: rgba(255,255,255,.22) !important; }
+
+  /* ── Historique ─────────────────────────────────────────────── */
+  .count        { background: rgba(255,255,255,.25) !important; }
+  .change-pill  { background: rgba(255,255,255,.25) !important; }
+  .entry-icon   { backdrop-filter: blur(6px) !important; }
+
+  /* ── AI Assistant ──────────────────────────────────────────── */
+  .ai-input {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .message__content {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .suggestion-chip {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+}
