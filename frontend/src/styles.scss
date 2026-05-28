@@ -1163,6 +1163,11 @@ body.theme-dark app-header .user-name { color: #F1F5F9 !important; }
 ═══════════════════════════════════════════════════════════════ */
 body.theme-dark app-client-detail {
 
+  /* ── Titres et textes — couvre tous les onglets ─────────── */
+  h1, h2, h3, h4, h5, h6 { color: #F1F5F9 !important; }
+  p:not([class*="badge"]):not([class*="mat-"]) { color: #CBD5E1 !important; }
+  label { color: #94A3B8 !important; }
+
   /* ── Topbar ─────────────────────────────────────────────── */
   .topbar {
     background: #1E293B !important;
@@ -1314,4 +1319,100 @@ body.theme-dark app-client-detail {
   /* ── Onglet Fiche identité / badges ─────────────────────── */
   .badge-re { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
   .badge-mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+}
+
+/* ── CLIENT DETAIL — complément dark mode pour tous les onglets ── */
+body.theme-dark app-client-detail {
+
+  /* Material expansion panels (titres comme "Identité légale") */
+  .mat-expansion-panel { background: #1E293B !important; }
+  .mat-expansion-panel-header { background: #1E293B !important; }
+  .mat-expansion-panel-header:hover { background: rgba(255,255,255,.06) !important; }
+  .mat-expansion-panel-header-title,
+  mat-panel-title { color: #F1F5F9 !important; }
+  .mat-expansion-panel-header-description { color: #94A3B8 !important; }
+  .mat-expansion-indicator::after { border-color: #94A3B8 !important; }
+  .mat-expansion-panel-body { background: #1E293B !important; }
+
+  /* Material form fields dans les onglets */
+  .mat-mdc-text-field-wrapper  { background: rgba(255,255,255,.07) !important; }
+  .mat-mdc-form-field input, .mat-mdc-form-field textarea { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text { color: #F1F5F9 !important; }
+
+  /* Textes primaires (divs/spans) dans tous les onglets */
+  .mode-bar__left, .ff-value, .flux-type-label,
+  .fiscal-group-title, .year-label, .kpi-value, .kpi-val,
+  .group-label, .mission-title, .add-panel-title, .add-panel-title span,
+  .resource, .fournisseur-name, .section-title,
+  .objective-text, .process-label,
+  .histo-header h3, .pilotage-title h3,
+  .chips-label, .fiche-section { color: #F1F5F9 !important; }
+
+  /* Textes secondaires */
+  .ff-label, .flux-type-hint, .res-id,
+  .gp-label, .kpi-lbl, .kpi-label,
+  .fiscal-group-title span,
+  .entry-meta, .flux-hint { color: #94A3B8 !important; }
+
+  /* Fonds blancs / gris clairs dans les onglets */
+  .flux-type-item { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+  .add-panel { background: #1E293B !important; border-color: rgba(255,255,255,.08) !important; }
+  .fournisseur-card, .fournisseur-item { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+
+  /* ADN — chips de section */
+  .ff-chip       { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .ff-chip--warn { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+
+  /* Onglet Analyse stratégique — SWOT */
+  .swot-forces       { background: rgba(22,163,74,.10) !important; }
+  .swot-faiblesses   { background: rgba(249,115,22,.10) !important; }
+  .swot-opportunites { background: rgba(37,99,235,.10) !important; }
+  .swot-menaces      { background: rgba(220,38,38,.10) !important; }
+  .swot-forces       .swot-card__header { background: rgba(22,163,74,.22) !important; color: #86EFAC !important; }
+  .swot-faiblesses   .swot-card__header { background: rgba(249,115,22,.22) !important; color: #FDBA74 !important; }
+  .swot-opportunites .swot-card__header { background: rgba(37,99,235,.22) !important; color: #93C5FD !important; }
+  .swot-menaces      .swot-card__header { background: rgba(220,38,38,.22) !important; color: #FCA5A5 !important; }
+
+  /* Onglet Contrôle interne */
+  .section-header--green { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .section-header--red   { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+  .section-header--blue  { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .section-header--gray  { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; }
+  .process-row--green { background: rgba(22,163,74,.06) !important; }
+  .process-row--red   { background: rgba(220,38,38,.06) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.06) !important; }
+  .process-input { background: rgba(255,255,255,.06) !important; color: #F1F5F9 !important; border-color: rgba(255,255,255,.10) !important; }
+
+  /* Onglet Objectifs */
+  .objective-card__header--blue   { background: rgba(37,99,235,.20) !important; color: #93C5FD !important; }
+  .objective-card__header--indigo { background: rgba(67,56,202,.20) !important; color: #A5B4FC !important; }
+  .objective-card__header--purple { background: rgba(124,58,237,.20) !important; color: #C4B5FD !important; }
+  .section-area { background: rgba(255,255,255,.04) !important; }
+
+  /* Onglet Historique */
+  .count        { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .change-pill  { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .entry-create .entry-icon { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .entry-update .entry-icon { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .entry-delete .entry-icon { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+  .badge-create { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .badge-update { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .badge-delete { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+
+  /* Onglet Missions */
+  .mission-card--ia { background: rgba(139,92,246,.12) !important; border-left-color: rgba(139,92,246,.50) !important; }
+  [class*="mission-badge"] { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+
+  /* Onglet AI Assistant */
+  .ai-input   { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.12) !important; }
+  .ai-textarea { color: #F1F5F9 !important; background: transparent !important; }
+  .ai-textarea::placeholder { color: #4D6080 !important; }
+  .message__content { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.08) !important; color: #CBD5E1 !important; }
+  .suggestion-chip { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.10) !important; color: #94A3B8 !important; }
+  .suggestion-chip:hover { background: rgba(99,102,241,.15) !important; color: #A5B4FC !important; }
 }
