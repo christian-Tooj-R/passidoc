@@ -1613,3 +1613,185 @@ body.theme-dark app-notes {
   /* Labels de section (Épinglées / Autres) */
   .section-label { color: #64748B !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE (body.theme-glass) — glassmorphism complet
+   
+   Principes :
+   1. Le gradient --page-bg est déjà sur .layout et .layout__main
+      (via var(--page-bg) dans main-layout.component.ts)
+   2. Le panel sidebar et le header ont déjà backdrop-filter
+      via --panel-backdrop (réglé par ThemeService)
+   3. Il faut rendre semi-transparents tous les fonds hardcodés
+      des composants + appliquer backdrop-filter sur les cartes
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Fond de page ─────────────────────────────────────────── */
+body.theme-glass {
+  background: var(--page-bg) !important;
+}
+
+/* ── Containers de page → transparents (laisse passer le gradient) */
+body.theme-glass .layout__main {
+  background: transparent !important;
+}
+
+/* Page containers */
+body.theme-glass .layout__main {
+  .dash, .notes-page, .pt-page, .explorer, .file-grid,
+  [class$="-page"]:not([class*="badge"]),
+  [class$="-wrapper"]:not([class*="mat-"]) {
+    background: transparent !important;
+  }
+}
+
+/* ── Cartes et panneaux → verre dépoli ───────────────────── */
+body.theme-glass .layout__main {
+
+  /* Toutes les cartes */
+  .card, .section-card,
+  [class$="-card"]:not([class*="note-card"]):not([class*="badge"])
+                  :not([class*="score-chip"]):not([class*="hero-card"]),
+  .table-card, .stat-card, .collab-card, .perm-card, .task-card,
+  .kpi-card, .kpi-item, .grid-wrap, .listing-table-wrap,
+  .listing-section, .hist-section, .semaine-card,
+  .adn-card, .process-rows, .objective-card, .space-card,
+  .folder-item, .member-card, .dossier-card, .role-tab,
+  .fm-row, .fm-card, .perm-card, .info-banner {
+    background: rgba(255,255,255,.68) !important;
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    border-color: rgba(255,255,255,.55) !important;
+    box-shadow: 0 4px 20px rgba(100,120,200,.10),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* Filter bars, toolbars, search */
+  .filter-bar, .toolbar, .tb-search, .search-bar,
+  .fm-search, .filter-chip, .fchip {
+    background: rgba(255,255,255,.60) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+
+  /* Thead tables */
+  thead, thead tr { background: rgba(255,255,255,.40) !important; }
+  table { background: transparent !important; }
+
+  /* Inputs/formulaires */
+  input:not([type="color"]):not([type="checkbox"])
+        :not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select {
+    background: rgba(255,255,255,.65) !important;
+    border-color: rgba(255,255,255,.50) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  /* Kanban */
+  .kanban-col {
+    background: rgba(255,255,255,.45) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255,255,255,.50) !important;
+  }
+
+  /* Section client-detail */
+  .topbar, .content__header, .hc-adn, .hc-info,
+  .sidebar, .content {
+    background: rgba(255,255,255,.75) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border-color: rgba(255,255,255,.55) !important;
+  }
+  .hero { background: rgba(255,255,255,.30) !important; border-color: rgba(255,255,255,.4) !important; }
+
+  /* Boutons secondaires */
+  .btn-secondary, .btn-ghost, .doc-btn, .btn-action,
+  .nav-btn, .page-btn, .icon-btn {
+    background: rgba(255,255,255,.65) !important;
+    backdrop-filter: blur(6px) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+
+  /* Notes cards — inline style background écrasé */
+  .note-card {
+    background: rgba(255,255,255,.70) !important;
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    box-shadow: 0 4px 20px rgba(100,120,200,.12),
+                inset 0 1px 0 rgba(255,255,255,.7) !important;
+  }
+
+  /* Cellules de statut Pilotage */
+  .cell-empty  { background: rgba(255,255,255,.45) !important; }
+  .cell-depose { background: rgba(22,163,74,.25) !important; }
+  .cell-retard { background: rgba(217,119,6,.25) !important; }
+  .cell-manquant { background: rgba(220,38,38,.25) !important; }
+
+  /* Badges statut */
+  .statut-a_faire   { background: rgba(37,99,235,.18) !important; }
+  .statut-en_cours  { background: rgba(217,119,6,.18) !important; }
+  .statut-terminee  { background: rgba(22,163,74,.18) !important; }
+  .statut-non_fait  { background: rgba(225,29,72,.18) !important; }
+  .statut-en_attente { background: rgba(124,58,237,.18) !important; }
+
+  /* Expansion panels (Material) */
+  .mat-expansion-panel {
+    background: rgba(255,255,255,.68) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255,255,255,.5) !important;
+  }
+  .mat-expansion-panel-header {
+    background: rgba(255,255,255,.75) !important;
+  }
+
+  /* Mat-form-fields */
+  .mat-mdc-text-field-wrapper {
+    background: rgba(255,255,255,.65) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  /* Menus Material */
+  .mat-mdc-menu-panel {
+    background: rgba(255,255,255,.85) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1px solid rgba(255,255,255,.6) !important;
+  }
+}
+
+/* ── Header app en mode verre (hors layout__main) ────────── */
+/* Déjà géré via --page-header-bg et --panel-backdrop dans le service,
+   on renforce juste l'effet */
+body.theme-glass app-header .topbar {
+  backdrop-filter: blur(20px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.6),
+              0 2px 16px rgba(100,120,200,.08) !important;
+}
+
+/* Search bar en verre dans le header */
+body.theme-glass app-header .search-bar {
+  background: rgba(255,255,255,.60) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: rgba(255,255,255,.50) !important;
+}
+body.theme-glass app-header .user-btn {
+  background: rgba(255,255,255,.65) !important;
+  backdrop-filter: blur(8px) !important;
+  border-color: rgba(255,255,255,.55) !important;
+}
+
+/* ── Dialogs en mode verre ───────────────────────────────── */
+body.theme-glass .cdk-overlay-container {
+  .mdc-dialog__surface, .mat-mdc-dialog-surface {
+    background: rgba(255,255,255,.85) !important;
+    backdrop-filter: blur(24px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+    border: 1px solid rgba(255,255,255,.6) !important;
+  }
+}
