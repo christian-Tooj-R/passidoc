@@ -1,5 +1,5 @@
-import { Controller, Post, Get, Query, UseGuards, HttpCode, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, Patch } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -16,9 +16,13 @@ export class PointageController {
 
   @Post('pointer')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Pointer arrivée ou départ' })
-  pointer(@CurrentUser() user: User) {
-    return this.svc.pointer(user.id);
+  @ApiOperation({ summary: 'Pointer arrivée, pause ou départ avec coordonnées GPS' })
+  @ApiBody({ schema: { properties: { latitude: { type: 'number' }, longitude: { type: 'number' } } } })
+  pointer(
+    @CurrentUser() user: User,
+    @Body() body: { latitude?: number; longitude?: number },
+  ) {
+    return this.svc.pointer(user.id, body.latitude, body.longitude);
   }
 
   @Get('journee')
@@ -49,5 +53,28 @@ export class PointageController {
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
   getHistoriqueAll(@Query('site') site?: string) {
     return this.svc.getHistoriqueAll(site);
+  }
+
+  // ── Emplacement bureau ─────────────────────────────────────────
+  @Get('site-location/:site')
+  @ApiOperation({ summary: 'Coordonnées GPS du bureau pour un site' })
+  getSiteLocation(@Param('site') site: string) {
+    return this.svc.getSiteLocation(site);
+  }
+
+  @Patch('site-location/:site')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: '[Admin] Configurer les coordonnées GPS du bureau' })
+  @ApiBody({ schema: { properties: {
+    latitude:     { type: 'number' },
+    longitude:    { type: 'number' },
+    radiusMeters: { type: 'number', default: 300 },
+    adresse:      { type: 'string' },
+  }}})
+  upsertSiteLocation(
+    @Param('site') site: string,
+    @Body() body: { latitude: number; longitude: number; radiusMeters?: number; adresse?: string },
+  ) {
+    return this.svc.upsertSiteLocation(site, body.latitude, body.longitude, body.radiusMeters ?? 300, body.adresse);
   }
 }

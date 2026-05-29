@@ -36,14 +36,30 @@ export interface MonStatut {
   dureePauseMin: number;
 }
 
+export interface SiteLocation {
+  site: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  adresse?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PointageService {
   private readonly api = `${environment.apiUrl}/pointage`;
 
   constructor(private http: HttpClient) {}
 
-  pointer() {
-    return this.http.post<Pointage>(`${this.api}/pointer`, {});
+  pointer(latitude?: number, longitude?: number) {
+    return this.http.post<Pointage>(`${this.api}/pointer`, { latitude, longitude });
+  }
+
+  getSiteLocation(site: string) {
+    return this.http.get<SiteLocation | null>(`${this.api}/site-location/${site}`);
+  }
+
+  upsertSiteLocation(site: string, data: { latitude: number; longitude: number; radiusMeters: number; adresse?: string }) {
+    return this.http.patch<SiteLocation>(`${this.api}/site-location/${site}`, data);
   }
 
   getJournee(date?: string, site?: string) {
