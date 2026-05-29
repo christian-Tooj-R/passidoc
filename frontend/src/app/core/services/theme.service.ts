@@ -1,4 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, effect } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 // ── 3 thèmes prédéfinis + personnalisé ─────────────────────────
 export const SIDEBAR_THEMES = [
@@ -58,7 +61,9 @@ export interface ThemePrefs {
   reducedMotion:     boolean;
 }
 
-const STORAGE_KEY = 'passidoc_theme';
+/** Clé localStorage par utilisateur (cache local pour éviter le flash) */
+const storageKey = (userId?: number | null) =>
+  userId ? `passidoc_theme_${userId}` : 'passidoc_theme_guest';
 
 const DEFAULTS: ThemePrefs = {
   sidebarThemeId:    'navy',
@@ -78,12 +83,46 @@ const DEFAULTS: ThemePrefs = {
 export class ThemeService {
   prefs = signal<ThemePrefs>({ ...DEFAULTS });
 
+  private http    = inject(HttpClient);
+  private auth    = inject(AuthService);
+  private api     = `${environment.apiUrl}/users/me/theme`;
+  private prevUid: number | null = null;
+
+  constructor() {
+    // Recharge le thème à chaque changement d'utilisateur connecté
+    effect(() => {
+      const uid = this.auth.currentUser()?.id ?? null;
+      if (uid !== this.prevUid) {
+        this.prevUid = uid;
+        this.load();
+      }
+    }, { allowSignalWrites: true });
+  }
+
   load() {
+    const uid = this.auth.currentUser()?.id ?? null;
+    const key = storageKey(uid);
+
+    // 1. Affichage immédiat depuis le cache localStorage (pas de flash)
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) this.prefs.set({ ...DEFAULTS, ...JSON.parse(stored) });
-    } catch {}
-    this.apply();
+      const cached = localStorage.getItem(key);
+      if (cached) { this.prefs.set({ ...DEFAULTS, ...JSON.parse(cached) }); this.apply(); }
+      else         { this.prefs.set({ ...DEFAULTS }); this.apply(); }
+    } catch { this.prefs.set({ ...DEFAULTS }); this.apply(); }
+
+    // 2. Synchronisation depuis la base (source de vérité)
+    if (uid) {
+      this.http.get<Partial<ThemePrefs>>(this.api).subscribe({
+        next: (data) => {
+          if (data && Object.keys(data).length > 0) {
+            this.prefs.set({ ...DEFAULTS, ...data });
+            localStorage.setItem(key, JSON.stringify(this.prefs()));
+            this.apply();
+          }
+        },
+        error: () => {}, // Garde le cache localStorage
+      });
+    }
   }
 
   update(partial: Partial<ThemePrefs>) {
@@ -99,7 +138,16 @@ export class ThemeService {
   }
 
   private save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.prefs()));
+    const uid   = this.auth.currentUser()?.id ?? null;
+    const prefs = this.prefs();
+
+    // Sauvegarde locale immédiate (UX réactive)
+    localStorage.setItem(storageKey(uid), JSON.stringify(prefs));
+
+    // Persistance en base (cross-device)
+    if (uid) {
+      this.http.patch(this.api, prefs).subscribe();
+    }
   }
 
   apply() {

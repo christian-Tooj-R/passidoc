@@ -125,6 +125,16 @@ export class UsersService {
     return this.findOne(userId);
   }
 
+  async getTheme(userId: number): Promise<Record<string, any>> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    return user?.themePrefs ?? {};
+  }
+
+  async saveTheme(userId: number, prefs: Record<string, any>): Promise<Record<string, any>> {
+    await this.userRepo.update(userId, { themePrefs: prefs });
+    return prefs;
+  }
+
   private sanitize(user: User) {
     const { password, twoFactorSecret, ...safe } = user;
     return safe;
