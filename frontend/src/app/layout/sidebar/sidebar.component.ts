@@ -5,9 +5,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { RolePermissionsService } from '../../core/services/role-permissions.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { filter } from 'rxjs/operators';
 
-type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin';
+type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin' | 'pointage';
 
 interface NavItem  { label: string; route: string; icon: string; badge?: number; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -44,16 +45,17 @@ interface AppModule {
             <button
               class="rail-item"
               [class.active]="activeModule() === m.id"
-              [matTooltip]="m.label" matTooltipPosition="right"
+              [matTooltip]="m.label"
+              matTooltipPosition="right"
               (click)="selectModule(m.id)">
               <div class="rail-item__pill"
-                   [style.background]="activeModule() === m.id ? 'rgba(147,197,253,0.22)' : 'transparent'">
-                <mat-icon [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.50)'">
+                   [style.background]="activeModule() === m.id ? 'var(--rail-active-bg, rgba(147,197,253,0.22))' : 'transparent'">
+                <mat-icon [style.color]="activeModule() === m.id ? 'var(--rail-active-color, #93c5fd)' : 'var(--rail-text-dim)'">
                   {{ m.icon }}
                 </mat-icon>
               </div>
               <span class="rail-item__label"
-                    [style.color]="activeModule() === m.id ? '#93c5fd' : 'rgba(255,255,255,.45)'">
+                    [style.color]="activeModule() === m.id ? 'var(--rail-active-color, #93c5fd)' : 'var(--rail-text-dim)'">
                 {{ m.label }}
               </span>
             </button>
@@ -62,6 +64,14 @@ interface AppModule {
 
         <div class="rail-spacer"></div>
         <div class="rail-divider"></div>
+
+        <!-- Personnalisation (tous les utilisateurs) -->
+        <a routerLink="/personnalisation"
+           routerLinkActive="rail-settings--active"
+           class="rail-settings"
+           matTooltip="Personnalisation" matTooltipPosition="right">
+          <mat-icon>palette</mat-icon>
+        </a>
 
         <!-- Avatar -->
         <button class="rail-avatar" [matTooltip]="fullName()" matTooltipPosition="right">
@@ -72,17 +82,43 @@ interface AppModule {
       </aside>
 
       <!-- ══ PANEL ══════════════════════════════════════ -->
-      <aside class="panel">
+      <aside class="panel" [class.panel--dark]="isDark()">
+
+        <!-- Header spécial Personnalisation -->
+        @if (isPersonnalisation()) {
+          <div class="panel-header">
+            <div class="panel-header__icon"
+                 [style.background]="isDark() ? 'rgba(255,255,255,.10)' : '#EDE9FE'"
+                 [style.box-shadow]="isDark() ? 'none' : '0 2px 8px #7C3AED33'">
+              <mat-icon style="color:#7C3AED">palette</mat-icon>
+            </div>
+            <div class="panel-header__text">
+              <span class="panel-header__title">Personnalisation</span>
+              <span class="panel-header__count">Thème et apparence</span>
+            </div>
+          </div>
+          <div class="panel-sep" style="background:linear-gradient(90deg,#7C3AED40 0%,transparent 100%)"></div>
+        }
 
         @if (currentModule(); as mod) {
 
-          <!-- Header -->
+          <!-- Header module -->
           <div class="panel-header">
-            <div class="panel-header__icon" [style.background]="mod.activeBg">
+            <div class="panel-header__icon"
+                 [style.background]="isDark() ? 'rgba(255,255,255,.10)' : mod.activeBg"
+                 [style.box-shadow]="isDark() ? 'none' : '0 2px 8px ' + mod.color + '33'">
               <mat-icon [style.color]="mod.color">{{ mod.icon }}</mat-icon>
             </div>
-            <span class="panel-header__title">{{ mod.label }}</span>
+            <div class="panel-header__text">
+              <span class="panel-header__title">{{ mod.label }}</span>
+              <span class="panel-header__count">
+                {{ totalItems(mod) }} section{{ totalItems(mod) > 1 ? 's' : '' }}
+              </span>
+            </div>
           </div>
+
+          <!-- Séparateur décoratif -->
+          <div class="panel-sep" [style.background]="'linear-gradient(90deg,' + mod.color + '40 0%, transparent 100%)'"></div>
 
           <!-- Groups + items -->
           <nav class="panel-nav">
@@ -93,12 +129,15 @@ interface AppModule {
               @for (item of group.items; track item.route) {
                 <a [routerLink]="item.route"
                    routerLinkActive="active"
+                   [routerLinkActiveOptions]="{ exact: true }"
                    #rla="routerLinkActive"
                    class="panel-item"
-                   [style.background]="rla.isActive ? mod.activeBg : ''"
-                   [style.color]="rla.isActive ? mod.color : ''">
-                  <mat-icon [style.color]="rla.isActive ? mod.color : '#5F6368'">{{ item.icon }}</mat-icon>
-                  <span>{{ item.label }}</span>
+                   [class.panel-item--active]="rla.isActive"
+                   [style.--item-bg]="activeBg(mod)"
+                   [style.--item-color]="mod.color">
+                  <mat-icon class="panel-item__icon"
+                            [style.color]="rla.isActive ? mod.color : null">{{ item.icon }}</mat-icon>
+                  <span class="panel-item__label">{{ item.label }}</span>
                   @if (item.badge) {
                     <span class="panel-item__badge">{{ item.badge }}</span>
                   }
@@ -113,11 +152,17 @@ interface AppModule {
 
         <!-- Footer -->
         <div class="panel-footer">
+          @if (theme.prefs().orgName) {
+            <div class="panel-org">{{ theme.prefs().orgName }}</div>
+          }
           <div class="panel-user">
-            <div class="panel-user__av">{{ initials() }}</div>
+            <div class="panel-user__av-wrap">
+              <div class="panel-user__av">{{ initials() }}</div>
+              <span class="panel-user__status"></span>
+            </div>
             <div class="panel-user__info">
               <span class="panel-user__name">{{ fullName() }}</span>
-              <span class="panel-user__role">{{ auth.currentUser()?.role }}</span>
+              <span class="panel-user__role">{{ roleLabel() }}</span>
             </div>
             <span class="panel-user__flag">
               {{ auth.currentUser()?.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}
@@ -129,12 +174,15 @@ interface AppModule {
     </div>
   `,
   styles: [`
-    .shell { display: flex; height: 100vh; flex-shrink: 0; }
+    .shell {
+      display: flex; height: 100vh; flex-shrink: 0;
+      overflow: hidden;
+    }
 
     /* ══ RAIL ════════════════════════════════════════════ */
     .rail {
-      width: 72px; height: 100vh; flex-shrink: 0;
-      background: linear-gradient(180deg, #0c1a3a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      width: 64px; height: 100vh; flex-shrink: 0;
+      background: var(--sidebar-gradient, linear-gradient(180deg, #0c1a3a 0%, #1e3a8a 50%, #1d4ed8 100%));
       border-right: none;
       display: flex; flex-direction: column; align-items: center;
       padding: 14px 0 18px;
@@ -144,7 +192,7 @@ interface AppModule {
 
     /* Logo */
     .rail-logo {
-      width: 40px; height: 40px; border-radius: 12px;
+      width: 36px; height: 36px; border-radius: 11px;
       background: linear-gradient(135deg, #1565C0, #60a5fa);
       display: flex; align-items: center; justify-content: center;
       text-decoration: none; flex-shrink: 0; margin-bottom: 10px;
@@ -152,32 +200,32 @@ interface AppModule {
       transition: transform .18s, box-shadow .18s;
     }
     .rail-logo:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(96,165,250,.45); }
-    .rail-logo mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
+    .rail-logo mat-icon { color: #fff; font-size: 18px; width: 18px; height: 18px; }
 
-    .rail-divider { width: 36px; height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; flex-shrink: 0; }
+    .rail-divider { width: 36px; height: 1px; background: var(--rail-divider, rgba(255,255,255,.08)); margin: 6px 0; flex-shrink: 0; }
     .rail-spacer  { flex: 1; }
 
     /* Rail items */
     .rail-nav { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; width: 100%; }
 
     .rail-item {
-      width: 64px; border: none; background: transparent; cursor: pointer;
+      width: 58px; border: none; background: transparent; cursor: pointer;
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 6px 0 8px; border-radius: 16px;
       transition: background .12s;
     }
-    .rail-item:hover { background: rgba(255,255,255,.07); }
+    .rail-item:hover { background: var(--rail-hover, rgba(255,255,255,.07)); }
 
     .rail-item__pill {
-      width: 48px; height: 32px; border-radius: 16px;
+      width: 42px; height: 28px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
       transition: background .18s, box-shadow .18s;
     }
     .rail-item.active .rail-item__pill {
-      box-shadow: 0 2px 12px rgba(96,165,250,.30), inset 0 0 0 1px rgba(147,197,253,.50);
+      box-shadow: 0 2px 12px var(--rail-active-bg, rgba(96,165,250,.30)), inset 0 0 0 1px var(--rail-active-color, rgba(147,197,253,.50));
     }
     .rail-item__pill mat-icon {
-      font-size: 22px; width: 22px; height: 22px;
+      font-size: 20px; width: 20px; height: 20px;
       transition: color .18s;
     }
 
@@ -187,9 +235,28 @@ interface AppModule {
       transition: color .18s;
     }
 
+
+    /* Icône personnalisation en bas */
+    .rail-settings {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; margin-bottom: 8px;
+      color: var(--rail-text-dim, rgba(255,255,255,.45));
+      transition: background .15s, color .15s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .rail-settings:hover {
+      background: var(--rail-hover, rgba(255,255,255,.07));
+      color: var(--rail-text, rgba(255,255,255,.90));
+    }
+    .rail-settings--active {
+      background: var(--rail-active-bg, rgba(147,197,253,0.22));
+      color: var(--rail-active-color, #93c5fd) !important;
+    }
+
     /* Avatar */
     .rail-avatar {
-      position: relative; width: 36px; height: 36px; border-radius: 50%;
+      position: relative; width: 32px; height: 32px; border-radius: 50%;
       background: linear-gradient(135deg, #1565C0, #60a5fa);
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
@@ -204,99 +271,174 @@ interface AppModule {
       background: #34A853; border: 2px solid #fff;
     }
 
-    /* ══ PANEL ════════════════════════════════════════════ */
+    /* ══ PANEL ══════════════════════════════════════════════════ */
     .panel {
-      width: 220px; height: 100vh; flex-shrink: 0;
-      background: #F0F4FF;
-      border-right: 1px solid #DDE3F0;
+      width: 200px; height: 100vh; flex-shrink: 0;
+      background: var(--panel-bg, #F7F8FD);
+      border-right: 1px solid var(--panel-border, #E4E8F0);
       display: flex; flex-direction: column; overflow: hidden;
+      backdrop-filter: var(--panel-backdrop, none);
+      -webkit-backdrop-filter: var(--panel-backdrop, none);
+    }
+    .panel--dark {
+      background: #141E2F;
+      border-color: rgba(255,255,255,.08);
     }
 
-    /* Header */
+    /* ── Header ─────────────────────────────────────────────── */
     .panel-header {
       display: flex; align-items: center; gap: 12px;
-      padding: 18px 16px 14px; flex-shrink: 0;
-      border-bottom: 1px solid #DDE3F0;
+      padding: 20px 16px 12px; flex-shrink: 0;
     }
     .panel-header__icon {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
+      transition: background .2s, box-shadow .2s;
     }
     .panel-header__icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .panel-header__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
     .panel-header__title {
-      font-size: 15px; font-weight: 700; color: #202124; letter-spacing: -.2px;
+      font-size: 14.5px; font-weight: 700; color: #1A1F36; letter-spacing: -.25px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panel--dark .panel-header__title { color: #F1F5F9; }
+    .panel-header__count {
+      font-size: 11px; font-weight: 500; color: #94A3B8; letter-spacing: .1px;
     }
 
-    /* Nav */
+    /* Séparateur dégradé sous le header */
+    .panel-sep {
+      height: 2px; flex-shrink: 0; margin: 0 16px 8px;
+      border-radius: 2px; opacity: .5;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────── */
     .panel-nav {
-      padding: 8px 8px 4px;
-      display: flex; flex-direction: column; gap: 1px;
-      overflow-y: auto; flex: 1;
-      scrollbar-width: none;
+      padding: 2px 8px 8px;
+      display: flex; flex-direction: column; gap: 2px;
+      overflow-y: auto; flex: 1; scrollbar-width: none;
     }
     .panel-nav::-webkit-scrollbar { display: none; }
 
     .panel-group-label {
-      font-size: 10.5px; font-weight: 700; color: #80868B;
-      text-transform: uppercase; letter-spacing: .8px;
-      padding: 12px 8px 5px; display: block;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; font-weight: 700; color: #B0B8CC;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 14px 4px 6px;
+    }
+    .panel-group-label::after {
+      content: ''; flex: 1; height: 1px;
+      background: currentColor; opacity: .35;
+    }
+    .panel--dark .panel-group-label { color: #3D4E68; }
+
+    /* ── Items ───────────────────────────────────────────────── */
+    .panel-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 8px 0 10px; height: 36px;
+      border-radius: 8px; text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      color: var(--pi-color, #3C4555);
+      position: relative; overflow: hidden;
+      transition: background .15s, color .15s;
+    }
+    .panel-item:not(.active):hover {
+      background: var(--ph-bg, rgba(0,0,0,.055)) !important;
+      color: var(--ph-color, #1A1F36) !important;
+    }
+    .panel-item:not(.active):hover .panel-item__icon { color: var(--ph-icon, #4B5563) !important; }
+
+    /* État actif */
+    .panel-item--active {
+      font-weight: 600;
+      background: var(--item-bg, rgba(0,0,0,.06));
+      color: var(--item-color, #1A1F36);
+    }
+    .panel-item--active::before {
+      content: '';
+      position: absolute; left: 0; top: 5px; bottom: 5px;
+      width: 3px; border-radius: 0 3px 3px 0;
+      background: var(--item-color, #1A1F36);
     }
 
-    .panel-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 0 12px; height: 38px;
-      border-radius: 20px; text-decoration: none;
-      font-size: 13.5px; font-weight: 500; color: #3C4043;
-      transition: background .12s, color .12s;
+    /* Icône directe */
+    .panel-item__icon {
+      font-size: 16px; width: 16px; height: 16px; flex-shrink: 0;
+      color: var(--pi-icon, #8B93A9); transition: color .15s;
     }
-    .panel-item:hover { background: #E2E9F8; color: #202124; }
-    .panel-item.active { font-weight: 600; }
-    .panel-item mat-icon {
-      font-size: 19px; width: 19px; height: 19px; flex-shrink: 0;
-      transition: color .12s;
-    }
-    .panel-item:hover mat-icon { color: #3C4043; }
-    .panel-item span { flex: 1; }
+    .panel-item--active .panel-item__icon { color: var(--item-color, #1A1F36); }
+
+    /* Label */
+    .panel-item__label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Badge */
     .panel-item__badge {
       font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
-      background: #D93025; color: white; border-radius: 9px;
+      background: #EF4444; color: white; border-radius: 9px;
       padding: 0 5px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
     }
 
     .panel-spacer { flex: 1; }
 
-    /* Footer */
+    /* ── Footer ─────────────────────────────────────────────── */
+    .panel-org {
+      font-size: 10px; font-weight: 700; color: #94A3B8;
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 6px 14px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panel--dark .panel-org { color: #3D4E68; }
+
     .panel-footer {
-      padding: 8px 10px 12px;
-      border-top: 1px solid #DDE3F0;
-      flex-shrink: 0;
+      padding: 6px 10px 14px; border-top: 1px solid #E4E8F0; flex-shrink: 0;
     }
+    .panel--dark .panel-footer { border-color: rgba(255,255,255,.07); }
+
     .panel-user {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 10px; border-radius: 12px;
-      transition: background .12s; cursor: default;
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 8px; border-radius: 12px;
+      transition: background .15s; cursor: default;
     }
-    .panel-user:hover { background: #E2E9F8; }
+    .panel-user:hover { background: rgba(0,0,0,.05); }
+    .panel--dark .panel-user:hover { background: rgba(255,255,255,.06); }
+
+    /* Avatar avec indicateur de présence */
+    .panel-user__av-wrap {
+      position: relative; flex-shrink: 0;
+    }
     .panel-user__av {
-      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%;
       background: linear-gradient(135deg, #1565C0, #42A5F5);
       display: flex; align-items: center; justify-content: center;
       font-size: 11px; font-weight: 700; color: white;
     }
+    .panel-user__status {
+      position: absolute; bottom: 0; right: -1px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #22C55E; border: 2px solid var(--panel-bg, #F7F8FD);
+    }
+    .panel--dark .panel-user__status { border-color: #141E2F; }
+
     .panel-user__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
     .panel-user__name {
-      font-size: 12px; font-weight: 600; color: #202124;
+      font-size: 12.5px; font-weight: 600; color: #1A1F36;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .panel-user__role { font-size: 10.5px; color: #80868B; text-transform: capitalize; }
-    .panel-user__flag { font-size: 15px; flex-shrink: 0; }
+    .panel--dark .panel-user__name { color: #F1F5F9; }
+    .panel-user__role {
+      font-size: 10.5px; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panel--dark .panel-user__role { color: #64748B; }
+    .panel-user__flag { font-size: 14px; flex-shrink: 0; }
   `],
 })
 export class SidebarComponent implements OnInit {
 
-  activeModule = signal<ModuleId>('apercu');
+  activeModule      = signal<ModuleId | null>('apercu');
+  isPersonnalisation = signal(false);
 
   private rolePerms = inject(RolePermissionsService);
+  theme = inject(ThemeService);
   constructor(public auth: AuthService, private router: Router) {}
 
   canSeeMenu(id: string): boolean {
@@ -311,13 +453,18 @@ export class SidebarComponent implements OnInit {
   }
 
   private syncFromRoute(url: string) {
-    if      (url.startsWith('/dashboard'))                                this.activeModule.set('apercu');
-    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles')) this.activeModule.set('dossiers');
-    else if (url.startsWith('/tasks'))                                    this.activeModule.set('travail');
-    else if (url.startsWith('/documents'))                                this.activeModule.set('documents');
-    else if (url.startsWith('/notes'))                                    this.activeModule.set('notes');
-    else if (url.startsWith('/equipes'))                                  this.activeModule.set('equipe');
-    else if (url.startsWith('/admin'))                                    this.activeModule.set('admin');
+    if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
+    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles'))      this.activeModule.set('dossiers');
+    else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
+    else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
+    else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
+    else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles'))  this.activeModule.set('equipe');
+    else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
+    else if (url.startsWith('/admin'))                                            this.activeModule.set('admin');
+    // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
+    else if (url.startsWith('/personnalisation'))                                   this.activeModule.set(null);
+    else                                                                           this.activeModule.set(null);
+    this.isPersonnalisation.set(url.startsWith('/personnalisation'));
   }
 
   get allModules(): AppModule[] {
@@ -368,6 +515,13 @@ export class SidebarComponent implements OnInit {
           ...(isAdmin ? [{ label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' }] : []),
         ]}],
       }] : []),
+      {
+        id: 'pointage' as ModuleId, icon: 'fingerprint', label: 'Pointage',
+        color: '#0F766E', activeBg: '#CCFBF1',
+        groups: [{ label: '', items: [
+          { label: 'Présences du jour', route: '/pointage', icon: 'fingerprint' },
+        ]}],
+      },
       ...(isAdmin ? [{
         id: 'admin' as ModuleId, icon: 'admin_panel_settings', label: 'Admin',
         color: '#B45309', activeBg: '#FEF3C7',
@@ -380,6 +534,25 @@ export class SidebarComponent implements OnInit {
 
   visibleModules() { return this.allModules; }
   currentModule()  { return this.allModules.find(m => m.id === this.activeModule()) ?? null; }
+
+  totalItems(mod: AppModule): number {
+    return mod.groups.reduce((n, g) => n + g.items.length, 0);
+  }
+
+  roleLabel(): string {
+    const role = this.auth.currentUser()?.role;
+    if (role === 'ADMIN') return 'Administrateur';
+    if (role === 'EXPERT_COMPTABLE') return 'Expert-comptable';
+    return 'Collaborateur';
+  }
+
+  /** True si le panel est en mode sombre */
+  isDark(): boolean { return this.theme.prefs().panelStyleId === 'dark'; }
+
+  /** Background de l'item actif : tint subtil en dark, couleur pastel en clair */
+  activeBg(mod: AppModule): string {
+    return this.isDark() ? 'rgba(255,255,255,.09)' : mod.activeBg;
+  }
 
   selectModule(id: ModuleId) {
     this.activeModule.set(id);

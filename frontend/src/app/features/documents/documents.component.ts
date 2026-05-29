@@ -1,724 +1,487 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
-import { debounceTime } from 'rxjs/operators';
-import { ClientsService } from '../../core/services/clients.service';
-import { DocumentsService } from '../../core/services/documents.service';
-import { Client, ClientDocument } from '../../core/models/client.model';
-
-interface ClientSpace {
-  client: Client;
-  docs: ClientDocument[];
-  loading: boolean;
-}
-
-interface RecentDoc {
-  clientId: number;
-  clientNom: string;
-  doc: ClientDocument;
-}
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { EspacesService, Espace, EspaceDoc } from '../../core/services/espaces.service';
+import { EspacesCreateDialogComponent } from './espaces-create-dialog.component';
 
 @Component({
   selector: 'app-documents',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, ReactiveFormsModule, FormsModule,
-    MatIconModule, MatTooltipModule, MatButtonModule, MatRippleModule,
+    CommonModule, FormsModule,
+    MatIconModule, MatTooltipModule, MatButtonModule, MatRippleModule, MatSnackBarModule, MatDialogModule,
   ],
   template: `
-    <div class="page">
+<div class="page">
 
-      <!-- ══ PAGE HEADER ════════════════════════════════ -->
-      <div class="page-header">
-        <div class="page-header__left">
-          <div class="page-icon">
-            <mat-icon>folder_open</mat-icon>
-          </div>
-          <div>
-            <h1 class="page-title">Mes documents</h1>
-            <p class="page-sub">
-              @if (loading()) { Chargement… }
-              @else { {{ totalDocs }} document{{ totalDocs > 1 ? 's' : '' }} · {{ spaces().length }} dossier{{ spaces().length > 1 ? 's' : '' }} }
-            </p>
-          </div>
+  <!-- ══ VUE LISTE DES ESPACES ════════════════════════════════ -->
+  @if (!espaceOuvert()) {
+
+    <div class="page-header">
+      <div class="page-header__left">
+        <div class="page-icon"><mat-icon>folder_open</mat-icon></div>
+        <div>
+          <h1 class="page-title">Mes documents</h1>
+          <p class="page-sub">
+            {{ espaces().length }} espace{{ espaces().length > 1 ? 's' : '' }}
+            · {{ totalDocs() }} document{{ totalDocs() > 1 ? 's' : '' }}
+            · {{ fmtSize(totalSize()) }} total
+          </p>
         </div>
-        <label class="btn-add" matRipple>
+      </div>
+      <button class="btn-new" matRipple (click)="ouvrirCreation()">
+        <mat-icon>add</mat-icon>
+        Nouvel espace
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="spaces-grid">
+        @for (i of [1,2,3]; track i) {
+          <div class="space-card space-card--skel"></div>
+        }
+      </div>
+    }
+
+    @else if (espaces().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon"><mat-icon>folder_open</mat-icon></div>
+        <h3>Aucun espace</h3>
+        <p>Créez un espace pour organiser et stocker vos documents.</p>
+        <button class="btn-new btn-new--lg" matRipple (click)="ouvrirCreation()">
           <mat-icon>add</mat-icon>
-          Ajouter un document
-          <input type="file" multiple hidden (change)="onFileSelected($event)" />
-        </label>
+          Créer mon premier espace
+        </button>
       </div>
+    }
 
-      <!-- ══ SEARCH + FILTER ════════════════════════════ -->
-      <div class="toolbar">
-        <div class="search-field">
-          <mat-icon class="search-icon">search</mat-icon>
-          <input class="search-input" [formControl]="searchCtrl"
-                 placeholder="Rechercher dans mes documents..." />
-          @if (searchCtrl.value) {
-            <button class="search-clear" (click)="searchCtrl.setValue('')">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </div>
-        <div class="filter-field">
-          <mat-icon class="filter-icon">filter_list</mat-icon>
-          <select class="filter-select" [(ngModel)]="selectedClientId">
-            <option value="">Tous les espaces</option>
-            @for (s of spaces(); track s.client.id) {
-              <option [value]="s.client.id">{{ s.client.nom }}</option>
-            }
-          </select>
-          <mat-icon class="filter-arrow">expand_more</mat-icon>
-        </div>
-      </div>
+    @else {
+      <div class="spaces-grid">
+        @for (esp of espaces(); track esp.id) {
+          <div class="space-card" (click)="ouvrirEspace(esp)">
 
-      <!-- ══ STATS STRIP ════════════════════════════════ -->
-      @if (!loading()) {
-        <div class="stats-strip">
-          @for (stat of getStats(); track stat.label) {
-            <div class="stat-chip">
-              <mat-icon [style.color]="stat.color">{{ stat.icon }}</mat-icon>
-              <span class="stat-count" [style.color]="stat.color">{{ stat.count }}</span>
-              <span class="stat-label">{{ stat.label }}</span>
-            </div>
-          }
-        </div>
-      }
+            <!-- Cover gradient -->
+            <div class="space-card__cover" [style.background]="gradient(esp)">
+              <div class="sc-initials">{{ initiales(esp.nom) }}</div>
+              <span class="sc-name">{{ esp.nom }}</span>
 
-      <!-- ══ DOCUMENTS RÉCENTS ══════════════════════════ -->
-      @if (loading()) {
-        <section class="section">
-          <div class="section-title">Documents récents</div>
-          <div class="recents-scroll">
-            @for (i of [1,2,3,4,5,6]; track i) {
-              <div class="recent-skeleton"></div>
-            }
-          </div>
-        </section>
-      }
-
-      @if (!loading() && recentDocs().length > 0) {
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Documents récents</div>
-            <span class="section-badge">{{ recentDocs().length }}</span>
-          </div>
-          <div class="recents-scroll">
-            @for (item of recentDocs(); track item.doc.id) {
-              <div class="recent-card" matRipple (click)="download(item.clientId, item.doc)">
-                <!-- Thumbnail -->
-                <div class="recent-thumb" [class]="'thumb-' + getExt(item.doc.nom)">
-                  <div class="recent-thumb__bg"></div>
-                  <mat-icon class="recent-thumb__icon">{{ getDocIcon(item.doc.nom) }}</mat-icon>
-                  <div class="recent-thumb__lines">
-                    <span></span><span></span><span></span><span></span>
-                  </div>
-                  <div class="recent-thumb__overlay">
-                    <mat-icon>download</mat-icon>
-                  </div>
+              <!-- Bouton ouvrir overlay -->
+              @if (confirmerSuppr() !== esp.id && paletteOuvertId() !== esp.id) {
+                <div class="sc-open">
+                  <span>Ouvrir</span>
+                  <mat-icon>arrow_forward</mat-icon>
                 </div>
-                <!-- Info -->
-                <div class="recent-info">
-                  <span class="recent-badge" [class]="'badge-' + getExt(item.doc.nom)">
-                    {{ getTypeLabel(item.doc.nom) }}
-                  </span>
-                  <p class="recent-name">{{ item.doc.nom }}</p>
-                  <div class="recent-meta">
-                    <mat-icon>person_outline</mat-icon>
-                    <span>{{ item.clientNom }}</span>
-                  </div>
-                  <div class="recent-date">{{ formatDate(item.doc.createdAt) }}</div>
+              }
+
+              <!-- Actions top-right -->
+              <div class="sc-actions" (click)="$event.stopPropagation()">
+                <button class="sc-action-btn"
+                        matTooltip="Changer la couleur"
+                        (click)="togglePalette(esp.id)">
+                  <mat-icon>palette</mat-icon>
+                </button>
+                <button class="sc-action-btn sc-action-btn--del"
+                        matTooltip="Supprimer l'espace"
+                        (click)="demanderSuppression(esp.id)">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Palette couleur -->
+            @if (paletteOuvertId() === esp.id) {
+              <div class="palette-panel" (click)="$event.stopPropagation()">
+                <div class="palette-row">
+                  @for (p of PALETTES; track p.val) {
+                    <button class="palette-swatch"
+                            [class.palette-swatch--active]="gradient(esp) === p.val"
+                            [style.background]="p.val"
+                            [title]="p.label"
+                            (click)="appliquerCouleur(esp, p.val)">
+                    </button>
+                  }
                 </div>
               </div>
             }
-          </div>
-        </section>
-      }
 
-      <!-- ══ MES ESPACES ════════════════════════════════ -->
-      @if (!loading()) {
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Mes espaces</div>
-            <span class="section-sub">{{ filteredSpaces().length }} espace{{ filteredSpaces().length > 1 ? 's' : '' }}</span>
-          </div>
-
-          @if (filteredSpaces().length > 0) {
-            <div class="spaces-grid">
-              @for (space of filteredSpaces(); track space.client.id) {
-                <div class="space-card">
-                  <!-- Card header with gradient -->
-                  <div class="space-card__head" [style.background]="getSpaceGradient(space.client.id)">
-                    <div class="space-avatar">{{ getInitials(space.client.nom) }}</div>
-                    <div class="space-meta">
-                      <div class="space-name">{{ space.client.nom }}</div>
-                      <div class="space-site">
-                        <span class="site-dot" [class.dot-mg]="space.client.site === 'MADAGASCAR'"></span>
-                        {{ space.client.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
-                      </div>
-                    </div>
-                    <div class="space-actions">
-                      <span class="space-count">{{ space.docs.length }}</span>
-                      <a [routerLink]="['/clients', space.client.id]"
-                         class="space-open" matTooltip="Ouvrir le dossier"
-                         (click)="$event.stopPropagation()">
-                        <mat-icon>open_in_new</mat-icon>
-                      </a>
-                    </div>
-                  </div>
-
-                  <!-- Docs list -->
-                  @if (space.loading) {
-                    <div class="space-body">
-                      @for (i of [1,2,3]; track i) {
-                        <div class="doc-skel"></div>
-                      }
-                    </div>
-                  } @else if (space.docs.length === 0) {
-                    <div class="space-empty">
-                      <mat-icon>upload_file</mat-icon>
-                      <span>Aucun document dans cet espace</span>
-                    </div>
-                  } @else {
-                    <div class="space-body">
-                      @for (doc of space.docs.slice(0, 5); track doc.id) {
-                        <div class="doc-row" matRipple (click)="download(space.client.id, doc)">
-                          <div class="doc-icon-wrap" [class]="'di-' + getExt(doc.nom)">
-                            <mat-icon>{{ getDocIcon(doc.nom) }}</mat-icon>
-                          </div>
-                          <span class="doc-name">{{ doc.nom }}</span>
-                          <span class="doc-size">{{ formatSize(doc.taille) }}</span>
-                          <span class="doc-date">{{ formatDate(doc.createdAt) }}</span>
-                        </div>
-                      }
-                    </div>
-                    <a [routerLink]="['/clients', space.client.id]"
-                       [queryParams]="{tab:'documents'}"
-                       class="space-more">
-                      <span>Voir tous les documents</span>
-                      <mat-icon>arrow_forward</mat-icon>
-                    </a>
-                  }
+            <!-- Confirmation suppression -->
+            @else if (confirmerSuppr() === esp.id) {
+              <div class="space-confirm" (click)="$event.stopPropagation()">
+                <span>Supprimer cet espace et ses {{ esp.documents.length }} document(s) ?</span>
+                <div class="space-confirm__btns">
+                  <button class="confirm-btn confirm-btn--danger" (click)="supprimerEspace(esp.id)">Supprimer</button>
+                  <button class="confirm-btn confirm-btn--cancel" (click)="confirmerSuppr.set(null)">Annuler</button>
                 </div>
-              }
-            </div>
-          } @else {
-            <div class="empty-state">
-              <div class="empty-icon"><mat-icon>folder_open</mat-icon></div>
-              <h3>Aucun résultat</h3>
-              <p>Aucun document ne correspond à votre recherche.</p>
-            </div>
-          }
-        </section>
-      }
+              </div>
+            }
 
+            <!-- Body -->
+            <div class="space-card__body">
+              <div class="sc-stats">
+                <span class="sc-stat-count">{{ esp.documents.length }} doc{{ esp.documents.length > 1 ? 's' : '' }}</span>
+                <span class="sc-stat-size">{{ docsSize(esp) }}</span>
+              </div>
+              <div class="sc-type-dots">
+                @if (countType(esp, 'pdf') > 0) {
+                  <span class="sc-dot sc-dot--pdf" [title]="'PDF (' + countType(esp, 'pdf') + ')'"></span>
+                }
+                @if (countType(esp, 'excel') > 0) {
+                  <span class="sc-dot sc-dot--excel" [title]="'Excel (' + countType(esp, 'excel') + ')'"></span>
+                }
+                @if (countType(esp, 'word') > 0) {
+                  <span class="sc-dot sc-dot--word" [title]="'Word (' + countType(esp, 'word') + ')'"></span>
+                }
+                @if (countType(esp, 'image') > 0) {
+                  <span class="sc-dot sc-dot--image" [title]="'Images (' + countType(esp, 'image') + ')'"></span>
+                }
+                @if (countType(esp, 'other') > 0) {
+                  <span class="sc-dot sc-dot--other" [title]="'Autres (' + countType(esp, 'other') + ')'"></span>
+                }
+              </div>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ══ VUE ESPACE OUVERT ═════════════════════════════════════ -->
+  @if (espaceOuvert()) {
+
+    <!-- Toolbar compacte -->
+    <div class="fm-toolbar">
+      <button class="back-btn" matRipple (click)="fermerEspace()">
+        <mat-icon>arrow_back</mat-icon>
+        Mes documents
+      </button>
+      <div class="fm-toolbar__space">
+        <div class="space-view-avatar" [style.background]="gradient(espaceOuvert()!)">
+          {{ initiales(espaceOuvert()!.nom) }}
+        </div>
+        <div class="fm-toolbar__info">
+          <span class="fm-space-name">{{ espaceOuvert()!.nom }}</span>
+          <span class="fm-space-meta">
+            {{ docsEspace().length }} doc{{ docsEspace().length > 1 ? 's' : '' }}
+            @if (docsEspace().length > 0) { · {{ fmtSize(docsEspace().reduce((s, d) => s + (d.taille || 0), 0)) }} }
+          </span>
+        </div>
+      </div>
+      <div class="fm-toolbar__controls">
+        <div class="fm-search">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Rechercher…"
+                 [value]="search()"
+                 (input)="search.set($any($event.target).value)" />
+        </div>
+        <div class="fm-view-toggle">
+          <button class="fm-view-btn" [class.fm-view-btn--active]="viewMode() === 'list'"
+                  matTooltip="Vue liste" (click)="viewMode.set('list')">
+            <mat-icon>view_list</mat-icon>
+          </button>
+          <button class="fm-view-btn" [class.fm-view-btn--active]="viewMode() === 'grid'"
+                  matTooltip="Vue grille" (click)="viewMode.set('grid')">
+            <mat-icon>grid_view</mat-icon>
+          </button>
+        </div>
+        <label class="btn-new btn-new--sm" matRipple [class.btn-new--loading]="uploading()">
+          <mat-icon>{{ uploading() ? 'hourglass_empty' : 'upload_file' }}</mat-icon>
+          {{ uploading() ? 'Envoi…' : 'Ajouter' }}
+          <input type="file" multiple hidden
+                 [disabled]="uploading()"
+                 (change)="onFilesSelected($event)" />
+        </label>
+      </div>
     </div>
+
+    <!-- Drop zone -->
+    <div class="drop-zone"
+         [class.drop-zone--active]="dragOver()"
+         (dragover)="$event.preventDefault(); dragOver.set(true)"
+         (dragleave)="dragOver.set(false)"
+         (drop)="onDrop($event)">
+      <mat-icon>cloud_upload</mat-icon>
+      <span>Glissez vos fichiers ici</span>
+    </div>
+
+    <!-- Chargement docs -->
+    @if (loadingDocs()) {
+      @if (viewMode() === 'list') {
+        <div class="fm-list">
+          <div class="fm-header">
+            <span class="fmh-name">Nom</span>
+            <span class="fmh-type">Type</span>
+            <span class="fmh-size">Taille</span>
+            <span class="fmh-date">Date</span>
+            <span class="fmh-actions"></span>
+          </div>
+          @for (i of [1,2,3]; track i) {
+            <div class="fm-row fm-row--skel"></div>
+          }
+        </div>
+      } @else {
+        <div class="fm-grid">
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <div class="fm-card fm-card--skel"></div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Vide -->
+    @else if (docsEspace().length === 0) {
+      <div class="empty-state empty-state--docs">
+        <div class="empty-icon empty-icon--sm"><mat-icon>upload_file</mat-icon></div>
+        <h3>Espace vide</h3>
+        <p>Ajoutez vos premiers documents via le bouton ou par glisser-déposer.</p>
+      </div>
+    }
+
+    <!-- Aucun résultat de recherche -->
+    @else if (docsFiltered().length === 0) {
+      <div class="empty-state empty-state--docs">
+        <div class="empty-icon empty-icon--sm"><mat-icon>search_off</mat-icon></div>
+        <h3>Aucun résultat</h3>
+        <p>Aucun document ne correspond à « {{ search() }} ».</p>
+      </div>
+    }
+
+    <!-- Vue liste -->
+    @else if (viewMode() === 'list') {
+      <div class="fm-list">
+        <div class="fm-header">
+          <span class="fmh-name">Nom</span>
+          <span class="fmh-type">Type</span>
+          <span class="fmh-size">Taille</span>
+          <span class="fmh-date">Date</span>
+          <span class="fmh-actions"></span>
+        </div>
+        @for (doc of docsFiltered(); track doc.id) {
+          <div class="fm-row">
+            <div class="fm-row__icon doc-icon-wrap" [class]="'di-' + ext(doc.nom)">
+              <mat-icon>{{ docIcon(doc.nom) }}</mat-icon>
+            </div>
+            <div class="fm-row__info">
+              <span class="doc-name">{{ doc.nom }}</span>
+              <span class="doc-meta">{{ fmtSize(doc.taille) }} · {{ fmtDate(doc.createdAt) }}</span>
+            </div>
+            <div class="fm-row__type">
+              <span class="doc-badge" [class]="'badge-' + ext(doc.nom)">{{ typeLabel(doc.nom) }}</span>
+            </div>
+            <div class="fm-row__size">{{ fmtSize(doc.taille) }}</div>
+            <div class="fm-row__date">{{ fmtDate(doc.createdAt) }}</div>
+            <div class="fm-row__actions">
+              <button class="doc-btn" matTooltip="Télécharger" (click)="downloadDoc(doc)">
+                <mat-icon>download</mat-icon>
+              </button>
+              <button class="doc-btn doc-btn--danger" matTooltip="Supprimer" (click)="supprimerDoc(doc)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Vue grille -->
+    @else {
+      <div class="fm-grid">
+        @for (doc of docsFiltered(); track doc.id) {
+          <div class="fm-card">
+            <div class="fm-card__icon doc-icon-wrap doc-icon-wrap--lg" [class]="'di-' + ext(doc.nom)">
+              <mat-icon>{{ docIcon(doc.nom) }}</mat-icon>
+            </div>
+            <span class="fm-card__name">{{ doc.nom }}</span>
+            <span class="fm-card__size">{{ fmtSize(doc.taille) }}</span>
+            <span class="fm-card__date">{{ fmtDate(doc.createdAt) }}</span>
+            <div class="fm-card__overlay">
+              <button class="doc-btn" matTooltip="Télécharger" (click)="downloadDoc(doc)">
+                <mat-icon>download</mat-icon>
+              </button>
+              <button class="doc-btn doc-btn--danger" matTooltip="Supprimer" (click)="supprimerDoc(doc)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+</div>
   `,
-  styles: [`
-    /* ══ PAGE LAYOUT ════════════════════════════════════ */
-    .page { padding: 0 0 56px; max-width: 1280px; }
-
-    /* ── Page header ─────────────────────────────────── */
-    .page-header {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
-    }
-    .page-header__left { display: flex; align-items: center; gap: 16px; }
-    .page-icon {
-      width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
-      background: linear-gradient(135deg, #1565C0 0%, #42A5F5 100%);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 16px rgba(21,101,192,.30);
-    }
-    .page-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: white; }
-    .page-title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -.5px; }
-    .page-sub   { font-size: 13px; color: #64748B; margin: 3px 0 0; }
-
-    /* Add button */
-    .btn-add {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 26px;
-      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
-      color: white; border-radius: 28px;
-      font-size: 13.5px; font-weight: 700; cursor: pointer;
-      white-space: nowrap; flex-shrink: 0;
-      box-shadow: 0 4px 14px rgba(34,197,94,.35);
-      font-family: inherit;
-      transition: transform .15s, box-shadow .15s;
-    }
-    .btn-add:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(34,197,94,.45);
-    }
-    .btn-add mat-icon { font-size: 20px; width: 20px; height: 20px; }
-
-    /* ── Toolbar ─────────────────────────────────────── */
-    .toolbar {
-      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
-    }
-
-    /* Search */
-    .search-field {
-      flex: 1; min-width: 240px;
-      display: flex; align-items: center; gap: 10px;
-      background: white;
-      border: 1.5px solid #E2E8F0; border-radius: 14px;
-      padding: 12px 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.05);
-      transition: border-color .15s, box-shadow .15s;
-    }
-    .search-field:focus-within {
-      border-color: #1565C0;
-      box-shadow: 0 0 0 3px rgba(21,101,192,.10);
-    }
-    .search-icon  { font-size: 18px; width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0; }
-    .search-input {
-      flex: 1; border: none; outline: none;
-      font-size: 14px; color: #0F172A; background: transparent;
-      font-family: inherit;
-    }
-    .search-input::placeholder { color: #94A3B8; }
-    .search-clear {
-      width: 22px; height: 22px; border: none; background: #F1F5F9;
-      border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; color: #64748B;
-    }
-    .search-clear mat-icon { font-size: 14px; width: 14px; height: 14px; }
-
-    /* Filter */
-    .filter-field {
-      display: flex; align-items: center; gap: 8px;
-      background: white; border: 1.5px solid #E2E8F0; border-radius: 14px;
-      padding: 12px 16px; min-width: 210px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.05);
-      cursor: pointer;
-      transition: border-color .15s;
-    }
-    .filter-field:focus-within { border-color: #1565C0; }
-    .filter-icon  { font-size: 18px; width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0; }
-    .filter-arrow { font-size: 18px; width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0; }
-    .filter-select {
-      flex: 1; border: none; outline: none; background: transparent;
-      font-size: 13.5px; font-weight: 500; color: #334155;
-      font-family: inherit; cursor: pointer;
-      -webkit-appearance: none; appearance: none;
-    }
-
-    /* ── Stats strip ─────────────────────────────────── */
-    .stats-strip {
-      display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap;
-    }
-    .stat-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: white; border: 1px solid #E2E8F0;
-      border-radius: 20px; padding: 6px 14px 6px 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    }
-    .stat-chip mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .stat-count { font-size: 13px; font-weight: 700; }
-    .stat-label { font-size: 12px; color: #64748B; }
-
-    /* ── Sections ─────────────────────────────────────── */
-    .section { margin-bottom: 36px; }
-    .section-head {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
-    }
-    .section-title {
-      font-size: 16px; font-weight: 700; color: #0F172A;
-    }
-    .section-badge {
-      background: #1565C0; color: white;
-      font-size: 11px; font-weight: 700;
-      padding: 2px 9px; border-radius: 20px;
-    }
-    .section-sub { font-size: 12.5px; color: #94A3B8; }
-
-    /* ══ DOCUMENTS RÉCENTS ════════════════════════════ */
-    @keyframes shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-    .recents-scroll {
-      display: flex; gap: 16px;
-      overflow-x: auto; padding-bottom: 10px;
-      scrollbar-width: thin; scrollbar-color: #E2E8F0 transparent;
-    }
-    .recents-scroll::-webkit-scrollbar { height: 5px; }
-    .recents-scroll::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
-
-    .recent-skeleton {
-      width: 172px; height: 220px; flex-shrink: 0; border-radius: 16px;
-      background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
-      background-size: 400% 100%; animation: shimmer 1.5s infinite;
-    }
-
-    /* Recent card */
-    .recent-card {
-      width: 172px; flex-shrink: 0; border-radius: 16px;
-      overflow: hidden; cursor: pointer; background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
-      transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
-      position: relative;
-    }
-    .recent-card:hover {
-      transform: translateY(-5px) scale(1.015);
-      box-shadow: 0 12px 32px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.04);
-    }
-
-    /* Thumbnail */
-    .recent-thumb {
-      height: 126px; position: relative; overflow: hidden;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 8px;
-    }
-    .recent-thumb__bg {
-      position: absolute; inset: 0; opacity: .12;
-      background: repeating-linear-gradient(
-        -45deg, currentColor 0, currentColor 1px, transparent 0, transparent 50%
-      );
-      background-size: 10px 10px;
-    }
-    .recent-thumb__icon {
-      font-size: 40px; width: 40px; height: 40px;
-      position: relative; z-index: 1; opacity: .85;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,.15));
-    }
-    .recent-thumb__lines {
-      display: flex; flex-direction: column; gap: 5px;
-      width: 65%; position: relative; z-index: 1;
-    }
-    .recent-thumb__lines span {
-      height: 5px; border-radius: 3px;
-      background: rgba(255,255,255,.55);
-    }
-    .recent-thumb__lines span:nth-child(1) { width: 100%; }
-    .recent-thumb__lines span:nth-child(2) { width: 78%; }
-    .recent-thumb__lines span:nth-child(3) { width: 55%; }
-    .recent-thumb__lines span:nth-child(4) { width: 40%; }
-    .recent-thumb__overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,.32);
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; transition: opacity .18s; z-index: 2;
-    }
-    .recent-thumb__overlay mat-icon { font-size: 30px; width: 30px; height: 30px; color: white; }
-    .recent-card:hover .recent-thumb__overlay { opacity: 1; }
-
-    /* Thumb color themes */
-    .thumb-pdf  { background: linear-gradient(155deg, #FFF1F2, #FECDD3); color: #DC2626; }
-    .thumb-pdf .recent-thumb__icon { color: #DC2626; }
-    .thumb-xlsx,.thumb-xls { background: linear-gradient(155deg, #F0FDF4, #BBF7D0); color: #16A34A; }
-    .thumb-xlsx .recent-thumb__icon,.thumb-xls .recent-thumb__icon { color: #16A34A; }
-    .thumb-docx,.thumb-doc { background: linear-gradient(155deg, #EFF6FF, #BFDBFE); color: #1D4ED8; }
-    .thumb-docx .recent-thumb__icon,.thumb-doc .recent-thumb__icon { color: #1D4ED8; }
-    .thumb-jpg,.thumb-jpeg,.thumb-png { background: linear-gradient(155deg, #FAF5FF, #E9D5FF); color: #7C3AED; }
-    .thumb-jpg .recent-thumb__icon,.thumb-jpeg .recent-thumb__icon,.thumb-png .recent-thumb__icon { color: #7C3AED; }
-    .thumb-file { background: linear-gradient(155deg, #F8FAFC, #E2E8F0); color: #475569; }
-    .thumb-file .recent-thumb__icon { color: #475569; }
-
-    /* Card info area */
-    .recent-info { padding: 12px 14px 14px; }
-    .recent-badge {
-      display: inline-block;
-      font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px;
-      padding: 2px 8px; border-radius: 20px; margin-bottom: 7px;
-    }
-    .badge-pdf  { background: #FEE2E2; color: #DC2626; }
-    .badge-xlsx,.badge-xls { background: #DCFCE7; color: #16A34A; }
-    .badge-docx,.badge-doc { background: #DBEAFE; color: #1D4ED8; }
-    .badge-jpg,.badge-jpeg,.badge-png { background: #F3E8FF; color: #7C3AED; }
-    .badge-file { background: #F1F5F9; color: #475569; }
-
-    .recent-name {
-      font-size: 12px; font-weight: 600; color: #1E293B;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin: 0 0 6px; line-height: 1.3;
-    }
-    .recent-meta {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 11px; color: #94A3B8; margin-bottom: 3px;
-    }
-    .recent-meta mat-icon { font-size: 12px; width: 12px; height: 12px; }
-    .recent-date { font-size: 11px; color: #CBD5E1; }
-
-    /* ══ SPACES GRID ═════════════════════════════════ */
-    .spaces-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 20px;
-    }
-
-    /* Space card */
-    .space-card {
-      background: white; border-radius: 20px; overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
-      transition: box-shadow .2s, transform .2s;
-    }
-    .space-card:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
-      transform: translateY(-3px);
-    }
-
-    /* Card header with gradient */
-    .space-card__head {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px 18px;
-    }
-    .space-avatar {
-      width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px;
-      background: rgba(255,255,255,.35); backdrop-filter: blur(4px);
-      border: 1.5px solid rgba(255,255,255,.6);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; color: white;
-      text-shadow: 0 1px 3px rgba(0,0,0,.2);
-    }
-    .space-meta { flex: 1; min-width: 0; }
-    .space-name {
-      font-size: 13.5px; font-weight: 700; color: white;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      text-shadow: 0 1px 3px rgba(0,0,0,.15);
-    }
-    .space-site {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: rgba(255,255,255,.8); margin-top: 2px;
-    }
-    .site-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: rgba(255,255,255,.8); flex-shrink: 0;
-    }
-    .site-dot.dot-mg { background: #86EFAC; }
-
-    .space-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .space-count {
-      font-size: 12px; font-weight: 700;
-      background: rgba(255,255,255,.25); color: white;
-      padding: 3px 10px; border-radius: 20px;
-      border: 1px solid rgba(255,255,255,.3);
-    }
-    .space-open {
-      width: 30px; height: 30px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,.18); color: rgba(255,255,255,.9);
-      transition: background .15s;
-    }
-    .space-open:hover { background: rgba(255,255,255,.35); }
-    .space-open mat-icon { font-size: 15px; width: 15px; height: 15px; }
-
-    /* Docs body */
-    .space-body { padding: 6px 0; }
-
-    .doc-skel {
-      height: 14px; margin: 10px 18px; border-radius: 7px;
-      background: linear-gradient(90deg, #F1F5F9 25%, #E8EDF4 50%, #F1F5F9 75%);
-      background-size: 400% 100%; animation: shimmer 1.5s infinite;
-    }
-
-    .space-empty {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 28px 16px; color: #94A3B8;
-    }
-    .space-empty mat-icon { font-size: 32px; width: 32px; height: 32px; opacity: .5; }
-    .space-empty span { font-size: 12.5px; text-align: center; }
-
-    /* Doc rows */
-    .doc-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 18px; cursor: pointer;
-      transition: background .12s;
-    }
-    .doc-row:hover { background: #F8FAFC; }
-
-    .doc-icon-wrap {
-      width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .doc-icon-wrap mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .di-pdf  { background: #FEE2E2; }
-    .di-pdf mat-icon  { color: #DC2626; }
-    .di-xlsx,.di-xls { background: #DCFCE7; }
-    .di-xlsx mat-icon,.di-xls mat-icon { color: #16A34A; }
-    .di-docx,.di-doc { background: #DBEAFE; }
-    .di-docx mat-icon,.di-doc mat-icon { color: #1D4ED8; }
-    .di-jpg,.di-jpeg,.di-png { background: #F3E8FF; }
-    .di-jpg mat-icon,.di-jpeg mat-icon,.di-png mat-icon { color: #7C3AED; }
-    .di-file { background: #F1F5F9; }
-    .di-file mat-icon { color: #64748B; }
-
-    .doc-name {
-      flex: 1; font-size: 12.5px; font-weight: 500; color: #334155;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .doc-size { font-size: 11px; color: #94A3B8; white-space: nowrap; flex-shrink: 0; }
-    .doc-date { font-size: 11px; color: #CBD5E1; white-space: nowrap; flex-shrink: 0; }
-
-    /* More link */
-    .space-more {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 18px;
-      font-size: 12.5px; font-weight: 600; color: #1565C0;
-      text-decoration: none;
-      border-top: 1px solid #F1F5F9;
-      transition: background .12s, color .12s;
-    }
-    .space-more:hover { background: #EFF6FF; color: #1E40AF; }
-    .space-more mat-icon { font-size: 16px; width: 16px; height: 16px; }
-
-    /* ── Empty state ─────────────────────────────────── */
-    .empty-state {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 72px 24px; gap: 14px; text-align: center;
-    }
-    .empty-icon {
-      width: 72px; height: 72px; border-radius: 22px;
-      background: linear-gradient(135deg, #1565C0, #42A5F5);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 6px 20px rgba(21,101,192,.30);
-    }
-    .empty-icon mat-icon { font-size: 34px; width: 34px; height: 34px; color: white; }
-    .empty-state h3 { font-size: 17px; font-weight: 700; color: #0F172A; margin: 0; }
-    .empty-state p  { font-size: 13.5px; color: #64748B; max-width: 300px; margin: 0; }
-  `],
+  styles: [`.page { padding: 32px 36px; }`],
+  styleUrl: './documents.component.scss',
 })
 export class DocumentsComponent implements OnInit {
-  loading    = signal(true);
-  spaces     = signal<ClientSpace[]>([]);
-  searchCtrl = new FormControl('');
-  selectedClientId: number | string = '';
 
-  private readonly SPACE_GRADIENTS = [
-    'linear-gradient(135deg, #1565C0 0%, #42A5F5 100%)',
-    'linear-gradient(135deg, #6A1B9A 0%, #AB47BC 100%)',
-    'linear-gradient(135deg, #00695C 0%, #26A69A 100%)',
-    'linear-gradient(135deg, #E65100 0%, #FFA726 100%)',
-    'linear-gradient(135deg, #1B5E20 0%, #66BB6A 100%)',
-    'linear-gradient(135deg, #880E4F 0%, #EC407A 100%)',
-    'linear-gradient(135deg, #0D47A1 0%, #29B6F6 100%)',
-    'linear-gradient(135deg, #4A148C 0%, #9C27B0 100%)',
+  espaces         = signal<Espace[]>([]);
+  espaceOuvert    = signal<Espace | null>(null);
+  docsEspace      = signal<EspaceDoc[]>([]);
+  loading         = signal(true);
+  loadingDocs     = signal(false);
+  uploading       = signal(false);
+  confirmerSuppr  = signal<number | null>(null);
+  paletteOuvertId = signal<number | null>(null);
+  dragOver        = signal(false);
+  search          = signal('');
+  viewMode        = signal<'list' | 'grid'>('list');
+
+  docsFiltered = computed(() =>
+    this.docsEspace().filter(d => d.nom.toLowerCase().includes(this.search().toLowerCase()))
+  );
+
+  totalSize = computed(() =>
+    this.espaces().reduce((s, e) => s + e.documents.reduce((ss, d) => ss + (d.taille || 0), 0), 0)
+  );
+
+  totalDocs = computed(() =>
+    this.espaces().reduce((s, e) => s + e.documents.length, 0)
+  );
+
+  readonly PALETTES = [
+    { label: 'Océan',   val: 'linear-gradient(135deg, #1565C0 0%, #42A5F5 100%)' },
+    { label: 'Violet',  val: 'linear-gradient(135deg, #6A1B9A 0%, #AB47BC 100%)' },
+    { label: 'Teal',    val: 'linear-gradient(135deg, #00695C 0%, #26A69A 100%)' },
+    { label: 'Ambre',   val: 'linear-gradient(135deg, #E65100 0%, #FFA726 100%)' },
+    { label: 'Forêt',   val: 'linear-gradient(135deg, #1B5E20 0%, #66BB6A 100%)' },
+    { label: 'Rose',    val: 'linear-gradient(135deg, #880E4F 0%, #EC407A 100%)' },
+    { label: 'Rouge',   val: 'linear-gradient(135deg, #B71C1C 0%, #EF5350 100%)' },
+    { label: 'Indigo',  val: 'linear-gradient(135deg, #4527A0 0%, #7E57C2 100%)' },
+    { label: 'Ardoise', val: 'linear-gradient(135deg, #455A64 0%, #90A4AE 100%)' },
+    { label: 'Lime',    val: 'linear-gradient(135deg, #558B2F 0%, #AED581 100%)' },
+    { label: 'Corail',  val: 'linear-gradient(135deg, #BF360C 0%, #FF8A65 100%)' },
+    { label: 'Marine',  val: 'linear-gradient(135deg, #006064 0%, #26C6DA 100%)' },
   ];
 
   constructor(
-    private clientsService: ClientsService,
-    private docsService: DocumentsService,
+    private svc: EspacesService,
+    private snack: MatSnackBar,
+    private dialog: MatDialog,
   ) {}
 
-  ngOnInit() {
-    this.clientsService.getAll().subscribe(clients => {
-      const sp: ClientSpace[] = clients.map(c => ({ client: c, docs: [], loading: true }));
-      this.spaces.set(sp);
-      this.loading.set(false);
+  ngOnInit() { this.charger(); }
 
-      sp.forEach((space, i) => {
-        this.docsService.getAll(space.client.id).subscribe({
-          next: docs => {
-            const updated = [...this.spaces()];
-            updated[i] = { ...updated[i], docs, loading: false };
-            this.spaces.set(updated);
-          },
-          error: () => {
-            const updated = [...this.spaces()];
-            updated[i] = { ...updated[i], loading: false };
-            this.spaces.set(updated);
-          },
-        });
+  charger() {
+    this.loading.set(true);
+    this.svc.getMesEspaces().subscribe({
+      next: data => { this.espaces.set(data); this.loading.set(false); },
+      error: () => { this.loading.set(false); },
+    });
+  }
+
+  ouvrirCreation() {
+    const ref = this.dialog.open(EspacesCreateDialogComponent, {
+      width: '440px',
+      panelClass: 'aro-create-dialog',
+      autoFocus: true,
+    });
+    ref.afterClosed().subscribe((result: { nom: string; couleur: string } | null) => {
+      if (!result) return;
+      this.svc.creer(result.nom, result.couleur).subscribe({
+        next: e => {
+          this.espaces.set([{ ...e, documents: [] }, ...this.espaces()]);
+          this.snack.open(`Espace "${e.nom}" créé`, undefined, { duration: 2500 });
+        },
+        error: () => this.snack.open('Erreur lors de la création', undefined, { duration: 3000 }),
       });
     });
-
-    this.searchCtrl.valueChanges.pipe(debounceTime(200)).subscribe();
   }
 
-  recentDocs(): RecentDoc[] {
-    const all: RecentDoc[] = [];
-    for (const space of this.spaces()) {
-      for (const doc of space.docs) {
-        all.push({ clientId: space.client.id, clientNom: space.client.nom, doc });
-      }
+  demanderSuppression(id: number) {
+    this.confirmerSuppr.set(id);
+    this.paletteOuvertId.set(null);
+  }
+
+  supprimerEspace(id: number) {
+    this.svc.supprimer(id).subscribe({
+      next: () => {
+        this.espaces.set(this.espaces().filter(e => e.id !== id));
+        this.confirmerSuppr.set(null);
+        this.snack.open('Espace supprimé', undefined, { duration: 2500 });
+      },
+      error: () => this.snack.open('Erreur lors de la suppression', undefined, { duration: 3000 }),
+    });
+  }
+
+  togglePalette(id: number) {
+    this.paletteOuvertId.set(this.paletteOuvertId() === id ? null : id);
+    this.confirmerSuppr.set(null);
+  }
+
+  appliquerCouleur(esp: Espace, couleur: string) {
+    this.svc.changerCouleur(esp.id, couleur).subscribe({
+      next: updated => {
+        this.espaces.set(this.espaces().map(e => e.id === esp.id ? { ...e, couleur: updated.couleur } : e));
+        this.paletteOuvertId.set(null);
+      },
+      error: () => this.snack.open('Erreur lors du changement de couleur', undefined, { duration: 3000 }),
+    });
+  }
+
+  ouvrirEspace(espace: Espace) {
+    this.paletteOuvertId.set(null);
+    this.search.set('');
+    this.espaceOuvert.set(espace);
+    this.loadingDocs.set(true);
+    this.svc.getDocs(espace.id).subscribe({
+      next: docs => { this.docsEspace.set(docs); this.loadingDocs.set(false); },
+      error: () => { this.loadingDocs.set(false); },
+    });
+  }
+
+  fermerEspace() {
+    this.espaceOuvert.set(null);
+    this.docsEspace.set([]);
+    this.search.set('');
+    this.charger();
+  }
+
+  onFilesSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    this.uploadFiles(Array.from(input.files));
+    input.value = '';
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.dragOver.set(false);
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length) this.uploadFiles(files);
+  }
+
+  private uploadFiles(files: File[]) {
+    const espace = this.espaceOuvert();
+    if (!espace) return;
+    this.uploading.set(true);
+    let done = 0;
+    for (const file of files) {
+      this.svc.upload(espace.id, file).subscribe({
+        next: doc => {
+          this.docsEspace.set([doc, ...this.docsEspace()]);
+          done++;
+          if (done === files.length) this.uploading.set(false);
+        },
+        error: () => {
+          done++;
+          this.snack.open(`Erreur upload : ${file.name}`, undefined, { duration: 3000 });
+          if (done === files.length) this.uploading.set(false);
+        },
+      });
     }
-    return all
-      .sort((a, b) => new Date(b.doc.createdAt ?? 0).getTime() - new Date(a.doc.createdAt ?? 0).getTime())
-      .slice(0, 8);
   }
 
-  filteredSpaces(): ClientSpace[] {
-    let result = this.spaces();
-    if (this.selectedClientId) {
-      result = result.filter(s => s.client.id === Number(this.selectedClientId));
-    }
-    const q = (this.searchCtrl.value || '').toLowerCase();
-    if (q) {
-      result = result.filter(s =>
-        s.client.nom.toLowerCase().includes(q) ||
-        s.docs.some(d => d.nom.toLowerCase().includes(q))
-      );
-    }
-    return result;
-  }
-
-  get totalDocs() {
-    return this.spaces().reduce((acc, s) => acc + s.docs.length, 0);
-  }
-
-  getStats() {
-    const all = this.spaces().flatMap(s => s.docs);
-    const count = (exts: string[]) => all.filter(d => exts.includes(this.getExt(d.nom))).length;
-    return [
-      { label: 'PDF',     count: count(['pdf']),             icon: 'picture_as_pdf', color: '#DC2626' },
-      { label: 'Excel',   count: count(['xls','xlsx']),       icon: 'table_chart',    color: '#16A34A' },
-      { label: 'Word',    count: count(['doc','docx']),        icon: 'description',    color: '#1D4ED8' },
-      { label: 'Images',  count: count(['jpg','jpeg','png']),  icon: 'image',          color: '#7C3AED' },
-      { label: 'Autres',  count: all.length - count(['pdf','xls','xlsx','doc','docx','jpg','jpeg','png']),
-        icon: 'insert_drive_file', color: '#64748B' },
-    ].filter(s => s.count > 0);
-  }
-
-  getSpaceGradient(clientId: number) {
-    return this.SPACE_GRADIENTS[clientId % this.SPACE_GRADIENTS.length];
-  }
-
-  getInitials(nom: string) {
-    return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  }
-
-  getExt(nom: string) {
-    return (nom?.split('.').pop()?.toLowerCase() || 'file');
-  }
-
-  getDocIcon(nom: string) {
-    const ext = this.getExt(nom);
-    if (ext === 'pdf')                    return 'picture_as_pdf';
-    if (['xls','xlsx'].includes(ext))     return 'table_chart';
-    if (['doc','docx'].includes(ext))     return 'description';
-    if (['jpg','jpeg','png'].includes(ext)) return 'image';
-    return 'insert_drive_file';
-  }
-
-  getTypeLabel(nom: string) {
-    const ext = this.getExt(nom);
-    if (ext === 'pdf')                return 'PDF';
-    if (['xls','xlsx'].includes(ext)) return 'Excel';
-    if (['doc','docx'].includes(ext)) return 'Word';
-    if (['jpg','jpeg','png'].includes(ext)) return 'Image';
-    return ext.toUpperCase();
-  }
-
-  formatDate(date: string | Date | undefined) {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
-  }
-
-  formatSize(bytes: number | undefined) {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' o';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' Ko';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
-  }
-
-  download(clientId: number, doc: ClientDocument) {
-    this.docsService.download(clientId, doc.id).subscribe(blob => {
+  downloadDoc(doc: EspaceDoc) {
+    const espace = this.espaceOuvert();
+    if (!espace) return;
+    this.svc.download(espace.id, doc.id).subscribe(blob => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = doc.nom; a.click();
@@ -726,7 +489,71 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
-  onFileSelected(_event: Event) {
-    console.log('Sélecteur de dossier à implémenter');
+  supprimerDoc(doc: EspaceDoc) {
+    const espace = this.espaceOuvert();
+    if (!espace) return;
+    this.svc.supprimerDoc(espace.id, doc.id).subscribe({
+      next: () => {
+        this.docsEspace.set(this.docsEspace().filter(d => d.id !== doc.id));
+        this.snack.open('Document supprimé', undefined, { duration: 2000 });
+      },
+      error: () => this.snack.open('Erreur lors de la suppression', undefined, { duration: 3000 }),
+    });
+  }
+
+  gradient(esp: Espace) {
+    return esp.couleur || this.PALETTES[esp.id % this.PALETTES.length].val;
+  }
+
+  initiales(nom: string) {
+    return nom.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
+  }
+
+  ext(nom: string) { return nom?.split('.').pop()?.toLowerCase() || 'file'; }
+
+  docIcon(nom: string) {
+    const e = this.ext(nom);
+    if (e === 'pdf') return 'picture_as_pdf';
+    if (['xls','xlsx'].includes(e)) return 'table_chart';
+    if (['doc','docx'].includes(e)) return 'description';
+    if (['jpg','jpeg','png','gif','webp'].includes(e)) return 'image';
+    return 'insert_drive_file';
+  }
+
+  typeLabel(nom: string) {
+    const e = this.ext(nom);
+    if (e === 'pdf') return 'PDF';
+    if (['xls','xlsx'].includes(e)) return 'Excel';
+    if (['doc','docx'].includes(e)) return 'Word';
+    if (['jpg','jpeg','png','gif','webp'].includes(e)) return 'Image';
+    return e.toUpperCase();
+  }
+
+  fmtSize(bytes: number) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' o';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' Ko';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
+  }
+
+  fmtDate(d: string) {
+    return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
+  }
+
+  docsSize(esp: Espace): string {
+    const total = esp.documents.reduce((s, d) => s + (d.taille || 0), 0);
+    return this.fmtSize(total);
+  }
+
+  countType(esp: Espace, type: string): number {
+    return esp.documents.filter(d => {
+      const e = this.ext(d.nom);
+      if (type === 'pdf')   return e === 'pdf';
+      if (type === 'excel') return ['xls','xlsx'].includes(e);
+      if (type === 'word')  return ['doc','docx'].includes(e);
+      if (type === 'image') return ['jpg','jpeg','png','gif','webp'].includes(e);
+      if (type === 'other') return !['pdf','xls','xlsx','doc','docx','jpg','jpeg','png','gif','webp'].includes(e);
+      return false;
+    }).length;
   }
 }

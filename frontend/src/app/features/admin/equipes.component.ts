@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
+import { MatRippleModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { ToastService } from '../../core/services/toast.service';
@@ -15,304 +15,353 @@ import { User } from '../../core/models/user.model';
 @Component({
   selector: 'app-equipes',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatRippleModule, MatTooltipModule],
   template: `
-    <div class="page">
-      @if (auth.isAdmin()) {
-        <!-- ======= VUE ADMIN ======= -->
-        <div class="page-header">
-          <div class="page-header__left">
-            <mat-icon class="page-icon">people</mat-icon>
-            <div>
-              <h1>Équipes</h1>
-              <p>Lier chaque collaborateur Madagascar à son collaborateur Réunion</p>
-            </div>
-          </div>
-        </div>
+<div class="page" (click)="assignPanelUserId.set(null)">
 
-        <div class="info-banner">
-          <mat-icon>info</mat-icon>
-          <span>
-            Seul le collaborateur Réunion lié (et l'admin) peut assigner des tâches à un collaborateur Madagascar.
-            Un collaborateur Réunion ne peut pas assigner à l'équipe d'un autre.
-          </span>
-        </div>
+  @if (auth.isAdmin()) {
+  <!-- ══ VUE ADMIN ══════════════════════════════════════════ -->
 
-        <!-- Vue par collaborateur Réunion -->
-        @for (ref of reunionUsers; track ref.id) {
-          <div class="team-card">
-            <div class="team-card__header">
-              <div class="user-avatar re">{{ ref.firstName[0] }}{{ ref.lastName[0] }}</div>
-              <div>
-                <div class="team-name">{{ ref.firstName }} {{ ref.lastName }}</div>
-                <div class="team-site">🇷🇪 Collaborateur Réunion</div>
-              </div>
-              <span class="team-count">{{ getTeam(ref.id).length }} collaborateur(s) Madagascar</span>
-            </div>
-            <div class="team-members">
-              @for (m of getTeam(ref.id); track m.id) {
-                <div class="member-chip">
-                  <div class="user-avatar mg sm">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
-                  <span>{{ m.firstName }} {{ m.lastName }}</span>
-                  <button mat-icon-button class="btn-remove" (click)="setReferent(m, null)" matTooltip="Retirer de l'équipe">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-              }
-              @if (getTeam(ref.id).length === 0) {
-                <span class="no-member">Aucun collaborateur assigné</span>
-              }
-            </div>
-          </div>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Toutes les équipes</h1>
+      <p class="page-sub">
+        {{ madagascarCollabs.length }} collaborateur(s) Madagascar ·
+        <span class="stat-ok">{{ assignedCount }} assigné(s)</span>
+        @if (madagascarCollabs.length - assignedCount > 0) {
+          · <span class="stat-warn">{{ madagascarCollabs.length - assignedCount }} sans équipe</span>
         }
+      </p>
+    </div>
+  </div>
 
-        <!-- Table assignation -->
-        <h2 class="section-title" style="margin-top:32px">
-          <mat-icon>swap_horiz</mat-icon> Configurer les liens
-        </h2>
-        <div class="table-card">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Collaborateur Madagascar</th>
-                <th>Collaborateur Réunion actuel</th>
-                <th>Modifier</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (u of madagascarCollabs; track u.id) {
-                <tr class="table-row">
-                  <td>
-                    <div class="user-cell">
-                      <div class="user-avatar mg">{{ u.firstName[0] }}{{ u.lastName[0] }}</div>
-                      <div>
-                        <div class="user-name">{{ u.firstName }} {{ u.lastName }}</div>
-                        <div class="text-muted">{{ u.email }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    @if (u.referentId) {
-                      <div class="user-cell">
-                        <div class="user-avatar re sm">{{ getReferentInitials(u.referentId) }}</div>
-                        <span>{{ getReferentName(u.referentId) }}</span>
-                      </div>
-                    } @else {
-                      <span class="none">Non configuré</span>
-                    }
-                  </td>
-                  <td>
-                    <mat-form-field appearance="outline" class="assign-field">
-                      <mat-select [value]="u.referentId || null" (selectionChange)="setReferent(u, $event.value)">
-                        <mat-option [value]="null">— Aucun —</mat-option>
-                        @for (r of reunionUsers; track r.id) {
-                          <mat-option [value]="r.id">{{ r.firstName }} {{ r.lastName }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </td>
-                </tr>
-              }
-              @if (madagascarCollabs.length === 0) {
-                <tr><td colspan="3" class="empty-state">
-                  <mat-icon>people_outline</mat-icon><span>Aucun collaborateur à Madagascar</span>
-                </td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
+  <div class="info-banner">
+    <mat-icon>info</mat-icon>
+    <span>Seul le collaborateur Réunion lié (et l'admin) peut assigner des tâches à un collaborateur Madagascar.</span>
+  </div>
 
-      } @else {
-        <!-- ======= VUE NON-ADMIN (Mon équipe) ======= -->
-        <div class="page-header">
-          <div class="page-header__left">
-            <mat-icon class="page-icon">people</mat-icon>
-            <div>
-              <h1>Mon équipe</h1>
-              @if (auth.currentUser()?.site === 'REUNION') {
-                <p>Vos collaborateurs Madagascar rattachés</p>
+  <!-- Search -->
+  <div class="search-bar" (click)="$event.stopPropagation()">
+    <mat-icon>search</mat-icon>
+    <input class="search-input" type="text"
+           placeholder="Rechercher un collaborateur…"
+           [value]="searchQuery()"
+           (input)="searchQuery.set($any($event.target).value)" />
+    @if (searchQuery()) {
+      <button class="search-clear" (click)="searchQuery.set('')">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Collaborateur Madagascar</th>
+          <th>Équipe Réunion</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of filteredMgCollabs; track u.id) {
+          <tr class="tr-main" [class.tr-main--open]="assignPanelUserId() === u.id">
+            <td>
+              <div class="user-cell">
+                <div class="avatar mg">{{ u.firstName[0] }}{{ u.lastName[0] }}</div>
+                <div>
+                  <div class="cell-name">{{ u.firstName }} {{ u.lastName }}</div>
+                  <div class="cell-email">{{ u.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              @if (u.referentId) {
+                <div class="user-cell">
+                  <div class="avatar re">{{ getReferentInitials(u.referentId) }}</div>
+                  <span class="cell-name">{{ getReferentName(u.referentId) }}</span>
+                </div>
               } @else {
-                <p>Votre collaborateur Réunion référent</p>
+                <span class="badge-none">Non assigné</span>
               }
-            </div>
-          </div>
-        </div>
+            </td>
+            <td class="td-action">
+              <button class="btn-action"
+                      [class.btn-action--active]="assignPanelUserId() === u.id"
+                      matRipple
+                      (click)="$event.stopPropagation(); openAssignPanel(u.id)">
+                <mat-icon>{{ u.referentId ? 'swap_horiz' : 'add_link' }}</mat-icon>
+                {{ u.referentId ? 'Changer' : 'Assigner' }}
+              </button>
+            </td>
+          </tr>
 
-        @if (auth.currentUser()?.site === 'REUNION') {
-          <!-- Collab Réunion : voir son équipe MG -->
-          @if (myTeam && myTeam.team.length > 0) {
-            <div class="my-team-grid">
-              @for (m of myTeam.team; track m.id) {
-                <div class="member-card">
-                  <div class="user-avatar mg lg">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
-                  <div class="member-info">
-                    <div class="member-name">{{ m.firstName }} {{ m.lastName }}</div>
-                    <div class="member-role">🇲🇬 Collaborateur Madagascar</div>
-                    <div class="member-email">{{ m.email }}</div>
+          @if (assignPanelUserId() === u.id) {
+            <tr class="tr-panel">
+              <td colspan="3" (click)="$event.stopPropagation()">
+                <div class="assign-bar">
+                  <span class="assign-label">Assigner à :</span>
+                  <div class="assign-chips">
+                    @for (r of reunionUsers; track r.id) {
+                      <button class="assign-chip"
+                              [class.assign-chip--active]="u.referentId === r.id"
+                              matRipple
+                              (click)="setReferentAndClose(u, r.id)">
+                        <div class="avatar re sm">{{ r.firstName[0] }}{{ r.lastName[0] }}</div>
+                        {{ r.firstName }} {{ r.lastName }}
+                        @if (u.referentId === r.id) {
+                          <mat-icon class="chip-check">check_circle</mat-icon>
+                        }
+                      </button>
+                    }
+                    @if (u.referentId) {
+                      <button class="assign-chip assign-chip--remove" matRipple
+                              (click)="setReferentAndClose(u, null)">
+                        <mat-icon>link_off</mat-icon>
+                        Retirer
+                      </button>
+                    }
                   </div>
                 </div>
-              }
-            </div>
-          } @else {
-            <div class="empty-team">
-              <mat-icon>people_outline</mat-icon>
-              <p>Aucun collaborateur Madagascar ne vous est rattaché pour l'instant.</p>
-              <span>Contactez l'administrateur pour configurer votre équipe.</span>
-            </div>
-          }
-        } @else {
-          <!-- Collab Madagascar : voir son référent Réunion -->
-          @if (myTeam && myTeam.referent) {
-            <div class="my-team-grid">
-              <div class="member-card">
-                <div class="user-avatar re lg">{{ myTeam.referent.firstName[0] }}{{ myTeam.referent.lastName[0] }}</div>
-                <div class="member-info">
-                  <div class="member-name">{{ myTeam.referent.firstName }} {{ myTeam.referent.lastName }}</div>
-                  <div class="member-role">🇷🇪 Collaborateur Réunion — Référent</div>
-                  <div class="member-email">{{ myTeam.referent.email }}</div>
-                </div>
-              </div>
-            </div>
-          } @else {
-            <div class="empty-team">
-              <mat-icon>person_off</mat-icon>
-              <p>Vous n'avez pas encore de collaborateur Réunion référent.</p>
-              <span>Contactez l'administrateur pour être rattaché à une équipe.</span>
-            </div>
+              </td>
+            </tr>
           }
         }
-      }
+
+        @if (filteredMgCollabs.length === 0) {
+          <tr>
+            <td colspan="3" class="td-empty">
+              <mat-icon>{{ searchQuery() ? 'search_off' : 'people_outline' }}</mat-icon>
+              <span>{{ searchQuery() ? 'Aucun résultat pour "' + searchQuery() + '"' : 'Aucun collaborateur Madagascar' }}</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  } @else {
+  <!-- ══ VUE NON-ADMIN (Mon équipe) ═════════════════════════ -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mon équipe</h1>
+        <p class="page-sub">
+          @if (auth.currentUser()?.site === 'REUNION') { Vos collaborateurs Madagascar rattachés }
+          @else { Votre collaborateur Réunion référent }
+        </p>
+      </div>
     </div>
+
+    @if (auth.currentUser()?.site === 'REUNION') {
+      @if (myTeam && myTeam.team.length > 0) {
+        <div class="my-team-grid">
+          @for (m of myTeam.team; track m.id) {
+            <div class="member-card">
+              <div class="avatar mg lg">{{ m.firstName[0] }}{{ m.lastName[0] }}</div>
+              <div>
+                <div class="cell-name" style="font-size:15px">{{ m.firstName }} {{ m.lastName }}</div>
+                <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">🇲🇬 Collaborateur Madagascar</div>
+                <div class="cell-email" style="margin-top:2px">{{ m.email }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-team">
+          <mat-icon>people_outline</mat-icon>
+          <p>Aucun collaborateur Madagascar ne vous est rattaché.</p>
+          <span>Contactez l'administrateur pour configurer votre équipe.</span>
+        </div>
+      }
+    } @else {
+      @if (myTeam && myTeam.referent) {
+        <div class="my-team-grid">
+          <div class="member-card">
+            <div class="avatar re lg">{{ myTeam.referent.firstName[0] }}{{ myTeam.referent.lastName[0] }}</div>
+            <div>
+              <div class="cell-name" style="font-size:15px">{{ myTeam.referent.firstName }} {{ myTeam.referent.lastName }}</div>
+              <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">🇷🇪 Référent Réunion</div>
+              <div class="cell-email" style="margin-top:2px">{{ myTeam.referent.email }}</div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="empty-team">
+          <mat-icon>person_off</mat-icon>
+          <p>Vous n'avez pas encore de collaborateur Réunion référent.</p>
+          <span>Contactez l'administrateur pour être rattaché à une équipe.</span>
+        </div>
+      }
+    }
+  }
+</div>
   `,
   styles: [`
-    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
-    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-    .page-header__left { display: flex; align-items: center; gap: 16px; }
-    .page-icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
-    .page-header h1 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; }
-    .page-header p { font-size: 13px; color: #94a3b8; margin: 0; }
+    .page { padding: 32px 36px; }
 
-    .info-banner { display: flex; align-items: flex-start; gap: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; margin-bottom: 28px; font-size: 13px; color: #1d4ed8; line-height: 1.5; }
-    .info-banner mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+    /* ── Header ──────────────────────────────────────────────── */
+    .page-header  { margin-bottom: 20px; }
+    .page-title   { font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; }
+    .page-sub     { font-size: 13px; color: #64748B; margin: 4px 0 0; }
+    .stat-ok      { color: #059669; font-weight: 600; }
+    .stat-warn    { color: #D97706; font-weight: 600; }
 
-    /* Team cards */
-    .team-card { background: white; border: 1px solid #e8ecf0; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-    .team-card__header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-    .team-name { font-size: 15px; font-weight: 700; color: #1e293b; }
-    .team-site { font-size: 12px; color: #94a3b8; }
-    .team-count { margin-left: auto; font-size: 12px; font-weight: 600; color: #6366f1; background: #eef2ff; padding: 3px 10px; border-radius: 20px; }
-    .team-members { display: flex; flex-wrap: wrap; gap: 8px; }
-    .member-chip { display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 4px 6px 4px 10px; font-size: 13px; color: #1e293b; font-weight: 500; }
-    .btn-remove { color: #cbd5e1 !important; width: 24px !important; height: 24px !important; }
-    .btn-remove:hover { color: #f87171 !important; }
-    ::ng-deep .btn-remove .mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
-    .no-member { font-size: 13px; color: #cbd5e1; font-style: italic; padding: 4px 0; }
+    /* ── Info banner ─────────────────────────────────────────── */
+    .info-banner {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 18px;
+      font-size: 13px; color: #1D4ED8; line-height: 1.5;
+    }
+    .info-banner mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
 
-    .section-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
-    .section-title mat-icon { font-size: 20px; width: 20px; height: 20px; color: #6366f1; }
+    /* ── Search ──────────────────────────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 8px;
+      border: 1.5px solid #E2E8F0; border-radius: 10px;
+      padding: 9px 12px; margin-bottom: 16px; background: white;
+      &:focus-within { border-color: #6366F1; }
+    }
+    .search-bar mat-icon { color: #94A3B8; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+    .search-input {
+      flex: 1; border: none; outline: none;
+      font-size: 13.5px; font-family: inherit; color: #0F172A; background: transparent;
+      &::placeholder { color: #94A3B8; }
+    }
+    .search-clear {
+      border: none; background: none; cursor: pointer; padding: 2px;
+      display: flex; align-items: center; color: #94A3B8; border-radius: 4px;
+      &:hover { color: #475569; }
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
 
-    /* Table */
-    .table-card { background: white; border-radius: 16px; border: 1px solid #e8ecf0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+    /* ── Table ───────────────────────────────────────────────── */
+    .table-wrap {
+      background: white; border-radius: 14px; overflow: hidden;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
     .table { width: 100%; border-collapse: collapse; }
-    .table thead th { padding: 14px 20px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; background: #f8fafc; border-bottom: 1px solid #e8ecf0; }
-    .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
-    .table-row:last-child { border-bottom: none; }
-    .table-row:hover { background: #f8fafc; }
-    .table td { padding: 12px 20px; vertical-align: middle; }
-
-    .user-cell { display: flex; align-items: center; gap: 10px; }
-    .user-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; text-transform: uppercase; }
-    .user-avatar.mg { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #15803d; }
-    .user-avatar.re { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1d4ed8; }
-    .user-avatar.sm { width: 28px; height: 28px; font-size: 10px; }
-    .user-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-    .text-muted { font-size: 12px; color: #94a3b8; }
-    .none { font-size: 13px; color: #cbd5e1; font-style: italic; }
-
-    .assign-field { width: 200px; }
-    ::ng-deep .assign-field .mat-mdc-form-field-subscript-wrapper { display: none; }
-    ::ng-deep .assign-field .mat-mdc-text-field-wrapper { padding: 0 8px; }
-
-    .empty-state { text-align: center; padding: 48px !important; color: #94a3b8; }
-    .empty-state mat-icon { font-size: 36px; width: 36px; height: 36px; display: block; margin: 0 auto 8px; }
-
-    /* Non-admin "Mon équipe" */
-    .my-team-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
-    .member-card { display: flex; align-items: center; gap: 16px; background: white; border: 1px solid #e8ecf0; border-radius: 14px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); min-width: 280px; }
-    .user-avatar.lg { width: 52px; height: 52px; font-size: 18px; }
-    .member-info { display: flex; flex-direction: column; gap: 3px; }
-    .member-name { font-size: 16px; font-weight: 700; color: #1e293b; }
-    .member-role { font-size: 12px; color: #6366f1; font-weight: 600; }
-    .member-email { font-size: 12px; color: #94a3b8; }
-    .empty-team { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 32px; text-align: center; color: #94a3b8; }
-    .empty-team mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 16px; color: #cbd5e1; }
-    .empty-team p { font-size: 15px; color: #64748b; font-weight: 500; margin: 0 0 6px; }
-    .empty-team span { font-size: 13px; color: #94a3b8; }
-
-    /* ── Permissions ── */
-    .perm-card { background: white; border: 1px solid #e8ecf0; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-    .perm-role-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .perm-role-tab {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 20px; border-radius: 12px;
-      border: 2px solid #e8ecf0; background: #f8fafc;
-      font-size: 14px; font-weight: 600; color: #64748b;
-      cursor: pointer; transition: all .15s;
+    .table thead th {
+      padding: 12px 20px; text-align: left;
+      font-size: 11px; font-weight: 700; color: #94A3B8;
+      text-transform: uppercase; letter-spacing: .7px;
+      background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
     }
-    .perm-role-tab.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
-    .perm-role-badge { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; }
-    .badge--ec  { background: #dbeafe; color: #1d4ed8; }
-    .badge--col { background: #dcfce7; color: #15803d; }
-    .perm-hint { font-size: 13px; color: #94a3b8; margin: 0 0 20px; line-height: 1.5; }
-    .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 24px; }
-    .perm-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 16px; border-radius: 12px;
-      border: 2px solid #e8ecf0; background: #f8fafc;
-      cursor: pointer; transition: all .15s; user-select: none;
+    .tr-main {
+      border-bottom: 1px solid #F1F5F9;
+      transition: background .1s;
+      &:last-child { border-bottom: none; }
+      &:hover { background: #F8FAFC; }
+      &--open { background: #F5F3FF !important; }
     }
-    .perm-item:hover { border-color: #a5b4fc; background: #f5f3ff; }
-    .perm-item--checked { border-color: #6366f1; background: #eef2ff; }
-    .perm-item__icon { width: 36px; height: 36px; border-radius: 10px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .perm-item--checked .perm-item__icon { background: #6366f1; }
-    .perm-item__icon mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; }
-    .perm-item--checked .perm-item__icon mat-icon { color: white; }
-    .perm-item__label { flex: 1; font-size: 13.5px; font-weight: 600; color: #334155; }
-    .perm-item--checked .perm-item__label { color: #3730a3; }
-    .perm-item__check mat-icon { font-size: 20px; width: 20px; height: 20px; color: #cbd5e1; }
-    .perm-item--checked .perm-item__check mat-icon { color: #6366f1; }
-    .perm-actions { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; border-top: 1px solid #f1f5f9; }
-    .perm-count { font-size: 13px; color: #94a3b8; font-weight: 500; }
-    .btn-save-perms {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: #6366f1; color: white; border: none;
-      border-radius: 10px; padding: 10px 22px;
-      font-size: 13.5px; font-weight: 600; cursor: pointer;
-      transition: background .15s; font-family: inherit;
+    .tr-main td { padding: 12px 20px; vertical-align: middle; }
+    .td-action { text-align: right; width: 130px; }
+
+    /* ── Assign panel row ───────────────────────────────────── */
+    .tr-panel td { padding: 0 20px 14px; background: #F5F3FF; border-bottom: 1px solid #E0E7FF; }
+    .assign-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 10px 0 0;
     }
-    .btn-save-perms:hover:not(:disabled) { background: #4f46e5; }
-    .btn-save-perms:disabled { opacity: .6; cursor: default; }
-    .btn-save-perms mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spin { animation: spin 1s linear infinite; }
+    .assign-label { font-size: 12px; font-weight: 600; color: #6366F1; white-space: nowrap; flex-shrink: 0; }
+    .assign-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .assign-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px 5px 6px; border: 1.5px solid #E2E8F0;
+      border-radius: 20px; background: white; cursor: pointer;
+      font-size: 12.5px; font-weight: 500; color: #334155;
+      font-family: inherit; transition: border-color .12s, background .12s;
+      &:hover { border-color: #A5B4FC; background: #EEF2FF; }
+      &--active { border-color: #6366F1; background: #EEF2FF; color: #3730A3; }
+      &--remove { border-color: #FECACA; color: #DC2626; background: #FFF5F5;
+                  &:hover { background: #FEE2E2; } }
+    }
+    .assign-chip .avatar { flex-shrink: 0; }
+    .chip-check { font-size: 14px !important; width: 14px !important; height: 14px !important; color: #6366F1 !important; }
+    .assign-chip--remove mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    /* ── Cells ───────────────────────────────────────────────── */
+    .user-cell  { display: flex; align-items: center; gap: 10px; }
+    .cell-name  { font-size: 13.5px; font-weight: 600; color: #1E293B; }
+    .cell-email { font-size: 11.5px; color: #94A3B8; margin-top: 1px; }
+    .badge-none { font-size: 12.5px; color: #94A3B8; font-style: italic; }
+
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border: 1.5px solid #E2E8F0;
+      border-radius: 8px; background: white; cursor: pointer;
+      font-size: 12.5px; font-weight: 600; color: #475569;
+      font-family: inherit; transition: border-color .12s, background .12s, color .12s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { border-color: #A5B4FC; background: #EEF2FF; color: #4338CA; }
+      &--active { border-color: #6366F1; background: #EEF2FF; color: #4338CA; }
+    }
+
+    /* ── Avatars ─────────────────────────────────────────────── */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+    .avatar.mg { background: #DCFCE7; color: #15803D; }
+    .avatar.re { background: #DBEAFE; color: #1D4ED8; }
+    .avatar.sm { width: 24px; height: 24px; font-size: 9px; border-radius: 6px; }
+    .avatar.lg { width: 50px; height: 50px; font-size: 17px; border-radius: 14px; }
+
+    /* ── Empty ───────────────────────────────────────────────── */
+    .td-empty {
+      text-align: center; padding: 48px !important;
+      color: #94A3B8; font-size: 14px;
+      mat-icon { display: block; font-size: 36px; width: 36px; height: 36px; margin: 0 auto 8px; opacity: .5; }
+    }
+
+    /* ── Non-admin ───────────────────────────────────────────── */
+    .my-team-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+    .member-card {
+      display: flex; align-items: center; gap: 14px;
+      background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+      padding: 18px 22px; min-width: 260px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .empty-team {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 64px 32px; text-align: center; color: #94A3B8;
+      mat-icon { font-size: 44px; width: 44px; height: 44px; margin-bottom: 14px; opacity: .4; }
+      p    { font-size: 14px; color: #64748B; font-weight: 500; margin: 0 0 6px; }
+      span { font-size: 13px; }
+    }
   `],
 })
 export class EquipesComponent implements OnInit, OnDestroy {
   private usersService = inject(UsersService);
   private toast        = inject(ToastService);
   auth = inject(AuthService);
-  private notifStream = inject(NotificationStreamService);
+  private notifStream  = inject(NotificationStreamService);
   private sub = new Subscription();
 
-  users: User[] = [];
+  users:  User[] = [];
   myTeam: { referent: User | null; team: User[] } | null = null;
 
+  searchQuery       = signal('');
+  assignPanelUserId = signal<number | null>(null);
 
   get madagascarCollabs(): User[] {
     return this.users.filter(u => u.site === 'MADAGASCAR' && u.role !== 'ADMIN' && u.isActive);
   }
   get reunionUsers(): User[] {
     return this.users.filter(u => u.site === 'REUNION' && u.isActive);
+  }
+  get filteredMgCollabs(): User[] {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return this.madagascarCollabs;
+    return this.madagascarCollabs.filter(u =>
+      `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
+    );
+  }
+  get assignedCount(): number {
+    return this.madagascarCollabs.filter(u => !!u.referentId).length;
   }
 
   ngOnInit() {
@@ -321,7 +370,6 @@ export class EquipesComponent implements OnInit, OnDestroy {
       this.notifStream.newNotif$.pipe(filter(n => n.type === 'TEAM_ASSIGNED')).subscribe(() => this.load())
     );
   }
-
   ngOnDestroy() { this.sub.unsubscribe(); }
 
   private load() {
@@ -332,26 +380,25 @@ export class EquipesComponent implements OnInit, OnDestroy {
     }
   }
 
-  getTeam(referentId: number): User[] {
-    return this.madagascarCollabs.filter(u => u.referentId === referentId);
-  }
-
   getReferentName(referentId: number): string {
     const u = this.users.find(u => u.id === referentId);
     return u ? `${u.firstName} ${u.lastName}` : 'Inconnu';
   }
-
   getReferentInitials(referentId: number): string {
     const u = this.users.find(u => u.id === referentId);
     return u ? `${u.firstName[0]}${u.lastName[0]}` : '?';
   }
-
+  openAssignPanel(userId: number) {
+    this.assignPanelUserId.set(this.assignPanelUserId() === userId ? null : userId);
+  }
   setReferent(user: User, referentId: number | null) {
     this.usersService.setReferent(user.id, referentId).subscribe(updated => {
       user.referentId = updated.referentId;
       this.toast.success('Équipe mise à jour');
     });
   }
-
+  setReferentAndClose(user: User, referentId: number | null) {
+    this.setReferent(user, referentId);
+    this.assignPanelUserId.set(null);
+  }
 }
-

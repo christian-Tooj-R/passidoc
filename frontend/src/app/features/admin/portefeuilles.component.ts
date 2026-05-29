@@ -574,7 +574,7 @@ interface CollabCard {
   `,
   styles: [`
     /* ─── Layout page ───────────────────────────────── */
-    .page { padding: 32px; max-width: 1280px; margin: 0 auto; }
+    .page { padding: 32px 36px; }
 
     /* ─── En-tête ───────────────────────────────────── */
     .page-header {

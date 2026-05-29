@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req, HttpCode } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -28,6 +28,24 @@ export class UsersController {
   findAll() {
     return this.usersService.findAll();
   }
+
+  /* ── Thème de l'utilisateur connecté ──────────────────────── */
+
+  @Get('me/theme')
+  @ApiOperation({ summary: 'Récupérer les préférences d\'apparence de l\'utilisateur connecté' })
+  getMyTheme(@Req() req: any) {
+    return this.usersService.getTheme(req.user.id);
+  }
+
+  @Patch('me/theme')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sauvegarder les préférences d\'apparence' })
+  @ApiBody({ schema: { type: 'object', description: 'ThemePrefs JSON' } })
+  updateMyTheme(@Req() req: any, @Body() prefs: Record<string, any>) {
+    return this.usersService.saveTheme(req.user.id, prefs);
+  }
+
+  /* ─────────────────────────────────────────────────────────── */
 
   @Get('assignable')
   @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })

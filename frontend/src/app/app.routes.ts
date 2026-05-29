@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { pointageGuard } from './core/guards/pointage.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -24,7 +25,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
       {
@@ -64,17 +65,25 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/portefeuilles.component').then((m) => m.PortefeuillesComponent),
       },
       {
+        path: 'pointage',
+        loadComponent: () => import('./features/pointage/pointage.component').then((m) => m.PointageComponent),
+      },
+      {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
+      },
+      {
+        path: 'personnalisation',
+        loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
       },
     ],
   },
   // ── Dossier plein écran (sans sidebar principale) ──────
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./layout/fullscreen-layout/fullscreen-layout.component').then((m) => m.FullscreenLayoutComponent),
     children: [
       {

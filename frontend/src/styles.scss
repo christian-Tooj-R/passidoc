@@ -84,6 +84,10 @@ html { @include mat.all-component-themes($passidoc-theme); }
 }
 
 /* ─────────────────────────────────────────────
+   DEBUG TEMPORAIRE — À supprimer après test
+───────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────
    Reset & base
 ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -108,6 +112,317 @@ h1, h2, h3, h4, h5, h6 {
 }
 p { margin: 0; }
 a { text-decoration: none; }
+
+/* ─────────────────────────────────────────────
+   Thème adaptatif — cards & texte global
+───────────────────────────────────────────── */
+
+/* Toutes les "section-card" (utilisées dans les pages admin/collab) */
+.section-card {
+  background:   var(--page-card-bg,     #FFFFFF) !important;
+  border-color: var(--page-card-border, #E8ECF0) !important;
+}
+
+/* Titres et textes globaux qui doivent suivre le thème */
+body {
+  color: var(--panel-text, var(--text-2));
+}
+
+/* ─────────────────────────────────────────────
+   Mode sombre global — tokens + overrides massifs
+   Stratégie : CSS vars pour les composants qui
+   les utilisent, sélecteurs !important pour tous
+   les hex hardcodés dans les composants Angular.
+───────────────────────────────────────────── */
+body.theme-dark {
+
+  /* ── Redéfinition des tokens CSS ─────────────────────── */
+  --text-1:            #F1F5F9;
+  --text-2:            #CBD5E1;
+  --text-3:            #94A3B8;
+  --text-4:            #64748B;
+  --surface:           var(--page-card-bg,  #1E293B);
+  --surface-2:         #1E293B;
+  --surface-container: #1E293B;
+  --bg:                var(--page-bg, #0F172A);
+  --border:            rgba(255,255,255,.08);
+  --border-strong:     rgba(255,255,255,.12);
+  --navy-light:        #1E293B;
+  --navy-border:       rgba(255,255,255,.12);
+
+  /* ── Scrollbar ────────────────────────────────────────── */
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+}
+
+/* ── Sidebar panel — dark mode ────────────────────────────────── */
+
+body.theme-dark app-sidebar .panel {
+  background: #141E2F !important;
+  border-color: rgba(255,255,255,.08) !important;
+}
+body.theme-dark app-sidebar .panel-footer {
+  border-color: rgba(255,255,255,.07) !important;
+}
+
+/* Textes */
+body.theme-dark app-sidebar .panel-header__title { color: #F1F5F9 !important; }
+body.theme-dark app-sidebar .panel-header__count { color: #3D4E68 !important; }
+body.theme-dark app-sidebar .panel-group-label   { color: #3D4E68 !important; }
+body.theme-dark app-sidebar .panel-user__name    { color: #F1F5F9 !important; }
+body.theme-dark app-sidebar .panel-user__role    { color: #4D6080 !important; }
+body.theme-dark app-sidebar .panel-org           { color: #3D4E68 !important; }
+body.theme-dark app-sidebar .panel-user:hover    { background: rgba(255,255,255,.06) !important; }
+body.theme-dark app-sidebar .panel-user__status  { border-color: #141E2F !important; }
+
+/* Items */
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active) { color: #B8C5D9 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active) .panel-item__icon { color: #4D6080 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active):hover { background: rgba(255,255,255,.07) !important; color: #E2EAF4 !important; }
+body.theme-dark app-sidebar .panel-item:not(.panel-item--active):hover .panel-item__icon { color: #94A3B8 !important; }
+
+/* ── Zone de contenu principal ────────────────────────────
+   Tous les overrides !important appliqués ici pour couvrir
+   les hex hardcodés dans les composants Angular encapsulés.
+──────────────────────────────────────────────────────────── */
+body.theme-dark .layout__main {
+
+  /* ── Fonds de page ──────────────────────────────────── */
+  background: var(--page-bg) !important;
+  color: #CBD5E1 !important;
+
+  /* Wrappers de page (*-page, *-wrapper, *-content) */
+  [class$="-page"], [class*="-page "],
+  [class$="-wrapper"], [class$="-content"]:not([class*="mat-"]) {
+    background: var(--page-bg, #0F172A) !important;
+  }
+
+  /* ── Surfaces / cards / sections ───────────────────── */
+  /* On cible les classes typiques sans cibler les badges
+     ni les éléments à couleur intentionnelle */
+  [class$="-section"],  [class*="-section "]:not([class*="badge"]),
+  [class$="-card"]:not([class*="note-card"]):not([class*="badge"]),
+  [class*=" -card"]:not([class*="badge"]),
+  [class$="-block"],    [class*="-block "],
+  [class$="-kpi"],
+  [class$="-box"],
+  [class$="-panel"]:not([class*="mat-"]),
+  [class$="-wrap"]:not([class*="chart"]):not([class*="mat-"]):not([class*="prog"]) {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Hero dashboard */
+  .hero { background: #0D2B25 !important; border-color: rgba(255,255,255,.08) !important; }
+  .hero__stats { background: rgba(255,255,255,.07) !important; }
+  .h-stat__div  { background: rgba(255,255,255,.12) !important; }
+
+  /* Alertes — fond rouge → version dark */
+  .alertes { background: #2D0A0A !important; }
+
+  /* Chart cards */
+  .chart-card { background: #111827 !important; border-color: rgba(255,255,255,.08) !important; }
+
+  /* Collab tabs */
+  .ctab { background: #1E293B !important; border-color: rgba(255,255,255,.10) !important; }
+  .ctab:hover { background: #263548 !important; }
+  .ctab--active { background: #1E1B4B !important; border-color: rgba(99,102,241,.40) !important; }
+  .ctab-name { color: #F1F5F9 !important; }
+
+  /* Filter chips / vue-toggle */
+  [class*="fchip"]:not([class*="fchip--active"]) {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .fchip-count { background: #263548 !important; color: #94A3B8 !important; }
+  .fchip-sep   { background: rgba(255,255,255,.10) !important; }
+  .tb-sort { background: #1E293B !important; }
+  [class*="vt-btn"]:not([class*="vt-active"]) {
+    color: #94A3B8 !important;
+  }
+  [class*="vt-btn"]:hover { background: #1E293B !important; color: #F1F5F9 !important; }
+  [class*="vt-active"] { background: #263548 !important; color: #F1F5F9 !important; }
+  [class*="tb-search"] {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+  }
+  [class*="tb-search"] input { color: #F1F5F9 !important; background: transparent !important; }
+
+  /* ── Textes — titres ────────────────────────────────── */
+  h1, h2, h3, h4, h5, h6 { color: #F1F5F9 !important; }
+
+  [class*="__title"],  [class*="-title"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__name"],   [class*="-name"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__heading"], [class*="-heading"],
+  [class*="__val"]:not([class*="val--"]),  /* kpi values */
+  [class*="kpi__val"],
+  .bc-current { color: #F1F5F9 !important; }
+
+  /* ── Textes — secondaire ────────────────────────────── */
+  [class*="__sub"],    [class*="-sub"]:not([class*="mat-"]),
+  [class*="__date"],   [class*="-date"]:not([class*="badge"]),
+  [class*="__lbl"],    [class*="__label"]:not([class*="badge"]):not([class*="mat-"]),
+  [class*="__eyebrow"],[class*="-meta"],
+  [class*="__role"],   [class*="-role"],
+  [class*="section-label"],
+  [class*="__kpi"] [class*="__lbl"],
+  .bc-home, .bc-sep   { color: #94A3B8 !important; }
+
+  /* Texte courant */
+  p:not([class*="badge"]) { color: #CBD5E1 !important; }
+
+  /* ── Séparateurs / lignes ───────────────────────────── */
+  [class*="__div"],  [class*="-sep"],
+  [class*="-divider"]:not([class*="mat-"]) {
+    background: rgba(255,255,255,.10) !important;
+  }
+
+  /* ── Tables ─────────────────────────────────────────── */
+  table  { background: transparent !important; color: #CBD5E1 !important; }
+  thead  { background: rgba(255,255,255,.03) !important; }
+  th     { color: #94A3B8 !important; border-color: rgba(255,255,255,.08) !important;
+           background: transparent !important; }
+  td     { color: #CBD5E1 !important; border-color: rgba(255,255,255,.06) !important; }
+  tr:hover td { background: rgba(255,255,255,.04) !important; }
+
+  /* Material table */
+  .mat-mdc-table          { background: var(--page-card-bg, #1E293B) !important; }
+  .mat-mdc-header-cell    { color: #94A3B8 !important; border-color: rgba(255,255,255,.08) !important;
+                             background: rgba(255,255,255,.03) !important; }
+  .mat-mdc-cell           { color: #CBD5E1 !important; border-color: rgba(255,255,255,.06) !important; }
+  .mat-mdc-row:hover .mat-mdc-cell { background: rgba(255,255,255,.04) !important; }
+
+  /* ── Inputs / formulaires natifs ───────────────────── */
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea, select {
+    background: #1E293B !important;
+    color: #F1F5F9 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+  input::placeholder, textarea::placeholder { color: #64748B !important; }
+
+  /* Material form fields */
+  .mat-mdc-text-field-wrapper    { background: #1E293B !important; }
+  .mat-mdc-form-field input,
+  .mat-mdc-form-field textarea   { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text     { color: #F1F5F9 !important; }
+
+  /* ── Tabs Material ──────────────────────────────────── */
+  .mat-mdc-tab-group .mat-mdc-tab-header {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-mdc-tab .mdc-tab__text-label       { color: #94A3B8 !important; }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: #F1F5F9 !important; }
+  .mat-mdc-tab-body-wrapper               { background: transparent !important; }
+
+  /* ── Expansion panels ───────────────────────────────── */
+  .mat-expansion-panel {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-expansion-panel-header-title       { color: #F1F5F9 !important; }
+  .mat-expansion-panel-header-description { color: #94A3B8 !important; }
+
+  /* ── Cards Material & globales ──────────────────────── */
+  .card, .mat-mdc-card, .section-card {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.07) !important;
+  }
+  .card-title { color: #F1F5F9 !important; }
+
+  /* ── Boutons secondaires ────────────────────────────── */
+  .btn-secondary {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+  .btn-secondary:hover { background: #263548 !important; }
+  .btn-ghost { color: #94A3B8 !important; }
+  .btn-ghost:hover { background: rgba(255,255,255,.07) !important; color: #F1F5F9 !important; }
+
+  /* ── Badges (adaptés en dark) ───────────────────────── */
+  .badge-gray   { background: #1E293B; color: #94A3B8;  border-color: rgba(255,255,255,.10); }
+  .badge-navy   { background: #1E293B; color: #93C5FD;  border-color: rgba(147,197,253,.20); }
+  .badge-blue   { background: #172554; color: #93C5FD;  border-color: rgba(147,197,253,.25); }
+  .badge-green  { background: #052E16; color: #86EFAC;  border-color: rgba(134,239,172,.25); }
+  .badge-red    { background: #2E0202; color: #FCA5A5;  border-color: rgba(252,165,165,.25); }
+  .badge-orange { background: #2C1503; color: #FCD34D;  border-color: rgba(252,211,77,.25);  }
+  .badge-purple { background: #1E0646; color: #C4B5FD;  border-color: rgba(196,181,253,.25); }
+
+  /* ── Menus / popovers ───────────────────────────────── */
+  .mat-mdc-menu-panel {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .mat-mdc-menu-item { color: #CBD5E1 !important; }
+  .mat-mdc-menu-item .mat-icon { color: #94A3B8 !important; }
+  .mat-mdc-menu-item:hover { background: rgba(255,255,255,.07) !important; }
+
+  /* ── Progress bars ──────────────────────────────────── */
+  [class*="prog"]:not([class*="-fill"]):not([class*="mat-"]) {
+    background: rgba(255,255,255,.12) !important;
+  }
+
+  /* ── Divers ─────────────────────────────────────────── */
+  .empty-state h3 { color: #CBD5E1 !important; }
+  .empty-state p  { color: #94A3B8 !important; }
+  .empty-state mat-icon { color: #475569 !important; }
+}
+
+/* ── Dialogs (CDK overlay, hors layout__main) ─────────────
+   Les dialogs sont rendus dans .cdk-overlay-container,
+   pas dans .layout__main, donc override séparé.
+──────────────────────────────────────────────────────────── */
+body.theme-dark .cdk-overlay-container {
+  .mdc-dialog__surface,
+  .mat-mdc-dialog-surface {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6     { color: #F1F5F9 !important; }
+  p                            { color: #CBD5E1 !important; }
+  [class*="__title"], [class*="-title"]:not([class*="mat-"]) { color: #F1F5F9 !important; }
+  [class*="__sub"], [class*="-sub"]   { color: #94A3B8 !important; }
+
+  [class$="-section"]:not([class*="cdk-"]),
+  [class$="-card"]:not([class*="note-card"]):not([class*="cdk-"]),
+  [class$="-block"]:not([class*="cdk-"]),
+  [class$="-box"]:not([class*="cdk-"]) {
+    background: #111827 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  .mat-mdc-text-field-wrapper  { background: #1E293B !important; }
+  .mat-mdc-form-field input,
+  .mat-mdc-form-field textarea { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text     { color: #F1F5F9 !important; }
+
+  .mat-mdc-tab-group .mat-mdc-tab-header {
+    background: #162032 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .mat-mdc-tab .mdc-tab__text-label { color: #94A3B8 !important; }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: #F1F5F9 !important; }
+
+  .btn-secondary {
+    background: #1E293B !important;
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+}
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -431,3 +746,1552 @@ a { text-decoration: none; }
   margin-bottom: 8px; padding: 0 4px;
 }
 .section-title mat-icon { font-size: 13px; width: 13px; height: 13px; }
+
+/* ─────────────────────────────────────────────
+   Accessibilité — réduire les animations
+───────────────────────────────────────────── */
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0ms !important;
+  transition-duration: 0ms !important;
+}
+
+/* ─────────────────────────────────────────────
+   Dialog espace — supprime padding par défaut
+───────────────────────────────────────────── */
+.aro-create-dialog .mat-mdc-dialog-surface {
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+/* ─────────────────────────────────────────────
+   Dialog pointage — sans backdrop, ombre forte
+   pour faire ressortir le modal sur la page
+───────────────────────────────────────────── */
+.pointage-dialog .mat-mdc-dialog-container {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.32),
+    0 2px 8px rgba(0,0,0,.20) !important;
+}
+
+/* ─────────────────────────────────────────────
+   Page Personnalisation — dark mode
+   (les composants utilisent des couleurs
+   hardcodées light non couvertes par les règles
+   génériques body.theme-dark .layout__main)
+───────────────────────────────────────────── */
+body.theme-dark .layout__main {
+
+  /* Boutons thème sidebar (background: white dans composant) */
+  .t-sw {
+    background: #0F172A !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .t-sw__label { color: #94A3B8 !important; }
+  .t-sw--on .t-sw__label { color: #A5B4FC !important; }
+  .t-sw__check { background: #1E293B !important; }
+
+  /* Boutons style panneau */
+  .ps-card {
+    background: #0F172A !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .ps-card__foot {
+    background: #1E293B !important;
+    color: #94A3B8 !important;
+  }
+
+  /* Constructeur dégradé personnalisé */
+  .cg-builder {
+    background: rgba(99,102,241,.08) !important;
+    border-color: rgba(99,102,241,.20) !important;
+  }
+  .cg-title { color: #A5B4FC !important; }
+  .cp-wrap {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+  .cp-hex, .cp-field__label, .cg-angles__label { color: #64748B !important; }
+  .angle-btn {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    span, mat-icon { color: #94A3B8 !important; }
+  }
+  .angle-btn--on, .angle-btn--on:hover {
+    background: #6366F1 !important;
+    border-color: #6366F1 !important;
+    span, mat-icon { color: white !important; }
+  }
+
+  /* Bouton reset */
+  .btn-reset {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #94A3B8 !important;
+  }
+
+  /* Colonne preview sticky */
+  .pv-sticky {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .pv-label { color: #64748B !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — overrides composants (ajout post-audit)
+   Stratégie : sélecteurs ciblés sur les classes des composants,
+   tous sous body.theme-dark .layout__main pour la spécificité.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Tokens dark réutilisables ──────────────────────────────── */
+/* --dk-card  : fond des cartes/tables       = #1A2535            */
+/* --dk-card2 : fond légèrement plus clair   = #1E293B            */
+/* --dk-hover : survol ligne/item            = rgba(255,255,255,.05) */
+/* --dk-head  : fond thead                   = rgba(255,255,255,.04) */
+/* --dk-border: bordure                      = rgba(255,255,255,.08) */
+/* --dk-text1 : texte principal              = #F1F5F9             */
+/* --dk-text2 : texte secondaire             = #94A3B8             */
+/* --dk-muted : texte très atténué           = #64748B             */
+
+body.theme-dark .layout__main {
+
+  /* ── Patterns généraux communs à toutes les pages ─────────── */
+
+  /* Cartes, tables, panneaux blancs */
+  .table-card, .stat-card, .collab-card, .perm-card, .task-card,
+  .filter-bar, .info-banner, .table-wrap, .listing-section,
+  .semaine-card, .listing-table-wrap, .hist-section,
+  .fm-row, .fm-card, .space-card, .palette-panel,
+  .detail-panel, .assign-chip, .btn-action,
+  .role-tab, .menu-item, .kpi, .dossier-card,
+  .folder-item, .sk-bar, .member-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Éléments gris très clairs (#F8FAFC, #F9FAFB, #F1F5F9…) */
+  .stat-card__icon, .kanban-col, .jour-badge,
+  .score-bar-track, .score-track, .tr-panel td,
+  .confirm-btn--cancel, .fm-search,
+  .fm-view-btn:not(.fm-view-btn--active),
+  .card-drag-handle, .prio-static, .td-id,
+  .role-tab__badge {
+    background: rgba(255,255,255,.07) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Thead / header de tableau */
+  .listing-table thead tr, .mini-table thead,
+  .hist-table thead tr, .users-table thead,
+  .kanban-col__header { background: rgba(255,255,255,.05) !important; }
+
+  .listing-table th, .hist-table th, .users-table thead th,
+  .sd-table th, .list-header span {
+    color: #64748B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  .listing-table td, .hist-table td, .sd-table td,
+  .lr-label, .cell-name, .user-name, .collab-name,
+  .folder-name, .hc-info__val, .profile__name,
+  .semaine-title, .listing-title, .hist-title,
+  .dossier-name, .folder-link, .date-nav-label,
+  .td-title-static, .td-title-input, .ct-select,
+  .ct-title-input, .sd-title, .filter-bar__num,
+  .card-title, .kpi strong, .stat-card__value,
+  .col-total-val, .semaine-total-val,
+  .task-card .card-title {
+    color: #F1F5F9 !important;
+  }
+
+  .listing-table td, .hist-table td {
+    border-color: rgba(255,255,255,.06) !important;
+  }
+
+  /* Hover lignes */
+  .listing-table .row-main:hover td,
+  .list-row:hover, .table-row:hover,
+  .tr-main:hover { background: rgba(255,255,255,.05) !important; }
+
+  /* Textes secondaires / meta */
+  .stat-card__label, .collab-role, .text-muted, .page-sub,
+  .page-subtitle, .profile__score-label span, .hc-info__lbl,
+  .hc-adn__title, .ch-group, .sidebar__nav-group,
+  .collab-date, .collab-title, .kpi span,
+  .semaine-total-label, .listing-table th,
+  .search-bar__label, .jour-label, .completude-lbl,
+  .empty-team p, .td-prop-lbl, .sd-kpi__lbl,
+  .sd-week-num, .fm-space-meta, .fm-header span,
+  .fm-row__size, .fm-row__date, .fm-card__size,
+  .fm-card__date, .doc-meta, .page-title,
+  .hc-sector__name { color: #94A3B8 !important; }
+
+  /* Bordures de lignes légères */
+  .list-row, .tr-main, .td-title-area, .td-header,
+  .sd-header, .bell-sep { border-color: rgba(255,255,255,.06) !important; }
+
+  /* ── Recherche / inputs ──────────────────────────────────── */
+  .search-bar, .tb-search, .fm-search,
+  .ct-title-input, .ct-select, .ct-date-input,
+  .search-input {
+    background: rgba(255,255,255,.07) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    color: #F1F5F9 !important;
+  }
+  .search-input::placeholder,
+  .ct-title-input::placeholder,
+  .tb-search input::placeholder { color: #64748B !important; }
+  .search-input:focus, .ct-title-input:focus {
+    background: rgba(255,255,255,.10) !important;
+  }
+
+  /* ── Boutons filtres / chips ─────────────────────────────── */
+  .filter-chip:not(.filter-chip--active):not(.fchip--active),
+  .fchip:not(.fchip--active),
+  .prio-btn:not(.active), .type-chip, .prio-chip {
+    background: rgba(255,255,255,.07) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    color: #94A3B8 !important;
+  }
+  .fchip-count { background: rgba(255,255,255,.10) !important; color: #94A3B8 !important; }
+
+  /* ── Boutons icônes / actions ────────────────────────────── */
+  .btn-action, .doc-btn, .nav-btn, .page-btn:not(.page-btn--active),
+  .btn-today:not(.active) {
+    background: rgba(255,255,255,.07) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #94A3B8 !important;
+  }
+  .btn-action:hover, .doc-btn:hover { background: rgba(255,255,255,.12) !important; color: #F1F5F9 !important; }
+
+  /* ── Kanban ──────────────────────────────────────────────── */
+  .kanban-col { border-radius: 10px; }
+  .kanban-col__header--a_faire  { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .kanban-col__header--en_cours { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .kanban-col__header--terminee { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .kanban-col__header--non_fait { background: rgba(225,29,72,.18) !important; color: #FCA5A5 !important; }
+  .kanban-col__header--en_attente { background: rgba(124,58,237,.18) !important; color: #C4B5FD !important; }
+  .task-card { box-shadow: 0 1px 3px rgba(0,0,0,.3) !important; }
+  .card-client { background: rgba(99,102,241,.18) !important; color: #A5B4FC !important; }
+  .kanban-empty { border-color: rgba(255,255,255,.10) !important; color: #4D6080 !important; }
+
+  /* ── Notes ───────────────────────────────────────────────── */
+  .skeleton-card { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+  .sk-line { background: linear-gradient(90deg, #253348 25%, #1E293B 50%, #253348 75%) !important; }
+  .note-title { color: #1A1F36; }
+  .note-body { color: #334155; }
+  .note-footer { border-color: rgba(255,255,255,.08) !important; color: #64748B !important; }
+  .section-label mat-icon, .section-label { color: #64748B !important; }
+  .action-btn { color: #64748B !important; }
+  .action-btn:hover { color: #94A3B8 !important; }
+
+  /* ── Équipes — bannière info ─────────────────────────────── */
+  .info-banner {
+    background: rgba(37,99,235,.12) !important;
+    border-color: rgba(99,102,241,.25) !important;
+    color: #93C5FD !important;
+  }
+  .info-banner mat-icon { color: #93C5FD !important; }
+  .info-row {
+    background: rgba(37,99,235,.12) !important;
+    border-color: rgba(37,99,235,.25) !important;
+    color: #93C5FD !important;
+  }
+
+  /* ── Role-permissions — tabs ─────────────────────────────── */
+  .role-tab { color: #94A3B8 !important; }
+  .role-tab:hover { background: rgba(99,102,241,.10) !important; }
+  .role-tab.active {
+    background: rgba(99,102,241,.18) !important;
+    border-color: rgba(99,102,241,.40) !important;
+    color: #A5B4FC !important;
+  }
+  .role-tab__badge { background: rgba(99,102,241,.20) !important; color: #A5B4FC !important; }
+  .role-tab__label { color: inherit !important; }
+  .menu-item { color: #94A3B8 !important; }
+  .menu-item:hover { background: rgba(99,102,241,.10) !important; border-color: rgba(99,102,241,.25) !important; }
+  .menu-item--on { background: rgba(99,102,241,.18) !important; border-color: rgba(99,102,241,.40) !important; }
+  .menu-item__icon { background: rgba(99,102,241,.20) !important; }
+  .menu-item__label { color: #94A3B8 !important; }
+  .menu-item--on .menu-item__label { color: #A5B4FC !important; }
+  .toggle-track { background: #334155 !important; }
+  .toggle-thumb { background: #94A3B8 !important; }
+
+  /* ── Portefeuilles / Admin — avatars clairs ──────────────── */
+  .collab-avatar, .dossier-avatar, .user-avatar:not(.user-avatar .user-avatar),
+  .folder-avatar-sm {
+    background: rgba(99,102,241,.20) !important;
+    color: #A5B4FC !important;
+  }
+  .user-avatar.re, .profile__site.site--re, .hc-info__site.site--re { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
+  .user-avatar.mg, .profile__site.site--mg, .hc-info__site.site--mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .resp-av { background: rgba(255,255,255,.10) !important; color: #94A3B8 !important; }
+
+  /* ── Client list / Client detail ─────────────────────────── */
+  .explorer { background: var(--page-bg, #0F172A) !important; }
+  .toolbar, .filter-bar { background: var(--page-card-bg, #1E293B) !important; border-color: rgba(255,255,255,.08) !important; }
+  .file-grid { background: var(--page-bg, #0F172A) !important; }
+  .folder-item { background: var(--page-card-bg, #1E293B) !important; border-color: rgba(255,255,255,.08) !important; }
+  .folder-name, .lr-label { color: #F1F5F9 !important; }
+  .folder-sub, .collab-sub, .resp-none { color: #64748B !important; }
+  .list-row:hover { background: rgba(255,255,255,.05) !important; }
+  .score-track, .seg-bar { background: rgba(255,255,255,.08) !important; }
+  .tb-search { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.10) !important; }
+  .sort-btn, .clear-btn, .search-clear { color: #64748B !important; }
+  .sort-btn:hover { background: rgba(255,255,255,.08) !important; }
+
+  /* Detail sidebar/content — géré dans body.theme-dark app-client-detail ci-dessous */
+  .bc-home, .bc-sep { color: #64748B !important; }
+
+  /* ── Pointage — éléments clairs ─────────────────────────── */
+  .semaine-card, .listing-section, .hist-section {
+    background: var(--page-card-bg, #1E293B) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .jour-col--today { background: rgba(37,99,235,.12) !important; }
+  .jour-col--today .jour-label,
+  .jour-col--today .jour-num { color: #93C5FD !important; }
+  .jour-num { color: #F1F5F9 !important; }
+  .jour-badge { background: rgba(255,255,255,.07) !important; }
+  .jour-badge--present { background: rgba(22,163,74,.18) !important; }
+  .jour-badge--parti { background: rgba(37,99,235,.18) !important; }
+  .jour-badge--absent { background: rgba(220,38,38,.18) !important; }
+  .jour-net { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; }
+  .semaine-total { border-color: rgba(255,255,255,.08) !important; }
+  .semaine-total-val { color: #F1F5F9 !important; }
+  .kpi { background: rgba(255,255,255,.05) !important; border-color: rgba(255,255,255,.08) !important; }
+  .kpi--present { background: rgba(22,163,74,.12) !important; }
+  .kpi--absent  { background: rgba(220,38,38,.12) !important; }
+  .kpi--pause   { background: rgba(217,119,6,.12) !important; }
+  .kpi--total   { background: rgba(37,99,235,.12) !important; }
+  .kpi--mois    { background: rgba(124,58,237,.12) !important; }
+  .kpi strong   { color: #F1F5F9 !important; }
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.07) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #94A3B8 !important;
+  }
+  .nav-btn:hover:not(:disabled),
+  .page-btn:hover:not(.page-btn--active) { background: rgba(255,255,255,.12) !important; color: #F1F5F9 !important; }
+  .btn-today { background: rgba(37,99,235,.12) !important; border-color: rgba(37,99,235,.25) !important; color: #93C5FD !important; }
+  .btn-export { background: rgba(22,163,74,.12) !important; border-color: rgba(22,163,74,.25) !important; color: #86EFAC !important; }
+  .employe-avatar { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .employe-avatar--present { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .employe-avatar--pause   { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .employe-avatar--parti   { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .col-jour-val.col-jour--today { background: rgba(22,163,74,.10) !important; }
+  .detail-panel { background: rgba(255,255,255,.04) !important; border-color: rgba(255,255,255,.06) !important; }
+  .seg-bar--travail { background: rgba(22,163,74,.12) !important; }
+  .seg-bar--pause   { background: rgba(217,119,6,.12) !important; }
+  .pause-tag { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .site-badge { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; }
+  .site-badge--re { background: rgba(234,88,12,.18) !important; color: #FDBA74 !important; }
+  .site-badge--mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+
+  /* ── Documents ───────────────────────────────────────────── */
+  .fm-view-btn:not(.fm-view-btn--active) { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.08) !important; }
+  .fm-search { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.10) !important; }
+  .fm-search input { color: #F1F5F9 !important; background: transparent !important; }
+  .fm-row:hover { background: rgba(255,255,255,.05) !important; }
+  .drop-zone { border-color: rgba(255,255,255,.12) !important; }
+  .back-btn { color: #94A3B8 !important; }
+  .back-btn:hover { background: rgba(255,255,255,.07) !important; color: #F1F5F9 !important; }
+  .fm-space-name { color: #F1F5F9 !important; }
+  .palette-panel { background: var(--page-card-bg, #1E293B) !important; border-color: rgba(255,255,255,.08) !important; }
+  .palette-swatch--active { border-color: #F1F5F9 !important; }
+  .space-confirm { background: rgba(220,38,38,.12) !important; border-color: rgba(220,38,38,.25) !important; color: #FCA5A5 !important; }
+  .confirm-btn--cancel { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; border-color: rgba(255,255,255,.10) !important; }
+  .di-pdf    { background: rgba(220,38,38,.15) !important; mat-icon { color: #FCA5A5 !important; } }
+  .di-xlsx, .di-xls { background: rgba(22,163,74,.15) !important; mat-icon { color: #86EFAC !important; } }
+  .di-docx, .di-doc { background: rgba(37,99,235,.15) !important; mat-icon { color: #93C5FD !important; } }
+  .di-jpg, .di-jpeg, .di-png, .di-gif, .di-webp { background: rgba(124,58,237,.15) !important; mat-icon { color: #C4B5FD !important; } }
+  .di-file   { background: rgba(249,115,22,.15) !important; mat-icon { color: #FDBA74 !important; } }
+  .badge-pdf   { background: rgba(220,38,38,.15) !important; color: #FCA5A5 !important; }
+  .badge-xlsx, .badge-xls { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
+  .badge-docx, .badge-doc { background: rgba(37,99,235,.15) !important; color: #93C5FD !important; }
+  .badge-jpg, .badge-jpeg, .badge-png, .badge-gif, .badge-webp { background: rgba(124,58,237,.15) !important; color: #C4B5FD !important; }
+  .badge-file  { background: rgba(249,115,22,.15) !important; color: #FDBA74 !important; }
+
+  /* ── Statuts universels ──────────────────────────────────── */
+  .status-ok, .badge-green, .status-pill.pill--ok,
+  .score-chip--ok { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .status-partial, .badge-orange, .status-pill.pill--partial,
+  .score-chip--partial { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .status-alert, .badge-red, .status-pill.pill--alert,
+  .score-chip--alert { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+
+  .statut-a_faire   { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .statut-en_cours  { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .statut-terminee  { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .statut-non_fait  { background: rgba(225,29,72,.18) !important; color: #FCA5A5 !important; }
+  .statut-en_attente { background: rgba(124,58,237,.18) !important; color: #C4B5FD !important; }
+
+  /* ── Squelettes génériques ───────────────────────────────── */
+  .space-card--skel, .doc-row--skel, .fm-row--skel, .fm-card--skel {
+    background: linear-gradient(90deg, #1A2535 25%, #253348 50%, #1A2535 75%) !important;
+    background-size: 400% 100% !important;
+  }
+}
+
+/* ── Header dark mode ────────────────────────────────────────── */
+body.theme-dark app-header .search-bar {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.09) !important;
+}
+body.theme-dark app-header .search-bar--focused {
+  background: rgba(255,255,255,.11) !important;
+  border-color: #6366F1 !important;
+}
+body.theme-dark app-header .search-bar__input { color: #F1F5F9 !important; }
+body.theme-dark app-header .search-bar__input::placeholder { color: #4D6080 !important; }
+body.theme-dark app-header .search-bar__icon { color: #4D6080 !important; }
+body.theme-dark app-header .search-bar--focused .search-bar__icon { color: #818CF8 !important; }
+body.theme-dark app-header .user-btn {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.09) !important;
+}
+body.theme-dark app-header .user-name { color: #F1F5F9 !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CLIENT DETAIL — dark mode complet (layout + tous les onglets)
+   Scoped sur app-client-detail pour éviter tout conflit.
+═══════════════════════════════════════════════════════════════ */
+body.theme-dark app-client-detail {
+
+  /* ── Titres et textes — couvre tous les onglets ─────────── */
+  h1, h2, h3, h4, h5, h6 { color: #F1F5F9 !important; }
+  p:not([class*="badge"]):not([class*="mat-"]) { color: #CBD5E1 !important; }
+  label { color: #94A3B8 !important; }
+
+  /* ── Topbar ─────────────────────────────────────────────── */
+  .topbar {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .bc-back { color: #93C5FD !important; }
+  .bc-back:hover { background: rgba(37,99,235,.10) !important; }
+  .bc-sep { color: #334155 !important; }
+  .bc-current { color: #F1F5F9 !important; }
+  .score-chip--ok      { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .score-chip--partial { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .score-chip--alert   { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+
+  /* ── Sidebar ────────────────────────────────────────────── */
+  .sidebar {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .profile__bg { background: linear-gradient(180deg, rgba(37,99,235,.10) 0%, transparent 100%) !important; }
+  .profile__name { color: #F1F5F9 !important; }
+  .profile__site.site--re { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
+  .profile__site.site--mg { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
+  .profile__score-label { color: #64748B !important; }
+  .score-track { background: rgba(255,255,255,.08) !important; }
+  .score-pct--ok      { color: #86EFAC !important; }
+  .score-pct--partial { color: #FCD34D !important; }
+  .score-pct--alert   { color: #FCA5A5 !important; }
+  .sidebar__divider   { background: rgba(255,255,255,.08) !important; }
+  .sidenav__label     { color: #3D4E68 !important; }
+  .sidenav__item      { color: #94A3B8 !important; }
+  .sidenav__item:hover { background: rgba(255,255,255,.07) !important; color: #E2EAF4 !important; }
+  .sidenav__item mat-icon { color: #3D4E68 !important; }
+
+  /* ── Content / Hero ─────────────────────────────────────── */
+  .content { background: #0F172A !important; }
+  .content__header {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .ch-text h3 { color: #F1F5F9 !important; }
+
+  .hero {
+    background: #0F172A !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .hc-sector__name { color: #F1F5F9 !important; }
+
+  .hc-adn {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .hc-adn__title { color: #64748B !important; }
+  .hc-adn__pct   { color: #F1F5F9 !important; }
+  .hc-adn__btn   { background: rgba(37,99,235,.15) !important; color: #93C5FD !important; }
+
+  .hc-info {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .hc-info__lbl { color: #64748B !important; }
+  .hc-info__val { color: #F1F5F9 !important; }
+  .hc-info__site.site--re { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
+  .hc-info__site.site--mg { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
+  .hc-info__ico-wrap--grey { background: rgba(255,255,255,.08) !important; mat-icon { color: #64748B !important; } }
+  .hc-info__ico-wrap--blue { background: rgba(37,99,235,.15) !important; mat-icon { color: #93C5FD !important; } }
+  .hc-info__ico-wrap--teal { background: rgba(13,148,136,.15) !important; mat-icon { color: #5EEAD4 !important; } }
+
+  /* ── Skeleton ───────────────────────────────────────────── */
+  .skeleton-wrap { background: #0F172A !important; }
+  .sk-topbar, .sk-sidebar, .sk-content-header {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .sk-divider { background: rgba(255,255,255,.08) !important; }
+
+  /* ══ ONGLETS — patterns larges ═══════════════════════════ */
+
+  /* Cartes / panneaux blancs dans tous les onglets */
+  .adn-card, .kpi-item, .mode-bar, .flux-type-item,
+  .add-panel, .controle-card, .analysis-card,
+  .year-section, .group-section {
+    background: #1E293B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Textes primaires */
+  .card-header h3, .tab-header h2, .tab-header h3,
+  .pilotage-title h3, .year-label, .group-label,
+  .mode-bar__left, .add-panel-title,
+  .flux-type-label, .kpi-val, .kpi-value,
+  .mission-title, .section-title-text {
+    color: #F1F5F9 !important;
+  }
+
+  /* Textes secondaires */
+  .pilotage-title p, .kpi-lbl, .kpi-label,
+  .gp-label, .flux-hint, .add-panel-sub { color: #94A3B8 !important; }
+
+  /* Tables */
+  table { background: transparent !important; }
+  thead tr { background: rgba(255,255,255,.04) !important; }
+  th {
+    color: #64748B !important;
+    border-color: rgba(255,255,255,.08) !important;
+    background: transparent !important;
+  }
+  td {
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.06) !important;
+  }
+  tr:hover td { background: rgba(255,255,255,.04) !important; }
+
+  /* Formulaires / inputs dans les onglets */
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select {
+    background: rgba(255,255,255,.07) !important;
+    color: #F1F5F9 !important;
+    border-color: rgba(255,255,255,.12) !important;
+  }
+  input::placeholder, textarea::placeholder { color: #64748B !important; }
+
+  /* Barres de progression */
+  .gp-bar-wrap, .prog-track { background: rgba(255,255,255,.08) !important; }
+
+  /* ── Onglet Missions ─────────────────────────────────────── */
+  .mission-card--realisee { background: rgba(22,163,74,.12) !important; border-left-color: rgba(34,197,94,.50) !important; }
+  .mission-card--refusee  { background: rgba(249,115,22,.12) !important; border-left-color: rgba(249,115,22,.50) !important; }
+  .mission-card--detectee { background: rgba(59,130,246,.12) !important; border-left-color: rgba(59,130,246,.50) !important; }
+  [class*="group-badge"] { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  [class*="group-divider"] { border-color: rgba(255,255,255,.06) !important; }
+
+  /* ── Onglet Tâches / KPI ─────────────────────────────────── */
+  .kpi-green .kpi-icon  { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .kpi-orange .kpi-icon { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .kpi-red .kpi-icon    { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+  .kpi-blue .kpi-icon   { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .kpi-done { border-color: rgba(22,163,74,.30) !important; }
+  .kpi-done .kpi-val { color: #86EFAC !important; }
+  .kpi-todo .kpi-val { color: #93C5FD !important; }
+
+  /* ── Onglet ADN ──────────────────────────────────────────── */
+  .adn-card--secteur { background: rgba(37,99,235,.06) !important; border-color: rgba(37,99,235,.20) !important; }
+  .card-header mat-icon { color: #818CF8 !important; }
+  .mode-badge--read { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .mode-badge--edit { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+  .flux-type-active { background: rgba(99,102,241,.18) !important; border-color: rgba(99,102,241,.40) !important; }
+  .flux-type-icon { color: #818CF8 !important; }
+
+  /* ── Onglet Fiche identité / badges ─────────────────────── */
+  .badge-re { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
+  .badge-mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+}
+
+/* ── CLIENT DETAIL — complément dark mode pour tous les onglets ── */
+body.theme-dark app-client-detail {
+
+  /* Material expansion panels (titres comme "Identité légale") */
+  .mat-expansion-panel { background: #1E293B !important; }
+  .mat-expansion-panel-header { background: #1E293B !important; }
+  .mat-expansion-panel-header:hover { background: rgba(255,255,255,.06) !important; }
+  .mat-expansion-panel-header-title,
+  mat-panel-title { color: #F1F5F9 !important; }
+  .mat-expansion-panel-header-description { color: #94A3B8 !important; }
+  .mat-expansion-indicator::after { border-color: #94A3B8 !important; }
+  .mat-expansion-panel-body { background: #1E293B !important; }
+
+  /* Material form fields dans les onglets */
+  .mat-mdc-text-field-wrapper  { background: rgba(255,255,255,.07) !important; }
+  .mat-mdc-form-field input, .mat-mdc-form-field textarea { color: #F1F5F9 !important; }
+  .mat-mdc-form-field .mat-mdc-floating-label,
+  .mat-mdc-form-field .mdc-floating-label { color: #94A3B8 !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.12) !important; }
+  .mat-mdc-select-value-text { color: #F1F5F9 !important; }
+
+  /* Textes primaires (divs/spans) dans tous les onglets */
+  .mode-bar__left, .ff-value, .flux-type-label,
+  .fiscal-group-title, .year-label, .kpi-value, .kpi-val,
+  .group-label, .mission-title, .add-panel-title, .add-panel-title span,
+  .resource, .fournisseur-name, .section-title,
+  .objective-text, .process-label,
+  .histo-header h3, .pilotage-title h3,
+  .chips-label, .fiche-section { color: #F1F5F9 !important; }
+
+  /* Textes secondaires */
+  .ff-label, .flux-type-hint, .res-id,
+  .gp-label, .kpi-lbl, .kpi-label,
+  .fiscal-group-title span,
+  .entry-meta, .flux-hint { color: #94A3B8 !important; }
+
+  /* Fonds blancs / gris clairs dans les onglets */
+  .flux-type-item { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+  .add-panel { background: #1E293B !important; border-color: rgba(255,255,255,.08) !important; }
+  .fournisseur-card, .fournisseur-item { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+
+  /* ADN — chips de section */
+  .ff-chip       { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .ff-chip--warn { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
+
+  /* Onglet Analyse stratégique — SWOT */
+  .swot-forces       { background: rgba(22,163,74,.10) !important; }
+  .swot-faiblesses   { background: rgba(249,115,22,.10) !important; }
+  .swot-opportunites { background: rgba(37,99,235,.10) !important; }
+  .swot-menaces      { background: rgba(220,38,38,.10) !important; }
+  .swot-forces       .swot-card__header { background: rgba(22,163,74,.22) !important; color: #86EFAC !important; }
+  .swot-faiblesses   .swot-card__header { background: rgba(249,115,22,.22) !important; color: #FDBA74 !important; }
+  .swot-opportunites .swot-card__header { background: rgba(37,99,235,.22) !important; color: #93C5FD !important; }
+  .swot-menaces      .swot-card__header { background: rgba(220,38,38,.22) !important; color: #FCA5A5 !important; }
+
+  /* Onglet Contrôle interne */
+  .section-header--green { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .section-header--red   { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+  .section-header--blue  { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .section-header--gray  { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; }
+  .process-row--green { background: rgba(22,163,74,.06) !important; }
+  .process-row--red   { background: rgba(220,38,38,.06) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.06) !important; }
+  .process-input { background: rgba(255,255,255,.06) !important; color: #F1F5F9 !important; border-color: rgba(255,255,255,.10) !important; }
+
+  /* Onglet Objectifs */
+  .objective-card__header--blue   { background: rgba(37,99,235,.20) !important; color: #93C5FD !important; }
+  .objective-card__header--indigo { background: rgba(67,56,202,.20) !important; color: #A5B4FC !important; }
+  .objective-card__header--purple { background: rgba(124,58,237,.20) !important; color: #C4B5FD !important; }
+  .section-area { background: rgba(255,255,255,.04) !important; }
+
+  /* Onglet Historique */
+  .count        { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .change-pill  { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .entry-create .entry-icon { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .entry-update .entry-icon { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .entry-delete .entry-icon { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+  .badge-create { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .badge-update { background: rgba(37,99,235,.18) !important; color: #93C5FD !important; }
+  .badge-delete { background: rgba(220,38,38,.18) !important; color: #FCA5A5 !important; }
+
+  /* Onglet Missions */
+  .mission-card--ia { background: rgba(139,92,246,.12) !important; border-left-color: rgba(139,92,246,.50) !important; }
+  [class*="mission-badge"] { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+
+  /* Onglet AI Assistant */
+  .ai-input   { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.12) !important; }
+  .ai-textarea { color: #F1F5F9 !important; background: transparent !important; }
+  .ai-textarea::placeholder { color: #4D6080 !important; }
+  .message__content { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.08) !important; color: #CBD5E1 !important; }
+  .suggestion-chip { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.10) !important; color: #94A3B8 !important; }
+  .suggestion-chip:hover { background: rgba(99,102,241,.15) !important; color: #A5B4FC !important; }
+}
+
+/* ── CLIENT DETAIL — tableaux et cellules onglets ────────────── */
+body.theme-dark app-client-detail {
+
+  /* ── Onglet Pilotage (flux-mensuel) ─────────────────────── */
+  .kpi-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .kpi-bar-track, .row-bar-track { background: rgba(255,255,255,.08) !important; }
+
+  /* Grille principale */
+  .grid-wrap {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .th-type, .th-month, .th-progress {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #64748B !important;
+  }
+  .th-month.th-current { background: rgba(99,102,241,.15) !important; color: #A5B4FC !important; }
+  .grid-row { border-color: rgba(255,255,255,.06) !important; }
+  .type-cell span { color: #F1F5F9 !important; }
+  .type-icon { color: #64748B !important; }
+  .row-pct { color: #94A3B8 !important; }
+
+  /* Cellules de statut */
+  .cell-empty   { background: rgba(255,255,255,.05) !important; border-color: rgba(255,255,255,.10) !important; color: #475569 !important; }
+  .cell-empty:hover { background: rgba(99,102,241,.12) !important; border-color: rgba(99,102,241,.35) !important; color: #A5B4FC !important; }
+  .cell-depose  { background: rgba(22,163,74,.18) !important; border-color: rgba(22,163,74,.35) !important; color: #86EFAC !important; }
+  .cell-depose:hover { background: rgba(22,163,74,.28) !important; }
+  .cell-retard  { background: rgba(217,119,6,.18) !important; border-color: rgba(217,119,6,.35) !important; color: #FCD34D !important; }
+  .cell-retard:hover { background: rgba(217,119,6,.28) !important; }
+  .cell-manquant { background: rgba(220,38,38,.18) !important; border-color: rgba(220,38,38,.35) !important; color: #FCA5A5 !important; }
+  .cell-manquant:hover { background: rgba(220,38,38,.28) !important; }
+  .cell-future  { border-color: rgba(255,255,255,.06) !important; color: rgba(255,255,255,.15) !important; }
+  .cell-na      { background: rgba(255,255,255,.03) !important; }
+  .cell-na-dash { color: rgba(255,255,255,.15) !important; }
+
+  /* Points de légende */
+  .dot-orange { background: rgba(217,119,6,.18) !important; border-color: rgba(217,119,6,.35) !important; }
+  .dot-red    { background: rgba(220,38,38,.18) !important; border-color: rgba(220,38,38,.35) !important; }
+  .dot-gray   { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.12) !important; }
+
+  /* Menu */
+  .menu-item-active { background: rgba(255,255,255,.07) !important; }
+
+  /* ── Onglet Tâches — tableaux ───────────────────────────── */
+  .grille-table, .tl-table {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .grille-table thead tr, .tl-table thead tr {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .grille-table th, .tl-table th {
+    color: #64748B !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .grille-table td, .tl-table td {
+    color: #CBD5E1 !important;
+    border-color: rgba(255,255,255,.06) !important;
+  }
+  .grille-table tr:hover td, .tl-table tr:hover td {
+    background: rgba(255,255,255,.04) !important;
+  }
+  .dr-separator td { background: rgba(255,255,255,.05) !important; border-color: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .dr-etape-row { background: rgba(255,255,255,.03) !important; border-color: rgba(255,255,255,.06) !important; }
+  .row-bar, .dr-bar-wrap { background: rgba(255,255,255,.08) !important; }
+  .tl-id  { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .tl-empty { background: rgba(255,255,255,.04) !important; border-color: rgba(255,255,255,.10) !important; }
+  .leg-cell.future { background: rgba(255,255,255,.03) !important; }
+
+  /* Badges type dans taches */
+  .es-a_faire { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+  .type-gv    { background: rgba(194,65,12,.18) !important; color: #FDBA74 !important; }
+  .type-dr    { background: rgba(51,65,85,.40) !important; color: #94A3B8 !important; }
+  .type-autre { background: rgba(255,255,255,.08) !important; color: #94A3B8 !important; }
+
+  /* ── Onglet Contrôle interne — process table ────────────── */
+  .process-table { background: #1A2535 !important; }
+  .process-wrap { background: #1A2535 !important; border-color: rgba(255,255,255,.08) !important; }
+  .process-row { border-color: rgba(255,255,255,.06) !important; }
+  .process-row td { color: #CBD5E1 !important; border-color: rgba(255,255,255,.06) !important; }
+  .process-row:hover td { background: rgba(255,255,255,.04) !important; }
+  .process-note { background: rgba(255,255,255,.06) !important; color: #F1F5F9 !important; border-color: rgba(255,255,255,.10) !important; }
+}
+
+/* ── CLIENT DETAIL — contrôle interne + objectifs ─────────── */
+body.theme-dark app-client-detail {
+
+  /* ── Contrôle interne ───────────────────────────────────── */
+  /* Conteneur des lignes de process (background: white) */
+  .process-rows {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  /* Lignes individuelles */
+  .process-row {
+    border-color: rgba(255,255,255,.08) !important;
+    color: #CBD5E1 !important;
+  }
+  .process-row--green { background: rgba(22,163,74,.08) !important; }
+  .process-row--red   { background: rgba(220,38,38,.08) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.08) !important; }
+  .process-input {
+    color: #F1F5F9 !important;
+    background: transparent !important;
+  }
+  .process-input:focus {
+    background: rgba(255,255,255,.06) !important;
+    outline-color: #6366F1 !important;
+  }
+  .process-input::placeholder { color: #4D6080 !important; }
+  .empty-hint { color: #4D6080 !important; }
+
+  /* Textarea note générale (Material) */
+  .full-width .mat-mdc-text-field-wrapper { background: rgba(255,255,255,.06) !important; }
+
+  /* ── Objectifs ──────────────────────────────────────────── */
+  /* Section title */
+  .section-title {
+    background: rgba(99,102,241,.10) !important;
+    color: #F1F5F9 !important;
+    border-left-color: #6366F1 !important;
+  }
+  .section-title mat-icon { color: #818CF8 !important; }
+
+  /* Cartes objectifs (fond blanc implicite) */
+  .objective-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .card-body { background: #1A2535 !important; }
+
+  /* Relation client section */
+  .ec-grid mat-form-field { color: #F1F5F9 !important; }
+}
+
+/* ── NOTES — dark mode : cartes et champs ─────────────────── */
+body.theme-dark app-notes {
+
+  /* Fond de page */
+  .notes-page { background: transparent !important; }
+
+  /* Cartes — le fond pastel (inline style) est écrasé par !important.
+     La bordure colorée reste depuis [style.border-color] et suffit
+     à distinguer les notes visuellement. */
+  .note-card {
+    background: #1A2535 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25) !important;
+  }
+  .note-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.35) !important; }
+
+  /* Champs de saisie */
+  .note-title {
+    color: #F1F5F9 !important;
+    background: transparent !important;
+  }
+  .note-title::placeholder { color: #4D6080 !important; }
+
+  .note-body {
+    color: #CBD5E1 !important;
+    background: transparent !important;
+  }
+  .note-body::placeholder { color: #4D6080 !important; }
+
+  /* Footer */
+  .note-footer {
+    color: #64748B !important;
+    border-top-color: rgba(255,255,255,.08) !important;
+  }
+
+  /* Boutons d'action */
+  .action-btn { color: #4D6080 !important; }
+  .action-btn:hover { color: #94A3B8 !important; }
+  .action-btn mat-icon.pinned { color: #F59E0B !important; }
+  .delete-btn:hover { color: #F87171 !important; }
+
+  /* Dot couleur sélectionné */
+  .color-dot.selected { border-color: rgba(255,255,255,.6) !important; }
+
+  /* Skeletons */
+  .skeleton-card {
+    background: #1A2535 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .sk-line {
+    background: linear-gradient(90deg, #1A2535 25%, #253348 50%, #1A2535 75%) !important;
+    background-size: 400% 100% !important;
+  }
+
+  /* Labels de section (Épinglées / Autres) */
+  .section-label { color: #64748B !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE — glassmorphism
+   Fond vibrant fixe + cartes ultra-transparentes + blur fort
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Fond aurora : gradient coloré + orbes ─────────────────── */
+body.theme-glass {
+  background: var(--glass-bg,
+    radial-gradient(ellipse at 15% 25%, rgba(139,92,246,.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, rgba(59,130,246,.30) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(16,185,129,.25) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 65%, rgba(245,158,11,.20) 0%, transparent 45%),
+    linear-gradient(135deg, #c7d8ff 0%, #dcd0ff 35%, #c8e8ff 65%, #d0c8ff 100%)
+  ) !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Tous les layouts → transparents (fond passe à travers) ── */
+body.theme-glass .layout,
+body.theme-glass .layout__content,
+body.theme-glass .layout__main {
+  background: transparent !important;
+}
+
+/* ── Containers de page → transparents ───────────────────── */
+body.theme-glass .layout__main {
+  .dash, .notes-page, .pt-page, .explorer, .file-grid,
+  .content,
+  [class$="-page"]:not([class*="badge"]),
+  [class$="-wrapper"]:not([class*="mat-"]) {
+    background: transparent !important;
+  }
+}
+
+/* ── VERRE — recette : opacité 18-28%, blur 20px, border blanche ── */
+body.theme-glass .layout__main {
+
+  /* ── Cartes / panneaux — opacité réduite pour laisser passer le gradient */
+  .card, .section-card,
+  [class$="-card"]:not([class*="note-card"]):not([class*="badge"]):not([class*="score-chip"]):not([class*="hero-card"]),
+  .table-card, .table-wrap, .stat-card, .collab-card, .perm-card, .task-card,
+  .kpi-card, .kpi-item, .grid-wrap, .listing-table-wrap, .hist-table-wrap,
+  .listing-section, .hist-section, .semaine-card,
+  .adn-card, .process-rows, .objective-card, .space-card,
+  .folder-item, .member-card, .dossier-card, .role-tab,
+  .fm-row, .fm-card, .info-banner, .filter-bar, .toolbar {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(220%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.12),
+                inset 0 1px 0 rgba(255,255,255,.60) !important;
+  }
+
+  /* Toolbars, search, chips */
+  .tb-search, .search-bar, .fm-search,
+  .filter-chip:not(.fchip--active), .fchip:not(.fchip--active),
+  .stat-chip, .assign-chip, .fchip-count {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+
+  /* Tables — cellules et lignes explicitement transparentes */
+  table, tbody, tbody tr, td { background: transparent !important; }
+  thead, thead tr { background: rgba(255,255,255,.18) !important; }
+  tr:hover, tr:hover td { background: rgba(255,255,255,.18) !important; }
+
+  /* Inputs / formulaires */
+  input:not([type="color"]):not([type="checkbox"])
+        :not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select {
+    background: rgba(255,255,255,.38) !important;
+    border-color: rgba(255,255,255,.50) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+  }
+
+  /* Kanban colonnes */
+  .kanban-col {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Client-detail sidebar, header interne */
+  .topbar, .content__header, .hc-adn, .hc-info, .sidebar {
+    background: rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .hero { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.30) !important; }
+
+  /* Notes cards */
+  .note-card {
+    background: rgba(255,255,255,.25) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.12),
+                inset 0 1px 0 rgba(255,255,255,.65) !important;
+  }
+
+  /* Expansion panels */
+  .mat-expansion-panel {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.08) !important;
+  }
+  .mat-expansion-panel-header { background: rgba(255,255,255,.15) !important; }
+
+  /* Mat-form-fields */
+  .mat-mdc-text-field-wrapper {
+    background: rgba(255,255,255,.35) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+
+  /* Boutons */
+  .btn-secondary, .btn-ghost, .doc-btn, .btn-action,
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.32) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+body.theme-glass app-header .topbar {
+  background: rgba(255,255,255,.30) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255,255,255,.50) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.55),
+              0 4px 20px rgba(80,60,180,.08) !important;
+}
+body.theme-glass app-header .search-bar {
+  background: rgba(255,255,255,.35) !important;
+  backdrop-filter: blur(10px) !important;
+  border-color: rgba(255,255,255,.50) !important;
+}
+body.theme-glass app-header .user-btn {
+  background: rgba(255,255,255,.35) !important;
+  backdrop-filter: blur(10px) !important;
+  border-color: rgba(255,255,255,.50) !important;
+}
+
+/* ── Menus Material ──────────────────────────────────────── */
+body.theme-glass .cdk-overlay-container {
+  .mat-mdc-menu-panel {
+    background: rgba(255,255,255,.40) !important;
+    backdrop-filter: blur(24px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.55) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.15) !important;
+  }
+  .mdc-dialog__surface, .mat-mdc-dialog-surface {
+    background: rgba(255,255,255,.38) !important;
+    backdrop-filter: blur(28px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
+    border: 1.5px solid rgba(255,255,255,.55) !important;
+    box-shadow: 0 16px 48px rgba(80,60,180,.20) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE — overrides spécifiques par composant
+   (éléments non couverts par les règles génériques)
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Tâches ──────────────────────────────────────────────────── */
+body.theme-glass app-tasks-global {
+
+  /* Zone kanban principale — le plus visible */
+  .kanban-board { background: transparent !important; }
+
+  /* Colonnes kanban */
+  .kanban-col {
+    background: rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Cartes de tâche */
+  .task-card {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.08),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* Drag handle */
+  .card-drag-handle {
+    background: rgba(255,255,255,.20) !important;
+    border-color: rgba(255,255,255,.20) !important;
+  }
+
+  /* Barre de filtre + boutons */
+  .filter-bar {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .prio-btn, .prio-chip, .type-chip {
+    background: rgba(255,255,255,.35) !important;
+    backdrop-filter: blur(6px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .td-btn-del {
+    background: rgba(255,255,255,.30) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+
+  /* Petits badges inline */
+  .td-id, .prio-static, .time-badge, .tl-id {
+    background: rgba(255,255,255,.30) !important;
+    border: none !important;
+  }
+
+  /* Dialogs synthèse & création — cartes internes */
+  .sd-kpi, .sd-card {
+    background: rgba(255,255,255,.30) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .ct-title-input, .ct-select, .ct-date-input {
+    background: rgba(255,255,255,.38) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+}
+
+/* ── Documents ───────────────────────────────────────────────── */
+body.theme-glass app-documents {
+
+  /* Vue espace ouvert — zone de fichiers */
+  .space-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 32px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.60) !important;
+  }
+  .space-card__body { background: transparent !important; }
+
+  /* Lignes et cartes de fichiers */
+  .fm-row, .fm-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(14px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+
+  /* Toolbar file manager */
+  .fm-toolbar, .space-toolbar {
+    background: rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .fm-search, .fm-view-btn {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .fm-view-btn--active {
+    background: rgba(255,255,255,.55) !important;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    background: rgba(255,255,255,.15) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+  .drop-zone--active {
+    background: rgba(255,255,255,.35) !important;
+  }
+
+  /* Palette et confirmation */
+  .palette-panel, .space-confirm {
+    background: rgba(255,255,255,.55) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+}
+
+/* ── Pointage ────────────────────────────────────────────────── */
+body.theme-glass app-pointage {
+
+  /* Cartes principales */
+  .semaine-card, .listing-section, .hist-section, .main-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* KPI cards (.kpi est différent de .kpi-item) */
+  .kpi {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(14px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+
+  /* Tables */
+  .listing-table-wrap, .hist-table-wrap {
+    background: rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .listing-table thead tr, .hist-table thead tr {
+    background: rgba(255,255,255,.20) !important;
+  }
+  .listing-table tbody tr:hover td, .hist-table tbody tr:hover td {
+    background: rgba(255,255,255,.15) !important;
+  }
+
+  /* Pagination et navigation */
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.30) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+  .btn-today, .btn-export {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.50) !important;
+  }
+
+  /* Carte principale (avec gradient — on préserve le gradient mais en glass) */
+  .main-card {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    background: inherit !important;
+    border: 1px solid rgba(255,255,255,.30) !important;
+  }
+
+  /* Badges jour */
+  .jour-badge { background: rgba(255,255,255,.25) !important; }
+  .jour-badge--present { background: rgba(22,163,74,.25) !important; }
+  .jour-badge--absent  { background: rgba(220,38,38,.25) !important; }
+  .jour-badge--parti   { background: rgba(37,99,235,.25) !important; }
+
+  /* Tables pointage — cellules transparentes */
+  .listing-table, .hist-table,
+  .listing-table tbody, .hist-table tbody,
+  .listing-table tbody tr, .hist-table tbody tr,
+  .listing-table td, .hist-table td { background: transparent !important; }
+}
+
+/* ── Admin (liste utilisateurs) ──────────────────────────────── */
+body.theme-glass app-admin {
+
+  /* Chips de stats */
+  .stat-chip {
+    background: rgba(255,255,255,.30) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: rgba(255,255,255,.45) !important;
+  }
+
+  /* Tableau */
+  .table-card {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10),
+                inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .users-table, .users-table tbody, .users-table tbody tr,
+  .users-table td { background: transparent !important; }
+  .users-table thead th {
+    background: rgba(255,255,255,.18) !important;
+    border-color: rgba(255,255,255,.30) !important;
+  }
+  .table-row:hover td { background: rgba(255,255,255,.18) !important; }
+
+  /* Chips filtres */
+  .stat-chip {
+    background: rgba(255,255,255,.20) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255,255,255,.40) !important;
+  }
+}
+
+/* ── Tables globales en mode verre — toutes les td/tr transparents ── */
+body.theme-glass .layout__main {
+  tbody tr, tbody tr td,
+  .tr-main td, .tr-panel td,
+  .tl-table td, .grille-table td,
+  .dr-etape-row td, .dr-separator td { background: transparent !important; }
+  .tr-main:hover td { background: rgba(255,255,255,.18) !important; }
+}
+
+/* ── Info-banner et assign-chip en mode verre ────────────────── */
+body.theme-glass .layout__main {
+  .info-banner {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(12px) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    color: #2D3A5E !important;
+  }
+  .info-banner mat-icon { color: #4F46E5 !important; }
+}
+
+/* ── Équipes — tableau ──────────────────────────────────────── */
+body.theme-glass app-equipes {
+  .table-wrap {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.10), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .table, .table tbody, .table tbody tr, .table td { background: transparent !important; }
+  .table thead th {
+    background: rgba(255,255,255,.18) !important;
+    border-color: rgba(255,255,255,.30) !important;
+    color: #475569 !important;
+  }
+  .tr-main { border-color: rgba(255,255,255,.20) !important; }
+  .tr-main:hover td { background: rgba(255,255,255,.18) !important; }
+  .tr-main--open td { background: rgba(99,102,241,.12) !important; }
+  .tr-panel td {
+    background: rgba(99,102,241,.10) !important;
+    border-color: rgba(255,255,255,.20) !important;
+  }
+  .assign-chip {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .btn-action {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE VERRE — Detail de dossier (app-client-detail + onglets)
+═══════════════════════════════════════════════════════════════ */
+body.theme-glass app-client-detail {
+
+  /* ── Topbar ────────────────────────────────────────────────── */
+  .topbar {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    box-shadow: 0 1px 0 rgba(255,255,255,.50) !important;
+  }
+  .bc-current { color: #1A1F36 !important; }
+  .bc-sep { color: rgba(0,0,0,.30) !important; }
+
+  /* ── Sidebar ───────────────────────────────────────────────── */
+  .sidebar {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .profile__bg { background: linear-gradient(180deg, rgba(99,102,241,.15) 0%, transparent 100%) !important; }
+  .score-track { background: rgba(255,255,255,.25) !important; }
+  .sidebar__divider { background: rgba(0,0,0,.08) !important; }
+  .sidenav__item { color: #2D3A5E !important; }
+  .sidenav__item:hover { background: rgba(255,255,255,.30) !important; }
+  .sidenav__item mat-icon { color: rgba(0,0,0,.35) !important; }
+  .sidenav__label { color: rgba(0,0,0,.40) !important; }
+
+  /* ── Content ───────────────────────────────────────────────── */
+  .content { background: transparent !important; }
+  .content__header {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+
+  /* ── Hero section ──────────────────────────────────────────── */
+  .hero { background: transparent !important; border-color: rgba(255,255,255,.30) !important; }
+  .hc-adn, .hc-info {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+    box-shadow: 0 4px 20px rgba(80,60,180,.08), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+  .hc-info__ico-wrap--grey,
+  .hc-info__ico-wrap--blue,
+  .hc-info__ico-wrap--teal { backdrop-filter: blur(4px) !important; }
+
+  /* ── Onglets — cartes et panneaux ──────────────────────────── */
+  .adn-card, .kpi-item, .mode-bar, .flux-type-item,
+  .add-panel, .objective-card, .section-area,
+  .process-rows, .fournisseur-card, .fournisseur-item {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.06), inset 0 1px 0 rgba(255,255,255,.50) !important;
+  }
+
+  /* ── Material expansion panels ─────────────────────────────── */
+  .mat-expansion-panel {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+    box-shadow: 0 4px 16px rgba(80,60,180,.06) !important;
+  }
+  .mat-expansion-panel-header { background: rgba(255,255,255,.14) !important; }
+  .mat-expansion-panel-header-title, mat-panel-title { color: #1A1F36 !important; }
+
+  /* ── Inputs / formulaires ──────────────────────────────────── */
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select {
+    background: rgba(255,255,255,.35) !important;
+    border-color: rgba(255,255,255,.50) !important;
+    color: #1A1F36 !important;
+  }
+  .mat-mdc-text-field-wrapper { background: rgba(255,255,255,.30) !important; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,.50) !important; }
+
+  /* ── Tables dans tous les onglets ─────────────────────────── */
+  table, tbody, tbody tr, td, th { background: transparent !important; }
+  thead tr { background: rgba(255,255,255,.18) !important; }
+  tr:hover td { background: rgba(255,255,255,.18) !important; }
+  th { color: #475569 !important; border-color: rgba(0,0,0,.08) !important; }
+  td { border-color: rgba(0,0,0,.06) !important; color: #2D3A5E !important; }
+
+  /* ── Boutons et petits éléments ────────────────────────────── */
+  .hc-adn__btn, .flux-type-active,
+  .nav-btn, .page-btn:not(.page-btn--active) {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+  .process-input {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.35) !important;
+    color: #1A1F36 !important;
+  }
+  .process-rows {
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+  }
+
+  /* ── Section titles / objectifs ────────────────────────────── */
+  .section-title {
+    background: rgba(99,102,241,.12) !important;
+    border-left-color: #6366F1 !important;
+    color: #1A1F36 !important;
+  }
+  .objective-card__header--blue   { background: rgba(37,99,235,.18) !important; }
+  .objective-card__header--indigo { background: rgba(67,56,202,.18) !important; }
+  .objective-card__header--purple { background: rgba(124,58,237,.18) !important; }
+  .card-body { background: transparent !important; }
+
+  /* ── SWOT ──────────────────────────────────────────────────── */
+  .swot-forces       { background: rgba(22,163,74,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-faiblesses   { background: rgba(249,115,22,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-opportunites { background: rgba(37,99,235,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-menaces      { background: rgba(220,38,38,.12) !important; border: 1.5px solid rgba(255,255,255,.30) !important; }
+  .swot-forces .swot-card__header       { background: rgba(22,163,74,.20) !important; }
+  .swot-faiblesses .swot-card__header   { background: rgba(249,115,22,.20) !important; }
+  .swot-opportunites .swot-card__header { background: rgba(37,99,235,.20) !important; }
+  .swot-menaces .swot-card__header      { background: rgba(220,38,38,.20) !important; }
+
+  /* ── Section contrôle interne ──────────────────────────────── */
+  .section-header--green { background: rgba(22,163,74,.18) !important; }
+  .section-header--red   { background: rgba(220,38,38,.18) !important; }
+  .section-header--blue  { background: rgba(37,99,235,.18) !important; }
+  .section-header--gray  { background: rgba(255,255,255,.18) !important; }
+  .process-row--green { background: rgba(22,163,74,.08) !important; }
+  .process-row--red   { background: rgba(220,38,38,.08) !important; }
+  .process-row--blue  { background: rgba(37,99,235,.08) !important; }
+
+  /* ── Pilotage — grille flux mensuel ────────────────────────── */
+  .kpi-card, .grid-wrap {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.38) !important;
+  }
+  .th-type, .th-month, .th-progress { background: rgba(255,255,255,.18) !important; color: #475569 !important; }
+  .th-month.th-current { background: rgba(99,102,241,.18) !important; color: #4338CA !important; }
+  .cell-empty   { background: rgba(255,255,255,.25) !important; border-color: rgba(0,0,0,.10) !important; }
+  .cell-depose  { background: rgba(22,163,74,.22) !important; }
+  .cell-retard  { background: rgba(217,119,6,.22) !important; }
+  .cell-manquant { background: rgba(220,38,38,.22) !important; }
+  .kpi-bar-track, .row-bar-track { background: rgba(255,255,255,.22) !important; }
+
+  /* ── Historique ─────────────────────────────────────────────── */
+  .count        { background: rgba(255,255,255,.25) !important; }
+  .change-pill  { background: rgba(255,255,255,.25) !important; }
+  .entry-icon   { backdrop-filter: blur(6px) !important; }
+
+  /* ── AI Assistant ──────────────────────────────────────────── */
+  .ai-input {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.45) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .message__content {
+    background: rgba(255,255,255,.28) !important;
+    border-color: rgba(255,255,255,.35) !important;
+  }
+  .suggestion-chip {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+  }
+}
+
+/* ── Dashboard — mode Verre ──────────────────────────────────── */
+body.theme-glass app-dashboard {
+
+  /* Chart cards */
+  .chart-card {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.08), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* Onglets collaborateur */
+  .ctab {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    color: #374151 !important;
+  }
+  .ctab:hover { background: rgba(255,255,255,.35) !important; }
+  .ctab--active {
+    background: rgba(99,102,241,.22) !important;
+    border-color: rgba(99,102,241,.50) !important;
+    color: #4338CA !important;
+  }
+  .ctab-taux { background: rgba(255,255,255,.30) !important; }
+
+  /* Section perf et hero */
+  .perf-section, .perf-header { background: transparent !important; }
+  .hero {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+  .hero__eyebrow, .hero__title, .hero__date { color: #1e293b !important; }
+  .h-stat__val { color: #1e293b !important; }
+  .h-stat__lbl { color: #475569 !important; }
+
+  /* Métriques */
+  .metric {
+    backdrop-filter: blur(12px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Alertes */
+  .alertes {
+    background: rgba(254,226,226,.55) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(252,165,165,.40) !important;
+  }
+
+  /* Section dossiers */
+  .section-bar {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+  .folder-item {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+}

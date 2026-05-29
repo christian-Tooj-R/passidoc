@@ -223,6 +223,7 @@ export class SideNavComponent {
     { route: '/clients',      icon: 'folder_shared',   label: 'Dossiers clients' },
     { route: '/tasks',        icon: 'task_alt',         label: 'Tâches' },
     { route: '/portefeuilles',icon: 'account_tree',    label: 'Portefeuilles',  portefeuilleOnly: true },
+    { route: '/pointage',     icon: 'fingerprint',      label: 'Pointage' },
     { route: '/equipes',      icon: 'people',           label: 'Équipes',        adminOnly: true },
     { route: '/admin',        icon: 'manage_accounts', label: 'Utilisateurs',   adminOnly: true },
   ];

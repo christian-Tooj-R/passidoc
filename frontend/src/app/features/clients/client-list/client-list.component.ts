@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRippleModule } from '@angular/material/core';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subscription, debounceTime } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
@@ -25,7 +26,7 @@ type ViewMode = 'grid' | 'list';
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatDialogModule,
-    MatTooltipModule, MatRippleModule,
+    MatTooltipModule, MatRippleModule, MatSnackBarModule,
   ],
   template: `
     <div class="explorer">
@@ -144,7 +145,32 @@ type ViewMode = 'grid' | 'list';
         } @else {
           <div class="file-grid">
             @for (c of filteredClients(); track c.id) {
-              <div class="folder-item" matRipple [routerLink]="['/clients', c.id]">
+              <div class="folder-item" matRipple
+                   [routerLink]="confirmDeleteId() === c.id ? null : ['/clients', c.id]">
+
+                <!-- Bouton supprimer (admin uniquement) -->
+                @if (auth.isAdmin() && confirmDeleteId() !== c.id) {
+                  <button class="folder-del-btn" matTooltip="Supprimer le dossier"
+                          (click)="initDelete(c.id, $event)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+
+                <!-- Confirmation de suppression inline -->
+                @if (confirmDeleteId() === c.id) {
+                  <div class="folder-confirm" (click)="$event.stopPropagation()">
+                    <mat-icon class="fc-icon">warning_amber</mat-icon>
+                    <span class="fc-text">Supprimer <strong>{{ c.nom }}</strong> ?</span>
+                    <p class="fc-sub">Cette action est irréversible.</p>
+                    <div class="fc-btns">
+                      <button class="fc-btn fc-btn--cancel" (click)="cancelDelete($event)">Annuler</button>
+                      <button class="fc-btn fc-btn--danger" [disabled]="deleting()"
+                              (click)="executeDelete(c.id, $event)">
+                        {{ deleting() ? '…' : 'Supprimer' }}
+                      </button>
+                    </div>
+                  </div>
+                }
 
                 <!-- Sector illustration -->
                 <div class="folder-illus" [style.background]="getSectorConfig(c.secteurActivite).bg">
@@ -224,7 +250,9 @@ type ViewMode = 'grid' | 'list';
           }
 
           @for (c of filteredClients(); track c.id) {
-            <div class="list-row" matRipple [routerLink]="['/clients', c.id]">
+            <div class="list-row" matRipple
+                 [routerLink]="confirmDeleteId() === c.id ? null : ['/clients', c.id]"
+                 [class.list-row--confirming]="confirmDeleteId() === c.id">
 
               <!-- Icon + name -->
               <div class="lr-name">
@@ -262,8 +290,28 @@ type ViewMode = 'grid' | 'list';
               <!-- Status -->
               <span class="lr-status" [class]="statusPillClass(score(c))">{{ getStatusLabel(score(c)) }}</span>
 
+              <!-- Supprimer (admin uniquement) -->
+              @if (auth.isAdmin()) {
+                @if (confirmDeleteId() === c.id) {
+                  <div class="lr-confirm" (click)="$event.stopPropagation()">
+                    <button class="lrc-btn lrc-btn--cancel" (click)="cancelDelete($event)">Annuler</button>
+                    <button class="lrc-btn lrc-btn--danger" [disabled]="deleting()"
+                            (click)="executeDelete(c.id, $event)">
+                      {{ deleting() ? '…' : 'Supprimer' }}
+                    </button>
+                  </div>
+                } @else {
+                  <button class="lr-del-btn" matTooltip="Supprimer le dossier"
+                          (click)="initDelete(c.id, $event)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+              }
+
               <!-- Arrow -->
-              <mat-icon class="lr-arrow">chevron_right</mat-icon>
+              @if (confirmDeleteId() !== c.id) {
+                <mat-icon class="lr-arrow">chevron_right</mat-icon>
+              }
 
             </div>
           }
@@ -532,18 +580,73 @@ type ViewMode = 'grid' | 'list';
     .stp--low  { background: #FFDAD6; color: #BA1A1A; }
 
     .lr-arrow { font-size: 18px; width: 18px; height: 18px; color: #C8C6CA; }
+
+    /* ── Suppression grille ────────────────────────────────────── */
+    .folder-del-btn {
+      position: absolute; top: 8px; right: 8px; z-index: 2;
+      width: 28px; height: 28px; border: none; border-radius: 8px;
+      background: rgba(220,38,38,.09); color: #DC2626; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      transition: background .15s;
+      mat-icon { font-size: 17px; width: 17px; height: 17px; }
+      &:hover { background: rgba(220,38,38,.18); }
+    }
+    .folder-item:hover .folder-del-btn { display: flex; }
+
+    .folder-confirm {
+      position: absolute; inset: 0; border-radius: inherit; z-index: 3;
+      background: rgba(255,255,255,.97);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 8px; padding: 16px; text-align: center;
+      backdrop-filter: blur(4px);
+    }
+    .fc-icon { font-size: 28px; width: 28px; height: 28px; color: #F59E0B; }
+    .fc-text { font-size: 13px; font-weight: 600; color: #1E293B; line-height: 1.4;
+               strong { color: #0F172A; } }
+    .fc-sub  { font-size: 11px; color: #94A3B8; margin: 0; }
+    .fc-btns { display: flex; gap: 8px; margin-top: 2px; }
+    .fc-btn  { padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer;
+               font-size: 12.5px; font-weight: 600; font-family: inherit;
+               transition: background .12s;
+               &--cancel { background: #F1F5F9; color: #64748B; &:hover { background: #E2E8F0; } }
+               &--danger { background: #DC2626; color: white; &:hover { background: #B91C1C; }
+                           &:disabled { opacity: .6; cursor: not-allowed; } } }
+
+    /* ── Suppression liste ─────────────────────────────────────── */
+    .lr-del-btn {
+      width: 30px; height: 30px; border: none; border-radius: 8px; flex-shrink: 0;
+      background: rgba(220,38,38,.08); color: #EF4444; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .15s, background .15s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: rgba(220,38,38,.16); }
+    }
+    .list-row:hover .lr-del-btn { opacity: 1; }
+    .list-row--confirming { background: #FFF5F5 !important; }
+
+    .lr-confirm {
+      display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+    }
+    .lrc-btn { padding: 5px 13px; border-radius: 7px; border: none; cursor: pointer;
+               font-size: 12px; font-weight: 600; font-family: inherit; white-space: nowrap;
+               transition: background .12s;
+               &--cancel { background: #F1F5F9; color: #64748B; &:hover { background: #E2E8F0; } }
+               &--danger { background: #DC2626; color: white; &:hover { background: #B91C1C; }
+                           &:disabled { opacity: .6; cursor: not-allowed; } } }
   `],
 })
 export class ClientListComponent implements OnInit, OnDestroy {
-  clients      = signal<Client[]>([]);
-  searchQuery  = signal('');
-  healthFilter = signal('');
-  siteFilter   = signal('');
-  mesDossiers  = signal(false);
-  collabFilter = signal<number | null>(null);
-  sortKey      = signal<SortKey>('nom');
-  sortDir      = signal<'asc'|'desc'>('asc');
-  viewMode     = signal<ViewMode>('grid');
+  clients         = signal<Client[]>([]);
+  searchQuery     = signal('');
+  healthFilter    = signal('');
+  siteFilter      = signal('');
+  mesDossiers     = signal(false);
+  collabFilter    = signal<number | null>(null);
+  sortKey         = signal<SortKey>('nom');
+  sortDir         = signal<'asc'|'desc'>('asc');
+  viewMode        = signal<ViewMode>('grid');
+  confirmDeleteId = signal<number | null>(null);
+  deleting        = signal(false);
 
   searchCtrl = new FormControl('');
 
@@ -599,6 +702,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   sortedClients = computed(() => this.clients());
 
+  private snack = inject(MatSnackBar);
+
   constructor(private clientsService: ClientsService, public auth: AuthService) {}
 
   ngOnInit() {
@@ -611,6 +716,34 @@ export class ClientListComponent implements OnInit, OnDestroy {
   ngOnDestroy() { this.sub.unsubscribe(); }
 
   load() { this.clientsService.getAll().subscribe(data => this.clients.set(data)); }
+
+  initDelete(id: number, e: Event) {
+    e.stopPropagation();
+    e.preventDefault();
+    this.confirmDeleteId.set(id);
+  }
+
+  cancelDelete(e: Event) {
+    e.stopPropagation();
+    this.confirmDeleteId.set(null);
+  }
+
+  executeDelete(id: number, e: Event) {
+    e.stopPropagation();
+    this.deleting.set(true);
+    this.clientsService.delete(id).subscribe({
+      next: () => {
+        this.clients.set(this.clients().filter(c => c.id !== id));
+        this.confirmDeleteId.set(null);
+        this.deleting.set(false);
+        this.snack.open('Dossier supprimé', undefined, { duration: 2500 });
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.snack.open('Erreur lors de la suppression', undefined, { duration: 3000 });
+      },
+    });
+  }
 
   setSort(k: SortKey) {
     if (this.sortKey() === k) this.sortDir.update(d => d === 'asc' ? 'desc' : 'asc');

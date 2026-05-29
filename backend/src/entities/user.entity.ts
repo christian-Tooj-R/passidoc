@@ -58,6 +58,10 @@ export class User {
   @JoinColumn({ name: 'referentId' })
   referent: User;
 
+  /** Préférences d'apparence — stockées par utilisateur */
+  @Column({ type: 'json', nullable: true })
+  themePrefs: Record<string, any> | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

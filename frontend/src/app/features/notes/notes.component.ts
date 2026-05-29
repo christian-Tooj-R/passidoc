@@ -150,7 +150,6 @@ const PALETTE = [
     .notes-page {
       padding: 32px 36px;
       min-height: 100%;
-      background: #FAFBFF;
     }
 
     /* ── Header ──────────────────────────────────── */

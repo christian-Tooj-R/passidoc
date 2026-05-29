@@ -19,13 +19,15 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
   template: `
     <header class="topbar">
 
-      <!-- ── Search bar MD3 ────────────────────────── -->
-      <div class="search-bar">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input class="search-input" type="text" placeholder="Rechercher un dossier, une tâche…" />
+      <!-- ── Recherche globale ───────────────────── -->
+      <div class="search-bar" [class.search-bar--focused]="searchFocused">
+        <mat-icon class="search-bar__icon">search</mat-icon>
+        <input class="search-bar__input"
+               type="text"
+               placeholder="Rechercher client, dossier, document…"
+               (focus)="searchFocused = true"
+               (blur)="searchFocused = false" />
       </div>
-
-      <div class="topbar__spacer"></div>
 
       <!-- ── Right ────────────────────────────────── -->
       <div class="topbar__right">
@@ -146,53 +148,65 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
   styles: [`
     /* ── Topbar ─────────────────────────────────── */
     .topbar {
-      height: 64px;
-      background: #FFFBFE;
-      border-bottom: 1px solid #E0E2EC;
-      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      height: 52px;
+      background: var(--page-header-bg, #FFFBFE);
+      border-bottom: 1px solid var(--page-header-border, #E0E2EC);
+      backdrop-filter: var(--panel-backdrop, none);
+      -webkit-backdrop-filter: var(--panel-backdrop, none);
+      box-shadow: 0 1px 2px rgba(0,0,0,.06);
       display: flex;
       align-items: center;
-      padding: 0 28px 0 30px;
+      padding: 0 24px;
       flex-shrink: 0;
       gap: 12px;
     }
-    .topbar__spacer { flex: 1; }
-    .topbar__right  { display: flex; align-items: center; gap: 8px; }
+    .topbar__right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
-    /* ── MD3 Search bar ──────────────────────────── */
+    /* ── Recherche globale ───────────────────────── */
     .search-bar {
-      display: flex; align-items: center; gap: 8px;
-      background: #E8EAED;
-      border-radius: 28px;
-      padding: 0 16px;
-      height: 40px;
-      width: 320px;
-      transition: background .12s;
+      flex: 1;
+      max-width: 520px;
+      display: flex; align-items: center; gap: 10px;
+      height: 34px;
+      background: #F1F5F9;
+      border-radius: 10px;
+      border: 1.5px solid transparent;
+      padding: 0 12px;
+      transition: border-color .18s, background .18s, box-shadow .18s;
+      cursor: text;
     }
-    .search-bar:focus-within { background: #FFFBFE; outline: 2px solid #19D9B4; outline-offset: -2px; }
-    .search-icon { font-size: 20px; width: 20px; height: 20px; color: #44474F; flex-shrink: 0; }
-    .search-input {
-      flex: 1; border: none; background: transparent;
-      font-size: 14px; color: #1A1C1E; font-family: 'Inter', sans-serif;
-      outline: none;
+    .search-bar--focused {
+      background: #fff;
+      border-color: #6366F1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,.10);
     }
-    .search-input::placeholder { color: #6F7978; }
+    .search-bar__icon {
+      font-size: 18px; width: 18px; height: 18px;
+      color: #94A3B8; flex-shrink: 0; transition: color .18s;
+    }
+    .search-bar--focused .search-bar__icon { color: #6366F1; }
+    .search-bar__input {
+      flex: 1; border: none; background: transparent; outline: none;
+      font-size: 13.5px; font-family: 'Inter', sans-serif;
+      color: #1A1F36;
+    }
+    .search-bar__input::placeholder { color: #94A3B8; }
 
     /* ── MD3 Icon buttons ────────────────────────── */
     .icon-btn {
       position: relative;
-      width: 40px; height: 40px;
+      width: 34px; height: 34px;
       border: none;
       background: transparent;
-      border-radius: 50%;
+      border-radius: 8px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      color: #44474F;
-      transition: background .12s;
+      color: var(--panel-text, #44474F);
+      transition: background .12s, color .12s;
     }
-    .icon-btn:hover { background: #E8EAED; }
+    .icon-btn:hover { background: var(--panel-hover-bg, #E8EAED); }
     .icon-btn.bell-active { color: #7B4F00; background: #FFDDB0; }
-    .icon-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .icon-btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
 
     .notif-badge {
       position: absolute; top: -5px; right: -5px;
@@ -303,26 +317,26 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
 
     /* ── User button ────────────────────────────── */
     .user-btn {
-      display: flex; align-items: center; gap: 9px;
-      padding: 4px 10px 4px 5px;
-      border: 1px solid #E4E7F0;
+      display: flex; align-items: center; gap: 7px;
+      padding: 3px 8px 3px 4px;
+      border: 1px solid var(--panel-border, #E4E7F0);
       border-radius: 40px;
-      background: #fff;
+      background: var(--page-card-bg, #fff);
       cursor: pointer;
       transition: all .15s;
       font-family: 'Inter', sans-serif;
     }
-    .user-btn:hover { background: #F8F9FC; border-color: #C9CEEA; }
+    .user-btn:hover { background: var(--panel-hover-bg, #F8F9FC); border-color: var(--panel-border, #C9CEEA); }
 
     .user-avatar {
-      width: 30px; height: 30px; flex-shrink: 0;
+      width: 26px; height: 26px; flex-shrink: 0;
       background: linear-gradient(135deg, #19D9B4, #53DA85);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #162351;
+      font-size: 10px; font-weight: 700; color: #162351;
     }
     .user-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-    .user-name  { font-size: 12.5px; font-weight: 600; color: #162351; line-height: 1; white-space: nowrap; }
+    .user-name  { font-size: 12.5px; font-weight: 600; color: var(--panel-title, #162351); line-height: 1; white-space: nowrap; }
     .role-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; line-height: 1.5; }
     .role-admin            { background: #E6FBF7; color: #0E9E83; }
     .role-expert_comptable { background: #EEF0F8; color: #162351; }
@@ -343,7 +357,8 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
   `],
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  bellOpen = false;
+  bellOpen     = false;
+  searchFocused = false;
 
   constructor(
     public auth: AuthService,
@@ -354,6 +369,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ) {}
 
   totalCount = computed(() => this.alertes.count() + this.notifStream.unreadCount());
+
+  ngOnInit() {
+    this.alertes.startPolling();
+    this.notifStream.connect();
+  }
+
+  ngOnDestroy() {
+    this.alertes.stopPolling();
+    this.notifStream.disconnect();
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -387,9 +412,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
     return 'task_alt';
   }
-
-  ngOnInit()    { this.alertes.startPolling(); this.notifStream.connect(); }
-  ngOnDestroy() { this.alertes.stopPolling();  this.notifStream.disconnect(); }
 
   get initials(): string {
     const u = this.auth.currentUser();
