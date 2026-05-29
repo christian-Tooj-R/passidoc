@@ -895,6 +895,22 @@ export class TaskDetailDialogComponent {
           }
         </div>
 
+        <!-- Recherche texte -->
+        <input class="tb-search-input" type="text" placeholder="Rechercher une tâche…"
+               [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" />
+
+        <!-- Toggle vue -->
+        <div class="view-toggle">
+          <button class="vt-btn" [class.vt-btn--active]="viewMode === 'kanban'"
+                  (click)="viewMode = 'kanban'" matTooltip="Kanban">
+            <mat-icon>view_kanban</mat-icon>
+          </button>
+          <button class="vt-btn" [class.vt-btn--active]="viewMode === 'list'"
+                  (click)="viewMode = 'list'" matTooltip="Tableau">
+            <mat-icon>table_rows</mat-icon>
+          </button>
+        </div>
+
         <!-- Compteur -->
         <div class="filter-bar__count">
           <span class="filter-bar__num">{{ filteredTasks.length }}</span>
@@ -904,6 +920,7 @@ export class TaskDetailDialogComponent {
       </div>
 
       <!-- ── Kanban Board ── -->
+      @if (viewMode === 'kanban') {
       <div class="kanban-board" cdkDropListGroup>
         @for (col of kanbanCols; track col.statut) {
           <div class="kanban-col">
@@ -1002,14 +1019,164 @@ export class TaskDetailDialogComponent {
           </div>
         }
       </div>
+      } <!-- fin @if kanban -->
+
+      <!-- ══ TABLE VIEW ══ -->
+      @if (viewMode === 'list') {
+        <div class="tasks-list-wrap">
+
+          <!-- Compteur résultats -->
+          <div class="tl-meta">
+            <span class="tl-count">{{ tableFilteredTasks.length }} tâche{{ tableFilteredTasks.length !== 1 ? 's' : '' }}</span>
+            @if (searchText) {
+              <span class="tl-search-tag">« {{ searchText }} »<button (click)="searchText=''; onSearchChange()"><mat-icon>close</mat-icon></button></span>
+            }
+          </div>
+
+          <!-- Table -->
+          <div class="tl-table-scroll">
+            <table class="tl-table">
+              <thead>
+                <tr>
+                  <th class="th-id">
+                    <button class="th-btn" (click)="sortTable('taskId')">
+                      #
+                      @if (tableSort.col === 'taskId') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-title">
+                    <button class="th-btn" (click)="sortTable('titre')">
+                      Titre
+                      @if (tableSort.col === 'titre') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-statut">
+                    <button class="th-btn" (click)="sortTable('statut')">
+                      Statut
+                      @if (tableSort.col === 'statut') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-prio">
+                    <button class="th-btn" (click)="sortTable('priorite')">
+                      Priorité
+                      @if (tableSort.col === 'priorite') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-type">Type</th>
+                  <th class="th-client">
+                    <button class="th-btn" (click)="sortTable('client')">
+                      Dossier
+                      @if (tableSort.col === 'client') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-assignee">
+                    <button class="th-btn" (click)="sortTable('assignee')">
+                      Assigné
+                      @if (tableSort.col === 'assignee') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-date">
+                    <button class="th-btn" (click)="sortTable('dateEcheance')">
+                      Échéance
+                      @if (tableSort.col === 'dateEcheance') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of tablePagedTasks; track t.id) {
+                  <tr class="tl-row"
+                      [class.tl-row--done]="t.statut === 'TERMINEE' || t.statut === 'NON_FAIT'"
+                      [class.tl-row--overdue]="isOverdue(t)"
+                      (click)="openDetail(t)">
+                    <td class="td-id">
+                      <span class="tl-id">{{ t.taskId ?? '—' }}</span>
+                    </td>
+                    <td class="td-title">
+                      <span class="tl-titre">{{ t.titre }}</span>
+                    </td>
+                    <td class="td-statut">
+                      <span class="tl-badge tl-badge--{{ t.statut.toLowerCase() }}">{{ statutLabel(t.statut) }}</span>
+                    </td>
+                    <td class="td-prio">
+                      <span class="tl-prio tl-prio--{{ (t.priorite ?? 'normale').toLowerCase() }}">
+                        {{ prioriteLabel(t.priorite ?? 'NORMALE') }}
+                      </span>
+                    </td>
+                    <td class="td-type">
+                      @if (t.type) {
+                        <span class="tl-type type-{{ t.type.toLowerCase() }}">{{ t.type }}</span>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
+                    <td class="td-client">
+                      @if (t.client) {
+                        <a class="tl-client" [routerLink]="['/clients', t.client.id]" (click)="$event.stopPropagation()">
+                          <mat-icon>folder_shared</mat-icon>{{ t.client.nom }}
+                        </a>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
+                    <td class="td-assignee">
+                      @if (t.assignee) {
+                        <div class="tl-assignee">
+                          <div class="tl-av">{{ t.assignee.firstName[0] }}{{ t.assignee.lastName[0] }}</div>
+                          <span>{{ t.assignee.firstName }} {{ t.assignee.lastName }}</span>
+                        </div>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
+                    <td class="td-date">
+                      @if (t.dateEcheance) {
+                        <span class="tl-date" [class.tl-date--overdue]="isOverdue(t)">
+                          <mat-icon>event</mat-icon>{{ t.dateEcheance | localDate:'dd MMM yy' }}
+                        </span>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="8" class="tl-empty-row">
+                    <mat-icon>task_alt</mat-icon>
+                    <span>Aucune tâche{{ searchText ? ' pour cette recherche' : '' }}</span>
+                  </td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          @if (tableTotalPages > 1) {
+            <div class="tl-pagination">
+              <span class="pag-info">
+                {{ (tablePage - 1) * tablePageSize + 1 }}–{{ Math.min(tablePage * tablePageSize, tableFilteredTasks.length) }}
+                sur {{ tableFilteredTasks.length }}
+              </span>
+              <div class="pag-btns">
+                <button class="pag-btn" [disabled]="tablePage <= 1" (click)="tablePage = tablePage - 1">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                @for (p of tablePages; track p) {
+                  <button class="pag-btn" [class.pag-btn--active]="p === tablePage"
+                          (click)="tablePage = p">{{ p }}</button>
+                }
+                <button class="pag-btn" [disabled]="tablePage >= tableTotalPages" (click)="tablePage = tablePage + 1">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
+        </div>
+      }
 
     </div>
   `,
   styles: [`
-    .page { padding: 32px 36px; }
+    /* Layout viewport-height : le kanban / la liste occupe tout l'espace dispo */
+    .page { padding: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Header */
-    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 32px 0; flex-shrink: 0;
+    }
     .page-header__left { display: flex; align-items: center; gap: 14px; }
     .page-icon-wrap {
       width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
@@ -1037,7 +1204,8 @@ export class TaskDetailDialogComponent {
     /* ── Filter bar ─────────────────────────────────────── */
     .filter-bar {
       display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; margin-bottom: 16px;
+      gap: 12px; flex-shrink: 0;
+      margin: 14px 32px 0;
       background: white; border: 1px solid #e5e7eb; border-radius: 12px;
       padding: 8px 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,.04);
@@ -1089,12 +1257,14 @@ export class TaskDetailDialogComponent {
 
     /* ── Kanban Board ──────────────────────────────────────── */
     .kanban-board {
+      flex: 1; min-height: 0;
       display: flex; gap: 14px;
-      overflow-x: auto; padding-bottom: 20px; align-items: flex-start;
-      min-height: calc(100vh - 280px);
+      overflow-x: auto; overflow-y: hidden;
+      padding: 14px 32px 16px;
+      align-items: stretch;
     }
     .kanban-board::-webkit-scrollbar { height: 6px; }
-    .kanban-board::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+    .kanban-board::-webkit-scrollbar-track { background: transparent; }
     .kanban-board::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
     /* ── Colonne ─────────────────────────────────────────── */
@@ -1129,8 +1299,9 @@ export class TaskDetailDialogComponent {
     .kanban-col__header--en_attente .kanban-col__dot { background: #8b5cf6; }
 
     .kanban-col__body {
-      flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 8px;
-      overflow-y: auto; min-height: 80px;
+      flex: 1; min-height: 0;
+      padding: 8px; display: flex; flex-direction: column; gap: 8px;
+      overflow-y: auto;
     }
     .kanban-col__body::-webkit-scrollbar { width: 4px; }
     .kanban-col__body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
@@ -1250,6 +1421,171 @@ export class TaskDetailDialogComponent {
     .kanban-empty mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .none { color: #d1d5db; }
+
+    /* ── Recherche + Toggle view ─────────────────────────── */
+    .tb-search-input {
+      flex: 1; max-width: 260px; min-width: 140px;
+      height: 32px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      padding: 0 12px; font-size: 13px; font-family: inherit;
+      color: #1e293b; background: #f9fafb; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .tb-search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.10); background: white; }
+    .tb-search-input::placeholder { color: #9ca3af; }
+
+    .view-toggle { display: flex; gap: 3px; flex-shrink: 0; }
+    .vt-btn {
+      width: 32px; height: 32px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      background: #f9fafb; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: #6b7280; transition: all .13s;
+    }
+    .vt-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .vt-btn:hover { border-color: #c7d2fe; color: #4f46e5; background: #eef2ff; }
+    .vt-btn--active { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+
+    /* ── Wrapper vue liste ───────────────────────────────── */
+    .tasks-list-wrap {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      padding: 14px 32px 16px;
+      overflow: hidden;
+    }
+
+    .tl-meta {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px; flex-shrink: 0;
+    }
+    .tl-count { font-size: 13px; font-weight: 600; color: #64748b; }
+    .tl-search-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #eef2ff; color: #4338ca; border-radius: 20px;
+      font-size: 12px; font-weight: 600; padding: 2px 8px 2px 12px;
+    }
+    .tl-search-tag button { border: none; background: none; cursor: pointer; padding: 0; display: flex; color: #6366f1; }
+    .tl-search-tag button mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    /* ── Scroll container ────────────────────────────────── */
+    .tl-table-scroll {
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: auto;
+      border: 1px solid #e5e7eb; border-radius: 12px;
+      background: white;
+    }
+    .tl-table-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .tl-table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* ── Tableau ─────────────────────────────────────────── */
+    .tl-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .tl-table thead { position: sticky; top: 0; z-index: 2; background: #f8fafc; }
+    .tl-table thead tr { border-bottom: 2px solid #e8ecf0; }
+
+    .th-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .6px;
+      padding: 0; white-space: nowrap;
+    }
+    .th-btn mat-icon { font-size: 13px; width: 13px; height: 13px; color: #6366f1; }
+    .th-btn:hover { color: #475569; }
+
+    .tl-table th { padding: 12px 14px; text-align: left; }
+    .tl-table td { padding: 11px 14px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+
+    /* Colonnes */
+    .th-id, .td-id { width: 70px; }
+    .th-statut, .td-statut { width: 120px; }
+    .th-prio, .td-prio { width: 90px; }
+    .th-type, .td-type { width: 90px; }
+    .th-client, .td-client { width: 180px; }
+    .th-assignee, .td-assignee { width: 150px; }
+    .th-date, .td-date { width: 110px; }
+
+    /* Lignes */
+    .tl-row { cursor: pointer; transition: background .1s; }
+    .tl-row:hover td { background: #f8faff; }
+    .tl-row--done td { opacity: .6; }
+    .tl-row--overdue .tl-date { color: #dc2626 !important; }
+
+    /* Cellules */
+    .tl-id { font-family: monospace; font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; }
+    .tl-titre { font-weight: 600; color: #1e293b; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tl-empty { color: #cbd5e1; }
+
+    /* Badges statut */
+    .tl-badge {
+      display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .tl-badge--a_faire   { background: #eff6ff; color: #1d4ed8; }
+    .tl-badge--en_cours  { background: #fffbeb; color: #d97706; }
+    .tl-badge--terminee  { background: #f0fdf4; color: #15803d; }
+    .tl-badge--non_fait  { background: #fff1f2; color: #e11d48; }
+    .tl-badge--en_attente { background: #f5f3ff; color: #7c3aed; }
+
+    /* Priorité */
+    .tl-prio {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600;
+    }
+    .tl-prio::before { content: ''; width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .tl-prio--haute   { color: #dc2626; }
+    .tl-prio--haute::before { background: #dc2626; }
+    .tl-prio--normale { color: #64748b; }
+    .tl-prio--normale::before { background: #94a3b8; }
+    .tl-prio--basse   { color: #16a34a; }
+    .tl-prio--basse::before { background: #16a34a; }
+
+    /* Client lien */
+    .tl-client {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: #4f46e5; font-weight: 500; text-decoration: none; font-size: 13px;
+    }
+    .tl-client mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tl-client:hover { text-decoration: underline; }
+
+    /* Assigné */
+    .tl-assignee { display: flex; align-items: center; gap: 7px; }
+    .tl-av {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Date */
+    .tl-date {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12.5px; color: #64748b;
+    }
+    .tl-date mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tl-date--overdue { color: #dc2626 !important; }
+
+    /* Empty row */
+    .tl-empty-row {
+      text-align: center; padding: 48px !important; color: #94a3b8;
+    }
+
+    /* Pagination */
+    .tl-pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 4px 0; flex-shrink: 0;
+    }
+    .pag-info { font-size: 12px; color: #64748b; }
+    .pag-btns { display: flex; gap: 4px; }
+    .pag-btn {
+      min-width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e7eb;
+      background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #374151;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .12s;
+    }
+    .pag-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .pag-btn:hover:not(:disabled) { border-color: #c7d2fe; color: #4f46e5; background: #eef2ff; }
+    .pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .pag-btn--active { border-color: #6366f1; background: #6366f1; color: white; }
+
+    /* tl-type réutilise les classes type-* existantes */
+    .tl-type { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
   `],
 })
 export class TasksGlobalComponent implements OnInit, OnDestroy {
@@ -1275,6 +1611,79 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   kanbanCols: { statut: TaskStatut; label: string; tasks: Task[] }[] = [];
   colIds: string[] = [];
+
+  // ── Vue tableau ──────────────────────────────────────
+  viewMode: 'kanban' | 'list' = 'kanban';
+  searchText = '';
+  tableSort: { col: string; dir: 'asc' | 'desc' } = { col: 'dateEcheance', dir: 'asc' };
+  tablePage = 1;
+  readonly tablePageSize = 30;
+  readonly Math = Math;
+
+  get tableFilteredTasks(): Task[] {
+    let list = [...this.filteredTasks];
+    if (this.searchText.trim()) {
+      const q = this.searchText.trim().toLowerCase();
+      list = list.filter(t =>
+        t.titre.toLowerCase().includes(q) ||
+        (t.taskId ?? '').toLowerCase().includes(q) ||
+        (t.client?.nom ?? '').toLowerCase().includes(q) ||
+        (t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}`.toLowerCase() : '').includes(q)
+      );
+    }
+    const dir = this.tableSort.dir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      switch (this.tableSort.col) {
+        case 'titre':    return dir * a.titre.localeCompare(b.titre);
+        case 'statut':   return dir * a.statut.localeCompare(b.statut);
+        case 'priorite': return dir * (a.priorite ?? 'NORMALE').localeCompare(b.priorite ?? 'NORMALE');
+        case 'client':   return dir * (a.client?.nom ?? '').localeCompare(b.client?.nom ?? '');
+        case 'assignee': return dir * (a.assignee?.firstName ?? '').localeCompare(b.assignee?.firstName ?? '');
+        case 'dateEcheance': {
+          const da = a.dateEcheance ? new Date(a.dateEcheance).getTime() : Infinity;
+          const db = b.dateEcheance ? new Date(b.dateEcheance).getTime() : Infinity;
+          return dir * (da - db);
+        }
+        default: return 0;
+      }
+    });
+    return list;
+  }
+
+  get tableTotalPages(): number { return Math.max(1, Math.ceil(this.tableFilteredTasks.length / this.tablePageSize)); }
+  get tablePagedTasks(): Task[] {
+    const start = (this.tablePage - 1) * this.tablePageSize;
+    return this.tableFilteredTasks.slice(start, start + this.tablePageSize);
+  }
+  get tablePages(): number[] {
+    const total = this.tableTotalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const p = this.tablePage;
+    const pages = new Set([1, total, p, p - 1, p + 1].filter(x => x >= 1 && x <= total));
+    return [...pages].sort((a, b) => a - b);
+  }
+
+  sortTable(col: string) {
+    this.tableSort = this.tableSort.col === col
+      ? { col, dir: this.tableSort.dir === 'asc' ? 'desc' : 'asc' }
+      : { col, dir: 'asc' };
+    this.tablePage = 1;
+  }
+
+  statutLabel(s: string): string {
+    const m: Record<string, string> = {
+      A_FAIRE: 'À faire', EN_COURS: 'En cours', TERMINEE: 'Terminée',
+      NON_FAIT: 'Non fait', EN_ATTENTE: 'En attente',
+    };
+    return m[s] ?? s;
+  }
+
+  prioriteLabel(p: string): string {
+    const m: Record<string, string> = { HAUTE: 'Haute', NORMALE: 'Normale', BASSE: 'Basse' };
+    return m[p] ?? p;
+  }
+
+  onSearchChange() { this.tablePage = 1; }
 
   get currentUserId(): number | null { return this.auth.currentUser()?.id ?? null; }
   get myTaskCount(): number { return this.tasks.filter(t => t.assignee?.id === this.currentUserId && !['TERMINEE','NON_FAIT'].includes(t.statut)).length; }
@@ -1336,6 +1745,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
       return true;
     });
     this.buildKanban();
+    this.tablePage = 1;
   }
 
   buildKanban() {
