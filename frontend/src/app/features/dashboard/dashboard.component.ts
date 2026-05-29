@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { FluxMensuelService } from '../../core/services/flux-mensuel.service';
 import { TasksService, Task } from '../../core/services/tasks.service';
 import { Client } from '../../core/models/client.model';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 Chart.register(...registerables);
 
@@ -530,12 +531,13 @@ export class DashboardComponent implements OnInit {
         borderColor: ['#16a34a', '#d97706', '#cbd5e1'], borderWidth: 1, hoverOffset: 6 }],
     };
     const top = s.dossiers.slice(0, 10);
+    const { restanteBg, restanteBorder } = this.chartTheme;
     this._dossierBarData = {
       labels: top.map(d => d.nom),
       datasets: [
-        { label: 'Terminées',  data: top.map(d => d.terminees),                         backgroundColor: 'rgba(34,197,94,.85)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
-        { label: 'En cours',   data: top.map(d => d.enCours),                           backgroundColor: 'rgba(245,158,11,.85)', borderColor: '#d97706', borderWidth: 1, borderRadius: 4 },
-        { label: 'Restantes',  data: top.map(d => d.total - d.terminees - d.enCours),   backgroundColor: 'rgba(226,232,240,.9)', borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 4 },
+        { label: 'Terminées',  data: top.map(d => d.terminees),                         backgroundColor: 'rgba(34,197,94,.85)',  borderColor: '#16a34a',      borderWidth: 1, borderRadius: 4 },
+        { label: 'En cours',   data: top.map(d => d.enCours),                           backgroundColor: 'rgba(245,158,11,.85)', borderColor: '#d97706',      borderWidth: 1, borderRadius: 4 },
+        { label: 'Restantes',  data: top.map(d => d.total - d.terminees - d.enCours),   backgroundColor: restanteBg,            borderColor: restanteBorder, borderWidth: 1, borderRadius: 4 },
       ],
     };
   }
@@ -543,76 +545,73 @@ export class DashboardComponent implements OnInit {
 
   // ── Chart.js : vue d'ensemble équipe ────────────────────
   get teamBarData(): ChartData<'bar'> {
+    const { restanteBg, restanteBorder } = this.chartTheme;
     return {
       labels: this.collabStats.map(s => s.name),
       datasets: [
         {
           label: 'Terminées',
           data: this.collabStats.map(s => s.terminees),
-          backgroundColor: 'rgba(34,197,94,.85)',
-          borderColor: '#16a34a',
-          borderWidth: 1,
-          borderRadius: 5,
+          backgroundColor: 'rgba(34,197,94,.85)', borderColor: '#16a34a',
+          borderWidth: 1, borderRadius: 5,
         },
         {
           label: 'En cours',
           data: this.collabStats.map(s => s.enCours),
-          backgroundColor: 'rgba(245,158,11,.85)',
-          borderColor: '#d97706',
-          borderWidth: 1,
-          borderRadius: 5,
+          backgroundColor: 'rgba(245,158,11,.85)', borderColor: '#d97706',
+          borderWidth: 1, borderRadius: 5,
         },
         {
           label: 'Restantes',
           data: this.collabStats.map(s => s.total - s.terminees - s.enCours),
-          backgroundColor: 'rgba(226,232,240,.9)',
-          borderColor: '#cbd5e1',
-          borderWidth: 1,
-          borderRadius: 5,
+          backgroundColor: restanteBg, borderColor: restanteBorder,
+          borderWidth: 1, borderRadius: 5,
         },
       ],
     };
   }
 
-  teamBarOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 16, boxWidth: 12, boxHeight: 12 } },
-      tooltip: { mode: 'index', intersect: false },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 12, family: 'Inter' } } },
-      y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, font: { size: 11, family: 'Inter' } }, beginAtZero: true },
-    },
-  };
+  get teamBarOptions(): ChartConfiguration['options'] {
+    const { textColor, gridColor, legendColor } = this.chartTheme;
+    return {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: legendColor, font: { size: 12, family: 'Inter' }, padding: 16, boxWidth: 12, boxHeight: 12 } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor, font: { size: 12, family: 'Inter' } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1, font: { size: 11, family: 'Inter' } }, beginAtZero: true },
+      },
+    };
+  }
 
-  doughnutOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    cutout: '68%',
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
-      tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} tâche(s)` } },
-    },
-  };
+  get doughnutOptions(): ChartConfiguration<'doughnut'>['options'] {
+    const { legendColor } = this.chartTheme;
+    return {
+      responsive: true, maintainAspectRatio: false, animation: false, cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: legendColor, font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} tâche(s)` } },
+      },
+    };
+  }
 
-  dossierBarOptions: ChartConfiguration['options'] = {
-    indexAxis: 'y' as const,
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
-      tooltip: { mode: 'index', intersect: false },
-    },
-    scales: {
-      x: { stacked: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, font: { size: 11 } }, beginAtZero: true },
-      y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' } } },
-    },
-  };
+  get dossierBarOptions(): ChartConfiguration['options'] {
+    const { textColor, gridColor, legendColor } = this.chartTheme;
+    return {
+      indexAxis: 'y' as const,
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: legendColor, font: { size: 12, family: 'Inter' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1, font: { size: 11 } }, beginAtZero: true },
+        y: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11, family: 'Inter' } } },
+      },
+    };
+  }
 
   get dossiersTransmissibles() { return this.clients.filter(c => c.santePassation >= 80).length; }
   get dossiersPartiels()       { return this.clients.filter(c => c.santePassation >= 50 && c.santePassation < 80).length; }
@@ -631,6 +630,22 @@ export class DashboardComponent implements OnInit {
         iconBg: this.alertes.length > 0 ? 'rgba(110,42,154,.15)' : 'rgba(0,107,87,.15)',
         bg:    this.alertes.length > 0 ? '#EEDCFF' : '#C8F8EE' },
     ];
+  }
+
+  private theme = inject(ThemeService);
+
+  /** Couleurs adaptatives selon le thème actif */
+  private get chartTheme() {
+    const mode = this.theme.prefs().panelStyleId;
+    const isDark  = mode === 'dark';
+    const isGlass = mode === 'glass';
+    return {
+      textColor:   isDark ? '#CBD5E1' : '#374151',
+      gridColor:   isDark ? 'rgba(255,255,255,.07)' : isGlass ? 'rgba(0,0,0,.06)' : '#f1f5f9',
+      legendColor: isDark ? '#CBD5E1' : '#374151',
+      restanteBg:  isDark ? 'rgba(226,232,240,.30)' : isGlass ? 'rgba(148,163,184,.45)' : 'rgba(226,232,240,.90)',
+      restanteBorder: isDark ? '#475569' : '#94a3b8',
+    };
   }
 
   constructor(

@@ -2231,3 +2231,67 @@ body.theme-glass app-client-detail {
     border-color: rgba(255,255,255,.40) !important;
   }
 }
+
+/* ── Dashboard — mode Verre ──────────────────────────────────── */
+body.theme-glass app-dashboard {
+
+  /* Chart cards */
+  .chart-card {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1.5px solid rgba(255,255,255,.45) !important;
+    box-shadow: 0 8px 28px rgba(80,60,180,.08), inset 0 1px 0 rgba(255,255,255,.55) !important;
+  }
+
+  /* Onglets collaborateur */
+  .ctab {
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.40) !important;
+    color: #374151 !important;
+  }
+  .ctab:hover { background: rgba(255,255,255,.35) !important; }
+  .ctab--active {
+    background: rgba(99,102,241,.22) !important;
+    border-color: rgba(99,102,241,.50) !important;
+    color: #4338CA !important;
+  }
+  .ctab-taux { background: rgba(255,255,255,.30) !important; }
+
+  /* Section perf et hero */
+  .perf-section, .perf-header { background: transparent !important; }
+  .hero {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+  .hero__eyebrow, .hero__title, .hero__date { color: #1e293b !important; }
+  .h-stat__val { color: #1e293b !important; }
+  .h-stat__lbl { color: #475569 !important; }
+
+  /* Métriques */
+  .metric {
+    backdrop-filter: blur(12px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+
+  /* Alertes */
+  .alertes {
+    background: rgba(254,226,226,.55) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(252,165,165,.40) !important;
+  }
+
+  /* Section dossiers */
+  .section-bar {
+    background: rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+  .folder-item {
+    background: rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1.5px solid rgba(255,255,255,.40) !important;
+  }
+}
