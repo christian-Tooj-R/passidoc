@@ -7,6 +7,8 @@ export interface PappersResult {
   formeJuridique: string;
   adresse: string;
   siret: string;
+  codeNaf: string;
+  libelleNaf: string;
   dirigeants: { nom: string; prenom: string; qualite: string; dateNaissance?: string }[];
 }
 
@@ -72,6 +74,8 @@ export class PappersService {
         r.siege?.commune,
       ].filter(Boolean).join(' ') ?? '',
       siret: r.siege?.siret ?? '',
+      codeNaf:    r.activite_principale              ?? r.siege?.activite_principale              ?? '',
+      libelleNaf: r.activite_principale_libelle      ?? r.siege?.activite_principale_libelle      ?? '',
       dirigeants: (r.dirigeants || []).slice(0, 5).map((d: any) => ({
         nom: d.nom ?? '',
         prenom: d.prenoms ?? d.prenom ?? '',

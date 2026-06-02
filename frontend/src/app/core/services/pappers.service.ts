@@ -8,6 +8,8 @@ export interface PappersResult {
   formeJuridique: string;
   adresse: string;
   siret: string;
+  codeNaf: string;
+  libelleNaf: string;
   dirigeants: { nom: string; prenom: string; qualite: string; dateNaissance?: string }[];
 }
 

@@ -153,6 +153,15 @@ interface WizardStep { id: StepId; label: string; }
                 <div class="preview-grid">
                   <div class="pi"><label>Forme juridique</label><span>{{ selected.formeJuridique || '—' }}</span></div>
                   <div class="pi"><label>SIRET siège</label><span>{{ selected.siret || '—' }}</span></div>
+                  @if (selected.codeNaf) {
+                    <div class="pi">
+                      <label>Code NAF / APE</label>
+                      <span class="naf-badge">
+                        <strong>{{ selected.codeNaf }}</strong>
+                        @if (selected.libelleNaf) { <em>{{ selected.libelleNaf }}</em> }
+                      </span>
+                    </div>
+                  }
                   <div class="pi full"><label>Adresse</label><span>{{ selected.adresse || '—' }}</span></div>
                   @if (selected.dirigeants.length > 0) {
                     <div class="pi full">
@@ -751,6 +760,9 @@ interface WizardStep { id: StepId; label: string; }
     .pi.full { grid-column: 1 / -1; }
     .pi label { font-size: 10px; font-weight: 700; color: #86EFAC; text-transform: uppercase; }
     .pi span { font-size: 12.5px; color: #14532D; font-weight: 500; }
+    .naf-badge { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .naf-badge strong { font-size: 13px; font-weight: 800; color: #14532D; font-family: monospace; }
+    .naf-badge em { font-style: normal; font-size: 12px; color: #166534; opacity: .85; }
 
     /* ── Champ nom manuel ── */
     .full { width: 100%; }
