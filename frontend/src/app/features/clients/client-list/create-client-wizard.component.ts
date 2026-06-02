@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError, takeUntil } from 'rxjs';
@@ -39,7 +40,7 @@ interface WizardStep { id: StepId; label: string; }
     CommonModule, ReactiveFormsModule, FormsModule,
     MatDialogModule,
     MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule,
+    MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressSpinnerModule, MatSnackBarModule,
   ],
   template: `
