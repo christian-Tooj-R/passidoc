@@ -778,6 +778,15 @@ body.reduced-motion *::after {
     0 2px 8px rgba(0,0,0,.20) !important;
 }
 
+/* Backdrop du modal de pointage :
+   bloque TOUS les clics, fond sombre + blur pour montrer que l'app
+   est "verrouillée" tant que l'utilisateur n'a pas pointé */
+.pointage-backdrop {
+  background: rgba(0, 0, 0, .55) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
 /* ─────────────────────────────────────────────
    Page Personnalisation — dark mode
    (les composants utilisent des couleurs
