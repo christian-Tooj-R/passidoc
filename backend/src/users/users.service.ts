@@ -126,12 +126,12 @@ export class UsersService {
   }
 
   async getTheme(userId: number): Promise<Record<string, any>> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const user = await this.repo.findOne({ where: { id: userId } });
     return user?.themePrefs ?? {};
   }
 
   async saveTheme(userId: number, prefs: Record<string, any>): Promise<Record<string, any>> {
-    await this.userRepo.update(userId, { themePrefs: prefs });
+    await this.repo.update(userId, { themePrefs: prefs });
     return prefs;
   }
 
