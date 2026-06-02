@@ -5,6 +5,14 @@ import { map, catchError, of } from 'rxjs';
 import { PointageService } from '../services/pointage.service';
 import { PointageModalComponent } from '../../features/pointage/pointage-modal.component';
 
+const DIALOG_CONFIG = {
+  disableClose:  true,
+  hasBackdrop:   true,                      // bloque TOUS les clics derrière
+  backdropClass: 'pointage-backdrop',       // backdrop semi-transparent avec blur
+  panelClass:    'pointage-dialog',
+  width:         '380px',
+};
+
 export const pointageGuard: CanActivateFn = () => {
   const svc    = inject(PointageService);
   const dialog = inject(MatDialog);
@@ -18,24 +26,14 @@ export const pointageGuard: CanActivateFn = () => {
         d => d.componentInstance instanceof PointageModalComponent
       );
       if (!dejaOuvert) {
-        const ref = dialog.open(PointageModalComponent, {
-          disableClose: true,
-          hasBackdrop: false,   // pas de backdrop : la sidebar reste visible
-          panelClass:    'pointage-dialog',
-          width: '360px',
-        });
+        const ref = dialog.open(PointageModalComponent, DIALOG_CONFIG);
 
-        // Si fermé sans pointer (console devtools), relancer la vérification
+        // Si fermé sans pointer (bypass console devtools), relancer
         ref.afterClosed().subscribe((pointe: boolean) => {
           if (!pointe) {
             svc.getMonStatut().subscribe(s => {
               if (!s.estPointe && dialog.openDialogs.length === 0) {
-                dialog.open(PointageModalComponent, {
-                  disableClose: true,
-                  hasBackdrop: false,
-                  panelClass:    'pointage-dialog',
-                  width: '360px',
-                });
+                dialog.open(PointageModalComponent, DIALOG_CONFIG);
               }
             });
           }
