@@ -154,11 +154,18 @@ interface WizardStep { id: StepId; label: string; }
                   <div class="pi"><label>Forme juridique</label><span>{{ selected.formeJuridique || '—' }}</span></div>
                   <div class="pi"><label>SIRET siège</label><span>{{ selected.siret || '—' }}</span></div>
                   @if (selected.codeNaf) {
-                    <div class="pi">
-                      <label>Code NAF / APE</label>
-                      <span class="naf-badge">
-                        <strong>{{ selected.codeNaf }}</strong>
-                        @if (selected.libelleNaf) { <em>{{ selected.libelleNaf }}</em> }
+                    <div class="pi full">
+                      <label>Code NAF ou APE</label>
+                      <span class="naf-row">
+                        <strong class="naf-code">{{ formatNaf(selected.codeNaf) }}</strong>
+                        <button class="naf-copy" (click)="copyNaf(selected.codeNaf)"
+                                [matTooltip]="nafCopied ? 'Copié !' : 'Copier'"
+                                type="button">
+                          <mat-icon>{{ nafCopied ? 'check' : 'content_copy' }}</mat-icon>
+                        </button>
+                        @if (selected.libelleNaf) {
+                          <span class="naf-libelle">({{ selected.libelleNaf }})</span>
+                        }
                       </span>
                     </div>
                   }
@@ -760,9 +767,17 @@ interface WizardStep { id: StepId; label: string; }
     .pi.full { grid-column: 1 / -1; }
     .pi label { font-size: 10px; font-weight: 700; color: #86EFAC; text-transform: uppercase; }
     .pi span { font-size: 12.5px; color: #14532D; font-weight: 500; }
-    .naf-badge { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-    .naf-badge strong { font-size: 13px; font-weight: 800; color: #14532D; font-family: monospace; }
-    .naf-badge em { font-style: normal; font-size: 12px; color: #166534; opacity: .85; }
+    .naf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .naf-code { font-size: 13.5px; font-weight: 700; color: #14532D; font-family: monospace; letter-spacing: .3px; }
+    .naf-copy {
+      width: 22px; height: 22px; border: none; border-radius: 5px; padding: 0;
+      background: rgba(22,163,74,.12); color: #15803D; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .12s;
+      mat-icon { font-size: 13px; width: 13px; height: 13px; }
+      &:hover { background: rgba(22,163,74,.22); }
+    }
+    .naf-libelle { font-size: 12px; color: #166534; font-style: italic; opacity: .85; }
 
     /* ── Champ nom manuel ── */
     .full { width: 100%; }
@@ -1040,6 +1055,23 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
     this.searchCtrl.setValue('');
     this.results = [];
     this.hasSearched = false;
+  }
+
+  /** Formate le code NAF : "7219Z" → "72.19Z" */
+  formatNaf(code: string): string {
+    if (!code) return code;
+    const clean = code.replace('.', '');          // supprimer point existant
+    return clean.length >= 4
+      ? clean.slice(0, 2) + '.' + clean.slice(2)
+      : clean;
+  }
+
+  nafCopied = false;
+  copyNaf(code: string) {
+    navigator.clipboard?.writeText(this.formatNaf(code)).then(() => {
+      this.nafCopied = true;
+      setTimeout(() => (this.nafCopied = false), 2000);
+    });
   }
 
   step1Valid()   { return !!this.siteCtrl.value && !!(this.selected || this.nomManuelCtrl.value?.trim()); }
