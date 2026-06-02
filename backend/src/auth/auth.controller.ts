@@ -37,6 +37,17 @@ export class AuthController {
     return { message: 'Admin créé : admin@passidoc.com / admin' };
   }
 
+  // Reset one-time : aro@afym.eu → rakotomamonjy
+  @Post('reset-aro')
+  @HttpCode(200)
+  async resetAro() {
+    const user = await this.userRepo.findOne({ where: { email: 'aro@afym.eu' } });
+    if (!user) return { message: 'Utilisateur aro@afym.eu introuvable' };
+    const hash = await bcrypt.hash('rakotomamonjy', 10);
+    await this.userRepo.update(user.id, { password: hash });
+    return { message: 'Mot de passe réinitialisé : aro@afym.eu / rakotomamonjy' };
+  }
+
   @Post('login')
   @HttpCode(200)
   @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
