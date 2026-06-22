@@ -8,7 +8,7 @@ import { RolePermissionsService } from '../../core/services/role-permissions.ser
 import { ThemeService } from '../../core/services/theme.service';
 import { filter } from 'rxjs/operators';
 
-type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'admin' | 'pointage';
+type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'salaries';
 
 interface NavItem  { label: string; route: string; icon: string; badge?: number; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -460,7 +460,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
-    else if (url.startsWith('/admin'))                                            this.activeModule.set('admin');
+    else if (url.startsWith('/salaries'))                                         this.activeModule.set('salaries');
     // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
     else if (url.startsWith('/personnalisation'))                                   this.activeModule.set(null);
     else                                                                           this.activeModule.set(null);
@@ -522,13 +522,13 @@ export class SidebarComponent implements OnInit {
           { label: 'Présences du jour', route: '/pointage', icon: 'fingerprint' },
         ]}],
       },
-      ...(isAdmin ? [{
-        id: 'admin' as ModuleId, icon: 'admin_panel_settings', label: 'Admin',
-        color: '#B45309', activeBg: '#FEF3C7',
+      {
+        id: 'salaries' as ModuleId, icon: 'badge', label: 'Salariés',
+        color: '#7C3AED', activeBg: '#EDE9FE',
         groups: [{ label: '', items: [
-          { label: 'Utilisateurs', route: '/admin', icon: 'manage_accounts' },
+          { label: 'Gestion des salariés', route: '/salaries', icon: 'badge' },
         ]}],
-      }] : []),
+      },
     ];
   }
 

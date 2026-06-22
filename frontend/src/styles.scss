@@ -2304,3 +2304,21 @@ body.theme-glass app-dashboard {
     border: 1.5px solid rgba(255,255,255,.40) !important;
   }
 }
+
+/* ── MatDatepicker toggle (nav-cal-toggle) ─────────────────── */
+.nav-cal-toggle button.mat-mdc-icon-button {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  line-height: 32px;
+  border-radius: 50% !important;
+  background: #f5f3ff !important;
+  color: #6366f1 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .mat-mdc-button-touch-target { width: 32px; height: 32px; }
+  mat-icon { font-size: 1.2rem; width: 1.2rem; height: 1.2rem; }
+  &:hover { background: #ede9fe !important; }
+}

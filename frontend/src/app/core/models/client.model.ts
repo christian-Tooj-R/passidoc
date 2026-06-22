@@ -81,6 +81,10 @@ export interface FicheIdentite {
   telephoneContact?: string;
   gerants?: Gerant[];
   salaries?: Salarie[];
+  actionnaires?: Actionnaire[];
+  honoraires?: Honoraires;
+  reseauxSociauxStructures?: ReseauSocial[];
+  nbConcurrentsGeneral?: number;
 }
 
 export interface Gerant {
@@ -95,6 +99,25 @@ export interface Salarie {
   nom: string;
   poste: string;
   typeContrat: string;
+}
+
+export interface Actionnaire {
+  nom: string;
+  prenom: string;
+  pourcentage: number;
+  regimeFiscal: string;
+}
+
+export interface Honoraires {
+  comptables?: number;
+  juridiques?: number;
+  sociaux?: number;
+  commissariatAuxComptes?: number;
+}
+
+export interface ReseauSocial {
+  plateforme: string;
+  url: string;
 }
 
 export type TypeFlux =

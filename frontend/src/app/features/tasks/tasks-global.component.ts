@@ -1476,20 +1476,20 @@ export class TaskDetailDialogComponent {
 
     /* ── Tableau ─────────────────────────────────────────── */
     .tl-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-    .tl-table thead { position: sticky; top: 0; z-index: 2; background: #f8fafc; }
-    .tl-table thead tr { border-bottom: 2px solid #e8ecf0; }
+    .tl-table thead { position: sticky; top: 0; z-index: 2; }
+    .tl-table thead tr { background: #162351; }
 
     .th-btn {
       display: flex; align-items: center; gap: 4px;
       background: none; border: none; cursor: pointer;
-      font-size: 11px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: .6px;
+      font-size: 12px; font-weight: 600; color: #fff;
+      text-transform: none; letter-spacing: 0;
       padding: 0; white-space: nowrap;
     }
-    .th-btn mat-icon { font-size: 13px; width: 13px; height: 13px; color: #6366f1; }
-    .th-btn:hover { color: #475569; }
+    .th-btn mat-icon { font-size: 13px; width: 13px; height: 13px; color: rgba(255,255,255,.7); }
+    .th-btn:hover { color: rgba(255,255,255,.85); }
 
-    .tl-table th { padding: 12px 14px; text-align: left; }
+    .tl-table th { padding: 10px 14px; text-align: left; color: #fff; }
     .tl-table td { padding: 11px 14px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
 
     /* Colonnes */

@@ -1,24 +1,26 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DocumentsService } from '../../../../../core/services/documents.service';
 import { ClientDocument } from '../../../../../core/models/client.model';
 import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
+import { DataTableComponent, ColDirective, ColumnDef } from '../../../../../shared/data-table/data-table.component';
 
 @Component({
   selector: 'app-documents-tab',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule, LocalDatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressBarModule,
+    LocalDatePipe, DataTableComponent, ColDirective],
   template: `
     <div class="tab-content">
       <div class="tab-header">
         <h3>Documents</h3>
-        <label class="upload-btn mat-flat-button">
+        <label class="upload-btn">
           <mat-icon>upload</mat-icon> Uploader un fichier
           <input type="file" hidden (change)="upload($event)" />
         </label>
@@ -28,42 +30,37 @@ import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
         <mat-progress-bar mode="indeterminate" />
       }
 
-      <table mat-table [dataSource]="documents" class="full-width">
-        <ng-container matColumnDef="nom">
-          <th mat-header-cell *matHeaderCellDef>Fichier</th>
-          <td mat-cell *matCellDef="let d">
+      <app-data-table [columns]="colonnes" [data]="documents" [pageSize]="0">
+
+        <ng-template appCol="nom" let-d>
+          <div class="file-cell">
             <mat-icon class="file-icon">insert_drive_file</mat-icon>
-            {{ d.nom }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="taille">
-          <th mat-header-cell *matHeaderCellDef>Taille</th>
-          <td mat-cell *matCellDef="let d">{{ formatSize(d.taille) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="uploadePar">
-          <th mat-header-cell *matHeaderCellDef>Uploadé par</th>
-          <td mat-cell *matCellDef="let d">
-            {{ d.uploadePar?.firstName }} {{ d.uploadePar?.lastName }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let d">{{ d.createdAt | localDate:'dd/MM/yyyy' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let d">
-            <button mat-icon-button color="primary" (click)="download(d)" matTooltip="Télécharger">
-              <mat-icon>download</mat-icon>
-            </button>
-            <button mat-icon-button color="warn" (click)="delete(d)" matTooltip="Supprimer">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-      </table>
+            <span>{{ d.nom }}</span>
+          </div>
+        </ng-template>
+
+        <ng-template appCol="taille" let-d>
+          {{ formatSize(d.taille) }}
+        </ng-template>
+
+        <ng-template appCol="uploadePar" let-d>
+          {{ d.uploadePar?.firstName }} {{ d.uploadePar?.lastName }}
+        </ng-template>
+
+        <ng-template appCol="date" let-d>
+          {{ d.createdAt | localDate:'dd/MM/yyyy' }}
+        </ng-template>
+
+        <ng-template appCol="actions" let-d>
+          <button mat-icon-button color="primary" (click)="download(d)" matTooltip="Télécharger">
+            <mat-icon>download</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="delete(d)" matTooltip="Supprimer">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </ng-template>
+
+      </app-data-table>
 
       @if (documents.length === 0 && !uploading) {
         <div class="empty-state">
@@ -76,6 +73,7 @@ import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
   styles: [`
     .tab-content { padding: 24px; }
     .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    h3 { margin: 0; font-size: 15px; font-weight: 600; color: #1e293b; }
     .upload-btn {
       display: inline-flex; align-items: center; gap: 8px;
       background: #1565C0; color: white; padding: 8px 20px;
@@ -83,19 +81,27 @@ import { LocalDatePipe } from '../../../../../core/pipes/local-date.pipe';
       transition: background .15s;
     }
     .upload-btn:hover { background: #0D47A1; }
-    .full-width { width: 100%; }
-    .file-icon { vertical-align: middle; font-size: 18px; color: #64748b; }
+    .file-cell { display: flex; align-items: center; gap: 8px; }
+    .file-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; flex-shrink: 0; }
     .empty-state { text-align: center; padding: 48px; color: #94a3b8; }
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
+    app-data-table { display: block; margin-top: 8px; }
   `],
 })
 export class DocumentsTabComponent implements OnInit {
   @Input() clientId!: number;
   documents: ClientDocument[] = [];
-  columns = ['nom', 'taille', 'uploadePar', 'date', 'actions'];
   uploading = false;
 
-  private toast = inject(ToastService);
+  readonly colonnes: ColumnDef[] = [
+    { key: 'nom',        label: 'Fichier' },
+    { key: 'taille',     label: 'Taille' },
+    { key: 'uploadePar', label: 'Uploadé par' },
+    { key: 'date',       label: 'Date' },
+    { key: 'actions',    label: '' },
+  ];
+
+  private toast   = inject(ToastService);
   private confirm = inject(ConfirmService);
   constructor(private service: DocumentsService) {}
   ngOnInit() { this.load(); }

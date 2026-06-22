@@ -22,6 +22,10 @@ export class AuthService {
     }
   }
 
+  register(dto: { firstName: string; lastName: string; email: string; password: string; site: string }) {
+    return this.http.post<any>(`${this.api}/register`, dto);
+  }
+
   login(email: string, password: string) {
     return this.http.post<any>(`${this.api}/login`, { email, password }).pipe(
       tap((res) => {

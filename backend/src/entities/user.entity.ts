@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn, OneToMany,
+  CreateDateColumn, UpdateDateColumn,
   ManyToOne, JoinColumn,
 } from 'typeorm';
 
@@ -61,6 +61,26 @@ export class User {
   /** Préférences d'apparence — stockées par utilisateur */
   @Column({ type: 'json', nullable: true })
   themePrefs: Record<string, any> | null;
+
+  /* ── Champs RH ────────────────────────────────── */
+
+  @Column({ type: 'varchar', nullable: true })
+  poste: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  typeContrat: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  dateEntree: string | null;
+
+  /** Date de départ — renseignée = ancien collaborateur */
+  @Column({ type: 'date', nullable: true })
+  dateSortie: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  telephone: string | null;
+
+  /* ─────────────────────────────────────────────── */
 
   @CreateDateColumn()
   createdAt: Date;

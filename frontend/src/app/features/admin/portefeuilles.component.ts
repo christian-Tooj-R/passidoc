@@ -725,15 +725,17 @@ interface CollabCard {
     }
 
     /* ─── Mini-table ─────────────────────────────────── */
-    .mini-table { width: 100%; border-collapse: collapse; }
+    .mini-table { width: 100%; border-collapse: collapse; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; }
+    .mini-table thead tr { background: #162351; }
     .mini-table thead th {
       padding: 10px 14px; text-align: left;
-      font-size: 10px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: .8px;
-      background: #f8fafc; border-bottom: 1px solid #e8ecf0;
+      font-size: 13px; font-weight: 600; color: #fff;
+      border: none;
     }
-    .mini-table td { padding: 10px 14px; vertical-align: middle; font-size: 13px; }
-    .mini-table tr:not(:last-child) td { border-bottom: 1px solid #f1f5f9; }
+    .mini-table tbody tr:nth-child(even) { background: #f8f9fa; }
+    .mini-table tbody tr:hover td { background: #e8edf8 !important; }
+    .mini-table td { padding: 10px 14px; vertical-align: middle; font-size: 13px; border-bottom: 1px solid #dee2e6; color: #212529; }
+    .mini-table tbody tr:last-child td { border-bottom: none; }
 
     .full-table thead th { padding: 13px 20px; }
     .full-table td { padding: 13px 20px; }

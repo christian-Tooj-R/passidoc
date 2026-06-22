@@ -1,8 +1,9 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, ManyToOne, JoinColumn,
+  CreateDateColumn, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
+import { PausePointage } from './pause-pointage.entity';
 
 @Entity('pointages')
 export class Pointage {
@@ -22,9 +23,11 @@ export class Pointage {
   @Column({ type: 'timestamp' })
   heureArrivee: Date;
 
+  /** @deprecated Conservé pour la compatibilité — utiliser pauses[] à la place */
   @Column({ type: 'timestamp', nullable: true })
   heureDebutPause: Date;
 
+  /** @deprecated Conservé pour la compatibilité — utiliser pauses[] à la place */
   @Column({ type: 'timestamp', nullable: true })
   heureFinPause: Date;
 
@@ -37,6 +40,9 @@ export class Pointage {
 
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   longitude: number | null;
+
+  @OneToMany(() => PausePointage, (pp) => pp.pointage, { cascade: true, eager: true })
+  pauses: PausePointage[];
 
   @CreateDateColumn()
   createdAt: Date;

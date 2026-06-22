@@ -1,115 +1,18 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { ToastService } from '../../core/services/toast.service';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../../core/services/users.service';
 import { User } from '../../core/models/user.model';
+import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 
-/* ── Dialog création utilisateur ── */
-@Component({
-  selector: 'app-create-user-dialog',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
-  template: `
-    <div class="dialog">
-      <div class="dialog-header">
-        <div class="dialog-header__icon"><mat-icon>person_add</mat-icon></div>
-        <div>
-          <h2>Nouvel utilisateur</h2>
-          <p>Créer un compte collaborateur ou expert</p>
-        </div>
-      </div>
-      <form [formGroup]="form" (ngSubmit)="confirm()" class="dialog-body">
-        <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Prénom</mat-label>
-            <input matInput formControlName="firstName" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Nom</mat-label>
-            <input matInput formControlName="lastName" />
-          </mat-form-field>
-        </div>
-        <mat-form-field appearance="outline" class="full">
-          <mat-label>Adresse email</mat-label>
-          <mat-icon matPrefix>alternate_email</mat-icon>
-          <input matInput type="email" formControlName="email" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full">
-          <mat-label>Mot de passe</mat-label>
-          <mat-icon matPrefix>lock_outline</mat-icon>
-          <input matInput type="password" formControlName="password" />
-          <mat-hint>Minimum 8 caractères</mat-hint>
-        </mat-form-field>
-        <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Rôle</mat-label>
-            <mat-select formControlName="role">
-              <mat-option value="COLLABORATEUR">Collaborateur</mat-option>
-              <mat-option value="EXPERT_COMPTABLE">Expert-Comptable</mat-option>
-              <mat-option value="ADMIN">Administrateur</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Site</mat-label>
-            <mat-select formControlName="site">
-              <mat-option value="REUNION">🇷🇪 La Réunion</mat-option>
-              <mat-option value="MADAGASCAR">🇲🇬 Madagascar</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-      </form>
-      <div class="dialog-actions">
-        <button mat-stroked-button type="button" (click)="cancel()">Annuler</button>
-        <button mat-flat-button class="btn-create" [disabled]="form.invalid" (click)="confirm()">
-          <mat-icon>person_add</mat-icon> Créer le compte
-        </button>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .dialog { width: 500px; max-width: 100%; }
-    .dialog-header { display: flex; align-items: center; gap: 16px; padding: 28px 28px 20px; border-bottom: 1px solid #f1f5f9; }
-    .dialog-header__icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1e40af, #3730a3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .dialog-header__icon mat-icon { color: white; font-size: 24px; width: 24px; height: 24px; }
-    .dialog-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
-    .dialog-header p { font-size: 13px; color: #64748b; margin: 0; }
-    .dialog-body { padding: 20px 28px; display: flex; flex-direction: column; gap: 4px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .full { width: 100%; }
-    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 28px 24px; border-top: 1px solid #f1f5f9; }
-    .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; }
-  `],
-})
-export class CreateUserDialogComponent {
-  dialogRef = inject(MatDialogRef<CreateUserDialogComponent>);
-  fb = inject(FormBuilder);
-  form = this.fb.group({
-    firstName: ['', Validators.required],
-    lastName: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-    role: ['COLLABORATEUR', Validators.required],
-    site: ['REUNION', Validators.required],
-  });
-  confirm() { if (this.form.valid) this.dialogRef.close(this.form.value); else this.form.markAllAsTouched(); }
-  cancel() { this.dialogRef.close(null); }
-}
-
-/* ── Page Utilisateurs ── */
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatIconModule,
-    MatDialogModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule,
+    MatTooltipModule, DataTableComponent, ColDirective],
   template: `
     <div class="page">
       <div class="page-header">
@@ -120,9 +23,6 @@ export class CreateUserDialogComponent {
             <p class="page-subtitle">{{ users.length }} compte(s) enregistré(s)</p>
           </div>
         </div>
-        <button mat-flat-button class="btn-create" (click)="openCreate()">
-          <mat-icon>person_add</mat-icon> Nouvel utilisateur
-        </button>
       </div>
 
       <!-- Stats mini -->
@@ -145,63 +45,39 @@ export class CreateUserDialogComponent {
         </div>
       </div>
 
-      <div class="table-card">
-        <table class="users-table">
-          <thead>
-            <tr>
-              <th>Utilisateur</th>
-              <th>Email</th>
-              <th>Rôle</th>
-              <th>Site</th>
-              <th>2FA</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (u of users; track u.id) {
-              <tr class="table-row">
-                <td>
-                  <div class="user-cell">
-                    <div class="user-avatar">{{ (u.firstName?.[0] || '') + (u.lastName?.[0] || '') }}</div>
-                    <span class="user-name">{{ u.firstName }} {{ u.lastName }}</span>
-                  </div>
-                </td>
-                <td class="text-muted">{{ u.email }}</td>
-                <td>
-                  <span class="role-badge" [class]="'role-' + u.role?.toLowerCase()">
-                    {{ roleLabel(u.role) }}
-                  </span>
-                </td>
-                <td>
-                  <span [class]="u.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
-                    {{ u.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="twofa-badge" [class.active]="u.isTwoFactorEnabled">
-                    <mat-icon>{{ u.isTwoFactorEnabled ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
-                    {{ u.isTwoFactorEnabled ? 'Activé' : 'Inactif' }}
-                  </span>
-                </td>
-                <td class="action-cell">
-                  <button mat-icon-button class="btn-delete" matTooltip="Désactiver l'utilisateur"
-                          (click)="deleteUser(u)">
-                    <mat-icon>person_off</mat-icon>
-                  </button>
-                </td>
-              </tr>
-            }
-            @if (users.length === 0) {
-              <tr>
-                <td colspan="6" class="empty-state">
-                  <mat-icon>group_off</mat-icon>
-                  <span>Aucun utilisateur</span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <app-data-table [columns]="colonnes" [data]="users" [pageSize]="0">
+
+        <ng-template appCol="nom" let-u>
+          <div class="user-cell">
+            <div class="user-avatar">{{ (u.firstName?.[0] || '') + (u.lastName?.[0] || '') }}</div>
+            <span class="user-name">{{ u.firstName }} {{ u.lastName }}</span>
+          </div>
+        </ng-template>
+
+        <ng-template appCol="role" let-u>
+          <span class="role-badge" [class]="'role-' + u.role?.toLowerCase()">{{ roleLabel(u.role) }}</span>
+        </ng-template>
+
+        <ng-template appCol="site" let-u>
+          <span [class]="u.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
+            {{ u.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+          </span>
+        </ng-template>
+
+        <ng-template appCol="twofa" let-u>
+          <span class="twofa-badge" [class.active]="u.isTwoFactorEnabled">
+            <mat-icon>{{ u.isTwoFactorEnabled ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
+            {{ u.isTwoFactorEnabled ? 'Activé' : 'Inactif' }}
+          </span>
+        </ng-template>
+
+        <ng-template appCol="actions" let-u>
+          <button mat-icon-button class="btn-delete" matTooltip="Désactiver l'utilisateur" (click)="deleteUser(u)">
+            <mat-icon>person_off</mat-icon>
+          </button>
+        </ng-template>
+
+      </app-data-table>
     </div>
   `,
   styles: [`
@@ -211,8 +87,6 @@ export class CreateUserDialogComponent {
     .page-icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
     .page-header h1 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; }
     .page-subtitle { font-size: 13px; color: #94a3b8; margin: 0; }
-    .btn-create { border-radius: 10px !important; font-weight: 600; background: linear-gradient(135deg, #1e40af, #3730a3) !important; color: white !important; }
-
     /* Stats */
     .stats-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
     .stat-chip {
@@ -224,24 +98,8 @@ export class CreateUserDialogComponent {
     }
     .stat-chip mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
 
-    /* Table */
-    .table-card {
-      background: white; border-radius: 16px;
-      border: 1px solid #e8ecf0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
-      overflow: hidden; margin-bottom: 8px;
-    }
-    .users-table { width: 100%; border-collapse: collapse; }
-    .users-table thead th {
-      padding: 14px 20px; text-align: left;
-      font-size: 11px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      background: #f8fafc; border-bottom: 1px solid #e8ecf0;
-    }
-    .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
-    .table-row:last-child { border-bottom: none; }
-    .table-row:hover { background: #f8fafc; }
-    .users-table td { padding: 12px 20px; vertical-align: middle; }
+    /* Table wrapper */
+    app-data-table { display: block; margin-bottom: 8px; }
 
     .user-cell { display: flex; align-items: center; gap: 10px; }
     .user-avatar {
@@ -285,27 +143,23 @@ export class CreateUserDialogComponent {
 export class AdminComponent implements OnInit {
   private usersService = inject(UsersService);
   private toast = inject(ToastService);
-  private dialog = inject(MatDialog);
 
   users: User[] = [];
+
+  readonly colonnes: ColumnDef[] = [
+    { key: 'nom',     label: 'Utilisateur' },
+    { key: 'email',   label: 'Email' },
+    { key: 'role',    label: 'Rôle' },
+    { key: 'site',    label: 'Site' },
+    { key: 'twofa',   label: '2FA' },
+    { key: 'actions', label: '' },
+  ];
 
   ngOnInit() {
     this.loadUsers();
   }
 
   loadUsers() { this.usersService.getAll().subscribe((d) => (this.users = d)); }
-
-  openCreate() {
-    const ref = this.dialog.open(CreateUserDialogComponent, { panelClass: 'rounded-dialog' });
-    ref.afterClosed().subscribe((result) => {
-      if (result) {
-        this.usersService.create(result).subscribe(() => {
-          this.loadUsers();
-          this.toast.success('Utilisateur créé avec succès');
-        });
-      }
-    });
-  }
 
   deleteUser(u: User) {
     if (!confirm(`Désactiver le compte de ${u.firstName} ${u.lastName} ?`)) return;

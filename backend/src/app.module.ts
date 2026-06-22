@@ -30,6 +30,7 @@ import { QuestionnaireAdnModule } from './questionnaire-adn/questionnaire-adn.mo
 import { RolePermissionsModule } from './role-permissions/role-permissions.module';
 import { PointageModule } from './pointage/pointage.module';
 import { EspacesModule } from './espaces/espaces.module';
+import { SalariesModule } from './salaries/salaries.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { EspacesModule } from './espaces/espaces.module';
     RolePermissionsModule,
     PointageModule,
     EspacesModule,
+    SalariesModule,
   ],
   controllers: [AppController],
   providers: [

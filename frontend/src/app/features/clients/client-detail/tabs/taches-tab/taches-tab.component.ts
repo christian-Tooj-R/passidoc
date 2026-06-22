@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { TasksService, Task, GrilleResult } from '../../../../../core/services/tasks.service';
 
 const MOIS_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -23,7 +24,7 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink,
-    MatButtonModule, MatIconModule, MatTooltipModule,
+    MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule,
   ],
   template: `
     <div class="grille-page">
@@ -35,6 +36,16 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
             <mat-icon>chevron_left</mat-icon>
           </button>
           <span class="year-label">{{ annee }}</span>
+          <button mat-icon-button matTooltip="Choisir une année" [matMenuTriggerFor]="yearMenu" class="year-btn-cal">
+            <mat-icon>calendar_month</mat-icon>
+          </button>
+          <mat-menu #yearMenu="matMenu">
+            @for (y of yearOptions; track y) {
+              <button mat-menu-item (click)="jumpToYear(y)" [class.year-active]="y === annee">
+                {{ y }}
+              </button>
+            }
+          </mat-menu>
           <button mat-icon-button (click)="changeAnnee(1)" [disabled]="annee >= today.getFullYear()" matTooltip="Année suivante">
             <mat-icon>chevron_right</mat-icon>
           </button>
@@ -322,6 +333,8 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     .grille-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
     .year-nav { display: flex; align-items: center; gap: 8px; }
     .year-label { font-size: 18px; font-weight: 800; color: #1e293b; min-width: 52px; text-align: center; }
+    .year-btn-cal { color: #6366f1 !important; }
+    .year-active { background: #f5f3ff; color: #6366f1; font-weight: 700; }
     .global-progress { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 160px; }
     .gp-label { font-size: 12px; color: #64748b; white-space: nowrap; }
     .gp-bar-wrap { flex: 1; height: 8px; background: #e8ecf0; border-radius: 4px; overflow: hidden; }
@@ -456,13 +469,14 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     .tl-link { display: flex; align-items: center; gap: 3px; margin-left: auto; font-size: 11.5px; color: #6366f1; text-decoration: none; font-weight: 600; }
     .tl-link mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .tl-link:hover { text-decoration: underline; }
-    .tl-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: white; border: 1px solid #e8ecf0; border-radius: 10px; overflow: hidden; }
-    .tl-table thead tr { background: #f8fafc; border-bottom: 2px solid #e8ecf0; }
-    .tl-table th { padding: 8px 12px; text-align: left; font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
-    .tl-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .1s; }
+    .tl-table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; }
+    .tl-table thead tr { background: #162351; }
+    .tl-table th { padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; }
+    .tl-table tbody tr { border-bottom: 1px solid #dee2e6; transition: background .1s; }
+    .tl-table tbody tr:nth-child(even) { background: #f8f9fa; }
     .tl-table tbody tr:last-child { border-bottom: none; }
-    .tl-table tbody tr:hover { background: #fafbfc; }
-    .tl-table td { padding: 8px 12px; color: #1e293b; vertical-align: middle; }
+    .tl-table tbody tr:hover td { background: #e8edf8 !important; }
+    .tl-table td { padding: 9px 12px; color: #212529; vertical-align: middle; }
     .tl-terminee td { color: #94a3b8; }
     .tl-id { font-family: monospace; font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; }
     .tl-titre { font-weight: 600; max-width: 220px; }
@@ -540,6 +554,19 @@ export class TachesTabComponent implements OnInit {
 
   changeAnnee(delta: number) {
     this.annee += delta;
+    this.load();
+  }
+
+  get yearOptions(): number[] {
+    const opts: number[] = [];
+    for (let y = this.today.getFullYear(); y >= Math.max(2020, this.today.getFullYear() - 5); y--) {
+      opts.push(y);
+    }
+    return opts;
+  }
+
+  jumpToYear(y: number) {
+    this.annee = y;
     this.load();
   }
 

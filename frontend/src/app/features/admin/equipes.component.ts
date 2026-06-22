@@ -238,25 +238,21 @@ import { User } from '../../core/models/user.model';
 
     /* ── Table ───────────────────────────────────────────────── */
     .table-wrap {
-      background: white; border-radius: 14px; overflow: hidden;
-      border: 1px solid #E2E8F0;
-      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      width: 100%; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden;
     }
-    .table { width: 100%; border-collapse: collapse; }
+    .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table thead tr { background: #162351; }
     .table thead th {
-      padding: 12px 20px; text-align: left;
-      font-size: 11px; font-weight: 700; color: #94A3B8;
-      text-transform: uppercase; letter-spacing: .7px;
-      background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+      padding: 10px 12px; text-align: left;
+      font-size: 13px; font-weight: 600; color: #fff; border: none; white-space: nowrap;
     }
     .tr-main {
-      border-bottom: 1px solid #F1F5F9;
-      transition: background .1s;
-      &:last-child { border-bottom: none; }
-      &:hover { background: #F8FAFC; }
-      &--open { background: #F5F3FF !important; }
+      background: #fff; border-bottom: 1px solid #dee2e6;
+      &:nth-child(even) { background: #f8f9fa; }
+      &:hover td { background: #e8edf8 !important; }
+      &--open td { background: #eef2ff !important; }
     }
-    .tr-main td { padding: 12px 20px; vertical-align: middle; }
+    .tr-main td { padding: 9px 12px; vertical-align: middle; color: #212529; }
     .td-action { text-align: right; width: 130px; }
 
     /* ── Assign panel row ───────────────────────────────────── */

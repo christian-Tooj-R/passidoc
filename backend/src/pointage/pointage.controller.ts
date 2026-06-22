@@ -17,12 +17,16 @@ export class PointageController {
   @Post('pointer')
   @HttpCode(200)
   @ApiOperation({ summary: 'Pointer arrivée, pause ou départ avec coordonnées GPS' })
-  @ApiBody({ schema: { properties: { latitude: { type: 'number' }, longitude: { type: 'number' } } } })
+  @ApiBody({ schema: { properties: {
+    latitude:  { type: 'number' },
+    longitude: { type: 'number' },
+    action:    { type: 'string', enum: ['debut_pause', 'fin_pause', 'depart'] },
+  }}})
   pointer(
     @CurrentUser() user: User,
-    @Body() body: { latitude?: number; longitude?: number },
+    @Body() body: { latitude?: number; longitude?: number; action?: 'debut_pause' | 'fin_pause' | 'depart' },
   ) {
-    return this.svc.pointer(user.id, body.latitude, body.longitude);
+    return this.svc.pointer(user.id, body.latitude, body.longitude, body.action);
   }
 
   @Get('journee')

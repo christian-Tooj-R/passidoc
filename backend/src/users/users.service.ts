@@ -125,6 +125,34 @@ export class UsersService {
     return this.findOne(userId);
   }
 
+  /** Vue salariés : tous les users actifs + anciens, triés par nom */
+  async findSalaries(site?: string) {
+    const where: any = site ? { site } : {};
+    const users = await this.repo.find({ where, order: { lastName: 'ASC', firstName: 'ASC' } });
+    return users.map(this.sanitize);
+  }
+
+  /** Mise à jour des champs RH uniquement */
+  async updateRH(id: number, dto: {
+    poste?: string | null;
+    typeContrat?: string | null;
+    dateEntree?: string | null;
+    dateSortie?: string | null;
+    telephone?: string | null;
+    firstName?: string;
+    lastName?: string;
+    site?: string;
+  }) {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+    Object.assign(user, dto);
+    // Si une date de sortie est renseignée, désactiver le compte
+    if (dto.dateSortie) user.isActive = false;
+    if (dto.dateSortie === null) user.isActive = true;
+    const saved = await this.repo.save(user);
+    return this.sanitize(saved);
+  }
+
   async getTheme(userId: number): Promise<Record<string, any>> {
     const user = await this.repo.findOne({ where: { id: userId } });
     return user?.themePrefs ?? {};

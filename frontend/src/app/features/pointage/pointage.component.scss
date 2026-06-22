@@ -266,6 +266,14 @@ $light:  #F9FAFB;
   &--out    { background: rgba(252,165,165,.2); border-color: rgba(252,165,165,.6); }
 }
 
+.btn-groupe-revenu {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 .journee-terminee {
   display: flex;
   align-items: center;
@@ -320,6 +328,26 @@ $light:  #F9FAFB;
 
   &:hover:not(:disabled) { background: #E5E7EB; color: #111827; }
   &:disabled { opacity: .35; cursor: not-allowed; }
+}
+
+.cal-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-anchor {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
 }
 
 // ── Grille jours ─────────────────────────────────────────────
@@ -544,50 +572,6 @@ $light:  #F9FAFB;
   &--mois    { background: #F5F3FF; border-color: #DDD6FE; mat-icon { color: $purple; } }
 }
 
-// ── Tableau listing ───────────────────────────────────────────
-.listing-table-wrap {
-  overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid #E5E7EB;
-}
-
-.listing-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-
-  thead tr { background: #F9FAFB; }
-
-  th {
-    padding: 10px 12px;
-    text-align: left;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: $gray;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-    white-space: nowrap;
-    border-bottom: 2px solid #E5E7EB;
-  }
-
-  .col-employe { min-width: 160px; }
-  .col-site    { white-space: nowrap; }
-
-  .col-jour {
-    text-align: center;
-    min-width: 80px;
-
-    &--today { background: #F0FDF4; color: $green !important; }
-  }
-
-  .col-total {
-    text-align: center;
-    min-width: 80px;
-    font-weight: 700;
-    color: #111827;
-  }
-}
-
 
 .col-jour-val {
   text-align: center;
@@ -674,80 +658,6 @@ $light:  #F9FAFB;
   &:hover { color: #374151; }
 }
 
-// ── Pagination ────────────────────────────────────────────────
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 4px 4px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pagination-info {
-  font-size: 0.8rem;
-  color: $gray;
-}
-
-.pagination-btns {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.page-btn {
-  min-width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #E5E7EB;
-  background: $light;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .12s, border-color .12s;
-
-  &:hover { background: #E5E7EB; }
-
-  &--active {
-    background: $blue;
-    border-color: $blue;
-    color: #fff;
-    font-weight: 700;
-
-    &:hover { background: darken($blue, 8%); }
-  }
-}
-
-.col-total-val {
-  text-align: center;
-  padding: 10px 8px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #1e40af;
-  font-variant-numeric: tabular-nums;
-  border-bottom: 1px solid #F3F4F6;
-  vertical-align: middle;
-}
-
-.row-main {
-  td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #F3F4F6;
-    vertical-align: middle;
-    color: #111827;
-  }
-
-  &:hover td { background: #F9FAFB; }
-
-  &--anomalie td { background: #FFFBEB !important; }
-  &--absent td   { color: $gray; background: #FAFAFA; }
-  &--expanded td { background: #EEF2FF !important; }
-}
-
 .row-detail {
   td { padding: 0; border-bottom: 1px solid #E5E7EB; }
 }
@@ -810,13 +720,6 @@ $light:  #F9FAFB;
   padding: 2px 6px;
   border-radius: 6px;
   font-variant-numeric: tabular-nums;
-}
-
-.empty-row {
-  text-align: center;
-  padding: 32px;
-  color: $gray;
-  font-style: italic;
 }
 
 // ── Badges statut ─────────────────────────────────────────────
