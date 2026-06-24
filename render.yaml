@@ -1,3 +1,9 @@
+databases:
+  - name: passidoc-db
+    plan: free
+    databaseName: passidoc_db
+    user: passidoc_user
+
 services:
   # ── Backend NestJS ──────────────────────────────────────────────────────────
   - type: web
@@ -10,18 +16,14 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_HOST
-        sync: false          # db4free.net host
-      - key: DB_PORT
-        value: "3306"
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        sync: false
+      - key: DB_TYPE
+        value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: passidoc-db
+          property: connectionString
       - key: JWT_SECRET
-        generateValue: true  # Render génère automatiquement
+        generateValue: true
       - key: FRONTEND_URL
         sync: false          # ex: https://passidoc-app.onrender.com
       - key: ANTHROPIC_API_KEY

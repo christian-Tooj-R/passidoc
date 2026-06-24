@@ -653,7 +653,6 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   ngOnInit() {
     this.service.get(this.clientId).subscribe((fiche: any) => {
-      console.log('[FICHE GET] actionnaires:', fiche.actionnaires, '| reseaux:', fiche.reseauxSociauxStructures, '| honoraires:', fiche.honoraires);
       this.form.patchValue({
         ...fiche,
         honoraires: fiche.honoraires ?? {},
@@ -782,7 +781,6 @@ export class FicheIdentiteTabComponent implements OnInit {
       reseauxSociauxStructures: v.reseauxSociaux,
     };
     delete payload['reseauxSociaux'];
-    console.log('[FICHE SAVE] Q:', this.nbConcurrentsQuartierCtrl.value, '| G:', this.nbConcurrentsGeneralCtrl.value, '| siteWeb:', this.siteWebCtrl.value);
     this.service.update(this.clientId, payload).subscribe({
       next: () => {
         this.saving = false;

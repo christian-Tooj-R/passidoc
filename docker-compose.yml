@@ -1,19 +1,20 @@
 version: '3.9'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: passidoc-mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: passidoc-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Passidoc2024!}
-      MYSQL_DATABASE: passidoc_db
-      MYSQL_USER: passidoc_user
-      MYSQL_PASSWORD: ${DB_PASSWORD:-Passidoc2024!}
+      POSTGRES_USER: ${DB_USER:-passidoc_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Passidoc2024!}
+      POSTGRES_DB: passidoc_db
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Passidoc2024!}"]
+      test: ["CMD", "pg_isready", "-U", "${DB_USER:-passidoc_user}", "-d", "passidoc_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,7 +51,7 @@ services:
     env_file:
       - ./backend/.env.docker
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
@@ -71,7 +72,7 @@ services:
       - passidoc-net
 
 volumes:
-  mysql_data:
+  postgres_data:
   minio_data:
 
 networks:

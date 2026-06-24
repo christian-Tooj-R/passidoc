@@ -49,7 +49,12 @@ import { SecteursModule } from './secteurs/secteurs.module';
           logging: config.get<string>('NODE_ENV') === 'development',
         };
         if (dbType === 'postgres') {
-          return { ...common, url: config.get<string>('DATABASE_URL'), ssl: { rejectUnauthorized: false } };
+          const useSSL = config.get<string>('NODE_ENV') === 'production';
+          return {
+            ...common,
+            url: config.get<string>('DATABASE_URL'),
+            ssl: useSSL ? { rejectUnauthorized: false } : false,
+          };
         }
         return {
           ...common,
