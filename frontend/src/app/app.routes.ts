@@ -29,11 +29,6 @@ export const routes: Routes = [
     canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
   },
-  {
-    path: 'salaries/:id',
-    canActivate: [authGuard, pointageGuard],
-    loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
-  },
   // ── Layout principal (avec sidebar) ──────────────────────────────────────
   {
     path: '',
@@ -83,6 +78,10 @@ export const routes: Routes = [
       {
         path: 'salaries',
         loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
+      },
+      {
+        path: 'salaries/:id',
+        loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
       },
       {
         path: 'admin',
