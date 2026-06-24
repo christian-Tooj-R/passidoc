@@ -64,11 +64,22 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
             <mat-icon>chevron_left</mat-icon>
           </button>
           <span class="year-label">{{ annee() }}</span>
+          <button mat-icon-button class="year-btn year-btn--cal" matTooltip="Choisir une année"
+                  [matMenuTriggerFor]="yearMenu">
+            <mat-icon>calendar_month</mat-icon>
+          </button>
           <button mat-icon-button (click)="changeYear(1)" class="year-btn"
                   [disabled]="annee() >= currentYear">
             <mat-icon>chevron_right</mat-icon>
           </button>
         </div>
+        <mat-menu #yearMenu="matMenu">
+          @for (y of yearOptions; track y) {
+            <button mat-menu-item (click)="jumpToYear(y)" [class.year-active]="y === annee()">
+              {{ y }}
+            </button>
+          }
+        </mat-menu>
       </div>
 
       <!-- ── KPI cards ─────────────────────────────────── -->
@@ -273,10 +284,12 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
 
     .year-nav { display: flex; align-items: center; gap: 8px; }
     .year-btn { color: #64748b !important; }
+    .year-btn--cal { color: #6366f1 !important; background: #f5f3ff !important; border-radius: 50%; }
     .year-label {
       font-size: 16px; font-weight: 700; color: #1e293b;
       min-width: 52px; text-align: center;
     }
+    .year-active { background: #f5f3ff; color: #6366f1; font-weight: 700; }
 
     /* ── KPI ─────────────────────────────────────────── */
     .kpi-row {
@@ -495,6 +508,19 @@ export class FluxMensuelTabComponent implements OnInit {
 
   changeYear(delta: number) {
     this.annee.update(y => y + delta);
+    this.load();
+  }
+
+  get yearOptions(): number[] {
+    const opts: number[] = [];
+    for (let y = this.currentYear; y >= Math.max(2020, this.currentYear - 5); y--) {
+      opts.push(y);
+    }
+    return opts;
+  }
+
+  jumpToYear(y: number) {
+    this.annee.set(y);
     this.load();
   }
 

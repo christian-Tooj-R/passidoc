@@ -18,12 +18,14 @@ import { ControleInterne } from './controle-interne.entity';
 import { Task } from './task.entity';
 import { QuestionnaireAdnGlobal } from './questionnaire-adn-global.entity';
 import { QuestionnaireAdnSectoriel } from './questionnaire-adn-sectoriel.entity';
+import { Exercice } from './exercice.entity';
 
 export enum ClientSite {
   REUNION = 'REUNION',
   MADAGASCAR = 'MADAGASCAR',
 }
 
+/** @deprecated — les codes secteur sont désormais stockés dans la table `secteurs` */
 export enum SecteurActivite {
   RESTAURATION = 'RESTAURATION',
   BTP = 'BTP',
@@ -47,8 +49,8 @@ export class Client {
   @Column({ type: 'enum', enum: ClientSite })
   site: ClientSite;
 
-  @Column({ type: 'enum', enum: SecteurActivite, nullable: true })
-  secteurActivite: SecteurActivite;
+  @Column({ nullable: true })
+  secteurActivite: string;
 
   santePassation: number = 0;
   completude: number = 0;
@@ -66,9 +68,11 @@ export class Client {
     if ((this as any).fournisseurs?.length > 0) score += 10;
     if ((this as any).synthesesCloture?.length > 0) score += 15;
     if ((this as any).documents?.length > 0) score += 5;
-    if ((this as any).analyseStrategique?.forces?.length > 0 || (this as any).analyseStrategique?.ca) score += 10;
+    const lastStrategie = (this as any).analysesStrategiques?.[0];
+    if (lastStrategie?.forces?.length > 0) score += 10;
     if ((this as any).missions?.length > 0) score += 10;
-    if ((this as any).controleInterne?.noteGenerale || (this as any).controleInterne?.processOk?.length > 0) score += 5;
+    const lastControle = (this as any).controlesInternes?.[0];
+    if (lastControle?.noteGenerale || lastControle?.processOk?.length > 0) score += 5;
     this.santePassation = Math.min(score, 100);
   }
 
@@ -155,17 +159,17 @@ export class Client {
   @OneToMany(() => ConversationIA, (c) => c.client, { cascade: true })
   conversationsIA: ConversationIA[];
 
-  @OneToOne(() => AnalyseStrategique, (a) => a.client, { cascade: true })
-  analyseStrategique: AnalyseStrategique;
+  @OneToMany(() => AnalyseStrategique, (a: any) => a.client)
+  analysesStrategiques: AnalyseStrategique[];
 
   @OneToMany(() => Mission, (m) => m.client, { cascade: true })
   missions: Mission[];
 
-  @OneToOne(() => ObjectifsClient, (o) => o.client, { cascade: true })
-  objectifs: ObjectifsClient;
+  @OneToMany(() => ObjectifsClient, (o: any) => o.client)
+  objectifsItems: ObjectifsClient[];
 
-  @OneToOne(() => ControleInterne, (c) => c.client, { cascade: true })
-  controleInterne: ControleInterne;
+  @OneToMany(() => ControleInterne, (c: any) => c.client)
+  controlesInternes: ControleInterne[];
 
   @OneToMany(() => Task, (t) => t.client, { cascade: true })
   tasks: Task[];
@@ -175,6 +179,12 @@ export class Client {
 
   @OneToOne(() => QuestionnaireAdnSectoriel, (q) => q.client, { cascade: true })
   questionnaireAdnSectoriel: QuestionnaireAdnSectoriel;
+
+  @Column({ nullable: true, length: 5 })
+  dateClotureExercice: string; // Format "MM-DD", ex: "12-31"
+
+  @OneToMany(() => Exercice, (e) => e.client)
+  exercices: Exercice[];
 
   @CreateDateColumn()
   createdAt: Date;

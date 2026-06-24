@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, Query,
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
+import { TaskCommentsService } from './task-comments.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -10,7 +11,10 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('clients/:clientId/tasks')
 export class TasksController {
-  constructor(private service: TasksService) {}
+  constructor(
+    private service: TasksService,
+    private comments: TaskCommentsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Liste des tâches du dossier' })
@@ -72,5 +76,30 @@ export class TasksController {
     @Body() dto: { type: string; annee: number; commentaire: string },
   ) {
     return this.service.updateCommentaire(clientId, dto.type, dto.annee, dto.commentaire);
+  }
+
+  // ─── Comments ──────────────────────────────────────────────────────────────
+
+  @Get(':id/comments')
+  getComments(@Param('id', ParseIntPipe) id: number) {
+    return this.comments.findByTask(id);
+  }
+
+  @Post(':id/comments')
+  addComment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { contenu: string; mentions?: number[] },
+    @Req() req: any,
+  ) {
+    return this.comments.create(id, dto, req.user);
+  }
+
+  @Delete(':id/comments/:commentId')
+  deleteComment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: any,
+  ) {
+    return this.comments.remove(commentId, req.user);
   }
 }

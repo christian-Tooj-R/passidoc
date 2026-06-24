@@ -76,7 +76,7 @@ type ViewMode = 'grid' | 'list';
         </div>
 
         <!-- Nouveau dossier -->
-        @if (auth.isAdmin()) {
+        @if (auth.canCreateDossier()) {
           <button class="btn-new-folder" (click)="openCreateDialog()" matTooltip="Nouveau dossier">
             <mat-icon>create_new_folder</mat-icon>
             <span>Nouveau</span>

@@ -48,6 +48,26 @@ export class AuthController {
     return { message: 'Mot de passe réinitialisé : aro@afym.eu / rakotomamonjy' };
   }
 
+  @Post('register')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Créer un compte (auto-inscription)' })
+  async register(@Body() dto: {
+    firstName: string; lastName: string;
+    email: string; password: string; site: string;
+  }) {
+    const exists = await this.userRepo.findOne({ where: { email: dto.email } });
+    if (exists) throw new ConflictException('Cet email est déjà utilisé');
+    const hashed = await bcrypt.hash(dto.password, 10);
+    const user = this.userRepo.create({
+      firstName: dto.firstName, lastName: dto.lastName,
+      email: dto.email, password: hashed,
+      site: dto.site as any, role: 'COLLABORATEUR' as any, isActive: true,
+    });
+    const saved = await this.userRepo.save(user);
+    const { password, twoFactorSecret, ...safe } = saved as any;
+    return safe;
+  }
+
   @Post('login')
   @HttpCode(200)
   @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute

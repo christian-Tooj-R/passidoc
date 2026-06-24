@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as XLSX from 'xlsx';
@@ -13,7 +14,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
-import { TasksService, Task, TaskStatut, TaskDashboard } from '../../core/services/tasks.service';
+import { TasksService, Task, TaskStatut, TaskDashboard, TaskComment } from '../../core/services/tasks.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { UsersService } from '../../core/services/users.service';
 import { NotificationStreamService } from '../../core/services/notification-stream.service';
@@ -23,6 +24,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { Client } from '../../core/models/client.model';
 import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
+import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 
 // ─── Rapport hebdomadaire ─────────────────────────────────────────────────────
 @Component({
@@ -228,6 +230,10 @@ export class SyntheseDialogComponent implements OnInit {
         <div class="ct-section-label">Titre <span class="required">*</span></div>
         <input class="ct-title-input" [(ngModel)]="titre" placeholder="Décrivez la tâche en quelques mots..." />
 
+        <!-- Commentaire -->
+        <div class="ct-section-label">Commentaire</div>
+        <textarea class="ct-comment-input" [(ngModel)]="commentaire" rows="3" placeholder="Détails, contexte, instructions…"></textarea>
+
         <!-- Ligne client + assigné -->
         <div class="ct-row">
           <div class="ct-field">
@@ -325,6 +331,15 @@ export class SyntheseDialogComponent implements OnInit {
     .ct-title-input:focus { outline: none; border-color: #6366f1; }
     .ct-title-input::placeholder { color: #94a3b8; font-weight: 400; }
 
+    .ct-comment-input {
+      width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; font-size: 13px; color: #1e293b;
+      font-family: inherit; resize: vertical; transition: border-color .15s;
+      box-sizing: border-box;
+    }
+    .ct-comment-input:focus { outline: none; border-color: #6366f1; }
+    .ct-comment-input::placeholder { color: #94a3b8; }
+
     /* Row */
     .ct-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .ct-field { display: flex; flex-direction: column; }
@@ -388,6 +403,7 @@ export class CreateTaskDialogComponent {
   data: { clients: Client[]; users: User[] } = inject(MAT_DIALOG_DATA);
 
   titre = '';
+  commentaire = '';
   selectedType = 'AUTRE';
   clientId: number | null = null;
   assigneeId: number | null = null;
@@ -409,6 +425,7 @@ export class CreateTaskDialogComponent {
     if (!this.titre.trim() || !this.clientId) return;
     this.tasksService.create(this.clientId!, {
       titre:        this.titre,
+      description:  this.commentaire || undefined,
       type:         this.selectedType as any,
       priorite:     this.priorite as any,
       dateEcheance: this.dateEcheance || undefined,
@@ -426,7 +443,7 @@ export class CreateTaskDialogComponent {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatTooltipModule, MatDialogModule, LocalDatePipe],
+    MatSelectModule, MatTooltipModule, MatDialogModule, LocalDatePipe, OnlyNumbersDirective],
   template: `
     <div class="td-wrap">
       <!-- Header -->
@@ -473,17 +490,23 @@ export class CreateTaskDialogComponent {
         <div class="td-left">
           <div class="td-prop-row">
             <span class="td-prop-lbl">Créée par</span>
-            <div class="td-assignee-display">
-              <div class="td-av">{{ initials(task.createdBy) }}</div>
-              <span>{{ task.createdBy ? (task.createdBy.firstName + ' ' + task.createdBy.lastName) : '—' }}</span>
-            </div>
+            @if (task.createdBy) {
+              <div class="td-user-badge td-user-badge--subtle">
+                <div class="td-av td-av--sm">{{ initials(task.createdBy) }}</div>
+                <span>{{ task.createdBy.firstName }} {{ task.createdBy.lastName }}</span>
+              </div>
+            } @else { <span class="none">—</span> }
           </div>
           <div class="td-prop-row">
-            <span class="td-prop-lbl">Temps exéc.</span>
+            <span class="td-prop-lbl">Temps total</span>
             <span class="td-prop-val">
-              @if (task.tempsExecution && task.tempsExecution > 0) {
-                <span class="time-badge">{{ formatTime(task.tempsExecution) }}</span>
-              } @else { <span class="none">—</span> }
+              @if (currentStatut === 'EN_COURS') {
+                <span class="time-badge time-badge--live">▶ {{ liveTimerDisplay }}</span>
+              } @else if (totalSecondes > 0) {
+                <span class="time-badge">{{ formatSeconds(totalSecondes) }}</span>
+              } @else {
+                <span class="none">—</span>
+              }
             </span>
           </div>
           @if (task.heureDebut && task.heureFin) {
@@ -544,12 +567,12 @@ export class CreateTaskDialogComponent {
                 }
               </select>
             } @else {
-              <div class="td-assignee-display">
-                @if (task.assignee) {
-                  <div class="td-av">{{ initials(task.assignee) }}</div>
+              @if (task.assignee) {
+                <div class="td-user-badge">
+                  <div class="td-av td-av--sm">{{ initials(task.assignee) }}</div>
                   <span>{{ task.assignee.firstName }} {{ task.assignee.lastName }}</span>
-                } @else { <span class="none">—</span> }
-              </div>
+                </div>
+              } @else { <span class="none">—</span> }
             }
           </div>
 
@@ -573,6 +596,77 @@ export class CreateTaskDialogComponent {
             </div>
           }
 
+        </div>
+
+        <!-- Commentaires — s'étend sur toute la largeur de la grille -->
+        <div class="td-comments">
+          <div class="tdc-header">
+            <mat-icon>chat_bubble_outline</mat-icon>
+            <span>Commentaires</span>
+            @if (comments.length > 0) { <span class="tdc-count">{{ comments.length }}</span> }
+          </div>
+
+          @if (loadingComments) { <div class="tdc-empty">Chargement…</div> }
+
+          @for (c of comments; track c.id) {
+            <div class="tdc-item">
+              <div class="tdc-av">{{ commentInitials(c.auteur) }}</div>
+              <div class="tdc-content">
+                <div class="tdc-meta">
+                  <strong>{{ c.auteur.firstName }} {{ c.auteur.lastName }}</strong>
+                  <span class="tdc-date">{{ c.createdAt | localDate:'dd/MM HH:mm' }}</span>
+                </div>
+                <div class="tdc-text" [innerHTML]="renderComment(c.contenu)"></div>
+              </div>
+              @if (c.auteurId === data.currentUserId || data.currentUserIsAdmin) {
+                <button class="tdc-del" (click)="deleteComment(c.id)" matTooltip="Supprimer">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
+          }
+
+          @if (!loadingComments && comments.length === 0) {
+            <div class="tdc-empty">Aucun commentaire pour l'instant</div>
+          }
+
+          <!-- Zone de saisie -->
+          <div class="tdc-add">
+            <div class="tdc-av">{{ initials(currentUserObj) }}</div>
+            <div class="tdc-input-wrap">
+              @if (mentionDropdownVisible && mentionMatches.length > 0) {
+                <div class="tdc-mention-dd">
+                  <div class="tdc-mention-header">
+                    <mat-icon>alternate_email</mat-icon> Mentionner
+                  </div>
+                  @for (u of mentionMatches; track u.id; let i = $index) {
+                    <div class="tdc-mention-opt" [class.tdc-mention-opt--active]="mentionActiveIndex === i"
+                         (mousedown)="selectMention(u)" (mouseenter)="mentionActiveIndex = i">
+                      <div class="tdc-mention-av" [style.background]="mentionAvatarColor(u)">
+                        {{ commentInitials(u) }}
+                      </div>
+                      <div class="tdc-mention-info">
+                        <span class="tdc-mention-name">{{ u.firstName }} {{ u.lastName }}</span>
+                        <span class="tdc-mention-role">{{ roleLabel(u) }}</span>
+                      </div>
+                      <span class="tdc-mention-site">{{ u.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}</span>
+                    </div>
+                  }
+                </div>
+              }
+              <textarea class="tdc-textarea"
+                        [(ngModel)]="newCommentText"
+                        (input)="onCommentInput($event)"
+                        (keydown)="onCommentKeydown($event)"
+                        placeholder="Commentaire… (@mention pour notifier)"
+                        rows="2"></textarea>
+              <div class="tdc-input-actions">
+                <button class="tdc-send" (click)="sendComment()" [disabled]="!newCommentText.trim() || sendingComment">
+                  <mat-icon>send</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -650,6 +744,19 @@ export class CreateTaskDialogComponent {
     /* Assignee */
     .td-assignee-display { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #1e293b; font-weight: 500; }
     .td-av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; }
+    .td-av--sm { width: 22px; height: 22px; font-size: 8.5px; }
+
+    /* User badge pill */
+    .td-user-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px 3px 4px;
+      background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 20px;
+      font-size: 12.5px; font-weight: 600; color: #4338ca;
+    }
+    .td-user-badge--subtle {
+      background: #f8fafc; border-color: #e2e8f0; color: #475569;
+    }
+    .td-user-badge--subtle .td-av { background: linear-gradient(135deg, #94a3b8, #64748b); }
 
     /* Status select */
     .statut-select {
@@ -713,12 +820,122 @@ export class CreateTaskDialogComponent {
     .td-btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,.35); }
     .td-btn-save:disabled { opacity: .4; cursor: not-allowed; }
     .td-btn-save mat-icon { font-size: 15px; width: 15px; height: 15px; }
+
+    /* Live timer */
+    .time-badge--live { background: #fef3c7; color: #b45309; animation: td-pulse 2s ease-in-out infinite; }
+    @keyframes td-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+
+    /* ── Comments section ─────────────────────────────────────────────── */
+    .td-comments {
+      grid-column: 1 / -1;
+      border-top: 1px solid #f1f5f9;
+      padding: 14px 20px 16px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .tdc-header {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .tdc-header mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tdc-count {
+      background: #6366f1; color: white;
+      font-size: 10px; padding: 1px 6px; border-radius: 10px;
+    }
+    .tdc-empty { text-align: center; font-size: 13px; color: #94a3b8; padding: 8px 0 12px; }
+
+    /* Comment items */
+    .tdc-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid #f8fafc;
+      position: relative;
+    }
+    .tdc-item:last-of-type { border-bottom: none; }
+    .tdc-av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .tdc-content { flex: 1; min-width: 0; }
+    .tdc-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .tdc-meta strong { font-size: 12px; color: #1e293b; font-weight: 700; }
+    .tdc-date { font-size: 11px; color: #94a3b8; }
+    .tdc-text { font-size: 13px; color: #334155; line-height: 1.45; word-break: break-word; }
+    .tdc-del {
+      background: none; border: none; cursor: pointer;
+      color: #94a3b8; padding: 2px; border-radius: 4px;
+      display: flex; align-items: center; opacity: 0;
+      transition: opacity .15s, color .15s; flex-shrink: 0;
+    }
+    .tdc-item:hover .tdc-del { opacity: 1; }
+    .tdc-del:hover { color: #ef4444; }
+    .tdc-del mat-icon { font-size: 13px; width: 13px; height: 13px; }
+
+    /* Add comment row */
+    .tdc-add {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding-top: 12px; margin-top: 6px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .tdc-input-wrap { flex: 1; position: relative; }
+    .tdc-mention-dd {
+      position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.13), 0 2px 6px rgba(0,0,0,.07);
+      z-index: 10; overflow: hidden;
+    }
+    .tdc-mention-header {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 12px 6px;
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .5px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .tdc-mention-header mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .tdc-mention-opt {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; cursor: pointer;
+      transition: background .1s; border-left: 3px solid transparent;
+    }
+    .tdc-mention-opt--active,
+    .tdc-mention-opt:hover {
+      background: #f5f3ff; border-left-color: #6366f1;
+    }
+    .tdc-mention-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .tdc-mention-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .tdc-mention-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .tdc-mention-role { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .tdc-mention-site { font-size: 14px; flex-shrink: 0; }
+    .tdc-textarea {
+      width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 13px; font-family: inherit; color: #1e293b; resize: none;
+      transition: border-color .15s; box-sizing: border-box;
+    }
+    .tdc-textarea:focus { outline: none; border-color: #6366f1; }
+    .tdc-textarea::placeholder { color: #94a3b8; }
+    .tdc-input-actions { display: flex; justify-content: flex-end; margin-top: 5px; }
+    .tdc-send {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white; cursor: pointer; transition: opacity .15s;
+    }
+    .tdc-send:disabled { opacity: .35; cursor: not-allowed; }
+    .tdc-send mat-icon { font-size: 16px; width: 16px; height: 16px; }
   `],
 })
-export class TaskDetailDialogComponent {
+export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   private tasksService = inject(TasksService);
   private toast = inject(ToastService);
   private confirm = inject(ConfirmService);
+  private sanitizer = inject(DomSanitizer);
+  private cdr = inject(ChangeDetectorRef);
   dialogRef = inject(MatDialogRef<TaskDetailDialogComponent>);
   data: { task: Task; users: User[]; currentUserId: number; currentUserIsAdmin: boolean } = inject(MAT_DIALOG_DATA);
   private fb = inject(FormBuilder);
@@ -728,6 +945,51 @@ export class TaskDetailDialogComponent {
   currentPrio: string = this.data.task.priorite ?? 'NORMALE';
   private _initialStatut = this.data.task.statut;
   private _initialPrio = this.data.task.priorite ?? 'NORMALE';
+
+  // ── Chrono ──────────────────────────────────────────────────────────────────
+  totalSecondes = this.data.task.tempsTotalSecondes ?? 0;
+  liveTimerDisplay = '';
+  private timerInterval?: ReturnType<typeof setInterval>;
+
+  // ── Commentaires ────────────────────────────────────────────────────────────
+  comments: TaskComment[] = [];
+  loadingComments = false;
+  sendingComment = false;
+  newCommentText = '';
+
+  // ── Mentions ─────────────────────────────────────────────────────────────────
+  mentionDropdownVisible = false;
+  mentionMatches: User[] = [];
+  mentionActiveIndex = 0;
+  private mentionStartIndex = -1;
+  private mentionSearch = '';
+  private mentionedUsers: User[] = []; // utilisateurs mentionnés dans le commentaire en cours
+
+  private readonly AVATAR_COLORS = [
+    'linear-gradient(135deg,#6366f1,#4f46e5)',
+    'linear-gradient(135deg,#0ea5e9,#0284c7)',
+    'linear-gradient(135deg,#10b981,#059669)',
+    'linear-gradient(135deg,#f59e0b,#d97706)',
+    'linear-gradient(135deg,#ec4899,#db2777)',
+    'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+  ];
+
+  mentionAvatarColor(u: User): string {
+    return this.AVATAR_COLORS[u.id % this.AVATAR_COLORS.length];
+  }
+
+  roleLabel(u: User): string {
+    const map: Record<string, string> = {
+      ADMIN: 'Administrateur',
+      EXPERT_COMPTABLE: 'Expert-comptable',
+      COLLABORATEUR: 'Collaborateur',
+    };
+    return map[u.role] ?? u.role;
+  }
+
+  get currentUserObj(): User | undefined {
+    return this.data.users.find(u => u.id === this.data.currentUserId);
+  }
 
   titleCtrl    = this.fb.control(this.task.titre, Validators.required);
   assigneeCtrl = this.fb.control(this.task.assignee?.id ?? null);
@@ -755,7 +1017,37 @@ export class TaskDetailDialogComponent {
            this.heuresSupCtrl.dirty || this.currentStatut !== this._initialStatut || this.currentPrio !== this._initialPrio;
   }
 
-  onStatutChange(statut: TaskStatut) { this.currentStatut = statut; }
+  ngOnInit() {
+    this.loadComments();
+    if (this.task.statut === 'EN_COURS') {
+      this.refreshTimer();
+      this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+  }
+
+  private refreshTimer() {
+    const debut = this.task.debutEnCours;
+    const acc = this.task.tempsTotalSecondes ?? 0;
+    const elapsed = debut ? Math.floor((Date.now() - new Date(debut).getTime()) / 1000) : 0;
+    this.liveTimerDisplay = this.formatSeconds(acc + elapsed);
+    this.cdr.markForCheck();
+  }
+
+  onStatutChange(statut: TaskStatut) {
+    this.currentStatut = statut;
+    if (statut === 'EN_COURS' && !this.timerInterval) {
+      this.refreshTimer();
+      this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
+    } else if (statut !== 'EN_COURS' && this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = undefined;
+      this.liveTimerDisplay = '';
+    }
+  }
 
   save() {
     this.tasksService.update(this.task.clientId, this.task.id, {
@@ -795,6 +1087,137 @@ export class TaskDetailDialogComponent {
     if (minutes < 60) return `${Math.round(minutes)}min`;
     const h = Math.floor(minutes / 60); const m = Math.round(minutes % 60);
     return m > 0 ? `${h}h${m}` : `${h}h`;
+  }
+
+  formatSeconds(seconds: number): string {
+    if (!seconds || seconds <= 0) return '0s';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return m > 0 ? `${h}h${m}min` : `${h}h`;
+    if (m > 0) return s > 0 ? `${m}min ${s}s` : `${m}min`;
+    return `${s}s`;
+  }
+
+  // ── Commentaires ────────────────────────────────────────────────────────────
+
+  loadComments() {
+    this.loadingComments = true;
+    this.tasksService.getComments(this.task.clientId, this.task.id).subscribe({
+      next: (c) => { this.comments = c; this.loadingComments = false; },
+      error: () => { this.loadingComments = false; },
+    });
+  }
+
+  commentInitials(auteur: { firstName: string; lastName: string }): string {
+    return (auteur.firstName?.[0] || '') + (auteur.lastName?.[0] || '');
+  }
+
+  renderComment(contenu: string): SafeHtml {
+    const escaped = contenu
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    const html = escaped.replace(/@\[([^\]]+)\]\(\d+\)/g,
+      '<span style="display:inline-flex;align-items:center;gap:2px;color:#4f46e5;font-weight:600;font-size:12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:20px;padding:1px 8px 1px 6px;white-space:nowrap">@$1</span>');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  onCommentInput(event: Event) {
+    const textarea = event.target as HTMLTextAreaElement;
+    const text = textarea.value;
+    const pos = textarea.selectionStart ?? text.length;
+    const before = text.substring(0, pos);
+    const lastAt = before.lastIndexOf('@');
+
+    if (lastAt !== -1) {
+      const search = before.substring(lastAt + 1);
+      if (!search.includes(' ')) {
+        this.mentionStartIndex = lastAt;
+        this.mentionSearch = search.toLowerCase();
+        this.mentionMatches = this.data.users.filter(u =>
+          `${u.firstName} ${u.lastName}`.toLowerCase().includes(this.mentionSearch)
+        ).slice(0, 5);
+        this.mentionActiveIndex = 0;
+        this.mentionDropdownVisible = this.mentionMatches.length > 0;
+        return;
+      }
+    }
+    this.mentionDropdownVisible = false;
+    this.mentionMatches = [];
+  }
+
+  onCommentKeydown(event: Event) {
+    const ke = event as KeyboardEvent;
+
+    if (this.mentionDropdownVisible) {
+      if (ke.key === 'ArrowDown') {
+        ke.preventDefault();
+        this.mentionActiveIndex = (this.mentionActiveIndex + 1) % this.mentionMatches.length;
+      } else if (ke.key === 'ArrowUp') {
+        ke.preventDefault();
+        this.mentionActiveIndex = (this.mentionActiveIndex - 1 + this.mentionMatches.length) % this.mentionMatches.length;
+      } else if (ke.key === 'Enter' || ke.key === 'Tab') {
+        ke.preventDefault();
+        const selected = this.mentionMatches[this.mentionActiveIndex];
+        if (selected) this.selectMention(selected);
+      } else if (ke.key === 'Escape') {
+        ke.preventDefault();
+        this.mentionDropdownVisible = false;
+      }
+      return; // bloquer tout le reste tant que le dropdown est ouvert
+    }
+
+    if (ke.key === 'Enter' && !ke.shiftKey) {
+      ke.preventDefault();
+      this.sendComment();
+    }
+  }
+
+  selectMention(user: User) {
+    const before = this.newCommentText.substring(0, this.mentionStartIndex);
+    const after = this.newCommentText.substring(this.mentionStartIndex + 1 + this.mentionSearch.length);
+    this.newCommentText = `${before}@${user.firstName} ${user.lastName} ${after.trimStart()}`;
+    if (!this.mentionedUsers.find(u => u.id === user.id)) {
+      this.mentionedUsers.push(user);
+    }
+    this.mentionDropdownVisible = false;
+    this.mentionMatches = [];
+  }
+
+  sendComment() {
+    const raw = this.newCommentText.trim();
+    if (!raw || this.sendingComment) return;
+
+    // Reconstituer @[Nom](id) et collecter les IDs mentionnés
+    let contenu = raw;
+    const mentions: number[] = [];
+    for (const u of this.mentionedUsers) {
+      const tag = `@${u.firstName} ${u.lastName}`;
+      if (contenu.includes(tag)) {
+        contenu = contenu.split(tag).join(`@[${u.firstName} ${u.lastName}](${u.id})`);
+        mentions.push(u.id);
+      }
+    }
+
+    this.sendingComment = true;
+    this.tasksService.addComment(this.task.clientId, this.task.id, { contenu, mentions }).subscribe({
+      next: (c) => {
+        if (c) this.comments.push(c);
+        this.newCommentText = '';
+        this.mentionedUsers = [];
+        this.sendingComment = false;
+      },
+      error: () => {
+        this.toast.error('Erreur lors de l\'envoi');
+        this.sendingComment = false;
+      },
+    });
+  }
+
+  deleteComment(commentId: number) {
+    this.tasksService.deleteComment(this.task.clientId, this.task.id, commentId).subscribe(() => {
+      this.comments = this.comments.filter(c => c.id !== commentId);
+    });
   }
 }
 
@@ -1476,20 +1899,20 @@ export class TaskDetailDialogComponent {
 
     /* ── Tableau ─────────────────────────────────────────── */
     .tl-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-    .tl-table thead { position: sticky; top: 0; z-index: 2; background: #f8fafc; }
-    .tl-table thead tr { border-bottom: 2px solid #e8ecf0; }
+    .tl-table thead { position: sticky; top: 0; z-index: 2; }
+    .tl-table thead tr { background: #162351; }
 
     .th-btn {
       display: flex; align-items: center; gap: 4px;
       background: none; border: none; cursor: pointer;
-      font-size: 11px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: .6px;
+      font-size: 12px; font-weight: 600; color: #fff;
+      text-transform: none; letter-spacing: 0;
       padding: 0; white-space: nowrap;
     }
-    .th-btn mat-icon { font-size: 13px; width: 13px; height: 13px; color: #6366f1; }
-    .th-btn:hover { color: #475569; }
+    .th-btn mat-icon { font-size: 13px; width: 13px; height: 13px; color: rgba(255,255,255,.7); }
+    .th-btn:hover { color: rgba(255,255,255,.85); }
 
-    .tl-table th { padding: 12px 14px; text-align: left; }
+    .tl-table th { padding: 10px 14px; text-align: left; color: #fff; }
     .tl-table td { padding: 11px 14px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
 
     /* Colonnes */

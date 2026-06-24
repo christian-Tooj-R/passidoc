@@ -13,6 +13,7 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { SyntheseService } from '../../../../../core/services/synthese.service';
 import { FiscalReferenceService } from '../../../../../core/services/fiscal-reference.service';
+import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.model';
 
 @Component({
@@ -21,7 +22,7 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
   imports: [
     CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatExpansionModule,
-    MatChipsModule, MatAutocompleteModule,
+    MatChipsModule, MatAutocompleteModule, OnlyNumbersDirective,
   ],
   template: `
     <div class="tab-content">

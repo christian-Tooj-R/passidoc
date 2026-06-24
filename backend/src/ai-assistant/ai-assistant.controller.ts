@@ -7,7 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AiAssistantService } from './ai-assistant.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/clients/:clientId/ai')
+@Controller('clients/:clientId/ai')
 export class AiAssistantController {
   constructor(private service: AiAssistantService) {}
 

@@ -2,14 +2,21 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+export interface PausePointage {
+  id: number;
+  heureDebut: string;
+  heureFin:   string | null;
+}
+
 export interface Pointage {
   id: number;
   userId: number;
   date: string;
   heureArrivee:    string;
-  heureDebutPause: string | null;
-  heureFinPause:   string | null;
+  heureDebutPause: string | null; // @deprecated — utiliser pauses[]
+  heureFinPause:   string | null; // @deprecated — utiliser pauses[]
   heureDepart:     string | null;
+  pauses:          PausePointage[];
 }
 
 export interface EntreeJournee {
@@ -34,6 +41,7 @@ export interface MonStatut {
   estParti:      boolean;
   dureeNetteMin: number;
   dureePauseMin: number;
+  nbPauses:      number;
 }
 
 export interface SiteLocation {
@@ -50,8 +58,8 @@ export class PointageService {
 
   constructor(private http: HttpClient) {}
 
-  pointer(latitude?: number, longitude?: number) {
-    return this.http.post<Pointage>(`${this.api}/pointer`, { latitude, longitude });
+  pointer(latitude?: number, longitude?: number, action?: 'debut_pause' | 'fin_pause' | 'depart') {
+    return this.http.post<Pointage>(`${this.api}/pointer`, { latitude, longitude, action });
   }
 
   getSiteLocation(site: string) {

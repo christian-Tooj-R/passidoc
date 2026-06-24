@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req, HttpCode } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req, HttpCode, Query } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -46,6 +46,28 @@ export class UsersController {
   }
 
   /* ─────────────────────────────────────────────────────────── */
+
+  @Get('salaries')
+  @ApiOperation({ summary: 'Liste des collaborateurs (vue RH)' })
+  @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
+  findSalaries(@Query('site') site?: string) {
+    return this.usersService.findSalaries(site);
+  }
+
+  @Get('salaries/:id')
+  @ApiOperation({ summary: 'Détail d\'un collaborateur (vue RH)' })
+  findOneSalarie(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findOne(id);
+  }
+
+  @Patch(':id/rh')
+  @ApiOperation({ summary: 'Mettre à jour les informations RH d\'un collaborateur' })
+  updateRH(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { poste?: string; typeContrat?: string; dateEntree?: string; dateSortie?: string; telephone?: string; firstName?: string; lastName?: string; site?: string },
+  ) {
+    return this.usersService.updateRH(id, dto);
+  }
 
   @Get('assignable')
   @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })

@@ -16,7 +16,9 @@ import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError,
 import { PappersService, PappersResult } from '../../../core/services/pappers.service';
 import { ClientsService } from '../../../core/services/clients.service';
 import { QuestionnaireAdnService } from '../../../core/services/questionnaire-adn.service';
-import { SecteurActivite, SECTEURS_LABELS, QuestionnaireAdnGlobal } from '../../../core/models/client.model';
+import { SecteurService } from '../../../core/services/secteur.service';
+import { Secteur } from '../../../core/models/secteur.model';
+import { SecteurActivite, QuestionnaireAdnGlobal } from '../../../core/models/client.model';
 import {
   VISION_OPTS, VALEUR_OPTS, PLACE_OPTS, AMBIANCE_OPTS, ENJEUX_RH_OPTS,
   CANAUX_OPTS, SAISONNALITE_OPTS, CAILLOU_OPTS, PROJETS_OPTS,
@@ -29,6 +31,7 @@ import {
   ZONE_LIBERAL_OPTS, ACCES_LIBERAL_OPTS, MODE_LIBERAL_OPTS, SECRETARIAT_OPTS,
   PATRIMOINE_SCI_OPTS, ETAT_SCI_OPTS, OBJECTIF_SCI_OPTS, REGIME_SCI_OPTS,
 } from '../questionnaire-adn.options';
+import { OnlyNumbersDirective } from '../../../shared/directives/only-numbers.directive';
 
 type StepId = 'entreprise' | 'secteur' | 'adn_global' | 'adn_sectoriel' | 'recap';
 interface WizardStep { id: StepId; label: string; }
@@ -41,7 +44,7 @@ interface WizardStep { id: StepId; label: string; }
     MatDialogModule,
     MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatSnackBarModule,
+    MatProgressSpinnerModule, MatSnackBarModule, OnlyNumbersDirective,
   ],
   template: `
     <div class="wizard">
@@ -152,7 +155,11 @@ interface WizardStep { id: StepId; label: string; }
                   <button class="preview-clear" (click)="clearAll()"><mat-icon>close</mat-icon></button>
                 </div>
                 <div class="preview-grid">
-                  <div class="pi"><label>Forme juridique</label><span>{{ selected.formeJuridique || '—' }}</span></div>
+                  <div class="pi">
+                    <label>Forme juridique</label>
+                    <input class="cloture-input" [formControl]="formeJuridiqueCtrl"
+                           placeholder="Ex: SARL, SAS, SA..." style="width:100%;max-width:200px" />
+                  </div>
                   <div class="pi"><label>SIRET siège</label><span>{{ selected.siret || '—' }}</span></div>
                   @if (selected.codeNaf) {
                     <div class="pi full">
@@ -177,6 +184,14 @@ interface WizardStep { id: StepId; label: string; }
                       <span>{{ selected.dirigeants.map(d => d.prenom + ' ' + d.nom + ' (' + d.qualite + ')').join(' · ') }}</span>
                     </div>
                   }
+                  <div class="pi full pi-cloture-row">
+                    <label>
+                      <mat-icon style="font-size:11px;width:11px;height:11px;vertical-align:middle">event</mat-icon>
+                      Clôture d'exercice <span class="pi-cloture-hint">(JJ/MM — ex : 31/12)</span>
+                    </label>
+                    <input class="cloture-input" [formControl]="clotureCtrl"
+                           placeholder="31/12" maxlength="5" />
+                  </div>
                 </div>
               </div>
             }
@@ -188,6 +203,12 @@ interface WizardStep { id: StepId; label: string; }
                 <mat-icon matPrefix>business</mat-icon>
                 <input matInput [formControl]="nomManuelCtrl"
                   placeholder="Si entreprise introuvable via la recherche" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Forme juridique (optionnel)</mat-label>
+                <mat-icon matPrefix>gavel</mat-icon>
+                <input matInput [formControl]="formeJuridiqueCtrl"
+                  placeholder="Ex: SARL, SAS, SA, SCI, Association..." />
               </mat-form-field>
             }
 
@@ -203,19 +224,29 @@ interface WizardStep { id: StepId; label: string; }
                 <span class="site-flag">🇲🇬</span><span>Madagascar</span>
               </label>
             </div>
+
           }
 
           <!-- ═══ ÉTAPE 2 — SECTEUR ════════════════════════════ -->
           @case ('secteur') {
             <p class="step-intro">Sélectionnez le secteur d'activité pour afficher le questionnaire adapté. Cliquez à nouveau pour désélectionner.</p>
+            @if (secteurs.length === 0) {
+              <div class="step-intro" style="text-align:center;color:#94a3b8;padding:32px 0">
+                <mat-icon style="font-size:32px;width:32px;height:32px;display:block;margin:0 auto 8px">hourglass_empty</mat-icon>
+                Chargement des secteurs...
+              </div>
+            }
             <div class="secteur-grid">
-              @for (entry of secteurEntries; track entry.value) {
+              @for (s of secteurs; track s.id) {
                 <label class="secteur-card"
-                       [class.selected]="secteurSelectionne === entry.value"
-                       (click)="secteurSelectionne = secteurSelectionne === entry.value ? null : entry.value">
-                  <mat-icon>{{ secteurIcon(entry.value) }}</mat-icon>
-                  <span>{{ entry.label }}</span>
-                  @if (secteurSelectionne === entry.value) {
+                       [class.selected]="secteurSelectionne === s.code"
+                       (click)="secteurSelectionne = secteurSelectionne === s.code ? null : s.code">
+                  <mat-icon>{{ s.icon || 'business' }}</mat-icon>
+                  <span>{{ s.label }}</span>
+                  @if (s.codeNaf) {
+                    <span class="secteur-naf">{{ s.codeNaf }}</span>
+                  }
+                  @if (secteurSelectionne === s.code) {
                     <mat-icon class="check-overlay">check_circle</mat-icon>
                   }
                 </label>
@@ -768,6 +799,17 @@ interface WizardStep { id: StepId; label: string; }
     .pi.full { grid-column: 1 / -1; }
     .pi label { font-size: 10px; font-weight: 700; color: #86EFAC; text-transform: uppercase; }
     .pi span { font-size: 12.5px; color: #14532D; font-weight: 500; }
+    .pi-cloture-row label { display: flex; align-items: center; gap: 4px; }
+    .pi-cloture-hint { font-size: 9.5px; color: #4ADE80; font-weight: 400; text-transform: none; }
+    .cloture-input {
+      width: 90px; padding: 4px 8px;
+      border: 1.5px solid rgba(34,197,94,.35); border-radius: 7px;
+      background: rgba(255,255,255,.6); color: #14532D;
+      font-size: 13px; font-weight: 600; font-family: monospace;
+      outline: none; letter-spacing: .5px;
+      &:focus { border-color: #16A34A; background: white; }
+      &::placeholder { color: #86EFAC; font-weight: 400; }
+    }
     .naf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .naf-code { font-size: 13.5px; font-weight: 700; color: #14532D; font-family: monospace; letter-spacing: .3px; }
     .naf-copy {
@@ -795,10 +837,26 @@ interface WizardStep { id: StepId; label: string; }
     .site-card.selected { border-color: #1565C0; background: #E8F0FE; color: #1565C0; font-weight: 700; }
     .site-flag { font-size: 22px; }
 
+    /* ── Info date clôture (depuis Pappers) ── */
+    .cloture-info {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 14px; padding: 10px 14px;
+      background: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 10px;
+      font-size: 13px; color: #2E7D32;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+      strong { font-weight: 700; }
+    }
+
     /* ── Intro étape ── */
     .step-intro { font-size: 13px; color: #74777F; margin: 0 0 20px; }
 
     /* ── Cartes secteur ── */
+    .secteur-naf {
+      margin-left: auto; font-size: 10.5px; font-weight: 600;
+      color: #94a3b8; background: #f1f5f9; padding: 2px 7px; border-radius: 20px;
+      letter-spacing: .3px; flex-shrink: 0;
+    }
+    .secteur-card.selected .secteur-naf { color: #1565C0; background: rgba(21,101,192,.12); }
     .secteur-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
     .secteur-card {
       display: flex; align-items: center; gap: 12px;
@@ -889,25 +947,29 @@ interface WizardStep { id: StepId; label: string; }
   `],
 })
 export class CreateClientWizardComponent implements OnInit, OnDestroy {
-  private dialogRef  = inject(MatDialogRef<CreateClientWizardComponent>);
-  private pappers    = inject(PappersService);
-  private clientsSvc = inject(ClientsService);
-  private qSvc       = inject(QuestionnaireAdnService);
-  private snack      = inject(MatSnackBar);
-  private elRef      = inject(ElementRef);
-  private destroy$   = new Subject<void>();
+  private dialogRef   = inject(MatDialogRef<CreateClientWizardComponent>);
+  private pappers     = inject(PappersService);
+  private clientsSvc  = inject(ClientsService);
+  private qSvc        = inject(QuestionnaireAdnService);
+  private secteurSvc  = inject(SecteurService);
+  private snack       = inject(MatSnackBar);
+  private elRef       = inject(ElementRef);
+  private destroy$    = new Subject<void>();
 
   // ── Étape 1 ──
-  searchCtrl    = new FormControl('');
-  nomManuelCtrl = new FormControl('');
-  siteCtrl      = new FormControl('');
+  searchCtrl         = new FormControl('');
+  nomManuelCtrl      = new FormControl('');
+  siteCtrl           = new FormControl('');
+  clotureCtrl        = new FormControl(''); // "JJ/MM" — saisie libre
+  formeJuridiqueCtrl = new FormControl('');
   results: PappersResult[] = [];
   selected: PappersResult | null = null;
   searching = false; hasSearched = false; dropdownOpen = false; highlightIndex = -1;
   private search$ = new Subject<string>();
 
   // ── Étape 2 ──
-  secteurSelectionne: SecteurActivite | null = null;
+  secteurSelectionne: string | null = null;
+  secteurs: Secteur[] = [];
 
   // ── Étape 3 ──
   global: Partial<QuestionnaireAdnGlobal> = {};
@@ -995,13 +1057,13 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
   readonly OBJECTIF_SCI_OPTS = OBJECTIF_SCI_OPTS; readonly REGIME_SCI_OPTS = REGIME_SCI_OPTS;
 
   readonly labelOf = (opts: any[], v: string) => opts.find(o => o.value === v)?.label ?? v;
-  readonly secteurEntries = (Object.keys(SECTEURS_LABELS) as SecteurActivite[])
-    .map(v => ({ value: v, label: SECTEURS_LABELS[v] }));
 
   // Proxy réponses sectorielles (any pour éviter TS4111)
   get r(): any { return this.reponses; }
 
   ngOnInit() {
+    this.secteurSvc.getAll().subscribe(list => this.secteurs = list);
+
     this.search$.pipe(
       debounceTime(180), distinctUntilChanged(),
       switchMap(q => {
@@ -1049,11 +1111,20 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
     this.searchCtrl.setValue(res.nomEntreprise, { emitEvent: false });
     this.results = [];
     this.closeDropdown();
+    if (res.dateClotureExercice) {
+      const [mm, dd] = res.dateClotureExercice.split('-');
+      this.clotureCtrl.setValue(`${dd}/${mm}`);
+    } else {
+      this.clotureCtrl.setValue('');
+    }
+    this.formeJuridiqueCtrl.setValue(res.formeJuridique ?? '');
   }
 
   clearAll() {
     this.selected = null;
     this.searchCtrl.setValue('');
+    this.clotureCtrl.setValue('');
+    this.formeJuridiqueCtrl.setValue('');
     this.results = [];
     this.hasSearched = false;
   }
@@ -1077,22 +1148,17 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
 
   step1Valid()   { return !!this.siteCtrl.value && !!(this.selected || this.nomManuelCtrl.value?.trim()); }
   nomFinal()     { return this.selected ? this.selected.nomEntreprise : (this.nomManuelCtrl.value?.trim() ?? ''); }
-  secteurLabel(s: SecteurActivite) { return SECTEURS_LABELS[s] ?? s; }
-  secteurLabelShort() {
-    const short: Record<string, string> = {
-      RESTAURATION: 'Restauration', BTP: 'BTP',
-      ASSOCIATION: 'Association', HOLDING: 'Holding',
-      PROFESSION_LIBERALE: 'Prof. Lib.', SCI: 'SCI',
-    };
-    return short[this.secteurSelectionne ?? ''] ?? '';
+  secteurLabel(code: string | null): string {
+    return this.secteurs.find(s => s.code === code)?.label ?? code ?? '';
   }
-  secteurIcon(s: SecteurActivite) {
-    const icons: Record<string, string> = {
-      RESTAURATION: 'restaurant', BTP: 'construction',
-      ASSOCIATION: 'volunteer_activism', HOLDING: 'account_tree',
-      PROFESSION_LIBERALE: 'medical_services', SCI: 'apartment',
-    };
-    return icons[s] ?? 'business';
+  secteurLabelShort() {
+    const s = this.secteurs.find(x => x.code === this.secteurSelectionne);
+    if (!s) return this.secteurSelectionne ?? '';
+    const words = s.label.split(/[\s&,]+/);
+    return words.slice(0, 2).join(' ');
+  }
+  secteurIcon(code: string) {
+    return this.secteurs.find(s => s.code === code)?.icon ?? 'business';
   }
 
   isIn(arr: string[] | undefined, v: string) { return arr?.includes(v) ?? false; }
@@ -1129,23 +1195,25 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
     if (!this.step1Valid() || this.creating()) return;
     this.creating.set(true);
     try {
+      const fj = this.formeJuridiqueCtrl.value?.trim() || undefined;
       const ficheData = this.selected ? {
         raisonSociale: this.selected.nomEntreprise,
         siren: this.selected.siren,
         siret: this.selected.siret,
-        formeJuridique: this.selected.formeJuridique,
+        formeJuridique: fj,
         adresse: this.selected.adresse,
         gerants: this.selected.dirigeants.map(d => ({
           nom: `${d.prenom} ${d.nom}`.trim(),
           qualite: d.qualite,
         })),
-      } : null;
+      } : (fj ? { formeJuridique: fj } : null);
 
       const client = await this.clientsSvc.create({
         nom: this.nomFinal(),
         site: this.siteCtrl.value!,
         secteurActivite: this.secteurSelectionne ?? undefined,
         ficheData: ficheData ?? undefined,
+        ...this.parsedCloture() ? { dateClotureExercice: this.parsedCloture() } : {},
       } as any).toPromise();
 
       if (!client) throw new Error('Échec création client');
@@ -1167,4 +1235,15 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
   }
 
   cancel() { this.dialogRef.close(null); }
+
+  /** Convertit "JJ/MM" (saisie utilisateur) → "MM-DD" (format interne) ou undefined si invalide */
+  parsedCloture(): string | undefined {
+    const val = this.clotureCtrl.value?.trim() ?? '';
+    if (!val) return undefined;
+    const parts = val.split(/[\/\-]/);
+    if (parts.length !== 2) return undefined;
+    const [dd, mm] = parts.map(p => p.padStart(2, '0'));
+    if (isNaN(+dd) || isNaN(+mm) || +mm < 1 || +mm > 12 || +dd < 1 || +dd > 31) return undefined;
+    return `${mm}-${dd}`;
+  }
 }

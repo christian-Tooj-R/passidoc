@@ -61,6 +61,9 @@ export class SyntheseCloture {
   @ManyToOne(() => Client, (client) => client.synthesesCloture)
   client: Client;
 
+  @Column({ type: 'int', nullable: true })
+  exerciceId: number | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

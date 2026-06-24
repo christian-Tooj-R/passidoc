@@ -167,12 +167,26 @@ export class TasksService {
       if (!allowed) throw new ForbiddenException('Vous ne pouvez pas assigner cette tâche à cet utilisateur');
     }
 
-    // Si passage à TERMINEE, enregistrer heure fin
     const updates: Partial<Task> = { ...dto } as any;
+    const now = new Date();
+
+    // Chrono : sortie d'EN_COURS → accumuler le temps écoulé
+    if (task.statut === TaskStatut.EN_COURS && dto.statut && dto.statut !== TaskStatut.EN_COURS && task.debutEnCours) {
+      const elapsed = Math.floor((now.getTime() - new Date(task.debutEnCours).getTime()) / 1000);
+      updates.tempsTotalSecondes = (task.tempsTotalSecondes ?? 0) + elapsed;
+      updates.debutEnCours = null as any;
+    }
+
+    // Chrono : entrée en EN_COURS
+    if (dto.statut === TaskStatut.EN_COURS && task.statut !== TaskStatut.EN_COURS) {
+      updates.debutEnCours = now;
+    }
+
+    // Compatibilité : passage à TERMINEE → enregistrer heure fin
     if (dto.statut === 'TERMINEE' && task.statut !== 'TERMINEE') {
-      updates.heureFin = new Date();
-      if (task.heureDebut) {
-        updates.tempsExecution = (new Date().getTime() - new Date(task.heureDebut).getTime()) / 60000;
+      updates.heureFin = now;
+      if (task.heureDebut && !updates.tempsExecution) {
+        updates.tempsExecution = (now.getTime() - new Date(task.heureDebut).getTime()) / 60000;
       }
     }
 

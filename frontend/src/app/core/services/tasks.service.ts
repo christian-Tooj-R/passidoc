@@ -27,6 +27,18 @@ export interface Task {
   mois?: number;
   annee?: number;
   commentaire?: string;
+  debutEnCours?: string;
+  tempsTotalSecondes?: number;
+  createdAt: string;
+}
+
+export interface TaskComment {
+  id: number;
+  contenu: string;
+  taskId: number;
+  auteurId: number;
+  auteur: { id: number; firstName: string; lastName: string };
+  mentions: number[];
   createdAt: string;
 }
 
@@ -109,5 +121,17 @@ export class TasksService {
 
   delete(clientId: number, id: number) {
     return this.http.delete(`${this.api(clientId)}/${id}`);
+  }
+
+  getComments(clientId: number, taskId: number) {
+    return this.http.get<TaskComment[]>(`${this.api(clientId)}/${taskId}/comments`);
+  }
+
+  addComment(clientId: number, taskId: number, dto: { contenu: string; mentions: number[] }) {
+    return this.http.post<TaskComment>(`${this.api(clientId)}/${taskId}/comments`, dto);
+  }
+
+  deleteComment(clientId: number, taskId: number, commentId: number) {
+    return this.http.delete(`${this.api(clientId)}/${taskId}/comments/${commentId}`);
   }
 }

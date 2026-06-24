@@ -1,14 +1,10 @@
 export type ClientSite = 'REUNION' | 'MADAGASCAR';
 
-export type SecteurActivite =
-  | 'RESTAURATION'
-  | 'BTP'
-  | 'ASSOCIATION'
-  | 'HOLDING'
-  | 'PROFESSION_LIBERALE'
-  | 'SCI';
+/** @deprecated — utiliser le code dynamique depuis SecteurService */
+export type SecteurActivite = string;
 
-export const SECTEURS_LABELS: Record<SecteurActivite, string> = {
+/** @deprecated — utiliser SecteurService.getAll() */
+export const SECTEURS_LABELS: Record<string, string> = {
   RESTAURATION: 'Hôtellerie-Restauration & Métiers de bouche',
   BTP: 'BTP',
   ASSOCIATION: 'Association',
@@ -48,6 +44,21 @@ export interface Responsable {
   email: string;
 }
 
+export type ExerciceStatut = 'OUVERT' | 'CLOTURE';
+
+export interface Exercice {
+  id: number;
+  annee: number;
+  dateOuverture: string;
+  dateCloture: string;
+  statut: ExerciceStatut;
+  clotureLeAt?: string | null;
+  clotureParId?: number | null;
+  clientId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Client {
   id: number;
   nom: string;
@@ -65,6 +76,7 @@ export interface Client {
   fournisseurs?: Fournisseur[];
   synthesesCloture?: SyntheseCloture[];
   documents?: ClientDocument[];
+  dateClotureExercice?: string; // "MM-DD"
   createdAt: string;
 }
 
@@ -81,6 +93,14 @@ export interface FicheIdentite {
   telephoneContact?: string;
   gerants?: Gerant[];
   salaries?: Salarie[];
+  actionnaires?: Actionnaire[];
+  honoraires?: Honoraires;
+  reseauxSociauxStructures?: ReseauSocial[];
+  siteWeb?: string;
+  evolutionSecteur?: string;
+  nbConcurrentsQuartier?: number;
+  nbConcurrentsCommune?: number;
+  nbConcurrentsGeneral?: number;
 }
 
 export interface Gerant {
@@ -95,6 +115,25 @@ export interface Salarie {
   nom: string;
   poste: string;
   typeContrat: string;
+}
+
+export interface Actionnaire {
+  nom: string;
+  prenom: string;
+  pourcentage: number;
+  regimeFiscal: string;
+}
+
+export interface Honoraires {
+  comptables?: number;
+  juridiques?: number;
+  sociaux?: number;
+  commissariatAuxComptes?: number;
+}
+
+export interface ReseauSocial {
+  plateforme: string;
+  url: string;
 }
 
 export type TypeFlux =

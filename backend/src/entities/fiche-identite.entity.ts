@@ -69,18 +69,43 @@ export class FicheIdentite {
   @Column({ type: 'json', nullable: true })
   reglementations: string[];
 
-  // Présence digitale & marché
+  @Column({ type: 'json', nullable: true })
+  actionnaires: {
+    nom: string;
+    prenom: string;
+    pourcentage: number;
+    regimeFiscal: string;
+  }[];
+
+  @Column({ type: 'json', nullable: true })
+  honoraires: {
+    comptables?: number;
+    juridiques?: number;
+    sociaux?: number;
+    commissariatAuxComptes?: number;
+  };
+
   @Column({ nullable: true })
   siteWeb: string;
 
+  /** @deprecated Utiliser reseauxSociauxStructures */
   @Column({ type: 'json', nullable: true })
   reseauxSociaux: string[];
+
+  @Column({ type: 'json', nullable: true })
+  reseauxSociauxStructures: {
+    plateforme: string;
+    url: string;
+  }[];
 
   @Column({ nullable: true })
   nbConcurrentsQuartier: number;
 
   @Column({ nullable: true })
   nbConcurrentsCommune: number;
+
+  @Column({ nullable: true })
+  nbConcurrentsGeneral: number;
 
   @Column({ type: 'text', nullable: true })
   evolutionSecteur: string;

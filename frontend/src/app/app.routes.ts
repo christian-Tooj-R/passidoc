@@ -23,6 +23,18 @@ export const routes: Routes = [
       },
     ],
   },
+  // ── Pages plein écran (sans sidebar principale) ──────────────────────────
+  {
+    path: 'clients/:id',
+    canActivate: [authGuard, pointageGuard],
+    loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
+  },
+  {
+    path: 'salaries/:id',
+    canActivate: [authGuard, pointageGuard],
+    loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
+  },
+  // ── Layout principal (avec sidebar) ──────────────────────────────────────
   {
     path: '',
     canActivate: [authGuard, pointageGuard],
@@ -69,26 +81,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/pointage/pointage.component').then((m) => m.PointageComponent),
       },
       {
+        path: 'salaries',
+        loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
+      },
+      {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
       },
       {
+        path: 'admin/secteurs',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('./features/admin/secteurs-admin.component').then((m) => m.SecteursAdminComponent),
+      },
+      {
         path: 'personnalisation',
         loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
-      },
-    ],
-  },
-  // ── Dossier plein écran (sans sidebar principale) ──────
-  {
-    path: '',
-    canActivate: [authGuard, pointageGuard],
-    loadComponent: () => import('./layout/fullscreen-layout/fullscreen-layout.component').then((m) => m.FullscreenLayoutComponent),
-    children: [
-      {
-        path: 'clients/:id',
-        loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
       },
     ],
   },

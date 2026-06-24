@@ -1,37 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AnalyseStrategique } from '../entities/analyse-strategique.entity';
-import { Client } from '../entities/client.entity';
+import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 
 @Injectable()
 export class AnalyseStrategiqueService {
   constructor(
-    @InjectRepository(AnalyseStrategique)
-    private repo: Repository<AnalyseStrategique>,
-    @InjectRepository(Client)
-    private clientRepo: Repository<Client>,
+    @InjectRepository(AnalyseStrategique) private repo: Repository<AnalyseStrategique>,
+    @InjectRepository(Exercice) private exerciceRepo: Repository<Exercice>,
   ) {}
 
-  async findByClient(clientId: number): Promise<AnalyseStrategique> {
-    const analyse = await this.repo.findOne({ where: { client: { id: clientId } } });
-    if (!analyse) {
-      const client = await this.clientRepo.findOne({ where: { id: clientId } });
-      if (!client) throw new NotFoundException('Client introuvable');
-      const newAnalyse = this.repo.create({ client });
-      return this.repo.save(newAnalyse);
+  async findByExercice(clientId: number, exerciceId: number): Promise<AnalyseStrategique> {
+    let record = await this.repo.findOne({ where: { clientId, exerciceId } });
+    if (!record) {
+      record = this.repo.create({ clientId, exerciceId });
+      return this.repo.save(record);
     }
-    return analyse;
+    return record;
   }
 
-  async upsert(clientId: number, data: Partial<AnalyseStrategique>): Promise<AnalyseStrategique> {
-    let analyse = await this.repo.findOne({ where: { client: { id: clientId } } });
-    if (!analyse) {
-      const client = await this.clientRepo.findOne({ where: { id: clientId } });
-      if (!client) throw new NotFoundException('Client introuvable');
-      analyse = this.repo.create({ client });
+  async upsert(clientId: number, exerciceId: number, data: Partial<AnalyseStrategique>): Promise<AnalyseStrategique> {
+    const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
+    if (!exercice) throw new NotFoundException('Exercice introuvable');
+    if (exercice.statut === ExerciceStatut.CLOTURE) {
+      throw new ForbiddenException("Exercice clôturé — données en lecture seule");
     }
-    Object.assign(analyse, data);
-    return this.repo.save(analyse);
+    let record = await this.repo.findOne({ where: { clientId, exerciceId } });
+    if (!record) record = this.repo.create({ clientId, exerciceId });
+    Object.assign(record, data);
+    return this.repo.save(record);
   }
 }

@@ -17,7 +17,7 @@ export class ClientsController {
   constructor(private clientsService: ClientsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.COLLABORATEUR)
   @ApiOperation({ summary: 'Créer un dossier client' })
   create(@Body() dto: CreateClientDto, @Req() req: any) {
     return this.clientsService.create(dto, req.user);

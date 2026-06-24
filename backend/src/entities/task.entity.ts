@@ -1,10 +1,11 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn,
+  ManyToOne, OneToMany, JoinColumn,
 } from 'typeorm';
 import { Client } from './client.entity';
 import { User } from './user.entity';
+import { TaskComment } from './task-comment.entity';
 
 export enum TaskStatut {
   A_FAIRE = 'A_FAIRE',
@@ -81,6 +82,16 @@ export class Task {
 
   @Column({ nullable: true, type: 'text' })
   commentaire: string; // note libre par ligne de grille
+
+  // Suivi du temps en cours
+  @Column({ nullable: true, type: 'timestamp' })
+  debutEnCours: Date;
+
+  @Column({ type: 'int', default: 0 })
+  tempsTotalSecondes: number;
+
+  @OneToMany(() => TaskComment, (c) => c.task, { cascade: false })
+  comments: TaskComment[];
 
   @ManyToOne(() => Client, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clientId' })

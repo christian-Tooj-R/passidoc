@@ -1,34 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ObjectifsClient } from '../entities/objectifs-client.entity';
-import { Client } from '../entities/client.entity';
+import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 
 @Injectable()
 export class ObjectifsService {
   constructor(
     @InjectRepository(ObjectifsClient) private repo: Repository<ObjectifsClient>,
-    @InjectRepository(Client) private clientRepo: Repository<Client>,
+    @InjectRepository(Exercice) private exerciceRepo: Repository<Exercice>,
   ) {}
 
-  async findByClient(clientId: number): Promise<ObjectifsClient> {
-    const obj = await this.repo.findOne({ where: { client: { id: clientId } } });
-    if (!obj) {
-      const client = await this.clientRepo.findOne({ where: { id: clientId } });
-      if (!client) throw new NotFoundException('Client introuvable');
-      return this.repo.save(this.repo.create({ client }));
+  async findByExercice(clientId: number, exerciceId: number): Promise<ObjectifsClient> {
+    let record = await this.repo.findOne({ where: { clientId, exerciceId } });
+    if (!record) {
+      record = this.repo.create({ clientId, exerciceId });
+      return this.repo.save(record);
     }
-    return obj;
+    return record;
   }
 
-  async upsert(clientId: number, data: Partial<ObjectifsClient>): Promise<ObjectifsClient> {
-    let obj = await this.repo.findOne({ where: { client: { id: clientId } } });
-    if (!obj) {
-      const client = await this.clientRepo.findOne({ where: { id: clientId } });
-      if (!client) throw new NotFoundException('Client introuvable');
-      obj = this.repo.create({ client });
+  async upsert(clientId: number, exerciceId: number, data: Partial<ObjectifsClient>): Promise<ObjectifsClient> {
+    const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
+    if (!exercice) throw new NotFoundException('Exercice introuvable');
+    if (exercice.statut === ExerciceStatut.CLOTURE) {
+      throw new ForbiddenException("Exercice clôturé — données en lecture seule");
     }
-    Object.assign(obj, data);
-    return this.repo.save(obj);
+    let record = await this.repo.findOne({ where: { clientId, exerciceId } });
+    if (!record) record = this.repo.create({ clientId, exerciceId });
+    Object.assign(record, data);
+    return this.repo.save(record);
   }
 }
