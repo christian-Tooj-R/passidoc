@@ -1,8 +1,8 @@
 databases:
-  - name: passidoc-db
+  - name: passidoc-db2
     plan: free
-    databaseName: passidoc_db
-    user: passidoc_user
+    databaseName: passidoc_db2
+    user: passidoc_db2_user
 
 services:
   # ── Backend NestJS ──────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ services:
         value: postgres
       - key: DATABASE_URL
         fromDatabase:
-          name: passidoc-db
+          name: passidoc-db2
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
