@@ -45,7 +45,7 @@ import { SecteursModule } from './secteurs/secteurs.module';
         const common = {
           type: dbType as any,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: config.get<string>('NODE_ENV') !== 'production' && config.get<string>('DB_SYNC') !== 'false',
+          synchronize: config.get<string>('DB_SYNC') === 'true' || (config.get<string>('NODE_ENV') !== 'production' && config.get<string>('DB_SYNC') !== 'false'),
           logging: config.get<string>('NODE_ENV') === 'development',
         };
         if (dbType === 'postgres') {
