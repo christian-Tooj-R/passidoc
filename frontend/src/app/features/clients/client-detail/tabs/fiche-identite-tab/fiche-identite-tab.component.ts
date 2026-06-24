@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import { FicheIdentiteService } from '../../../../../core/services/fiche-identit
 import { FiscalReferenceService, FiscalRef } from '../../../../../core/services/fiscal-reference.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
 import { ClientSite, TypeFlux } from '../../../../../core/models/client.model';
+import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 
 const PLATFORM_SVGS: Record<string, string> = {
   Facebook:  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#1877F2"/><path fill="#fff" d="M13 10.5V8.8c0-.6.3-.9.8-.9H16V5h-2.5C11.4 5 10 6.5 10 8.8v1.7H8V13h2v7h3v-7h2l.5-2.5H13z"/></svg>`,
@@ -46,7 +47,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     CommonModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule, MatButtonModule,
     MatIconModule, MatExpansionModule, MatSelectModule,
-    MatChipsModule, MatTooltipModule, MatCheckboxModule,
+    MatChipsModule, MatTooltipModule, MatCheckboxModule, OnlyNumbersDirective,
   ],
   template: `
     <div class="tab-content">
@@ -151,42 +152,83 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
           <!-- Actionnariat -->
           <mat-expansion-panel>
             <mat-expansion-panel-header>
-              <mat-panel-title><mat-icon>account_circle</mat-icon>&nbsp;Actionnariat</mat-panel-title>
+              <mat-panel-title>
+                <mat-icon>account_circle</mat-icon>&nbsp;Actionnariat
+                @if (actionnaires.length > 0) {
+                  <span class="act-total-badge">{{ actionnaires.length }}</span>
+                }
+              </mat-panel-title>
             </mat-expansion-panel-header>
             <div class="actionnaires-section">
-              <p class="section-hint">Maximum 5 actionnaires.</p>
               @for (ctrl of actionnaires.controls; track $index) {
-                <div class="actionnaire-row" [formGroup]="asGroup(ctrl)">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Nom</mat-label>
-                    <input matInput formControlName="nom" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Prénom</mat-label>
-                    <input matInput formControlName="prenom" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="pct-field">
-                    <mat-label>%</mat-label>
-                    <input matInput type="number" formControlName="pourcentage" min="0" max="100" />
-                    <span matSuffix>%</span>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Régime fiscal</mat-label>
-                    <mat-select formControlName="regimeFiscal">
-                      <mat-option value="IR">IR</mat-option>
-                      <mat-option value="IS">IS</mat-option>
-                      <mat-option value="LMNP">LMNP</mat-option>
-                      <mat-option value="Autre">Autre</mat-option>
-                    </mat-select>
-                  </mat-form-field>
-                  <button type="button" mat-icon-button color="warn"
-                          matTooltip="Supprimer" (click)="removeActionnaire($index)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
+                @if (isEditingActionnaire($index)) {
+                  <!-- Mode édition -->
+                  <div class="act-row">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Prénom <span class="req">*</span></mat-label>
+                      <input matInput [formControl]="fc($index, 'prenom')" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Nom <span class="req">*</span></mat-label>
+                      <input matInput [formControl]="fc($index, 'nom')" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="pct-field">
+                      <mat-label>% <span class="req">*</span></mat-label>
+                      <input matInput type="number" [formControl]="fc($index, 'pourcentage')" min="0" max="100" />
+                      <span matSuffix>%</span>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Régime <span class="req">*</span></mat-label>
+                      <mat-select [formControl]="fc($index, 'regimeFiscal')">
+                        <mat-option value="IR">IR</mat-option>
+                        <mat-option value="IS">IS</mat-option>
+                        <mat-option value="LMNP">LMNP</mat-option>
+                        <mat-option value="Autre">Autre</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    <div style="display:flex;gap:2px;flex-shrink:0">
+                      <button type="button" mat-icon-button matTooltip="Valider"
+                              (click)="stopEditActionnaire($index)">
+                        <mat-icon style="color:#16a34a">check_circle</mat-icon>
+                      </button>
+                      <button type="button" mat-icon-button color="warn"
+                              matTooltip="Supprimer" (click)="removeActionnaire($index)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Mode affichage -->
+                  <div class="act-view-row">
+                    <span class="act-view-name">
+                      {{ fc($index, 'prenom').value }} {{ fc($index, 'nom').value }}
+                    </span>
+                    @if (fc($index, 'pourcentage').value != null) {
+                      <span class="act-badge act-badge--pct">{{ fc($index, 'pourcentage').value }}%</span>
+                    }
+                    @if (fc($index, 'regimeFiscal').value) {
+                      <span class="act-badge act-badge--regime">{{ fc($index, 'regimeFiscal').value }}</span>
+                    }
+                    <div style="display:flex;gap:2px;margin-left:auto;flex-shrink:0">
+                      <button type="button" mat-icon-button matTooltip="Modifier"
+                              (click)="startEditActionnaire($index)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button type="button" mat-icon-button color="warn"
+                              matTooltip="Supprimer" (click)="removeActionnaire($index)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
               }
+
+              @if (actionnaires.length === 0) {
+                <p style="color:#94a3b8;font-size:13px;padding:8px 0 0">Aucun actionnaire enregistré.</p>
+              }
+
               @if (actionnaires.length < 5) {
-                <button type="button" mat-stroked-button (click)="addActionnaire()">
+                <button type="button" class="act-add-btn" (click)="addActionnaire()">
                   <mat-icon>add</mat-icon> Ajouter un actionnaire
                 </button>
               }
@@ -198,29 +240,29 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             <mat-expansion-panel-header>
               <mat-panel-title><mat-icon>euro</mat-icon>&nbsp;Honoraires annuels (€)</mat-panel-title>
             </mat-expansion-panel-header>
-            <div class="form-grid" [formGroupName]="'honoraires'">
+            <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Comptables</mat-label>
                 <mat-icon matPrefix>calculate</mat-icon>
-                <input matInput type="number" formControlName="comptables" />
+                <input matInput type="number" [formControl]="honorairesComptablesCtrl" />
                 <span matSuffix>€</span>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Juridiques</mat-label>
                 <mat-icon matPrefix>gavel</mat-icon>
-                <input matInput type="number" formControlName="juridiques" />
+                <input matInput type="number" [formControl]="honorairesJuridiquesCtrl" />
                 <span matSuffix>€</span>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Sociaux</mat-label>
                 <mat-icon matPrefix>people</mat-icon>
-                <input matInput type="number" formControlName="sociaux" />
+                <input matInput type="number" [formControl]="honorairesSociauxCtrl" />
                 <span matSuffix>€</span>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Commissariat aux comptes</mat-label>
                 <mat-icon matPrefix>verified</mat-icon>
-                <input matInput type="number" formControlName="commissariatAuxComptes" />
+                <input matInput type="number" [formControl]="honorairesCommissariatCtrl" />
                 <span matSuffix>€</span>
               </mat-form-field>
             </div>
@@ -235,21 +277,29 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
               <mat-form-field appearance="outline">
                 <mat-label>Concurrents dans le quartier</mat-label>
                 <mat-icon matPrefix>place</mat-icon>
-                <input matInput type="number" formControlName="nbConcurrentsQuartier" />
+                <input matInput type="number" [formControl]="nbConcurrentsQuartierCtrl" />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Concurrence générale</mat-label>
                 <mat-icon matPrefix>public</mat-icon>
-                <input matInput type="number" formControlName="nbConcurrentsGeneral" />
+                <input matInput type="number" [formControl]="nbConcurrentsGeneralCtrl" />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Site web</mat-label>
                 <mat-icon matPrefix>language</mat-icon>
-                <input matInput formControlName="siteWeb" placeholder="https://..." />
+                <input matInput [formControl]="siteWebCtrl" placeholder="https://..." />
+                @if (siteWebCtrl.value) {
+                  <a matSuffix [href]="formatUrl(siteWebCtrl.value ?? '')"
+                     target="_blank" rel="noopener"
+                     mat-icon-button matTooltip="Ouvrir le site"
+                     style="color:#2563eb">
+                    <mat-icon>open_in_new</mat-icon>
+                  </a>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-col">
                 <mat-label>Évolution du secteur</mat-label>
-                <textarea matInput rows="3" formControlName="evolutionSecteur" placeholder="Tendances, données sectorielles, évolution du marché local..."></textarea>
+                <textarea matInput rows="3" [formControl]="evolutionSecteurCtrl" placeholder="Tendances, données sectorielles, évolution du marché local..."></textarea>
               </mat-form-field>
             </div>
 
@@ -260,32 +310,72 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                 <span>Réseaux sociaux</span>
               </div>
               @for (ctrl of reseauxSociaux.controls; track $index) {
-                <div class="reseau-row" [formGroup]="asGroup(ctrl)">
-                  <img class="reseau-plat-icon"
-                       [src]="platIconUrl(asGroup(ctrl).get('plateforme')?.value || 'Autre')"
-                       width="36" height="36" alt="">
-                  <mat-form-field appearance="outline" class="reseau-plateforme">
-                    <mat-label>Plateforme</mat-label>
-                    <mat-select formControlName="plateforme">
-                      @for (p of plateformes; track p.value) {
-                        <mat-option [value]="p.value">
-                          <span class="plat-option">
-                            <img [src]="platIconUrl(p.value)" width="18" height="18" alt="">
-                            {{ p.label }}
-                          </span>
-                        </mat-option>
+                @if (isEditing($index)) {
+                  <!-- Mode édition -->
+                  <div class="reseau-row">
+                    <img class="reseau-plat-icon"
+                         [src]="platIconUrl(rsCtrl($index, 'plateforme').value || 'Autre')"
+                         width="36" height="36" alt="">
+                    <mat-form-field appearance="outline" class="reseau-plateforme">
+                      <mat-label>Plateforme</mat-label>
+                      <mat-select [formControl]="rsCtrl($index, 'plateforme')">
+                        @for (p of plateformes; track p.value) {
+                          <mat-option [value]="p.value">
+                            <span class="plat-option">
+                              <img [src]="platIconUrl(p.value)" width="18" height="18" alt="">
+                              {{ p.label }}
+                            </span>
+                          </mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="reseau-url">
+                      <mat-label>URL ou nom de profil</mat-label>
+                      <input matInput [formControl]="rsCtrl($index, 'url')" placeholder="https://..." />
+                    </mat-form-field>
+                    <div style="display:flex;gap:2px">
+                      <button type="button" mat-icon-button matTooltip="Valider"
+                              (click)="stopEdit($index)">
+                        <mat-icon style="color:#16a34a">check_circle</mat-icon>
+                      </button>
+                      <button type="button" mat-icon-button color="warn"
+                              matTooltip="Supprimer" (click)="removeReseau($index)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Mode affichage : lien cliquable -->
+                  <div class="reseau-link-row">
+                    <img class="reseau-plat-icon"
+                         [src]="platIconUrl(rsCtrl($index, 'plateforme').value || 'Autre')"
+                         width="32" height="32" alt="">
+                    <div class="reseau-link-info">
+                      <span class="reseau-plat-name">{{ rsCtrl($index, 'plateforme').value || 'Autre' }}</span>
+                      @if (rsCtrl($index, 'url').value) {
+                        <a class="reseau-link"
+                           [href]="formatUrl(rsCtrl($index, 'url').value)"
+                           target="_blank" rel="noopener noreferrer"
+                           matTooltip="{{ rsCtrl($index, 'url').value }}">
+                          <mat-icon class="reseau-ext-icon">open_in_new</mat-icon>
+                          {{ displayUrl(rsCtrl($index, 'url').value) }}
+                        </a>
+                      } @else {
+                        <span class="reseau-link-empty">Aucun lien renseigné</span>
                       }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="reseau-url">
-                    <mat-label>URL ou nom de profil</mat-label>
-                    <input matInput formControlName="url" placeholder="https://..." />
-                  </mat-form-field>
-                  <button type="button" mat-icon-button color="warn"
-                          matTooltip="Supprimer" (click)="removeReseau($index)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
+                    </div>
+                    <div class="reseau-link-actions">
+                      <button type="button" mat-icon-button matTooltip="Modifier"
+                              (click)="startEdit($index)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button type="button" mat-icon-button color="warn"
+                              matTooltip="Supprimer" (click)="removeReseau($index)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
               }
               <!-- Boutons rapides pour les plateformes populaires -->
               <div class="reseaux-quick">
@@ -385,12 +475,42 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
 
     .section-hint { font-size: 12px; color: #94a3b8; margin: 0 0 12px; }
 
-    .actionnaires-section { padding: 16px 0; display: flex; flex-direction: column; gap: 10px; }
-    .actionnaire-row {
-      display: grid; grid-template-columns: 1fr 1fr 80px 1fr auto;
+    /* Actionnariat */
+    .actionnaires-section { padding: 16px 0; display: flex; flex-direction: column; gap: 4px; }
+    .act-row {
+      display: grid; grid-template-columns: 1fr 1fr 110px 1fr auto;
       gap: 10px; align-items: center;
     }
-    .pct-field { max-width: 80px; }
+    .pct-field { max-width: 110px; }
+    .act-total-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #6366f1; color: white;
+      font-size: 10px; font-weight: 700; margin-left: 6px;
+    }
+    .req { color: #dc2626; }
+    .act-view-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+    }
+    .act-view-name { font-size: 14px; font-weight: 600; color: #1e293b; flex: 1; }
+    .act-badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+    }
+    .act-badge--pct { background: #e0e7ff; color: #4338ca; }
+    .act-badge--regime { background: #d1fae5; color: #065f46; }
+    .act-add-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 4px; padding: 6px 14px; border-radius: 8px;
+      border: 1.5px dashed #c7d2fe; background: transparent;
+      color: #6366f1; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #eef2ff; border-style: solid; }
+    }
 
     .reseaux-section { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
     .reseaux-header {
@@ -402,6 +522,35 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .reseau-plat-icon { border-radius: 8px; display: block; flex-shrink: 0; }
     .plat-option { display: flex; align-items: center; gap: 8px; }
     .plat-option img { border-radius: 4px; display: block; flex-shrink: 0; }
+
+    /* Reseau — mode affichage */
+    .reseau-link-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 12px;
+      border: 1.5px solid #e2e8f0; background: #f8fafc;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .reseau-link-row:hover {
+      border-color: #bfdbfe; box-shadow: 0 1px 4px rgba(99,102,241,.08);
+    }
+    .reseau-link-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .reseau-plat-name {
+      font-size: 10.5px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .reseau-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: #2563eb; font-size: 13.5px; font-weight: 500;
+      text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 100%; transition: color .12s;
+    }
+    .reseau-link:hover { color: #1d4ed8; text-decoration: underline; }
+    .reseau-ext-icon { font-size: 13px; width: 13px; height: 13px; flex-shrink: 0; }
+    .reseau-link-empty { font-size: 13px; color: #cbd5e1; font-style: italic; }
+    .reseau-link-actions {
+      display: flex; gap: 2px; opacity: 0; transition: opacity .15s; flex-shrink: 0;
+    }
+    .reseau-link-row:hover .reseau-link-actions { opacity: 1; }
 
     .reseaux-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
     .quick-btn {
@@ -448,20 +597,30 @@ export class FicheIdentiteTabComponent implements OnInit {
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  // Contrôles déclarés explicitement pour garantir le binding dans les panels lazy
+  readonly nbConcurrentsQuartierCtrl = new FormControl<number | null>(null);
+  readonly nbConcurrentsGeneralCtrl  = new FormControl<number | null>(null);
+  readonly siteWebCtrl               = new FormControl('');
+  readonly evolutionSecteurCtrl      = new FormControl('');
+  readonly honorairesComptablesCtrl           = new FormControl<number | null>(null);
+  readonly honorairesJuridiquesCtrl           = new FormControl<number | null>(null);
+  readonly honorairesSociauxCtrl              = new FormControl<number | null>(null);
+  readonly honorairesCommissariatCtrl         = new FormControl<number | null>(null);
+
   form = this.fb.group({
     raisonSociale: [''], siren: [''], siret: [''],
     formeJuridique: [''], adresse: [''], activite: [''],
     surfaceCommerciale: [null as number | null],
     emailContact: [''], telephoneContact: [''],
-    nbConcurrentsQuartier: [null as number | null],
-    nbConcurrentsGeneral:  [null as number | null],
-    siteWeb: [''],
-    evolutionSecteur: [''],
+    nbConcurrentsQuartier: this.nbConcurrentsQuartierCtrl,
+    nbConcurrentsGeneral:  this.nbConcurrentsGeneralCtrl,
+    siteWeb:               this.siteWebCtrl,
+    evolutionSecteur:      this.evolutionSecteurCtrl,
     honoraires: this.fb.group({
-      comptables:            [null as number | null],
-      juridiques:            [null as number | null],
-      sociaux:               [null as number | null],
-      commissariatAuxComptes:[null as number | null],
+      comptables:            this.honorairesComptablesCtrl,
+      juridiques:            this.honorairesJuridiquesCtrl,
+      sociaux:               this.honorairesSociauxCtrl,
+      commissariatAuxComptes:this.honorairesCommissariatCtrl,
     }),
     actionnaires: this.fb.array([]),
     reseauxSociaux: this.fb.array([]),
@@ -476,6 +635,17 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   asGroup(ctrl: any): FormGroup { return ctrl as FormGroup; }
 
+  /** Accès direct à un FormControl — contourne la chaîne DI des mat-expansion-panel lazily rendus */
+  ctrl(path: string): FormControl { return this.form.get(path) as FormControl; }
+
+  fc(index: number, field: string): FormControl {
+    return this.actionnaires.at(index).get(field) as FormControl;
+  }
+
+  rsCtrl(index: number, field: string): FormControl {
+    return this.reseauxSociaux.at(index).get(field) as FormControl;
+  }
+
   constructor(
     private service: FicheIdentiteService,
     private clientsService: ClientsService,
@@ -483,6 +653,7 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   ngOnInit() {
     this.service.get(this.clientId).subscribe((fiche: any) => {
+      console.log('[FICHE GET] actionnaires:', fiche.actionnaires, '| reseaux:', fiche.reseauxSociauxStructures, '| honoraires:', fiche.honoraires);
       this.form.patchValue({
         ...fiche,
         honoraires: fiche.honoraires ?? {},
@@ -506,10 +677,10 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   private newActionnaire(a?: any): FormGroup {
     return this.fb.group({
-      nom:          [a?.nom ?? ''],
-      prenom:       [a?.prenom ?? ''],
-      pourcentage:  [a?.pourcentage ?? null],
-      regimeFiscal: [a?.regimeFiscal ?? ''],
+      nom:          [a?.nom ?? '',         Validators.required],
+      prenom:       [a?.prenom ?? '',      Validators.required],
+      pourcentage:  [a?.pourcentage ?? null, Validators.required],
+      regimeFiscal: [a?.regimeFiscal ?? '', Validators.required],
     });
   }
 
@@ -520,13 +691,71 @@ export class FicheIdentiteTabComponent implements OnInit {
     });
   }
 
-  addActionnaire() { if (this.actionnaires.length < 5) this.actionnaires.push(this.newActionnaire()); }
-  removeActionnaire(i: number) { this.actionnaires.removeAt(i); }
+  private actionnaireEditingIndices = new Set<number>();
 
-  addReseau(plateforme?: string) { this.reseauxSociaux.push(this.newReseau(plateforme ? { plateforme, url: '' } : undefined)); }
-  removeReseau(i: number) { this.reseauxSociaux.removeAt(i); }
+  isEditingActionnaire(i: number): boolean { return this.actionnaireEditingIndices.has(i); }
+  startEditActionnaire(i: number) { this.actionnaireEditingIndices.add(i); }
+  stopEditActionnaire(i: number) { this.actionnaireEditingIndices.delete(i); }
+
+  actionnaireInitials(ctrl: FormGroup): string {
+    const p = (ctrl.get('prenom')?.value ?? '').trim();
+    const n = (ctrl.get('nom')?.value ?? '').trim();
+    return ((p[0] ?? '') + (n[0] ?? '')).toUpperCase() || '?';
+  }
+
+  addActionnaire() {
+    if (this.actionnaires.length < 5) {
+      const newIndex = this.actionnaires.length;
+      this.actionnaires.push(this.newActionnaire());
+      this.actionnaireEditingIndices.add(newIndex);
+    }
+  }
+
+  removeActionnaire(i: number) {
+    this.actionnaires.removeAt(i);
+    this.actionnaireEditingIndices.delete(i);
+    const updated = new Set<number>();
+    this.actionnaireEditingIndices.forEach(idx => {
+      if (idx < i) updated.add(idx);
+      else if (idx > i) updated.add(idx - 1);
+    });
+    this.actionnaireEditingIndices = updated;
+  }
+
+  private editingIndices = new Set<number>();
+
+  isEditing(i: number): boolean { return this.editingIndices.has(i); }
+  startEdit(i: number) { this.editingIndices.add(i); }
+  stopEdit(i: number) { this.editingIndices.delete(i); }
+
+  addReseau(plateforme?: string) {
+    this.reseauxSociaux.push(this.newReseau(plateforme ? { plateforme, url: '' } : undefined));
+    this.editingIndices.add(this.reseauxSociaux.length - 1);
+  }
+  removeReseau(i: number) {
+    this.reseauxSociaux.removeAt(i);
+    this.editingIndices.delete(i);
+    // recalculer les indices supérieurs
+    const updated = new Set<number>();
+    this.editingIndices.forEach(idx => { if (idx < i) updated.add(idx); else if (idx > i) updated.add(idx - 1); });
+    this.editingIndices = updated;
+  }
   hasReseau(plateforme: string): boolean {
     return this.reseauxSociaux.controls.some(c => c.get('plateforme')?.value === plateforme);
+  }
+
+  formatUrl(url: string): string {
+    if (!url) return '#';
+    return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  }
+
+  displayUrl(url: string): string {
+    try {
+      const u = new URL(this.formatUrl(url));
+      return (u.hostname + u.pathname).replace(/^www\./, '').replace(/\/$/, '');
+    } catch {
+      return url;
+    }
   }
 
   isTypeActif(key: TypeFlux): boolean { return this.selectedTypes.includes(key); }
@@ -553,8 +782,14 @@ export class FicheIdentiteTabComponent implements OnInit {
       reseauxSociauxStructures: v.reseauxSociaux,
     };
     delete payload['reseauxSociaux'];
+    console.log('[FICHE SAVE] Q:', this.nbConcurrentsQuartierCtrl.value, '| G:', this.nbConcurrentsGeneralCtrl.value, '| siteWeb:', this.siteWebCtrl.value);
     this.service.update(this.clientId, payload).subscribe({
-      next: () => { this.saving = false; this.toast.success('Fiche enregistrée'); },
+      next: () => {
+        this.saving = false;
+        this.editingIndices.clear();
+        this.actionnaireEditingIndices.clear();
+        this.toast.success('Fiche enregistrée');
+      },
       error: () => { this.saving = false; this.toast.error('Erreur lors de la sauvegarde'); },
     });
   }

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,8 +21,8 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
     <div class="tab">
       <div class="tab-header">
         <h2>Analyse Stratégique</h2>
-        <button mat-flat-button color="primary" (click)="save()">
-          <mat-icon>save</mat-icon> Enregistrer
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="readonly">
+          <mat-icon>save</mat-icon> {{ readonly ? 'Lecture seule' : 'Enregistrer' }}
         </button>
       </div>
 
@@ -124,8 +124,10 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
     .bmc-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 16px; }
   `],
 })
-export class AnalyseStrategiqueTabComponent implements OnInit {
+export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
   @Input() clientId!: number;
+  @Input() exerciceId!: number;
+  @Input() readonly = false;
   private fb = inject(FormBuilder);
   private service = inject(AnalyseStrategiqueService);
   private toast = inject(ToastService);
@@ -149,8 +151,17 @@ export class AnalyseStrategiqueTabComponent implements OnInit {
     { key: 'porterSubstituts',       label: 'Menace des produits de substitution',       hint: 'Ex : Moyenne — grande distribution, snacking industriel' },
   ];
 
-  ngOnInit() {
-    this.service.get(this.clientId).subscribe((data) => {
+  ngOnInit() { this.load(); }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if ((changes['exerciceId'] || changes['clientId']) && this.exerciceId) {
+      this.load();
+    }
+  }
+
+  private load() {
+    if (!this.clientId || !this.exerciceId) return;
+    this.service.get(this.clientId, this.exerciceId).subscribe((data) => {
       if (data) {
         this.form.patchValue(data);
         this.swot.forces       = (data.forces      || []).join('\n');
@@ -166,8 +177,9 @@ export class AnalyseStrategiqueTabComponent implements OnInit {
   }
 
   save() {
+    if (this.readonly) return;
     const toArray = (text: string) => text.split('\n').map(s => s.trim()).filter(Boolean);
-    this.service.save(this.clientId, {
+    this.service.save(this.clientId, this.exerciceId, {
       ...this.form.value,
       forces:       toArray(this.swot.forces),
       faiblesses:   toArray(this.swot.faiblesses),

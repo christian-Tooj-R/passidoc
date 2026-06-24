@@ -69,7 +69,6 @@ export class FicheIdentite {
   @Column({ type: 'json', nullable: true })
   reglementations: string[];
 
-  // ── Actionnariat ─────────────────────────────────────────────
   @Column({ type: 'json', nullable: true })
   actionnaires: {
     nom: string;
@@ -78,7 +77,6 @@ export class FicheIdentite {
     regimeFiscal: string;
   }[];
 
-  // ── Honoraires ───────────────────────────────────────────────
   @Column({ type: 'json', nullable: true })
   honoraires: {
     comptables?: number;
@@ -87,7 +85,6 @@ export class FicheIdentite {
     commissariatAuxComptes?: number;
   };
 
-  // ── Présence digitale & marché ────────────────────────────────
   @Column({ nullable: true })
   siteWeb: string;
 
@@ -97,7 +94,7 @@ export class FicheIdentite {
 
   @Column({ type: 'json', nullable: true })
   reseauxSociauxStructures: {
-    plateforme: string;  // 'facebook' | 'instagram' | 'linkedin' | 'twitter' | 'youtube' | 'tiktok' | 'autre'
+    plateforme: string;
     url: string;
   }[];
 
@@ -107,7 +104,6 @@ export class FicheIdentite {
   @Column({ nullable: true })
   nbConcurrentsCommune: number;
 
-  /** Remplacement de nbConcurrentsCommune — concurrence générale */
   @Column({ nullable: true })
   nbConcurrentsGeneral: number;
 

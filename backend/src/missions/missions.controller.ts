@@ -4,7 +4,7 @@ import { MissionsService } from './missions.service';
 import { Mission } from '../entities/mission.entity';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/clients/:clientId/missions')
+@Controller('clients/:clientId/missions')
 export class MissionsController {
   constructor(private service: MissionsService) {}
 

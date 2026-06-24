@@ -31,6 +31,8 @@ import { RolePermissionsModule } from './role-permissions/role-permissions.modul
 import { PointageModule } from './pointage/pointage.module';
 import { EspacesModule } from './espaces/espaces.module';
 import { SalariesModule } from './salaries/salaries.module';
+import { ExerciceModule } from './exercice/exercice.module';
+import { SecteursModule } from './secteurs/secteurs.module';
 
 @Module({
   imports: [
@@ -43,7 +45,7 @@ import { SalariesModule } from './salaries/salaries.module';
         const common = {
           type: dbType as any,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: config.get<string>('NODE_ENV') !== 'production' || config.get<string>('DB_SYNC') === 'true',
+          synchronize: config.get<string>('NODE_ENV') !== 'production' && config.get<string>('DB_SYNC') !== 'false',
           logging: config.get<string>('NODE_ENV') === 'development',
         };
         if (dbType === 'postgres') {
@@ -85,6 +87,8 @@ import { SalariesModule } from './salaries/salaries.module';
     PointageModule,
     EspacesModule,
     SalariesModule,
+    ExerciceModule,
+    SecteursModule,
   ],
   controllers: [AppController],
   providers: [

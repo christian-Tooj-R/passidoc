@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn,
+  CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn,
 } from 'typeorm';
 import { Client } from './client.entity';
 
@@ -22,7 +22,7 @@ export class AnalyseStrategique {
   @Column({ type: 'json', nullable: true })
   menaces: string[];
 
-  // 5 forces de Porter (texte libre)
+  // 5 forces de Porter
   @Column({ type: 'text', nullable: true })
   porterConcurrence: string;
 
@@ -42,9 +42,15 @@ export class AnalyseStrategique {
   @Column({ type: 'text', nullable: true })
   businessModelCanvas: string;
 
-  @OneToOne(() => Client, (client) => client.analyseStrategique)
-  @JoinColumn()
+  @ManyToOne(() => Client, (c: any) => c.analysesStrategiques, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'clientId' })
   client: Client;
+
+  @Column()
+  clientId: number;
+
+  @Column({ type: 'int', nullable: true })
+  exerciceId: number | null;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -61,9 +61,11 @@ export class AuthService {
   isLoggedIn(): boolean { return !!this._token(); }
   isAdmin(): boolean { return this._user()?.role === 'ADMIN'; }
   isExpert(): boolean { return this._user()?.role === 'EXPERT_COMPTABLE'; }
+  isCollaborateur(): boolean { return this._user()?.role === 'COLLABORATEUR'; }
   isReunion(): boolean { return this._user()?.site === 'REUNION'; }
   isMadagascar(): boolean { return this._user()?.site === 'MADAGASCAR'; }
   canManagePortefeuilles(): boolean { return this.isAdmin() || this.isExpert() || this.isReunion(); }
+  canCreateDossier(): boolean { return this.isAdmin() || this.isExpert() || this.isCollaborateur(); }
 
   private setSession(res: any) {
     localStorage.setItem('token', res.access_token);

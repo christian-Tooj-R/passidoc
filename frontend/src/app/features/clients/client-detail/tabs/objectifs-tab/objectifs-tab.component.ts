@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,8 +20,8 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
     <div class="tab">
       <div class="tab-header">
         <h2>Objectifs & Relation client</h2>
-        <button mat-flat-button color="primary" (click)="save()">
-          <mat-icon>save</mat-icon> Enregistrer
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="readonly">
+          <mat-icon>save</mat-icon> {{ readonly ? 'Lecture seule' : 'Enregistrer' }}
         </button>
       </div>
 
@@ -171,8 +171,10 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
     .full-width { width: 100%; }
   `],
 })
-export class ObjectifsTabComponent implements OnInit {
+export class ObjectifsTabComponent implements OnInit, OnChanges {
   @Input() clientId!: number;
+  @Input() exerciceId!: number;
+  @Input() readonly = false;
   private fb = inject(FormBuilder);
   private service = inject(ObjectifsService);
   private toast = inject(ToastService);
@@ -192,14 +194,24 @@ export class ObjectifsTabComponent implements OnInit {
     relationDirecteur: [''],
   });
 
-  ngOnInit() {
-    this.service.get(this.clientId).subscribe(data => {
+  ngOnInit() { this.load(); }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if ((changes['exerciceId'] || changes['clientId']) && this.exerciceId) {
+      this.load();
+    }
+  }
+
+  private load() {
+    if (!this.clientId || !this.exerciceId) return;
+    this.service.get(this.clientId, this.exerciceId).subscribe(data => {
       if (data) this.form.patchValue(data);
     });
   }
 
   save() {
-    this.service.save(this.clientId, this.form.value).subscribe(() => {
+    if (this.readonly) return;
+    this.service.save(this.clientId, this.exerciceId, this.form.value).subscribe(() => {
       this.toast.success('Objectifs enregistrés');
     });
   }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Client } from '../entities/client.entity';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
+import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { MinioService } from '../storage/minio.service';
@@ -15,6 +16,7 @@ export class ClientsService {
     @InjectRepository(Client) private repo: Repository<Client>,
     @InjectRepository(FicheIdentite) private ficheRepo: Repository<FicheIdentite>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Exercice) private exerciceRepo: Repository<Exercice>,
     private minio: MinioService,
     private notifications: NotificationsService,
   ) {}
@@ -45,6 +47,14 @@ export class ClientsService {
     });
     await this.ficheRepo.save(fiche);
 
+    // Créer le premier exercice si dateClotureExercice fourni
+    if (dto.dateClotureExercice) {
+      const ex = computeExercice(dto.dateClotureExercice);
+      await this.exerciceRepo.save(
+        this.exerciceRepo.create({ clientId: saved.id, ...ex, statut: ExerciceStatut.OUVERT }),
+      );
+    }
+
     return this.findOne(saved.id);
   }
 
@@ -57,7 +67,7 @@ export class ClientsService {
       .leftJoinAndSelect('client.questionnaireAdnSectoriel', 'adnSectoriel')
       .leftJoinAndSelect('client.missions', 'missions')
       .leftJoinAndSelect('client.fluxMensuels', 'fluxMensuels')
-      .leftJoinAndSelect('client.objectifs', 'objectifs')
+      .leftJoinAndSelect('client.objectifsItems', 'objectifsItems')
       .where('client.isActive = :active', { active: true });
 
     if (currentUser.role !== UserRole.ADMIN) {
@@ -83,7 +93,7 @@ export class ClientsService {
   async findOne(id: number) {
     const client = await this.repo.findOne({
       where: { id },
-      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents', 'responsable', 'analyseStrategique', 'missions', 'controleInterne'],
+      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents', 'responsable', 'analysesStrategiques', 'missions', 'controlesInternes'],
     });
     if (!client) throw new NotFoundException('Dossier client introuvable');
     return client;
@@ -195,4 +205,17 @@ export class ClientsService {
     await this.repo.update(id, { logoUrl: url });
     return this.findOne(id);
   }
+}
+
+/** Calcule annee + dateOuverture + dateCloture à partir de "MM-DD" */
+export function computeExercice(dateClotureExercice: string): { annee: number; dateOuverture: string; dateCloture: string } {
+  const today = new Date();
+  const [month, day] = dateClotureExercice.split('-').map(Number);
+  const clotureThisYear = new Date(today.getFullYear(), month - 1, day);
+  const annee = today <= clotureThisYear ? today.getFullYear() : today.getFullYear() + 1;
+  const dateCloture = `${annee}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const prevCloture = new Date(annee - 1, month - 1, day);
+  prevCloture.setDate(prevCloture.getDate() + 1);
+  const dateOuverture = prevCloture.toISOString().split('T')[0];
+  return { annee, dateOuverture, dateCloture };
 }

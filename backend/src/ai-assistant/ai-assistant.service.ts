@@ -47,10 +47,10 @@ export class AiAssistantService {
         'fluxMensuels',
         'fournisseurs',
         'synthesesCloture',
-        'analyseStrategique',
+        'analysesStrategiques',
         'missions',
-        'objectifs',
-        'controleInterne',
+        'objectifsItems',
+        'controlesInternes',
       ],
     });
 
@@ -145,9 +145,9 @@ export class AiAssistantService {
 
   private buildSystemPrompt(client: Client): string {
     const fi = client.ficheIdentite;
-    const analyse = client.analyseStrategique;
-    const objectifs = client.objectifs;
-    const ci = client.controleInterne;
+    const analyse = client.analysesStrategiques?.[0];
+    const objectifs = client.objectifsItems?.[0];
+    const ci = client.controlesInternes?.[0];
     const missions = client.missions || [];
     const fournisseurs = client.fournisseurs || [];
     const syntheses = client.synthesesCloture || [];

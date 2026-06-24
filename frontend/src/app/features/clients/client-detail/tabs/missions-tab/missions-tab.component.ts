@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { MissionsService, Mission } from '../../../../../core/services/missions.service';
@@ -16,7 +17,7 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
   imports: [
     CommonModule, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule,
+    MatInputModule, MatSelectModule, OnlyNumbersDirective,
   ],
   template: `
     <div class="tab">

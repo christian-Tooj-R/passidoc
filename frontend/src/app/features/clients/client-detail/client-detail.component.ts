@@ -6,7 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { ClientsService } from '../../../core/services/clients.service';
-import { Client } from '../../../core/models/client.model';
+import { ExerciceService } from '../../../core/services/exercice.service';
+import { Client, Exercice } from '../../../core/models/client.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
 import { FluxMensuelTabComponent } from './tabs/flux-mensuel-tab/flux-mensuel-tab.component';
 import { FournisseursTabComponent } from './tabs/fournisseurs-tab/fournisseurs-tab.component';
@@ -130,6 +131,46 @@ interface TabGroup {
             </button>
           </div>
         </div>
+
+        <!-- ══ BANNIÈRE EXERCICE ══════════════════════════ -->
+        @if (exerciceCourant()) {
+          <div class="exercice-banner" [class.exercice-banner--cloture]="exerciceCourant()!.statut === 'CLOTURE'">
+            <div class="eb-left">
+              <mat-icon class="eb-icon">event_note</mat-icon>
+              <div class="eb-info">
+                <span class="eb-label">Exercice en cours</span>
+                <span class="eb-period">
+                  {{ exerciceCourant()!.annee }}
+                  <span class="eb-dates">
+                    · {{ exerciceCourant()!.dateOuverture | date:'dd/MM/yyyy' }}
+                    → {{ exerciceCourant()!.dateCloture | date:'dd/MM/yyyy' }}
+                  </span>
+                </span>
+              </div>
+              <span class="eb-statut" [class.eb-statut--cloture]="exerciceCourant()!.statut === 'CLOTURE'">
+                <mat-icon>{{ exerciceCourant()!.statut === 'OUVERT' ? 'lock_open' : 'lock' }}</mat-icon>
+                {{ exerciceCourant()!.statut === 'OUVERT' ? 'Ouvert' : 'Clôturé' }}
+              </span>
+            </div>
+            <div class="eb-right">
+              @if (exercices().length > 1) {
+                <select class="eb-select" (change)="onExerciceChange($any($event.target).value)">
+                  @for (ex of exercices(); track ex.id) {
+                    <option [value]="ex.id" [selected]="ex.id === exerciceCourant()!.id">
+                      Exercice {{ ex.annee }} — {{ ex.statut === 'OUVERT' ? 'En cours' : 'Clôturé' }}
+                    </option>
+                  }
+                </select>
+              }
+              @if (exerciceCourant()!.statut === 'OUVERT') {
+                <button class="eb-btn-cloture" (click)="cloturerExercice()" [disabled]="cloturant()">
+                  <mat-icon>lock</mat-icon>
+                  {{ cloturant() ? 'Clôture...' : "Clôturer l'exercice" }}
+                </button>
+              }
+            </div>
+          </div>
+        }
 
         <!-- ══ LAYOUT ═══════════════════════════════════ -->
         <div class="layout">
@@ -307,10 +348,10 @@ interface TabGroup {
                 @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
                 @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
-                @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" /> }
+                @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('missions')     { <app-missions-tab            [clientId]="client.id" /> }
-                @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" /> }
-                @case ('objectifs')    { <app-objectifs-tab           [clientId]="client.id" /> }
+                @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('objectifs')    { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
                 @case ('taches')       { <app-taches-tab              [clientId]="client.id" /> }
                 @case ('ia')           { <app-ai-assistant-tab        [clientId]="client.id" /> }
@@ -328,12 +369,12 @@ interface TabGroup {
     :host {
       display: block;
       width: 100%;
-      height: 100%;
+      height: 100vh;
       overflow: hidden;
     }
     .detail {
       display: flex; flex-direction: column;
-      height: 100%; overflow: hidden;
+      height: 100vh; overflow: hidden;
     }
 
     /* ── Top bar ─────────────────────────────────────── */
@@ -774,6 +815,51 @@ interface TabGroup {
     .sk-block--lg { height: 120px; }
     .sk-block--md { height: 80px; }
     .sk-block--sm { flex: 1; height: 80px; }
+
+    /* ══ BANNIÈRE EXERCICE ═════════════════════════════════ */
+    .exercice-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px;
+      background: linear-gradient(90deg, #E8F5E9 0%, #F1F8E9 100%);
+      border-bottom: 1px solid #A5D6A7;
+      flex-shrink: 0;
+    }
+    .exercice-banner--cloture {
+      background: linear-gradient(90deg, #F5F5F5 0%, #FAFAFA 100%);
+      border-bottom-color: #E0E2EC;
+    }
+    .eb-left { display: flex; align-items: center; gap: 12px; }
+    .eb-icon { color: #2E7D32; font-size: 20px; width: 20px; height: 20px; }
+    .exercice-banner--cloture .eb-icon { color: #89909A; }
+    .eb-info { display: flex; flex-direction: column; line-height: 1.3; }
+    .eb-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #2E7D32; }
+    .exercice-banner--cloture .eb-label { color: #89909A; }
+    .eb-period { font-size: 14px; font-weight: 700; color: #1A1C1E; }
+    .eb-dates { font-size: 12px; font-weight: 400; color: #74777F; }
+    .eb-statut {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px 3px 6px; border-radius: 20px;
+      background: #C8E6C9; color: #1B5E20;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+    .eb-statut--cloture { background: #E0E2EC; color: #44474F; }
+    .eb-right { display: flex; align-items: center; gap: 10px; }
+    .eb-select {
+      border: 1px solid #C4C7CF; border-radius: 8px; padding: 6px 10px;
+      font-size: 12px; background: #fff; cursor: pointer; outline: none;
+      &:focus { border-color: #2E7D32; }
+    }
+    .eb-btn-cloture {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; background: #fff; color: #B71C1C;
+      border: 1px solid #EF9A9A; border-radius: 20px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background .15s, border-color .15s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: #FFEBEE; border-color: #F44336; }
+      &:disabled { opacity: .5; cursor: not-allowed; }
+    }
   `],
 })
 export class ClientDetailComponent implements OnInit {
@@ -782,6 +868,10 @@ export class ClientDetailComponent implements OnInit {
   client: Client | null = null;
   loading = signal(true);
   activeTab = signal<TabId>('fiche');
+
+  exercices       = signal<Exercice[]>([]);
+  exerciceCourant = signal<Exercice | null>(null);
+  cloturant       = signal(false);
 
 
   readonly TAB_GROUPS: TabGroup[] = [
@@ -830,7 +920,11 @@ export class ClientDetailComponent implements OnInit {
     },
   ];
 
-  constructor(private route: ActivatedRoute, private clientsService: ClientsService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private clientsService: ClientsService,
+    private exerciceService: ExerciceService,
+  ) {}
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -841,10 +935,38 @@ export class ClientDetailComponent implements OnInit {
       const remaining = Math.max(0, 800 - elapsed);
       setTimeout(() => this.loading.set(false), remaining);
     });
+    this.exerciceService.list(id).subscribe(list => {
+      this.exercices.set(list);
+      const courant = list.find(e => e.statut === 'OUVERT') ?? list[0] ?? null;
+      this.exerciceCourant.set(courant);
+    });
   }
 
   onTypesChanged(types: any[]) {
     if (this.client) this.client = { ...this.client, typesFluxActifs: types };
+  }
+
+  onExerciceChange(idStr: string) {
+    const id = Number(idStr);
+    const ex = this.exercices().find(e => e.id === id) ?? null;
+    this.exerciceCourant.set(ex);
+  }
+
+  cloturerExercice() {
+    const ex = this.exerciceCourant();
+    if (!ex || !this.client) return;
+    if (!confirm(`Clôturer l'exercice ${ex.annee} ? Un nouvel exercice sera créé automatiquement.`)) return;
+    this.cloturant.set(true);
+    this.exerciceService.cloturer(this.client.id, ex.id).subscribe({
+      next: ({ closed, next }) => {
+        this.exercices.update(list =>
+          [...list.map(e => e.id === closed.id ? closed : e), next],
+        );
+        this.exerciceCourant.set(next);
+        this.cloturant.set(false);
+      },
+      error: () => this.cloturant.set(false),
+    });
   }
 
 

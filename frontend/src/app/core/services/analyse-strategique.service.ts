@@ -7,11 +7,11 @@ export class AnalyseStrategiqueService {
   private http = inject(HttpClient);
   private base = environment.apiUrl;
 
-  get(clientId: number) {
-    return this.http.get<any>(`${this.base}/clients/${clientId}/analyse`);
+  get(clientId: number, exerciceId: number) {
+    return this.http.get<any>(`${this.base}/clients/${clientId}/analyse`, { params: { exerciceId } });
   }
 
-  save(clientId: number, data: any) {
-    return this.http.patch<any>(`${this.base}/clients/${clientId}/analyse`, data);
+  save(clientId: number, exerciceId: number, data: any) {
+    return this.http.patch<any>(`${this.base}/clients/${clientId}/analyse`, data, { params: { exerciceId } });
   }
 }

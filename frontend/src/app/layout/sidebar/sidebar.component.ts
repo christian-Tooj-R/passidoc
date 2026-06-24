@@ -458,7 +458,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
-    else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles'))  this.activeModule.set('equipe');
+    else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
     else if (url.startsWith('/salaries'))                                         this.activeModule.set('salaries');
     // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
@@ -512,7 +512,10 @@ export class SidebarComponent implements OnInit {
         color: '#7C3AED', activeBg: '#EDE9FE',
         groups: [{ label: '', items: [
           { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
-          ...(isAdmin ? [{ label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' }] : []),
+          ...(isAdmin ? [
+            { label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' },
+            { label: "Secteurs d'activité",   route: '/admin/secteurs',    icon: 'category' },
+          ] : []),
         ]}],
       }] : []),
       {

@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  UpdateDateColumn, OneToOne, JoinColumn,
+  UpdateDateColumn, ManyToOne, JoinColumn,
 } from 'typeorm';
 import { Client } from './client.entity';
 
@@ -47,9 +47,15 @@ export class ObjectifsClient {
   @Column({ type: 'text', nullable: true })
   relationDirecteur: string;
 
-  @OneToOne(() => Client, (client) => client.objectifs)
-  @JoinColumn()
+  @ManyToOne(() => Client, (c: any) => c.objectifsItems, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'clientId' })
   client: Client;
+
+  @Column()
+  clientId: number;
+
+  @Column({ type: 'int', nullable: true })
+  exerciceId: number | null;
 
   @UpdateDateColumn()
   updatedAt: Date;

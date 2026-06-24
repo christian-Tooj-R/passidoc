@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Alertes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/alertes')
+@Controller('alertes')
 export class AlertesGlobalesController {
   constructor(private service: FluxMensuelService) {}
 

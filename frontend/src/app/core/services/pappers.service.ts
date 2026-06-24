@@ -11,6 +11,7 @@ export interface PappersResult {
   codeNaf: string;
   libelleNaf: string;
   dirigeants: { nom: string; prenom: string; qualite: string; dateNaissance?: string }[];
+  dateClotureExercice?: string; // "MM-DD"
 }
 
 @Injectable({ providedIn: 'root' })

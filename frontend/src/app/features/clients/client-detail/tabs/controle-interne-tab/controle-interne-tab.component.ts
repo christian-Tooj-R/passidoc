@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,8 +21,8 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
     <div class="tab">
       <div class="tab-header">
         <h2>Contrôle Interne & Pilotage</h2>
-        <button mat-flat-button color="primary" (click)="save()">
-          <mat-icon>save</mat-icon> Enregistrer
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="readonly">
+          <mat-icon>save</mat-icon> {{ readonly ? 'Lecture seule' : 'Enregistrer' }}
         </button>
       </div>
 
@@ -175,8 +175,10 @@ import { ControleInterneService } from '../../../../../core/services/controle-in
     }
   `],
 })
-export class ControleInterneTabComponent implements OnInit {
+export class ControleInterneTabComponent implements OnInit, OnChanges {
   @Input() clientId!: number;
+  @Input() exerciceId!: number;
+  @Input() readonly = false;
   private service = inject(ControleInterneService);
   private toast = inject(ToastService);
   private confirm = inject(ConfirmService);
@@ -186,8 +188,17 @@ export class ControleInterneTabComponent implements OnInit {
   outils: { nom: string; description: string }[] = [];
   noteGenerale = '';
 
-  ngOnInit() {
-    this.service.get(this.clientId).subscribe(data => {
+  ngOnInit() { this.load(); }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if ((changes['exerciceId'] || changes['clientId']) && this.exerciceId) {
+      this.load();
+    }
+  }
+
+  private load() {
+    if (!this.clientId || !this.exerciceId) return;
+    this.service.get(this.clientId, this.exerciceId).subscribe(data => {
       if (data) {
         this.processOk = data.processOk || [];
         this.processKo = data.processDefaillants || [];
@@ -213,7 +224,8 @@ export class ControleInterneTabComponent implements OnInit {
   }
 
   save() {
-    this.service.save(this.clientId, {
+    if (this.readonly) return;
+    this.service.save(this.clientId, this.exerciceId, {
       processOk: this.processOk,
       processDefaillants: this.processKo,
       outilsPilotage: this.outils,

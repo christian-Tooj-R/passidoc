@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { QuestionnaireAdnService } from '../../../../../core/services/questionnaire-adn.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
 import { SecteurActivite, SECTEURS_LABELS, QuestionnaireAdnGlobal, QuestionnaireAdnSectoriel } from '../../../../../core/models/client.model';
@@ -32,7 +33,7 @@ import {
     CommonModule, FormsModule,
     MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatProgressSpinnerModule,
+    MatSnackBarModule, MatProgressSpinnerModule, OnlyNumbersDirective,
   ],
   template: `
     @if (loading()) {

@@ -7,11 +7,11 @@ export class ControleInterneService {
   private http = inject(HttpClient);
   private base = environment.apiUrl;
 
-  get(clientId: number) {
-    return this.http.get<any>(`${this.base}/clients/${clientId}/controle-interne`);
+  get(clientId: number, exerciceId: number) {
+    return this.http.get<any>(`${this.base}/clients/${clientId}/controle-interne`, { params: { exerciceId } });
   }
 
-  save(clientId: number, data: any) {
-    return this.http.patch<any>(`${this.base}/clients/${clientId}/controle-interne`, data);
+  save(clientId: number, exerciceId: number, data: any) {
+    return this.http.patch<any>(`${this.base}/clients/${clientId}/controle-interne`, data, { params: { exerciceId } });
   }
 }
