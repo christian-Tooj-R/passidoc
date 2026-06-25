@@ -33,6 +33,7 @@ import { EspacesModule } from './espaces/espaces.module';
 import { SalariesModule } from './salaries/salaries.module';
 import { ExerciceModule } from './exercice/exercice.module';
 import { SecteursModule } from './secteurs/secteurs.module';
+import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { SecteursModule } from './secteurs/secteurs.module';
     SalariesModule,
     ExerciceModule,
     SecteursModule,
+    CongesAbsencesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -14,14 +14,43 @@ export interface Collaborateur {
   site: UserSite;
   isActive: boolean;
   isTwoFactorEnabled: boolean;
-  poste: string | null;
-  typeContrat: string | null;
-  dateEntree: string | null;
-  dateSortie: string | null;
-  telephone: string | null;
   referentId: number | null;
   createdAt: string;
   updatedAt: string;
+  // Identité
+  dateNaissance: string | null;
+  lieuNaissance: string | null;
+  sexe: string | null;
+  nationalite: string | null;
+  situationMatrimoniale: string | null;
+  nbEnfantsCharge: number | null;
+  // Coordonnées
+  adresse: string | null;
+  codePostal: string | null;
+  ville: string | null;
+  pays: string | null;
+  telephone: string | null;
+  // Pro
+  poste: string | null;
+  departement: string | null;
+  typeContrat: string | null;
+  dateEntree: string | null;
+  dateFinContrat: string | null;
+  dateSortie: string | null;
+  statut: string | null;
+  tempsTravail: string | null;
+  heuresHebdo: number | null;
+  // Admin
+  matricule: string | null;
+  numeroCIN: string | null;
+  numeroSS: string | null;
+  numeroFiscal: string | null;
+  // Paie
+  salaireBase: number | null;
+  modePaiement: string | null;
+  banque: string | null;
+  iban: string | null;
+  devise: string | null;
 }
 
 export interface CreateCollaborateurDto {
@@ -37,16 +66,7 @@ export interface CreateCollaborateurDto {
   telephone?: string | null;
 }
 
-export interface UpdateRHDto {
-  firstName?: string;
-  lastName?: string;
-  site?: UserSite;
-  poste?: string | null;
-  typeContrat?: string | null;
-  dateEntree?: string | null;
-  dateSortie?: string | null;
-  telephone?: string | null;
-}
+export type UpdateRHDto = Partial<Omit<Collaborateur, 'id' | 'email' | 'role' | 'isActive' | 'isTwoFactorEnabled' | 'referentId' | 'createdAt' | 'updatedAt'>>;
 
 @Injectable({ providedIn: 'root' })
 export class SalariesService {

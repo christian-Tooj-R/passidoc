@@ -11,7 +11,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterModule } from '@angular/router';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
-
 const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', 'Freelance', 'Autre'];
 
 @Component({
@@ -53,7 +52,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     [loading]="loading()"
     [pageSize]="20"
     [rowClass]="rowClass"
-    (rowClick)="router.navigate(['/salaries', $event.id])">
+    (rowClick)="router.navigate(['/salaries',$event.id])">
 
     <ng-template appCol="site" let-c>
       {{ c.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
@@ -72,7 +71,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #menu="matMenu">
-        <button mat-menu-item (click)="router.navigate(['/salaries', c.id])">
+        <button mat-menu-item (click)="router.navigate(['/rh/salaries',c.id])">
           <mat-icon>visibility</mat-icon><span>Voir la fiche</span>
         </button>
         <button mat-menu-item (click)="openForm(c)">

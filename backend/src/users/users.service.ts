@@ -134,14 +134,25 @@ export class UsersService {
 
   /** Mise à jour des champs RH uniquement */
   async updateRH(id: number, dto: {
-    poste?: string | null;
-    typeContrat?: string | null;
-    dateEntree?: string | null;
-    dateSortie?: string | null;
-    telephone?: string | null;
-    firstName?: string;
-    lastName?: string;
-    site?: string;
+    // Identité
+    firstName?: string; lastName?: string;
+    dateNaissance?: string | null; lieuNaissance?: string | null;
+    sexe?: string | null; nationalite?: string | null;
+    situationMatrimoniale?: string | null; nbEnfantsCharge?: number | null;
+    // Coordonnées
+    adresse?: string | null; codePostal?: string | null;
+    ville?: string | null; pays?: string | null; telephone?: string | null;
+    // Pro
+    site?: string; poste?: string | null; departement?: string | null;
+    typeContrat?: string | null; dateEntree?: string | null;
+    dateFinContrat?: string | null; dateSortie?: string | null;
+    statut?: string | null; tempsTravail?: string | null; heuresHebdo?: number | null;
+    // Admin
+    matricule?: string | null; numeroCIN?: string | null;
+    numeroSS?: string | null; numeroFiscal?: string | null;
+    // Paie
+    salaireBase?: number | null; modePaiement?: string | null;
+    banque?: string | null; iban?: string | null; devise?: string | null;
   }) {
     const user = await this.repo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');

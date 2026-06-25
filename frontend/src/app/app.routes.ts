@@ -29,6 +29,7 @@ export const routes: Routes = [
     canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
   },
+  
   // ── Layout principal (avec sidebar) ──────────────────────────────────────
   {
     path: '',
@@ -76,14 +77,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/pointage/pointage.component').then((m) => m.PointageComponent),
       },
       {
-        path: 'salaries',
-        loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
-      },
-      {
-        path: 'salaries/:id',
-        loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
-      },
-      {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
@@ -98,6 +91,19 @@ export const routes: Routes = [
       {
         path: 'personnalisation',
         loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
+      },
+      {
+        path: 'salaries',
+        canActivate: [authGuard, pointageGuard],
+        loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
+      },
+      {
+        path: 'salaries/:id',
+        loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
+      },
+      {
+        path: 'conges',
+        loadComponent: () => import('./features/conges-absences/conges-absences.component').then((m) => m.CongesAbsencesComponent),
       },
     ],
   },

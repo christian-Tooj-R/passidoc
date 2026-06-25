@@ -8,7 +8,7 @@ import { RolePermissionsService } from '../../core/services/role-permissions.ser
 import { ThemeService } from '../../core/services/theme.service';
 import { filter } from 'rxjs/operators';
 
-type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'salaries';
+type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'rh';
 
 interface NavItem  { label: string; route: string; icon: string; badge?: number; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -460,7 +460,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
-    else if (url.startsWith('/salaries'))                                         this.activeModule.set('salaries');
+    else if (url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
     // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
     else if (url.startsWith('/personnalisation'))                                   this.activeModule.set(null);
     else                                                                           this.activeModule.set(null);
@@ -526,11 +526,19 @@ export class SidebarComponent implements OnInit {
         ]}],
       },
       {
-        id: 'salaries' as ModuleId, icon: 'badge', label: 'Salariés',
-        color: '#7C3AED', activeBg: '#EDE9FE',
-        groups: [{ label: '', items: [
-          { label: 'Gestion des salariés', route: '/salaries', icon: 'badge' },
-        ]}],
+        id: 'rh' as ModuleId,icon: 'badge',label: 'RH',color: '#2563EB',activeBg: '#DBEAFE',groups: [{ label: '', items: [
+            ...(this.canSeeMenu('salaries') ? [{
+              label: 'Salariés',
+              route: '/salaries',
+              icon: 'badge',
+            }] : []),
+            ...(this.canSeeMenu('conges') ? [{
+              label: 'Congés & absences',
+              route: '/conges',
+              icon: 'event_busy',
+            }] : []),
+          ],
+        }],
       },
     ];
   }
