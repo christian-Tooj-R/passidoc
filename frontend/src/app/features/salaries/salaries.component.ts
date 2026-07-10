@@ -52,7 +52,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     [loading]="loading()"
     [pageSize]="20"
     [rowClass]="rowClass"
-    (rowClick)="router.navigate(['/salaries',$event.id])">
+    (rowClick)="router.navigate(['/rh/salaries',$event.id])">
 
     <ng-template appCol="site" let-c>
       {{ c.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}

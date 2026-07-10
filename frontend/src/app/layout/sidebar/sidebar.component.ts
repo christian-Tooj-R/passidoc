@@ -526,16 +526,11 @@ export class SidebarComponent implements OnInit {
         ]}],
       },
       {
-        id: 'rh' as ModuleId,icon: 'badge',label: 'RH',color: '#2563EB',activeBg: '#DBEAFE',groups: [{ label: '', items: [
-            ...(this.canSeeMenu('salaries') ? [{
-              label: 'Salariés',
-              route: '/salaries',
-              icon: 'badge',
-            }] : []),
-            ...(this.canSeeMenu('conges') ? [{
-              label: 'Congés & absences',
-              route: '/conges',
-              icon: 'event_busy',
+        id: 'rh' as ModuleId, icon: 'manage_accounts', label: 'RH', color: '#7C3AED', activeBg: '#EDE9FE', groups: [{ label: '', items: [
+            ...(this.canSeeMenu('salaries') || this.canSeeMenu('conges') ? [{
+              label: 'Ressources Humaines',
+              route: '/rh',
+              icon: 'manage_accounts',
             }] : []),
           ],
         }],
