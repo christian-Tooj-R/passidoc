@@ -27,7 +27,7 @@ const DEVISES        = ['EUR', 'MGA', 'USD'];
 
 type Section = 'profil' | 'conges' | 'documents';
 
-type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie' | 'acces';
+type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
 @Component({
   selector: 'app-salaries-detail',
   standalone: true,
@@ -139,9 +139,6 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie' | 'acces';
         <button class="ptab" [class.active]="profilTab()==='paie'" (click)="profilTab.set('paie')">
           <mat-icon>account_balance_wallet</mat-icon><span>Paie</span>
         </button>
-        <button class="ptab" [class.active]="profilTab()==='acces'" (click)="profilTab.set('acces')">
-          <mat-icon>manage_accounts</mat-icon><span>Accès</span>
-        </button>
       </div>
 
       <!-- Contenu des onglets -->
@@ -226,66 +223,6 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie' | 'acces';
         </div>
         }
 
-        <!-- ── Accès système ── -->
-        @if (profilTab() === 'acces') {
-        <div class="tab-pane">
-          <div class="section-title"><mat-icon>manage_accounts</mat-icon> Accès système</div>
-          <div class="field-grid">
-            <div class="field">
-              <span class="f-label">Rôle</span>
-              <span class="f-val">
-                <span class="role-badge"
-                      [style.background]="roleBg(collab()!.role)"
-                      [style.color]="roleColor(collab()!.role)">
-                  {{ roleLabel(collab()!.role) }}
-                </span>
-              </span>
-            </div>
-            <div class="field">
-              <span class="f-label">Compte</span>
-              <span class="f-val">
-                <span [class]="collab()!.isActive ? 'badge badge--green' : 'badge badge--grey'">
-                  {{ collab()!.isActive ? 'Actif' : 'Désactivé' }}
-                </span>
-              </span>
-            </div>
-            <div class="field">
-              <span class="f-label">Double authentification</span>
-              <span class="f-val">
-                <span [class]="collab()!.isTwoFactorEnabled ? 'badge badge--green' : 'badge badge--grey'">
-                  {{ collab()!.isTwoFactorEnabled ? 'Activée' : 'Désactivée' }}
-                </span>
-              </span>
-            </div>
-            <div class="field">
-              <span class="f-label">Membre depuis</span>
-              <span class="f-val">{{ collab()!.createdAt | date:'dd MMM yyyy' }}</span>
-            </div>
-          </div>
-
-          <!-- Changement de rôle -->
-          <div class="role-change">
-            <p class="role-change__title"><mat-icon>swap_horiz</mat-icon> Modifier le rôle</p>
-            <div class="role-options">
-              @for (r of roles; track r.value) {
-                <label class="role-opt" [class.active]="selectedRole() === r.value">
-                  <input type="radio" [value]="r.value" [checked]="selectedRole()===r.value" (change)="selectedRole.set(r.value)" />
-                  <span class="role-opt__dot" [style.background]="r.bg" [style.color]="r.color">{{ r.label[0] }}</span>
-                  <div>
-                    <span class="role-opt__name">{{ r.label }}</span>
-                    <span class="role-opt__desc">{{ r.desc }}</span>
-                  </div>
-                </label>
-              }
-            </div>
-            <button mat-flat-button class="btn-role"
-                    [disabled]="selectedRole()===collab()!.role || savingRole()"
-                    (click)="saveRole()">
-              {{ savingRole() ? 'Enregistrement...' : 'Appliquer ce rôle' }}
-            </button>
-          </div>
-        </div>
-        }
 
       </div>
     </div>
