@@ -17,7 +17,6 @@ import { AnalyseStrategiqueTabComponent } from './tabs/analyse-strategique-tab/a
 import { MissionsTabComponent } from './tabs/missions-tab/missions-tab.component';
 import { ObjectifsTabComponent } from './tabs/objectifs-tab/objectifs-tab.component';
 import { ControleInterneTabComponent } from './tabs/controle-interne-tab/controle-interne-tab.component';
-import { AiAssistantTabComponent } from './tabs/ai-assistant-tab/ai-assistant-tab.component';
 import { TachesTabComponent } from './tabs/taches-tab/taches-tab.component';
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
@@ -25,7 +24,7 @@ import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'taches' | 'ia' | 'historique';
+  | 'documents' | 'taches' | 'historique';
 
 interface TabGroup {
   label: string;
@@ -57,7 +56,7 @@ interface TabGroup {
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
-    AiAssistantTabComponent, TachesTabComponent, HistoriqueTabComponent,
+    TachesTabComponent, HistoriqueTabComponent,
     AdnTabComponent,
   ],
   template: `
@@ -354,7 +353,6 @@ interface TabGroup {
                 @case ('objectifs')    { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
                 @case ('taches')       { <app-taches-tab              [clientId]="client.id" /> }
-                @case ('ia')           { <app-ai-assistant-tab        [clientId]="client.id" [clientName]="client.nom" /> }
                 @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
@@ -909,13 +907,6 @@ export class ClientDetailComponent implements OnInit {
         { id: 'documents',  icon: 'attach_file', label: 'Documents' },
         { id: 'taches',     icon: 'task_alt',    label: 'Tâches' },
         { id: 'historique', icon: 'history',     label: 'Historique' },
-      ],
-    },
-    {
-      label: 'Intelligence',
-      icon: 'auto_awesome',
-      tabs: [
-        { id: 'ia', icon: 'smart_toy', label: 'Assistant IA' },
       ],
     },
   ];

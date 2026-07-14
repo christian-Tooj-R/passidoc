@@ -30,6 +30,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
   },
   {
+    path: 'clients/:id/ai',
+    canActivate: [authGuard, pointageGuard],
+    loadComponent: () => import('./features/clients/ai-chat-fullscreen/ai-chat-fullscreen.component').then((m) => m.AiChatFullscreenComponent),
+  },
+  {
     path: 'rh',
     canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./features/rh/rh.component').then((m) => m.RhComponent),
