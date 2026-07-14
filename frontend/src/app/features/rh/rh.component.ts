@@ -130,17 +130,17 @@ const NAV: NavItem[] = [
     .rh-shell--hidden { visibility: hidden; }
     @keyframes rhFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* ── Sidebar (couleur reprend l'animation d'entrée) ──── */
+    /* ── Sidebar ──────────────────────────────────────────── */
     .rh-sidebar {
       width: 236px;
       flex-shrink: 0;
-      background: linear-gradient(180deg, #200B45 0%, #2a0e58 100%);
-      border-right: none;
+      background: white;
+      border-right: 1px solid #E8E4F4;
       display: flex;
       flex-direction: column;
       padding: 0;
       position: relative;
-      box-shadow: 3px 0 20px rgba(32,11,69,.35);
+      box-shadow: 2px 0 12px rgba(109,40,217,.06);
     }
 
     /* En-tête module */
@@ -149,32 +149,32 @@ const NAV: NavItem[] = [
       align-items: center;
       gap: 10px;
       padding: 20px 16px 18px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      border-bottom: 1px solid #EDE9F8;
     }
     .rh-header__icon {
       width: 36px;
       height: 36px;
       border-radius: 9px;
-      background: rgba(167,139,250,.25);
-      border: 1px solid rgba(167,139,250,.3);
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      mat-icon { color: #c4b5fd; font-size: 20px; width: 20px; height: 20px; }
+      box-shadow: 0 3px 10px rgba(109,40,217,.3);
+      mat-icon { color: white; font-size: 20px; width: 20px; height: 20px; }
     }
     .rh-header__title {
       display: block;
       font-size: 13px;
       font-weight: 700;
-      color: #fff;
+      color: #1E293B;
       line-height: 1.25;
       letter-spacing: -.1px;
     }
     .rh-header__sub {
       display: block;
       font-size: 11px;
-      color: rgba(196,181,253,.6);
+      color: #94A3B8;
       margin-top: 1px;
     }
 
@@ -190,7 +190,7 @@ const NAV: NavItem[] = [
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .06em;
-      color: rgba(196,181,253,.4);
+      color: #CBD5E1;
       padding: 0 8px 8px;
       display: block;
     }
@@ -201,19 +201,19 @@ const NAV: NavItem[] = [
       padding: 9px 10px;
       border-radius: 7px;
       text-decoration: none;
-      color: rgba(255,255,255,.65);
+      color: #64748B;
       font-size: 13px;
       font-weight: 500;
       transition: background .12s, color .12s;
       position: relative;
     }
     .rh-nav__item:hover {
-      background: rgba(255,255,255,.08);
-      color: #fff;
+      background: #F5F3FF;
+      color: #5B21B6;
     }
     .rh-nav__item.active {
-      background: rgba(167,139,250,.2);
-      color: #fff;
+      background: #EDE9F8;
+      color: #5B21B6;
       font-weight: 600;
     }
     .rh-nav__item.active::before {
@@ -222,18 +222,18 @@ const NAV: NavItem[] = [
       left: 0; top: 6px; bottom: 6px;
       width: 3px;
       border-radius: 0 2px 2px 0;
-      background: #a78bfa;
+      background: #7C3AED;
     }
     .rh-nav__icon {
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: rgba(196,181,253,.5);
+      color: #94A3B8;
       flex-shrink: 0;
       transition: color .12s;
     }
-    .rh-nav__item:hover .rh-nav__icon { color: rgba(196,181,253,.9); }
-    .rh-nav__item.active .rh-nav__icon { color: #c4b5fd; }
+    .rh-nav__item:hover .rh-nav__icon { color: #7C3AED; }
+    .rh-nav__item.active .rh-nav__icon { color: #7C3AED; }
     .rh-nav__label { flex: 1; min-width: 0; }
 
     .rh-spacer { flex: 1; }
@@ -249,13 +249,13 @@ const NAV: NavItem[] = [
       background: none;
       cursor: pointer;
       border-radius: 7px;
-      color: rgba(196,181,253,.45);
+      color: #94A3B8;
       font-size: 12px;
       font-weight: 500;
       transition: background .12s, color .12s;
       mat-icon { font-size: 15px; width: 15px; height: 15px; }
     }
-    .rh-back:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); }
+    .rh-back:hover { background: #F1F5F9; color: #475569; }
 
     /* Barre de progression navigation */
     .rh-progress {
@@ -264,7 +264,7 @@ const NAV: NavItem[] = [
       overflow: hidden;
       flex-shrink: 0;
     }
-    .rh-progress--active { background: rgba(255,255,255,.08); }
+    .rh-progress--active { background: #EDE9F8; }
     .rh-progress__bar { height: 100%; width: 0; }
     .rh-progress--active .rh-progress__bar {
       width: 100%;
