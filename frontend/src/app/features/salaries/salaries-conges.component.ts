@@ -45,7 +45,7 @@ const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_L
   <!-- Soldes -->
   <div class="soldes-grid">
     @for (s of soldes(); track s.typeConge) {
-      @if (s.joursAcquis > 0 || s.typeConge === 'CONGES_PAYES' || s.typeConge === 'RTT') {
+      @if ((s.joursAcquis > 0 || s.typeConge === 'CONGES_PAYES') && s.typeConge !== 'RTT') {
         <div class="solde-card" [style.border-top-color]="typeColor(s.typeConge)">
           <div class="solde-card__type">{{ typeLabel(s.typeConge) }}</div>
           <div class="solde-card__main" [class.solde-card__main--low]="s.solde <= 2">

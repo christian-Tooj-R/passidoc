@@ -27,13 +27,24 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
 <div class="page">
 
   <div class="page-header">
-    <h2>Collaborateurs</h2>
-    <span class="count">{{ stats().actifs }} actif(s) · {{ stats().total }} au total</span>
+    <div class="page-header__left">
+      <h2>Collaborateurs</h2>
+      <div class="page-header__stats">
+        <span class="stat-chip stat-chip--actif">
+          <span class="stat-dot"></span>
+          {{ stats().actifs }} actif{{ stats().actifs > 1 ? 's' : '' }}
+        </span>
+        <span class="stat-chip">{{ stats().total }} au total</span>
+      </div>
+    </div>
   </div>
 
   <div class="toolbar">
-    <input class="search" type="text" placeholder="Rechercher..."
-           [value]="search()" (input)="search.set($any($event.target).value)" />
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input class="search" type="text" placeholder="Nom, poste, email…"
+             [value]="search()" (input)="search.set($any($event.target).value)" />
+    </div>
     <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
       <option value="">Tous les sites</option>
       <option value="REUNION">La Réunion</option>
@@ -46,6 +57,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     </select>
   </div>
 
+  <div class="table-wrap">
   <app-data-table
     [columns]="colonnes"
     [data]="listeFiltree()"
@@ -90,6 +102,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     </ng-template>
 
   </app-data-table>
+  </div>
 </div>
 
 @if (formVisible()) {
@@ -149,46 +162,95 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
 }
   `,
   styles: [`
-    .page { padding: 24px; }
-    .page-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 16px;
-      h2 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #111; }
-      .count { font-size: 13px; color: #666; }
+    .page { padding: 0; }
+
+    /* ── Bandeau en-tête violet ── */
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 22px 28px 20px;
+      background: linear-gradient(135deg, #200B45 0%, #2d0a5e 100%);
     }
-    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .page-header__left { display: flex; flex-direction: column; gap: 8px; }
+    h2 { margin: 0; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+    .page-header__stats { display: flex; gap: 6px; align-items: center; }
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11.5px; font-weight: 500;
+      background: rgba(255,255,255,.12); color: rgba(255,255,255,.8);
+      border-radius: 20px; padding: 3px 10px;
+    }
+    .stat-chip--actif { background: rgba(167,139,250,.3); color: #e9d5ff; }
+    .stat-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; flex-shrink: 0;
+    }
+
+    /* ── Barre de filtre ── */
+    .toolbar {
+      display: flex; gap: 8px; align-items: center;
+      padding: 14px 28px; margin-bottom: 0; flex-wrap: wrap;
+      background: #fff; border-bottom: 1px solid #EDE9FE;
+    }
+    .search-wrap {
+      position: relative; display: flex; align-items: center;
+    }
+    .search-icon {
+      position: absolute; left: 9px;
+      width: 15px; height: 15px; color: #9CA3AF; pointer-events: none;
+    }
     .search {
-      border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px;
-      font-size: 13px; outline: none; width: 240px;
-      &:focus { border-color: #162351; }
+      border: 1px solid #E5E7EB; border-radius: 6px;
+      padding: 7px 10px 7px 30px;
+      font-size: 13px; outline: none; width: 220px; background: #fff;
+      color: #111827;
+      transition: border-color .15s, box-shadow .15s;
+      &:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+      &::placeholder { color: #9CA3AF; }
     }
     .filter-select {
-      border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px;
-      font-size: 13px; background: #fff; outline: none; cursor: pointer;
+      border: 1px solid #E5E7EB; border-radius: 6px;
+      padding: 7px 10px; font-size: 13px;
+      background: #fff; color: #374151;
+      outline: none; cursor: pointer;
+      transition: border-color .15s;
+      &:focus { border-color: #7c3aed; }
     }
+
+    /* ── Zone table ── */
+    .table-wrap { padding: 20px 28px; }
+
+    /* ── Badges rôle ── */
     .role-badge {
       display: inline-block; font-size: 11px; font-weight: 600;
       padding: 2px 8px; border-radius: 4px;
     }
-    .role-badge--admin            { background: #fde8e8; color: #991b1b; }
-    .role-badge--expert_comptable { background: #dbeafe; color: #1e40af; }
-    .role-badge--collaborateur    { background: #e4e8f4; color: #4b5a7a; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 999; }
+    .role-badge--admin            { background: #FEE2E2; color: #991B1B; }
+    .role-badge--expert_comptable { background: #DBEAFE; color: #1E40AF; }
+    .role-badge--collaborateur    { background: #E4E8F4; color: #334473; }
+
+    /* ── Drawer ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 999; }
     .drawer {
       position: fixed; right: 0; top: 0; bottom: 0; width: 400px;
-      background: #fff; box-shadow: -2px 0 12px rgba(0,0,0,.15);
+      background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,.12);
       z-index: 1000; display: flex; flex-direction: column;
     }
     .drawer-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border-bottom: 1px solid #ddd;
-      font-size: 14px; font-weight: 600; color: #111;
+      padding: 16px 18px; border-bottom: 1px solid #F0F2F7;
+      font-size: 14px; font-weight: 600; color: #111827;
     }
     .drawer-body {
-      padding: 16px; display: flex; flex-direction: column; gap: 2px;
+      padding: 18px; display: flex; flex-direction: column; gap: 2px;
       flex: 1; overflow-y: auto;
-      label { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 2px; display: block; }
+      label { font-size: 11.5px; font-weight: 600; color: #6B7280;
+              text-transform: uppercase; letter-spacing: .04em;
+              margin-bottom: 2px; display: block; }
     }
     .w100 { width: 100%; }
-    .drawer-footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid #eee; margin-top: 8px; }
+    .drawer-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 12px 18px; border-top: 1px solid #F0F2F7;
+    }
   `],
 })
 export class SalariesComponent implements OnInit {

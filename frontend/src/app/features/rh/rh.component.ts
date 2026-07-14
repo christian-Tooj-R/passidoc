@@ -4,11 +4,12 @@ import { RouterModule, Router, RouterOutlet, NavigationStart, NavigationEnd, Nav
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-interface NavItem { label: string; icon: string; route: string; desc: string; }
+
+interface NavItem { label: string; icon: string; route: string; }
 
 const NAV: NavItem[] = [
-  { label: 'Gestion des salariés', icon: 'badge',        route: '/rh/salaries', desc: 'Fiches, contrats, paie' },
-  { label: 'Congés & Absences',    icon: 'beach_access', route: '/rh/conges',   desc: 'Demandes, soldes, approbations' },
+  { label: 'Collaborateurs', icon: 'badge',        route: '/rh/salaries' },
+  { label: 'Congés & Absences', icon: 'event_busy', route: '/rh/conges'   },
 ];
 
 @Component({
@@ -16,7 +17,7 @@ const NAV: NavItem[] = [
   standalone: true,
   imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
-<!-- ══ Écran d'entrée (loading) ══ -->
+<!-- ══ Écran d'entrée ══ -->
 @if (entering()) {
   <div class="rh-entry">
     <div class="entry-card">
@@ -30,94 +31,67 @@ const NAV: NavItem[] = [
   </div>
 }
 
-<!-- ══ Interface principale ══ -->
-@if (!entering()) {
-<div class="rh-shell" [class.rh-shell--ready]="!entering()">
+<div class="rh-shell" [class.rh-shell--hidden]="entering()">
 
-  <!-- ── Sidebar dédiée RH ── -->
+  <!-- ── Sidebar ── -->
   <aside class="rh-sidebar">
 
-    <!-- Retour -->
-    <button class="back-btn" (click)="router.navigate(['/dashboard'])">
-      <mat-icon>arrow_back</mat-icon>
-      <span>Tableau de bord</span>
-    </button>
-
-    <!-- Brand -->
-    <div class="rh-brand">
-      <div class="rh-brand__icon">
+    <!-- En-tête module -->
+    <div class="rh-header">
+      <div class="rh-header__icon">
         <mat-icon>manage_accounts</mat-icon>
       </div>
-      <div>
-        <span class="rh-brand__title">Ressources Humaines</span>
-        <span class="rh-brand__sub">AFYM Audit Expertise</span>
+      <div class="rh-header__text">
+        <span class="rh-header__title">Ressources Humaines</span>
+        <span class="rh-header__sub">AFYM Audit Expertise</span>
       </div>
     </div>
 
-    <div class="rh-sep"></div>
-
     <!-- Navigation -->
-    <p class="rh-nav-label">Modules</p>
     <nav class="rh-nav">
+      <span class="rh-nav__section">Navigation</span>
       @for (item of nav; track item.route) {
-        <a class="rh-nav-item"
+        <a class="rh-nav__item"
            [routerLink]="item.route"
            routerLinkActive="active"
-           [routerLinkActiveOptions]="{ exact: false }"
-           (click)="startNavLoading()">
-          <span class="rh-nav-item__icon">
-            <mat-icon>{{ item.icon }}</mat-icon>
-          </span>
-          <span class="rh-nav-item__text">
-            <span class="rh-nav-item__label">{{ item.label }}</span>
-            <span class="rh-nav-item__desc">{{ item.desc }}</span>
-          </span>
+           [routerLinkActiveOptions]="{ exact: false }">
+          <mat-icon class="rh-nav__icon">{{ item.icon }}</mat-icon>
+          <span class="rh-nav__label">{{ item.label }}</span>
         </a>
       }
     </nav>
 
     <div class="rh-spacer"></div>
 
-    <!-- Indicateur de chargement navigation -->
-    @if (navLoading()) {
-      <div class="nav-loading-bar"><div class="nav-loading-bar__fill"></div></div>
-    }
+    <!-- Retour vers l'application -->
+    <button class="rh-back" (click)="router.navigate(['/dashboard'])">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Retour à l'application</span>
+    </button>
+
+    <!-- Barre de chargement navigation (bas de sidebar) -->
+    <div class="rh-progress" [class.rh-progress--active]="navLoading()">
+      <div class="rh-progress__bar"></div>
+    </div>
 
   </aside>
 
-  <!-- ── Zone de contenu ── -->
-  <main class="rh-main" [class.rh-main--loading]="navLoading()">
-    @if (navLoading()) {
-      <div class="content-skeleton">
-        <div class="sk-header"></div>
-        <div class="sk-row"></div>
-        <div class="sk-row sk-row--short"></div>
-        <div class="sk-grid">
-          @for (i of [1,2,3,4,5,6]; track i) {
-            <div class="sk-card"></div>
-          }
-        </div>
-      </div>
-    }
-    <div [class.rh-content--hidden]="navLoading()">
-      <router-outlet />
-    </div>
+  <!-- ── Contenu ── -->
+  <main class="rh-main">
+    <router-outlet />
   </main>
 
 </div>
-}
   `,
   styles: [`
-    /* ══ Écran d'entrée ══════════════════════════════════ */
+    /* ── Écran d'entrée ── */
     .rh-entry {
       position: fixed; inset: 0; z-index: 9999;
       background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 50%, #1e0a4f 100%);
       display: flex; align-items: center; justify-content: center;
       animation: entryFadeOut .4s ease-in 1.2s forwards;
     }
-    @keyframes entryFadeOut {
-      to { opacity: 0; pointer-events: none; }
-    }
+    @keyframes entryFadeOut { to { opacity: 0; pointer-events: none; } }
     .entry-card {
       display: flex; flex-direction: column; align-items: center; gap: 16px;
       animation: entrySlideUp .5s cubic-bezier(.16,1,.3,1) forwards;
@@ -140,186 +114,194 @@ const NAV: NavItem[] = [
     }
     .entry-bar__fill {
       height: 100%; background: linear-gradient(90deg, #a78bfa, #c4b5fd);
-      border-radius: 2px;
-      animation: barFill 1.1s cubic-bezier(.4,0,.2,1) forwards;
+      border-radius: 2px; animation: barFill 1.1s cubic-bezier(.4,0,.2,1) forwards;
     }
     @keyframes barFill { from { width: 0; } to { width: 100%; } }
 
-    /* ══ Shell principal ══════════════════════════════════ */
+    /* ── Shell ──────────────────────────────────────────── */
     .rh-shell {
-      display: flex; height: 100vh; width: 100vw; overflow: hidden;
-      background: #f4f5fb;
-      opacity: 0; animation: shellIn .35s ease .05s forwards;
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      background: #F0EEFF;
+      animation: rhFadeIn .35s ease .05s both;
     }
-    @keyframes shellIn { to { opacity: 1; } }
+    .rh-shell--hidden { visibility: hidden; }
+    @keyframes rhFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* ── Sidebar ─────────────────────────────────────────── */
+    /* ── Sidebar (couleur reprend l'animation d'entrée) ──── */
     .rh-sidebar {
-      width: 250px; flex-shrink: 0;
-      background: #fff;
-      border-right: 1px solid #ede9fe;
-      display: flex; flex-direction: column;
-      padding: 16px 0 16px;
-      box-shadow: 2px 0 12px rgba(109,40,217,.06);
-      position: relative; overflow: hidden;
-    }
-    /* Dégradé décoratif haut de sidebar */
-    .rh-sidebar::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed);
+      width: 236px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #200B45 0%, #2a0e58 100%);
+      border-right: none;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      position: relative;
+      box-shadow: 3px 0 20px rgba(32,11,69,.35);
     }
 
-    .back-btn {
-      display: flex; align-items: center; gap: 8px;
-      margin: 0 12px 12px; padding: 8px 10px; width: calc(100% - 24px);
-      border: none; background: none; cursor: pointer; border-radius: 8px;
-      color: #6b7280; font-size: 12px; font-weight: 500;
-      transition: background .13s, color .13s;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    /* En-tête module */
+    .rh-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 16px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
     }
-    .back-btn:hover { background: #f3f4f6; color: #111827; }
+    .rh-header__icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: rgba(167,139,250,.25);
+      border: 1px solid rgba(167,139,250,.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      mat-icon { color: #c4b5fd; font-size: 20px; width: 20px; height: 20px; }
+    }
+    .rh-header__title {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.25;
+      letter-spacing: -.1px;
+    }
+    .rh-header__sub {
+      display: block;
+      font-size: 11px;
+      color: rgba(196,181,253,.6);
+      margin-top: 1px;
+    }
 
-    .rh-brand {
-      display: flex; align-items: center; gap: 11px;
-      padding: 8px 16px 16px;
+    /* Navigation */
+    .rh-nav {
+      display: flex;
+      flex-direction: column;
+      padding: 14px 10px 0;
+      gap: 2px;
     }
-    .rh-brand__icon {
-      width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
-      background: linear-gradient(135deg, #5b21b6, #7c3aed);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 12px rgba(124,58,237,.35);
-      mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
+    .rh-nav__section {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: rgba(196,181,253,.4);
+      padding: 0 8px 8px;
+      display: block;
     }
-    .rh-brand__title {
-      display: block; font-size: 13.5px; font-weight: 700; color: #111827; line-height: 1.2;
+    .rh-nav__item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      border-radius: 7px;
+      text-decoration: none;
+      color: rgba(255,255,255,.65);
+      font-size: 13px;
+      font-weight: 500;
+      transition: background .12s, color .12s;
+      position: relative;
     }
-    .rh-brand__sub {
-      display: block; font-size: 10.5px; color: #9ca3af; margin-top: 1px;
+    .rh-nav__item:hover {
+      background: rgba(255,255,255,.08);
+      color: #fff;
     }
-
-    .rh-sep { height: 1px; background: #f3f0ff; margin: 0 16px 12px; }
-
-    .rh-nav-label {
-      font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .08em; color: #9ca3af;
-      padding: 0 20px; margin: 0 0 6px;
+    .rh-nav__item.active {
+      background: rgba(167,139,250,.2);
+      color: #fff;
+      font-weight: 600;
     }
-
-    .rh-nav { display: flex; flex-direction: column; gap: 3px; padding: 0 10px; }
-
-    .rh-nav-item {
-      display: flex; align-items: center; gap: 11px;
-      padding: 10px 12px; border-radius: 10px;
-      text-decoration: none; color: #374151;
-      transition: background .13s, color .13s, box-shadow .13s;
-      position: relative; overflow: hidden;
+    .rh-nav__item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 6px; bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: #a78bfa;
     }
-    .rh-nav-item:hover {
-      background: #f5f3ff; color: #5b21b6;
-      .rh-nav-item__icon mat-icon { color: #7c3aed; }
+    .rh-nav__icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: rgba(196,181,253,.5);
+      flex-shrink: 0;
+      transition: color .12s;
     }
-    .rh-nav-item.active {
-      background: #ede9fe; color: #5b21b6;
-      box-shadow: inset 3px 0 0 #7c3aed;
-      .rh-nav-item__icon mat-icon { color: #7c3aed; }
-      .rh-nav-item__label { font-weight: 700; }
-    }
-    .rh-nav-item__icon {
-      width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
-      background: #f3f4f6;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .13s;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6b7280; transition: color .13s; }
-    }
-    .rh-nav-item.active .rh-nav-item__icon { background: #ddd6fe; }
-    .rh-nav-item__text { display: flex; flex-direction: column; min-width: 0; }
-    .rh-nav-item__label { font-size: 13px; font-weight: 500; line-height: 1.2; }
-    .rh-nav-item__desc  { font-size: 10.5px; color: #9ca3af; margin-top: 1px; }
-    .rh-nav-item.active .rh-nav-item__desc { color: #8b5cf6; }
+    .rh-nav__item:hover .rh-nav__icon { color: rgba(196,181,253,.9); }
+    .rh-nav__item.active .rh-nav__icon { color: #c4b5fd; }
+    .rh-nav__label { flex: 1; min-width: 0; }
 
     .rh-spacer { flex: 1; }
 
-    /* Barre de chargement navigation */
-    .nav-loading-bar {
-      height: 2px; background: #ede9fe; margin: 0 0 0;
-      overflow: hidden; flex-shrink: 0;
+    /* Bouton retour */
+    .rh-back {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 10px 12px;
+      padding: 8px 10px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 7px;
+      color: rgba(196,181,253,.45);
+      font-size: 12px;
+      font-weight: 500;
+      transition: background .12s, color .12s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
     }
-    .nav-loading-bar__fill {
-      height: 100%;
-      background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 50%, #7c3aed 100%);
+    .rh-back:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); }
+
+    /* Barre de progression navigation */
+    .rh-progress {
+      height: 2px;
+      background: transparent;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .rh-progress--active { background: rgba(255,255,255,.08); }
+    .rh-progress__bar { height: 100%; width: 0; }
+    .rh-progress--active .rh-progress__bar {
+      width: 100%;
+      background: linear-gradient(90deg, #7c3aed 0%, #c4b5fd 50%, #7c3aed 100%);
       background-size: 200% 100%;
-      animation: navBar 1.2s linear infinite;
+      animation: progressBar 1.2s linear infinite;
     }
-    @keyframes navBar {
+    @keyframes progressBar {
       0%   { background-position: 100% 0; }
       100% { background-position: -100% 0; }
     }
 
     /* ── Zone de contenu ──────────────────────────────────── */
     .rh-main {
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      display: flex; flex-direction: column;
-      transition: opacity .2s;
-    }
-    .rh-main--loading { overflow: hidden; }
-    .rh-content--hidden { display: none; }
-
-    /* Skeleton de chargement contenu */
-    .content-skeleton {
-      padding: 28px;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-    .sk-header {
-      height: 32px; border-radius: 8px;
-      background: linear-gradient(90deg, #f0ebff 0%, #e9e3ff 50%, #f0ebff 100%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s ease infinite;
-      width: 220px;
-    }
-    .sk-row {
-      height: 16px; border-radius: 6px; width: 70%;
-      background: linear-gradient(90deg, #f5f3ff 0%, #ede9fe 50%, #f5f3ff 100%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s ease .1s infinite;
-    }
-    .sk-row--short { width: 45%; }
-    .sk-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 8px;
-    }
-    .sk-card {
-      height: 110px; border-radius: 12px;
-      background: linear-gradient(90deg, #f5f3ff 0%, #ede9fe 40%, #f5f3ff 100%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s ease infinite;
-    }
-    .sk-card:nth-child(2) { animation-delay: .15s; }
-    .sk-card:nth-child(3) { animation-delay: .3s; }
-    .sk-card:nth-child(4) { animation-delay: .1s; }
-    .sk-card:nth-child(5) { animation-delay: .25s; }
-    .sk-card:nth-child(6) { animation-delay: .4s; }
-    @keyframes shimmer {
-      0%   { background-position: 100% 0; }
-      100% { background-position: -100% 0; }
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
     }
   `],
 })
 export class RhComponent implements OnInit {
-  router    = inject(Router);
-  entering  = signal(true);
+  router     = inject(Router);
+  entering   = signal(true);
   navLoading = signal(false);
   readonly nav = NAV;
 
   ngOnInit() {
-    // Écran d'entrée : 1.6s puis disparaît
     setTimeout(() => this.entering.set(false), 1600);
 
-    // Barre de chargement lors des navigations internes
     this.router.events.subscribe(e => {
       if (e instanceof NavigationStart && this.router.url.startsWith('/rh')) {
         this.navLoading.set(true);
       }
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
-        setTimeout(() => this.navLoading.set(false), 300);
+        setTimeout(() => this.navLoading.set(false), 280);
       }
     });
   }

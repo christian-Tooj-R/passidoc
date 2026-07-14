@@ -813,7 +813,7 @@ export class SalariesDetailComponent implements OnInit {
   });
 
   soldesPrincipaux = computed(() =>
-    this.soldes().filter(s => ['CONGES_PAYES', 'RTT', 'MALADIE'].includes(s.typeConge) && s.joursAcquis > 0)
+    this.soldes().filter(s => ['CONGES_PAYES', 'MALADIE'].includes(s.typeConge) && s.joursAcquis > 0)
   );
 
   enAttenteCount = computed(() => 0);
