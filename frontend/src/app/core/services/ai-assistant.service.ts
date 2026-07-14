@@ -8,11 +8,31 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface AiContextSummary {
+  ficheIdentite: boolean;
+  gerants: number;
+  salaries: number;
+  analyseStrategique: boolean;
+  performances: boolean;
+  derniereAnnee: number | null;
+  missions: number;
+  objectifs: boolean;
+  controleInterne: boolean;
+  fournisseurs: number;
+  fluxMensuels: number;
+  fluxManquants: number;
+  santePassation: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AiAssistantService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private api = environment.apiUrl;
+
+  getContextSummary(clientId: number) {
+    return this.http.get<AiContextSummary>(`${this.api}/clients/${clientId}/ai/context`);
+  }
 
   getHistory(clientId: number) {
     return this.http.get<any[]>(`${this.api}/clients/${clientId}/ai/history`);

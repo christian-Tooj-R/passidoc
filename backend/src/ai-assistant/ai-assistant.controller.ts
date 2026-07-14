@@ -11,6 +11,11 @@ import { AiAssistantService } from './ai-assistant.service';
 export class AiAssistantController {
   constructor(private service: AiAssistantService) {}
 
+  @Get('context')
+  getContext(@Param('clientId') clientId: string) {
+    return this.service.getContextSummary(+clientId);
+  }
+
   @Get('history')
   getHistory(@Param('clientId') clientId: string) {
     return this.service.getHistory(+clientId);

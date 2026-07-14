@@ -354,7 +354,7 @@ interface TabGroup {
                 @case ('objectifs')    { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
                 @case ('taches')       { <app-taches-tab              [clientId]="client.id" /> }
-                @case ('ia')           { <app-ai-assistant-tab        [clientId]="client.id" /> }
+                @case ('ia')           { <app-ai-assistant-tab        [clientId]="client.id" [clientName]="client.nom" /> }
                 @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
