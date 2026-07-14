@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserAntenne, UserRole, UserSite } from '../entities/user.entity';
+import { Task, TaskStatut } from '../entities/task.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -11,6 +12,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class UsersService {
   constructor(
     @InjectRepository(User) private repo: Repository<User>,
+    @InjectRepository(Task) private taskRepo: Repository<Task>,
     private notifications: NotificationsService,
   ) {}
 
@@ -196,6 +198,18 @@ export class UsersService {
   async saveTheme(userId: number, prefs: Record<string, any>): Promise<Record<string, any>> {
     await this.repo.update(userId, { themePrefs: prefs });
     return prefs;
+  }
+
+  async getTaskCounts(): Promise<{ userId: number; count: number }[]> {
+    const rows = await this.taskRepo
+      .createQueryBuilder('t')
+      .select('t.assigneeId', 'userId')
+      .addSelect('COUNT(*)', 'count')
+      .where('t.assigneeId IS NOT NULL')
+      .andWhere('t.statut != :done', { done: TaskStatut.TERMINEE })
+      .groupBy('t.assigneeId')
+      .getRawMany();
+    return rows.map(r => ({ userId: Number(r.userId), count: Number(r.count) }));
   }
 
   private sanitize(user: User) {

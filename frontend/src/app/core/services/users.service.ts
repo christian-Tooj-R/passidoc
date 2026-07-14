@@ -16,6 +16,7 @@ export class UsersService {
   delete(id: number) { return this.http.delete(`${this.api}/${id}`); }
   getAssignable() { return this.http.get<User[]>(`${this.api}/assignable`); }
   getMyTeam() { return this.http.get<{ referent: User | null; team: User[] }>(`${this.api}/my-team`); }
+  getTaskCounts() { return this.http.get<{ userId: number; count: number }[]>(`${this.api}/task-counts`); }
   setReferent(userId: number, referentId: number | null) {
     return this.http.patch<User>(`${this.api}/${userId}/referent`, { referentId });
   }

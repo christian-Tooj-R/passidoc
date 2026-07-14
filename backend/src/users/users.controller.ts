@@ -69,6 +69,10 @@ export class UsersController {
     return this.usersService.updateRH(id, dto);
   }
 
+  @Get('task-counts')
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE)
+  getTaskCounts() { return this.usersService.getTaskCounts(); }
+
   @Get('assignable')
   @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })
   getAssignable(@Req() req: any) {

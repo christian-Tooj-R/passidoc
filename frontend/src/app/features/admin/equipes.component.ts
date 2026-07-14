@@ -1,11 +1,12 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { ToastService } from '../../core/services/toast.service';
 import { UsersService } from '../../core/services/users.service';
@@ -19,6 +20,12 @@ interface EditForm {
   role: string;
   referentId: number | null;
   saving: boolean;
+  transferToId: number | null;
+}
+
+interface CreateForm {
+  firstName: string; lastName: string; email: string; password: string;
+  role: string; site: string; antenne: string; referentId: number | null; saving: boolean;
 }
 
 @Component({
@@ -36,18 +43,25 @@ interface EditForm {
       <div>
         <h1 class="page-title">Hiérarchie des équipes</h1>
         <p class="page-sub">
-          {{ totalHierarchie }} utilisateur(s) à gérer ·
+          {{ totalHierarchie }} utilisateur(s) ·
           <span class="stat-ok">{{ assignedCount }} dans une antenne</span>
           @if (totalHierarchie - assignedCount > 0) {
             · <span class="stat-warn">{{ totalHierarchie - assignedCount }} sans antenne</span>
           }
         </p>
       </div>
-      <div class="legend">
-        <span class="badge-role chef-antenne">Chef d'antenne</span>
-        <span class="badge-role chef-mission">Chef de mission</span>
-        <span class="badge-role collab">Collaborateur</span>
-        <span class="badge-role gerant">Gérant</span>
+      <div class="header-actions">
+        <div class="legend">
+          <span class="badge-role chef-antenne">Chef d'antenne</span>
+          <span class="badge-role chef-mission">Chef de mission</span>
+          <span class="badge-role collab">Collaborateur</span>
+          <span class="badge-role gerant">Gérant</span>
+        </div>
+        @if (auth.isAdmin()) {
+          <button class="btn-create" (click)="$event.stopPropagation(); openCreate()">
+            <mat-icon>person_add</mat-icon> Nouveau collaborateur
+          </button>
+        }
       </div>
     </div>
 
@@ -176,16 +190,44 @@ interface EditForm {
 
     <!-- ── Organigramme ──────────────────────────────────────────────────────── -->
     @if (activeTab() === 'chart') {
+    <div class="chart-toolbar">
+      <span class="chart-hint"><mat-icon>info</mat-icon> Cliquez sur un nœud pour modifier</span>
+      <button class="btn-print" (click)="printChart()"><mat-icon>print</mat-icon> Exporter / Imprimer</button>
+    </div>
     <div class="chart-wrap">
-      <div class="org-scroll">
+      <div class="org-scroll" #orgScroll>
         <ul class="org-tree">
           <li>
             <div class="org-node org-node--root">
               <mat-icon>business</mat-icon>
               <span class="org-root-name">AFYM Audit Expertise</span>
-              <span class="org-count">{{ users().length }} membres</span>
+              <span class="org-count">{{ users().filter(u => u.isActive).length }} membres</span>
             </div>
             <ul>
+              <!-- Bureau Réunion -->
+              @if (reunionUsers().length > 0) {
+                <li>
+                  <div class="org-node org-node--bureau">
+                    <mat-icon>location_city</mat-icon>
+                    <span class="org-antenne-name">Bureau Réunion</span>
+                    <span class="org-count">{{ reunionUsers().length }}</span>
+                  </div>
+                  <ul>
+                    @for (ru of reunionUsers(); track ru.id) {
+                      <li>
+                        <div class="org-node org-node--reunion-user" (click)="$event.stopPropagation(); openEdit(ru)">
+                          <div class="org-avatar" [class]="ru.role === 'ADMIN' ? 'adm' : 'exp'">{{ initials(ru) }}</div>
+                          <div>
+                            <div class="org-name">{{ ru.firstName }} {{ ru.lastName }}</div>
+                            <div class="org-role">{{ roleLabel(ru.role) }}</div>
+                          </div>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+              <!-- Antennes Madagascar -->
               @for (antenne of ['EST', 'OUEST']; track antenne) {
                 <li>
                   <div class="org-node org-node--antenne">
@@ -194,26 +236,30 @@ interface EditForm {
                     <span class="org-count">{{ usersInAntenne(antenne).length }}</span>
                   </div>
                   @let ca = chefAntenne(antenne);
+                  @let gm = gerantMadagascar(antenne);
+                  @let cms = chefsMission(antenne);
                   <ul>
                     @if (ca) {
                       <li>
-                        <div class="org-node org-node--chef-antenne">
+                        <div class="org-node org-node--chef-antenne" (click)="$event.stopPropagation(); openEdit(ca)">
                           <div class="org-avatar ca">{{ initials(ca) }}</div>
                           <div>
                             <div class="org-name">{{ ca.firstName }} {{ ca.lastName }}</div>
                             <div class="org-role">Chef d'antenne</div>
                           </div>
                         </div>
-                        @let cms = chefsMission(antenne);
                         @if (cms.length > 0) {
                           <ul>
                             @for (cm of cms; track cm.id) {
                               <li>
-                                <div class="org-node org-node--chef-mission">
+                                <div class="org-node org-node--chef-mission" (click)="$event.stopPropagation(); openEdit(cm)">
                                   <div class="org-avatar cm">{{ initials(cm) }}</div>
                                   <div>
                                     <div class="org-name">{{ cm.firstName }} {{ cm.lastName }}</div>
                                     <div class="org-role">Chef de mission</div>
+                                    @if (taskCount(cm) > 0) {
+                                      <span class="org-task-badge">{{ taskCount(cm) }} tâche(s)</span>
+                                    }
                                   </div>
                                 </div>
                                 @let collabs = collaborateursOf(cm.id);
@@ -221,11 +267,14 @@ interface EditForm {
                                   <ul>
                                     @for (c of collabs; track c.id) {
                                       <li>
-                                        <div class="org-node org-node--collab">
+                                        <div class="org-node org-node--collab" (click)="$event.stopPropagation(); openEdit(c)">
                                           <div class="org-avatar co">{{ initials(c) }}</div>
                                           <div>
                                             <div class="org-name">{{ c.firstName }} {{ c.lastName }}</div>
                                             <div class="org-role">Collaborateur</div>
+                                            @if (taskCount(c) > 0) {
+                                              <span class="org-task-badge">{{ taskCount(c) }} tâche(s)</span>
+                                            }
                                           </div>
                                         </div>
                                       </li>
@@ -244,12 +293,9 @@ interface EditForm {
                         </div>
                       </li>
                     }
-                  </ul>
-                  @let gm = gerantMadagascar(antenne);
-                  @if (gm) {
-                    <ul>
+                    @if (gm) {
                       <li>
-                        <div class="org-node org-node--gerant">
+                        <div class="org-node org-node--gerant" (click)="$event.stopPropagation(); openEdit(gm)">
                           <div class="org-avatar ge">{{ initials(gm) }}</div>
                           <div>
                             <div class="org-name">{{ gm.firstName }} {{ gm.lastName }}</div>
@@ -257,8 +303,8 @@ interface EditForm {
                           </div>
                         </div>
                       </li>
-                    </ul>
-                  }
+                    }
+                  </ul>
                 </li>
               }
             </ul>
@@ -275,6 +321,7 @@ interface EditForm {
         <div class="all-users-title">
           <mat-icon>manage_accounts</mat-icon>
           Tous les utilisateurs
+          <span class="all-users-count">{{ filteredUsers().length }}</span>
         </div>
         <div class="all-users-search" (click)="$event.stopPropagation()">
           <mat-icon>search</mat-icon>
@@ -286,6 +333,40 @@ interface EditForm {
         </div>
       </div>
 
+      <!-- Filtres -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <select class="filter-select" [value]="filterRole()" (change)="filterRole.set($any($event.target).value)">
+            <option value="">Tous les rôles</option>
+            <option value="ADMIN">Administrateur</option>
+            <option value="EXPERT_COMPTABLE">Expert-comptable</option>
+            <option value="CHEF_ANTENNE">Chef d'antenne</option>
+            <option value="CHEF_MISSION">Chef de mission</option>
+            <option value="COLLABORATEUR">Collaborateur</option>
+            <option value="GERANT_MADAGASCAR">Gérant Madagascar</option>
+          </select>
+          <select class="filter-select" [value]="filterAntenne()" (change)="filterAntenne.set($any($event.target).value)">
+            <option value="">Toutes antennes</option>
+            <option value="EST">EST</option>
+            <option value="OUEST">OUEST</option>
+          </select>
+          <select class="filter-select" [value]="filterSite()" (change)="filterSite.set($any($event.target).value)">
+            <option value="">Tous sites</option>
+            <option value="REUNION">La Réunion</option>
+            <option value="MADAGASCAR">Madagascar</option>
+          </select>
+          @if (activeFiltersCount() > 0) {
+            <button class="btn-clear-filters" (click)="clearFilters()">
+              <mat-icon>filter_alt_off</mat-icon> Effacer ({{ activeFiltersCount() }})
+            </button>
+          }
+        </div>
+        <label class="toggle-inactive">
+          <input type="checkbox" [checked]="showInactive()" (change)="showInactive.set($any($event.target).checked)" />
+          Afficher inactifs
+        </label>
+      </div>
+
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -295,7 +376,8 @@ interface EditForm {
               <th>Rôle actuel</th>
               <th>Antenne</th>
               <th>Superviseur direct</th>
-              <th>Action</th>
+              <th>Charge</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -305,7 +387,10 @@ interface EditForm {
                   <div class="user-cell">
                     <div class="avatar sm" [class]="avatarClass(u)">{{ initials(u) }}</div>
                     <div>
-                      <div class="td-name">{{ u.firstName }} {{ u.lastName }}</div>
+                      <div class="td-name">
+                        {{ u.firstName }} {{ u.lastName }}
+                        @if (!u.isActive) { <span class="badge-inactive">Inactif</span> }
+                      </div>
                       <div class="td-email">{{ u.email }}</div>
                     </div>
                   </div>
@@ -337,17 +422,43 @@ interface EditForm {
                   }
                 </td>
                 <td>
-                  <button class="btn-table-assign" matRipple (click)="$event.stopPropagation(); openEdit(u)">
-                    <mat-icon>edit</mat-icon> Modifier
-                  </button>
+                  @if (taskCount(u) > 0) {
+                    <span class="charge-badge" [class.charge-badge--high]="taskCount(u) >= 5">
+                      {{ taskCount(u) }} tâche{{ taskCount(u) > 1 ? 's' : '' }}
+                    </span>
+                  } @else {
+                    <span class="td-empty-val">—</span>
+                  }
+                </td>
+                <td>
+                  <div class="td-actions">
+                    <button class="btn-table-assign" matRipple (click)="$event.stopPropagation(); openEdit(u)"
+                            matTooltip="Modifier le rôle / l'antenne">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="btn-table-rh" matRipple (click)="$event.stopPropagation(); goToRH(u)"
+                            matTooltip="Voir la fiche RH">
+                      <mat-icon>badge</mat-icon>
+                    </button>
+                    @if (auth.isAdmin()) {
+                      <button class="btn-table-toggle"
+                              [class.btn-table-toggle--active]="u.isActive"
+                              matRipple
+                              [matTooltip]="u.isActive ? 'Désactiver le compte' : 'Réactiver le compte'"
+                              (click)="$event.stopPropagation(); toggleActive(u)">
+                        <mat-icon>{{ u.isActive ? 'person_off' : 'person' }}</mat-icon>
+                      </button>
+                    }
+                  </div>
                 </td>
               </tr>
             }
             @if (filteredUsers().length === 0) {
               <tr>
-                <td colspan="6" class="td-empty">
+                <td colspan="7" class="td-empty">
                   <mat-icon>search_off</mat-icon>
-                  Aucun résultat pour "{{ searchQuery() }}"
+                  @if (searchQuery()) { Aucun résultat pour "{{ searchQuery() }}" }
+                  @else { Aucun utilisateur ne correspond aux filtres sélectionnés }
                 </td>
               </tr>
             }
@@ -573,6 +684,54 @@ interface EditForm {
           }
         </div>
       </div>
+
+      <!-- Transfert d'équipe (pour Chef de mission avec collaborateurs) -->
+      @if (editForm()!.user.role === 'CHEF_MISSION') {
+        @let collabsActuels = collaborateursOf(editForm()!.user.id);
+        @if (collabsActuels.length > 0) {
+          <div class="transfer-section">
+            <div class="transfer-title">
+              <mat-icon>swap_horiz</mat-icon>
+              Transférer l'équipe ({{ collabsActuels.length }} collaborateur(s))
+            </div>
+            <p class="form-hint">Réassigne tous les collaborateurs vers un autre chef de mission.</p>
+            @let otherCMs = chefsMission(editForm()!.antenne).filter(cm => cm.id !== editForm()!.user.id);
+            @if (otherCMs.length > 0) {
+              <div class="transfer-row">
+                <div class="select-wrap" style="flex:1">
+                  <select [(ngModel)]="editForm()!.transferToId">
+                    <option [ngValue]="null">— Choisir le destinataire —</option>
+                    @for (cm of otherCMs; track cm.id) {
+                      <option [ngValue]="cm.id">{{ cm.firstName }} {{ cm.lastName }}</option>
+                    }
+                  </select>
+                  <mat-icon class="select-icon">expand_more</mat-icon>
+                </div>
+                <button class="btn-transfer" [disabled]="!editForm()!.transferToId" (click)="transferTeam()">
+                  <mat-icon>group</mat-icon> Transférer
+                </button>
+              </div>
+            } @else {
+              <p class="field-hint field-hint--warn">Aucun autre chef de mission dans cette antenne.</p>
+            }
+          </div>
+        }
+      }
+
+      <!-- Statut du compte -->
+      @if (auth.isAdmin()) {
+        <div class="account-status">
+          <div class="account-status__label">
+            <mat-icon>{{ editForm()!.user.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+            Compte {{ editForm()!.user.isActive ? 'actif' : 'inactif' }}
+          </div>
+          <button class="btn-toggle-active"
+                  [class.btn-toggle-active--off]="editForm()!.user.isActive"
+                  (click)="$event.stopPropagation(); toggleActive(editForm()!.user)">
+            {{ editForm()!.user.isActive ? 'Désactiver le compte' : 'Réactiver le compte' }}
+          </button>
+        </div>
+      }
     </div>
 
     <div class="edit-drawer__footer">
@@ -580,6 +739,119 @@ interface EditForm {
       <button class="btn-save" [disabled]="editForm()!.saving" (click)="saveEdit()">
         @if (editForm()!.saving) { <mat-icon class="spin">refresh</mat-icon> Enregistrement… }
         @else { <mat-icon>check</mat-icon> Enregistrer }
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ══ PANNEAU DE CRÉATION ══════════════════════════════════════════════════ -->
+@if (createForm()) {
+  <div class="edit-backdrop" (click)="closeAll()"></div>
+  <div class="edit-drawer" (click)="$event.stopPropagation()">
+    <div class="edit-drawer__header">
+      <div class="edit-user-info">
+        <div class="avatar lg default" style="background:#E0E7FF;color:#4338CA">
+          <mat-icon>person_add</mat-icon>
+        </div>
+        <div>
+          <div class="edit-name">Nouveau collaborateur</div>
+          <div class="edit-email">Remplissez les informations ci-dessous</div>
+        </div>
+      </div>
+      <button class="btn-icon" (click)="closeAll()"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div class="edit-drawer__body">
+      <div class="form-row-2">
+        <div class="form-field">
+          <label>Prénom *</label>
+          <input class="text-input" type="text" placeholder="Prénom" [(ngModel)]="createForm()!.firstName" />
+        </div>
+        <div class="form-field">
+          <label>Nom *</label>
+          <input class="text-input" type="text" placeholder="Nom" [(ngModel)]="createForm()!.lastName" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Email *</label>
+        <input class="text-input" type="email" placeholder="email@afym.mg" [(ngModel)]="createForm()!.email" />
+      </div>
+      <div class="form-field">
+        <label>Mot de passe provisoire *</label>
+        <input class="text-input" type="password" placeholder="Min. 8 caractères" [(ngModel)]="createForm()!.password" />
+      </div>
+      <div class="form-row-2">
+        <div class="form-field">
+          <label>Site *</label>
+          <div class="select-wrap">
+            <select [(ngModel)]="createForm()!.site">
+              <option value="REUNION">🇷🇪 La Réunion</option>
+              <option value="MADAGASCAR">🇲🇬 Madagascar</option>
+            </select>
+            <mat-icon class="select-icon">expand_more</mat-icon>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Antenne</label>
+          <div class="select-wrap">
+            <select [(ngModel)]="createForm()!.antenne">
+              <option value="">— Aucune —</option>
+              <option value="EST">🌅 EST</option>
+              <option value="OUEST">🌇 OUEST</option>
+            </select>
+            <mat-icon class="select-icon">expand_more</mat-icon>
+          </div>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Rôle *</label>
+        <div class="select-wrap">
+          <select [(ngModel)]="createForm()!.role">
+            <option value="COLLABORATEUR">Collaborateur</option>
+            <option value="CHEF_MISSION">Chef de mission</option>
+            <option value="CHEF_ANTENNE">Chef d'antenne</option>
+            <option value="GERANT_MADAGASCAR">Gérant Madagascar</option>
+            <option value="EXPERT_COMPTABLE">Expert-comptable</option>
+            <option value="ADMIN">Administrateur</option>
+          </select>
+          <mat-icon class="select-icon">expand_more</mat-icon>
+        </div>
+      </div>
+      @if (createForm()!.role === 'COLLABORATEUR' && createForm()!.antenne) {
+        <div class="form-field">
+          <label>Chef de mission rattaché</label>
+          <div class="select-wrap">
+            <select [(ngModel)]="createForm()!.referentId">
+              <option [ngValue]="null">— Non rattaché —</option>
+              @for (cm of chefsMission(createForm()!.antenne); track cm.id) {
+                <option [ngValue]="cm.id">{{ cm.firstName }} {{ cm.lastName }}</option>
+              }
+            </select>
+            <mat-icon class="select-icon">expand_more</mat-icon>
+          </div>
+        </div>
+      }
+      @if (createForm()!.role === 'CHEF_MISSION' && createForm()!.antenne) {
+        <div class="form-field">
+          <label>Chef d'antenne rattaché</label>
+          <div class="select-wrap">
+            <select [(ngModel)]="createForm()!.referentId">
+              <option [ngValue]="null">— Non rattaché —</option>
+              @for (ca of chefsAntenneFor(createForm()!.antenne); track ca.id) {
+                <option [ngValue]="ca.id">{{ ca.firstName }} {{ ca.lastName }}</option>
+              }
+            </select>
+            <mat-icon class="select-icon">expand_more</mat-icon>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="edit-drawer__footer">
+      <button class="btn-cancel" (click)="closeAll()">Annuler</button>
+      <button class="btn-save" [disabled]="createForm()!.saving" (click)="saveCreate()">
+        @if (createForm()!.saving) { <mat-icon class="spin">refresh</mat-icon> Création… }
+        @else { <mat-icon>person_add</mat-icon> Créer le compte }
       </button>
     </div>
   </div>
@@ -1000,11 +1272,151 @@ interface EditForm {
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin .8s linear infinite; }
+
+    /* ── Header actions ──────────────────────────────────────────── */
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-create {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: none; border-radius: 8px;
+      background: #162351; color: white; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #1e3170; }
+    }
+
+    /* ── Org chart toolbar ───────────────────────────────────────── */
+    .chart-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .btn-print {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border: 1px solid #CBD5E1; border-radius: 8px;
+      background: white; color: #334155; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #F8FAFC; border-color: #94A3B8; }
+    }
+    .chart-hint { font-size: 12px; color: #94A3B8; }
+
+    /* ── Org nodes overrides ─────────────────────────────────────── */
+    .org-node--bureau > .org-node-content {
+      background: #EFF6FF; border: 2px solid #BFDBFE;
+      .org-label { color: #1D4ED8; font-weight: 800; }
+    }
+    .org-node--reunion-user > .org-node-content {
+      background: #F0FDF4; border: 1px solid #BBF7D0;
+      cursor: pointer;
+      &:hover { background: #DCFCE7; }
+    }
+    .org-avatar.adm { background: #EDE9FE; color: #6D28D9; }
+    .org-avatar.exp { background: #FEF3C7; color: #92400E; }
+    .org-task-badge {
+      display: inline-block; margin-top: 4px;
+      padding: 1px 7px; border-radius: 10px;
+      background: #FEF9C3; color: #854D0E;
+      font-size: 10px; font-weight: 700; letter-spacing: .03em;
+    }
+
+    /* ── Users tab header ────────────────────────────────────────── */
+    .all-users-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 22px; padding: 0 8px;
+      background: #E2E8F0; color: #475569; border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+    }
+
+    /* ── Filter bar ──────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 12px 16px; background: #F8FAFC; border-radius: 10px;
+      margin-bottom: 16px; border: 1px solid #E2E8F0;
+    }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-select {
+      padding: 5px 10px; border: 1px solid #CBD5E1; border-radius: 7px;
+      background: white; color: #334155; font-size: 12px; font-family: inherit;
+      cursor: pointer;
+      &:focus { outline: none; border-color: #162351; }
+    }
+    .toggle-inactive {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #64748B; cursor: pointer;
+      input[type=checkbox] { cursor: pointer; }
+    }
+    .btn-clear-filters {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border: 1px solid #FCA5A5; border-radius: 7px;
+      background: #FEF2F2; color: #DC2626; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      &:hover { background: #FEE2E2; }
+    }
+
+    /* ── Table badges & actions ──────────────────────────────────── */
+    .badge-inactive {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      background: #F1F5F9; color: #94A3B8;
+      font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .charge-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      background: #F0FDF4; color: #16A34A;
+      font-size: 11px; font-weight: 700;
+      &.charge-badge--high { background: #FEF9C3; color: #D97706; }
+    }
+    .td-actions { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+    .btn-table-rh {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border: 1px solid #E0E7FF; border-radius: 6px;
+      background: #EEF2FF; color: #4338CA; cursor: pointer;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: #E0E7FF; }
+    }
+    .btn-table-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border: 1px solid #FCA5A5; border-radius: 6px;
+      background: #FEF2F2; color: #DC2626; cursor: pointer;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: #FEE2E2; }
+      &.btn-table-toggle--on { border-color: #BBF7D0; background: #F0FDF4; color: #16A34A; &:hover { background: #DCFCE7; } }
+    }
+
+    /* ── Edit drawer: transfer section ──────────────────────────── */
+    .transfer-section { margin-top: 16px; padding: 14px; background: #FFF7ED; border-radius: 10px; border: 1px solid #FED7AA; }
+    .transfer-title { font-size: 12px; font-weight: 700; color: #92400E; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .transfer-row { display: flex; align-items: center; gap: 8px; }
+    .btn-transfer {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border: none; border-radius: 8px;
+      background: #EA580C; color: white; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #C2410C; }
+      &:disabled { opacity: .5; cursor: not-allowed; }
+    }
+
+    /* ── Edit drawer: account status section ─────────────────────── */
+    .account-status { margin-top: 16px; padding: 14px; background: #F8FAFC; border-radius: 10px; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .account-status__label { font-size: 13px; color: #64748B; }
+    .btn-toggle-active {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border: 1px solid #BBF7D0; border-radius: 8px;
+      background: #F0FDF4; color: #15803D; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #DCFCE7; }
+      &.btn-toggle-active--off { border-color: #FCA5A5; background: #FEF2F2; color: #DC2626; &:hover { background: #FEE2E2; } }
+    }
+
+    /* ── Create drawer: form helpers ─────────────────────────────── */
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
   `],
 })
 export class EquipesComponent implements OnInit, OnDestroy {
+  @ViewChild('orgScroll') orgScrollRef!: ElementRef<HTMLElement>;
+
   private usersService = inject(UsersService);
   private toast        = inject(ToastService);
+  private router       = inject(Router);
   auth = inject(AuthService);
   private notifStream  = inject(NotificationStreamService);
   private sub = new Subscription();
@@ -1015,7 +1427,13 @@ export class EquipesComponent implements OnInit, OnDestroy {
   activeTab      = signal<'hierarchy' | 'chart' | 'users'>('hierarchy');
   reassignUserId = signal<number | null>(null);
   editForm       = signal<EditForm | null>(null);
+  createForm     = signal<CreateForm | null>(null);
   searchQuery    = signal('');
+  filterRole     = signal('');
+  filterAntenne  = signal('');
+  filterSite     = signal('');
+  showInactive   = signal(false);
+  taskCounts     = signal<Record<number, number>>({});
 
   get totalHierarchie(): number {
     return this.users().filter(u => u.isActive).length;
@@ -1026,15 +1444,30 @@ export class EquipesComponent implements OnInit, OnDestroy {
   get totalMg(): number { return this.totalHierarchie; }
 
   filteredUsers = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
-    const list = [...this.users()].sort((a, b) =>
-      `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
-    );
+    const q       = this.searchQuery().toLowerCase().trim();
+    const role    = this.filterRole();
+    const antenne = this.filterAntenne();
+    const site    = this.filterSite();
+    const showIn  = this.showInactive();
+    let list = [...this.users()];
+    if (!showIn) list = list.filter(u => u.isActive);
+    if (role)    list = list.filter(u => u.role === role);
+    if (antenne) list = list.filter(u => u.antenne === antenne);
+    if (site)    list = list.filter(u => u.site === site);
+    list.sort((a, b) => `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`));
     if (!q) return list;
     return list.filter(u =>
       `${u.firstName} ${u.lastName} ${u.email} ${u.role}`.toLowerCase().includes(q)
     );
   });
+
+  activeFiltersCount = computed(() =>
+    [this.filterRole(), this.filterAntenne(), this.filterSite()].filter(Boolean).length
+  );
+
+  reunionUsers = computed(() =>
+    this.users().filter(u => u.isActive && (u.role === 'ADMIN' || u.role === 'EXPERT_COMPTABLE'))
+  );
 
   usersInAntenne(antenne: string): User[] {
     return this.users().filter(u => u.antenne === antenne && u.isActive);
@@ -1063,14 +1496,219 @@ export class EquipesComponent implements OnInit, OnDestroy {
     return this.users().filter(u => u.role === 'CHEF_ANTENNE' && u.antenne === antenne && u.isActive);
   }
 
+  openCreate() {
+    this.editForm.set(null);
+    this.createForm.set({
+      firstName: '', lastName: '', email: '', password: '',
+      role: 'COLLABORATEUR', site: 'MADAGASCAR', antenne: '', referentId: null, saving: false,
+    });
+  }
+
+  saveCreate() {
+    const f = this.createForm();
+    if (!f) return;
+    if (!f.firstName || !f.lastName || !f.email || !f.password) {
+      this.toast.error('Tous les champs obligatoires doivent être remplis'); return;
+    }
+    f.saving = true; this.createForm.set({ ...f });
+    this.usersService.create({
+      firstName: f.firstName, lastName: f.lastName, email: f.email,
+      password: f.password, role: f.role, site: f.site,
+      antenne: f.antenne || null, referentId: f.referentId,
+    }).subscribe({
+      next: () => {
+        this.toast.success(`${f.firstName} ${f.lastName} créé(e)`);
+        this.createForm.set(null); this.load();
+      },
+      error: (err) => {
+        f.saving = false; this.createForm.set({ ...f });
+        this.toast.error(err?.error?.message ?? 'Erreur lors de la création');
+      },
+    });
+  }
+
+  toggleActive(user: User) {
+    const next = !user.isActive;
+    this.usersService.update(user.id, { isActive: next }).subscribe({
+      next: () => {
+        this.toast.success(next ? `${user.firstName} réactivé(e)` : `${user.firstName} désactivé(e)`);
+        this.load();
+      },
+      error: () => this.toast.error('Erreur lors de la mise à jour'),
+    });
+  }
+
+  transferTeam() {
+    const f = this.editForm();
+    if (!f || !f.transferToId) return;
+    const collabs = this.collaborateursOf(f.user.id);
+    if (!collabs.length) { this.toast.error('Aucun collaborateur à transférer'); return; }
+    const calls = collabs.map(c => this.usersService.update(c.id, { referentId: f.transferToId }));
+    forkJoin(calls).subscribe({
+      next: () => {
+        this.toast.success(`${collabs.length} collaborateur(s) transféré(s)`);
+        this.editForm.set(null); this.load();
+      },
+      error: () => this.toast.error('Erreur lors du transfert'),
+    });
+  }
+
+  goToRH(user: User) { this.router.navigate(['/rh/salaries', user.id]); }
+
+  printChart() {
+    const el = this.orgScrollRef?.nativeElement;
+    if (!el) return;
+
+    const orgHtml = el.outerHTML
+      .replace(/\s_nghost-[^\s"=]+(?:="[^"]*")?/g, '')
+      .replace(/\s_ngcontent-[^\s"=]+(?:="[^"]*")?/g, '');
+
+    const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const win = window.open('', '_blank', 'width=1400,height=900');
+    if (!win) return;
+
+    win.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Organigramme AFYM Audit Expertise</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px; background: #fff; color: #1e293b;
+      padding: 24px 16px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    h1   { font-size: 20px; font-weight: 800; margin-bottom: 4px; text-align: center; }
+    .sub { font-size: 12px; color: #64748b; margin-bottom: 36px; text-align: center; }
+
+    /* Material Icons */
+    mat-icon {
+      font-family: 'Material Icons';
+      font-weight: normal; font-style: normal; font-size: 18px; line-height: 1;
+      display: inline-block; white-space: nowrap; text-transform: none;
+      letter-spacing: normal; word-wrap: normal; direction: ltr;
+      vertical-align: middle; flex-shrink: 0;
+    }
+
+    /* ── Arbre org : CSS exact du composant ─────────────────── */
+    .org-scroll { display: inline-block; min-width: 100%; text-align: center; padding: 8px 40px 0; }
+
+    ul.org-tree, ul.org-tree ul { list-style: none; margin: 0; padding: 0; }
+    ul.org-tree { display: inline-block; white-space: nowrap; }
+    ul.org-tree ul {
+      padding-top: 28px; position: relative;
+      display: flex; justify-content: center;
+    }
+    ul.org-tree ul::before {
+      content: ''; position: absolute; top: 0; left: 50%;
+      border-left: 2px solid #CBD5E1; height: 28px;
+    }
+    ul.org-tree li {
+      display: inline-flex; flex-direction: column; align-items: center;
+      vertical-align: top; padding: 28px 10px 0; position: relative;
+    }
+    ul.org-tree li::before, ul.org-tree li::after {
+      content: ''; position: absolute; top: 0; right: 50%;
+      border-top: 2px solid #CBD5E1; width: 50%; height: 28px;
+    }
+    ul.org-tree li::after { right: auto; left: 50%; border-left: 2px solid #CBD5E1; }
+    ul.org-tree li:only-child::after, ul.org-tree li:only-child::before { display: none; }
+    ul.org-tree li:only-child { padding-top: 0; }
+    ul.org-tree li:first-child::before, ul.org-tree li:last-child::after { border: none; }
+    ul.org-tree li:last-child::before { border-right: 2px solid #CBD5E1; border-radius: 0 6px 0 0; }
+    ul.org-tree li:first-child::after { border-radius: 6px 0 0 0; }
+
+    /* ── Nœuds ────────────────────────────────────────────────── */
+    .org-node {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 12px;
+      border: 1.5px solid #E2E8F0; background: white !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); white-space: nowrap;
+    }
+    .org-node--root {
+      background: #162351 !important; color: white !important;
+      border-color: #162351 !important; padding: 14px 24px; border-radius: 14px; gap: 12px;
+    }
+    .org-node--root mat-icon { color: rgba(255,255,255,.6); font-size: 22px; }
+    .org-node--antenne {
+      background: #1E3A8A !important; color: white !important;
+      border-color: #1E3A8A !important; border-radius: 10px; padding: 9px 16px;
+    }
+    .org-node--bureau       { background: #EFF6FF !important; border-color: #93C5FD !important; }
+    .org-node--chef-antenne { background: #F5F3FF !important; border-color: #A78BFA !important; }
+    .org-node--chef-mission { background: #F0FDF4 !important; border-color: #6EE7B7 !important; }
+    .org-node--collab       { background: #F0F9FF !important; border-color: #BAE6FD !important; }
+    .org-node--gerant       { background: #FFF7ED !important; border-color: #FED7AA !important; }
+    .org-node--reunion-user { background: #F0FDF4 !important; border-color: #86EFAC !important; }
+    .org-node--empty        { background: #F8FAFC !important; border-color: #E2E8F0 !important; color: #94A3B8 !important; }
+
+    /* ── Avatars ─────────────────────────────────────────────── */
+    .org-avatar {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: white !important;
+      background: #94A3B8 !important;
+    }
+    .org-avatar.ca  { background: #7C3AED !important; }
+    .org-avatar.cm  { background: #059669 !important; }
+    .org-avatar.co  { background: #2563EB !important; }
+    .org-avatar.ge  { background: #D97706 !important; }
+    .org-avatar.adm { background: #7C3AED !important; }
+    .org-avatar.exp { background: #D97706 !important; }
+
+    .org-root-name    { font-size: 15px; font-weight: 700; }
+    .org-antenne-name { font-size: 13px; font-weight: 700; }
+    .org-count {
+      font-size: 12px; opacity: .65; padding: 2px 8px;
+      background: rgba(255,255,255,.18) !important; border-radius: 10px;
+    }
+    .org-name { font-size: 13px; font-weight: 600; color: #1E293B; line-height: 1.2; }
+    .org-role { font-size: 11px; color: #64748B; }
+    .org-task-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 10px;
+      background: #FEF9C3 !important; color: #854D0E !important;
+      font-size: 9px; font-weight: 700; margin-top: 2px;
+    }
+
+    @media print {
+      @page { size: A3 landscape; margin: 10mm; }
+      body { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Organigramme — AFYM Audit Expertise</h1>
+  <p class="sub">Édité le ${today}</p>
+  ${orgHtml}
+  <script>
+    document.fonts.ready.then(() => { window.print(); });
+  <\/script>
+</body>
+</html>`);
+    win.document.close();
+  }
+
+  taskCount(u: User): number { return this.taskCounts()[u.id] ?? 0; }
+
+  clearFilters() { this.filterRole.set(''); this.filterAntenne.set(''); this.filterSite.set(''); }
+
   openEdit(user: User) {
     this.reassignUserId.set(null);
+    this.createForm.set(null);
     this.editForm.set({
       user,
-      antenne:    user.antenne ?? '',
-      role:       user.role,
-      referentId: user.referentId ?? null,
-      saving:     false,
+      antenne:      user.antenne ?? '',
+      role:         user.role,
+      referentId:   user.referentId ?? null,
+      saving:       false,
+      transferToId: null,
     });
   }
 
@@ -1122,6 +1760,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
   closeAll() {
     this.reassignUserId.set(null);
     this.editForm.set(null);
+    this.createForm.set(null);
   }
 
   ngOnInit() {
@@ -1135,6 +1774,11 @@ export class EquipesComponent implements OnInit, OnDestroy {
   private load() {
     if (this.auth.hasFullVisibility() || this.auth.isChefAntenne()) {
       this.usersService.getAll().subscribe(u => this.users.set(u));
+      this.usersService.getTaskCounts().subscribe(counts => {
+        const map: Record<number, number> = {};
+        counts.forEach(c => map[c.userId] = c.count);
+        this.taskCounts.set(map);
+      });
     } else {
       this.usersService.getMyTeam().subscribe(t => this.myTeam = t);
     }
