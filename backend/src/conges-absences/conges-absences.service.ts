@@ -44,6 +44,13 @@ export class CongesAbsencesService {
     nombreJours: number;
     motif?: string;
   }) {
+    if (!dto.dateDebut || isNaN(new Date(dto.dateDebut).getTime())) {
+      throw new BadRequestException('Date de début invalide');
+    }
+    if (!dto.dateFin || isNaN(new Date(dto.dateFin).getTime())) {
+      throw new BadRequestException('Date de fin invalide');
+    }
+
     const user = await this.userRepo.findOne({ where: { id: dto.userId } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
 
