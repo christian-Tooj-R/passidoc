@@ -458,6 +458,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
+    else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
     else if (url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
@@ -514,7 +515,7 @@ export class SidebarComponent implements OnInit {
           { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
           ...(isAdmin ? [
             { label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' },
-            { label: "Secteurs d'activité",   route: '/admin/secteurs',    icon: 'category' },
+            { label: "Secteurs d'activité",   route: '/admin/secteurs',       icon: 'category'     },
           ] : []),
         ]}],
       }] : []),
@@ -523,6 +524,9 @@ export class SidebarComponent implements OnInit {
         color: '#0F766E', activeBg: '#CCFBF1',
         groups: [{ label: '', items: [
           { label: 'Présences du jour', route: '/pointage', icon: 'fingerprint' },
+          ...(isAdmin ? [
+            { label: 'Config. pointage', route: '/admin/pointage-config', icon: 'location_on' },
+          ] : []),
         ]}],
       },
       {

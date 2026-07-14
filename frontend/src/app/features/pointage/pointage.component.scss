@@ -274,6 +274,45 @@ $light:  #F9FAFB;
   margin-top: 4px;
 }
 
+// Indicateur géolocalisation sous le bouton arrivée
+.geo-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 20px;
+  margin-top: 10px;
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.75);
+  max-width: 360px;
+  text-align: center;
+  justify-content: center;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+
+  &--ok {
+    background: rgba(16,185,129,.2);
+    color: #6ee7b7;
+    mat-icon { color: #6ee7b7; }
+  }
+  &--trop_loin {
+    background: rgba(239,68,68,.2);
+    color: #fca5a5;
+    mat-icon { color: #fca5a5; }
+  }
+  &--refuse, &--indisponible {
+    background: rgba(245,158,11,.2);
+    color: #fcd34d;
+    mat-icon { color: #fcd34d; }
+  }
+  &--checking {
+    mat-icon { animation: spin .9s linear infinite; }
+  }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .journee-terminee {
   display: flex;
   align-items: center;

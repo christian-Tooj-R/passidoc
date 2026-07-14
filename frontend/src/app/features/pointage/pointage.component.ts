@@ -8,9 +8,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatRippleModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FormsModule } from '@angular/forms';
-import { PointageService, Pointage, PausePointage, MonStatut, EntreeJournee } from '../../core/services/pointage.service';
+import { PointageService, Pointage, PausePointage, MonStatut, EntreeJournee, SiteLocation } from '../../core/services/pointage.service';
 import { AuthService } from '../../core/services/auth.service';
+import { GeoLocationService } from '../../core/services/geo-location.service';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
+
+type GeoEtat = 'idle' | 'checking' | 'ok' | 'trop_loin' | 'refuse' | 'indisponible';
 
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const JOURS_LONGS  = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -148,10 +151,41 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
           <button class="btn-pointer" matRipple
                   [class.btn-pointer--pause]="etat() === 'present'"
                   [class.btn-pointer--resume]="etat() === 'en_pause'"
-                  [disabled]="enCours()" (click)="pointer(etat() === 'present' ? 'debut_pause' : etat() === 'en_pause' ? 'fin_pause' : undefined)">
-            <mat-icon>{{ btnIcon() }}</mat-icon>
-            <span>{{ btnLabel() }}</span>
+                  [disabled]="enCours() || (etat() === 'absent' && !peutPointerArrivee())"
+                  (click)="pointer(etat() === 'present' ? 'debut_pause' : etat() === 'en_pause' ? 'fin_pause' : undefined)">
+            <mat-icon>{{ etat() === 'absent' && geoEtat() === 'checking' ? 'hourglass_empty' : btnIcon() }}</mat-icon>
+            <span>{{ etat() === 'absent' && geoEtat() === 'checking' ? 'Vérification position…' : btnLabel() }}</span>
           </button>
+          @if (etat() === 'absent' && siteLocation()) {
+            <div class="geo-status" [class]="'geo-status--' + geoEtat()">
+              @switch (geoEtat()) {
+                @case ('ok') {
+                  <mat-icon>check_circle</mat-icon>
+                  <span>Vous êtes au bureau · {{ geo.formatDistance(distanceM()!) }}</span>
+                }
+                @case ('trop_loin') {
+                  <mat-icon>location_off</mat-icon>
+                  <span>Trop loin du bureau ({{ geo.formatDistance(distanceM()!) }}) · rayon {{ siteLocation()!.radiusMeters }} m</span>
+                }
+                @case ('refuse') {
+                  <mat-icon>gps_off</mat-icon>
+                  <span>Géolocalisation refusée — autorisez-la dans votre navigateur</span>
+                }
+                @case ('indisponible') {
+                  <mat-icon>gps_off</mat-icon>
+                  <span>Géolocalisation non disponible sur cet appareil</span>
+                }
+                @case ('checking') {
+                  <mat-icon>my_location</mat-icon>
+                  <span>Vérification de votre position…</span>
+                }
+                @default {
+                  <mat-icon>location_on</mat-icon>
+                  <span>Pointage géolocalisé activé pour ce site</span>
+                }
+              }
+            </div>
+          }
         }
         @if (etat() === 'parti') {
           <div class="journee-terminee"><mat-icon>check_circle</mat-icon>Bonne fin de journée !</div>
@@ -397,7 +431,19 @@ export class PointageComponent implements OnInit, OnDestroy {
   now           = signal(new Date());
   semaineOffset = signal(0);
 
+  // ── Géolocalisation ───────────────────────────────────────────
+  siteLocation  = signal<SiteLocation | null>(null);
+  geoEtat       = signal<GeoEtat>('idle');
+  distanceM     = signal<number | null>(null);
+  private myLat: number | null = null;
+  private myLng: number | null = null;
+
   etat = computed(() => this.statut()?.etat ?? 'absent');
+
+  peutPointerArrivee = computed(() => {
+    if (!this.siteLocation()) return true;        // pas de config → libre
+    return this.geoEtat() === 'ok';
+  });
 
   netMin = computed(() => {
     const s = this.statut();
@@ -489,12 +535,15 @@ export class PointageComponent implements OnInit, OnDestroy {
     private svc: PointageService,
     private auth: AuthService,
     private snack: MatSnackBar,
+    public  geo: GeoLocationService,
   ) {}
 
   ngOnInit() {
     this.charger();
+    this.initGeo();
     this.timers.push(setInterval(() => this.now.set(new Date()), 1000));
     this.timers.push(setInterval(() => this.charger(), 60_000));
+    this.timers.push(setInterval(() => this.rafraichirGeo(), 30_000));
   }
 
   ngOnDestroy() { this.timers.forEach(t => clearInterval(t)); }
@@ -514,11 +563,47 @@ export class PointageComponent implements OnInit, OnDestroy {
 
   pointer(action?: 'debut_pause' | 'fin_pause' | 'depart') {
     this.enCours.set(true);
-    this.svc.pointer(undefined, undefined, action).subscribe({
+    const lat = this.myLat ?? undefined;
+    const lng = this.myLng ?? undefined;
+    this.svc.pointer(lat, lng, action).subscribe({
       next:  () => { this.charger(); this.enCours.set(false); },
       error: (e) => {
-        this.snack.open(e.error?.message ?? 'Erreur', undefined, { duration: 3000 });
+        this.snack.open(e.error?.message ?? 'Erreur', undefined, { duration: 4000 });
         this.enCours.set(false);
+        // Si erreur de position, on relance la vérif géo
+        if (e.status === 400) this.rafraichirGeo();
+      },
+    });
+  }
+
+  private initGeo() {
+    const site = this.auth.currentUser()?.site;
+    if (!site) return;
+    this.svc.getSiteLocation(site).subscribe({
+      next: loc => {
+        this.siteLocation.set(loc);
+        if (loc) this.rafraichirGeo();
+      },
+    });
+  }
+
+  rafraichirGeo() {
+    if (!this.siteLocation()) return;
+    this.geoEtat.set('checking');
+    this.geo.getCurrentPosition().subscribe({
+      next: coords => {
+        this.myLat = coords.latitude;
+        this.myLng = coords.longitude;
+        const loc = this.siteLocation()!;
+        const dist = this.geo.distanceTo(coords.latitude, coords.longitude, loc.latitude, loc.longitude);
+        this.distanceM.set(dist);
+        this.geoEtat.set(dist <= loc.radiusMeters ? 'ok' : 'trop_loin');
+      },
+      error: (err: Error) => {
+        this.myLat = null;
+        this.myLng = null;
+        this.distanceM.set(null);
+        this.geoEtat.set(err.message.includes('refus') || err.message.includes('ermission') ? 'refuse' : 'indisponible');
       },
     });
   }
