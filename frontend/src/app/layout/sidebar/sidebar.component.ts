@@ -469,7 +469,7 @@ export class SidebarComponent implements OnInit {
   }
 
   get allModules(): AppModule[] {
-    const isAdmin   = this.auth.isAdmin();
+    const isAdmin   = this.auth.isAdmin() || this.auth.isExpert();
     const canPortef = this.auth.canManagePortefeuilles();
     return [
       ...(this.canSeeMenu('dashboard') ? [{
@@ -509,11 +509,12 @@ export class SidebarComponent implements OnInit {
         ]}],
       }] : []),
       ...(this.canSeeMenu('equipes') ? [{
-        id: 'equipe' as ModuleId, icon: 'groups', label: isAdmin ? 'Équipes' : 'Équipe',
+        id: 'equipe' as ModuleId, icon: 'groups',
+        label: isAdmin ? 'Équipes' : (this.auth.isChefAntenne() ? 'Mon antenne' : (this.auth.isChefMission() ? 'Mon équipe' : 'Équipe')),
         color: '#7C3AED', activeBg: '#EDE9FE',
         groups: [{ label: '', items: [
-          { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
-          ...(isAdmin ? [
+          { label: isAdmin ? 'Hiérarchie des équipes' : (this.auth.isChefAntenne() ? 'Mon antenne' : 'Mon équipe'), route: '/equipes', icon: 'people' },
+          ...(this.auth.isAdmin() ? [
             { label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' },
             { label: "Secteurs d'activité",   route: '/admin/secteurs',       icon: 'category'     },
           ] : []),
@@ -551,9 +552,15 @@ export class SidebarComponent implements OnInit {
 
   roleLabel(): string {
     const role = this.auth.currentUser()?.role;
-    if (role === 'ADMIN') return 'Administrateur';
-    if (role === 'EXPERT_COMPTABLE') return 'Expert-comptable';
-    return 'Collaborateur';
+    const labels: Record<string, string> = {
+      ADMIN:             'Administrateur',
+      EXPERT_COMPTABLE:  'Expert-comptable',
+      CHEF_ANTENNE:      'Chef d\'antenne',
+      CHEF_MISSION:      'Chef de mission',
+      COLLABORATEUR:     'Collaborateur',
+      GERANT_MADAGASCAR: 'Gérant Madagascar',
+    };
+    return labels[role ?? ''] ?? 'Collaborateur';
   }
 
   /** True si le panel est en mode sombre */

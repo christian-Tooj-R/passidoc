@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatut } from '../entities/task.entity';
-import { User, UserRole, UserSite } from '../entities/user.entity';
+import { User, UserRole, UserSite } from '../entities/user.entity'; // UserSite kept for legacy path
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -16,12 +16,20 @@ export class TasksService {
   ) {}
 
   private async canAssignTo(assigner: User, assigneeId: number): Promise<boolean> {
-    if (assigner.role === UserRole.ADMIN) return true;
-    if (assigner.site === UserSite.REUNION) {
-      const assignee = await this.userRepo.findOne({ where: { id: assigneeId } });
-      return assignee?.site === UserSite.MADAGASCAR || assigneeId === assigner.id;
+    if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(assigner.role)) return true;
+    if (assigneeId === assigner.id) return true;
+    const assignee = await this.userRepo.findOne({ where: { id: assigneeId } });
+    if (!assignee) return false;
+    if (assigner.role === UserRole.CHEF_ANTENNE) {
+      return assignee.antenne === assigner.antenne;
     }
-    return assigneeId === assigner.id;
+    if (assigner.role === UserRole.CHEF_MISSION) {
+      return assignee.referentId === assigner.id;
+    }
+    if (assigner.site === UserSite.REUNION) {
+      return assignee.site === UserSite.MADAGASCAR;
+    }
+    return false;
   }
 
   private getWeekNumber(date: Date): number {
@@ -60,7 +68,17 @@ export class TasksService {
       .where('task.annee IS NULL')
       .orderBy('task.createdAt', 'DESC');
 
-    if (currentUser.role !== UserRole.ADMIN) {
+    if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
+      // Voir toutes les tâches — pas de filtre
+    } else if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
+      qb.andWhere('(assignee.antenne = :antenne OR task.assigneeId = :userId)', {
+        antenne: currentUser.antenne, userId: currentUser.id,
+      });
+    } else if (currentUser.role === UserRole.CHEF_MISSION) {
+      qb.andWhere('(task.creePar = :userId OR assignee.referentId = :userId OR task.assigneeId = :userId)', {
+        userId: currentUser.id,
+      });
+    } else {
       qb.andWhere('(client.responsableId = :userId OR task.assigneeId = :userId)', { userId: currentUser.id });
     }
 
