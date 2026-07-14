@@ -21,10 +21,12 @@ export class ObjectifsService {
   }
 
   async upsert(clientId: number, exerciceId: number, data: Partial<ObjectifsClient>): Promise<ObjectifsClient> {
-    const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
-    if (!exercice) throw new NotFoundException('Exercice introuvable');
-    if (exercice.statut === ExerciceStatut.CLOTURE) {
-      throw new ForbiddenException("Exercice clôturé — données en lecture seule");
+    if (exerciceId > 0) {
+      const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
+      if (!exercice) throw new NotFoundException('Exercice introuvable');
+      if (exercice.statut === ExerciceStatut.CLOTURE) {
+        throw new ForbiddenException("Exercice clôturé — données en lecture seule");
+      }
     }
     let record = await this.repo.findOne({ where: { clientId, exerciceId } });
     if (!record) record = this.repo.create({ clientId, exerciceId });

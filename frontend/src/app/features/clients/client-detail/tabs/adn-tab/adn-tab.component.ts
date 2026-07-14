@@ -463,7 +463,9 @@ export class AdnTabComponent implements OnInit {
 
   save() {
     this.saving.set(true);
-    const s1 = this.svc.updateGlobal(this.clientId, this.global).toPromise();
+    // Strip backend-only fields — NestJS forbidNonWhitelisted rejects id/updatedAt/clientId
+    const { id: _id, updatedAt: _upd, clientId: _cid, createdAt: _cr, ...globalPayload } = this.global as any;
+    const s1 = this.svc.updateGlobal(this.clientId, globalPayload).toPromise();
     const s2 = this.svc.updateSectoriel(this.clientId, {
       secteur: this.secteurSelectionne ?? undefined,
       reponses: { ...this.r },

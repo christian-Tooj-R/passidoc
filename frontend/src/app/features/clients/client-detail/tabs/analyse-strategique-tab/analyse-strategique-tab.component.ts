@@ -154,13 +154,13 @@ export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
   ngOnInit() { this.load(); }
 
   ngOnChanges(changes: SimpleChanges) {
-    if ((changes['exerciceId'] || changes['clientId']) && this.exerciceId) {
+    if ((changes['exerciceId'] || changes['clientId']) && this.clientId != null && this.exerciceId != null) {
       this.load();
     }
   }
 
   private load() {
-    if (!this.clientId || !this.exerciceId) return;
+    if (!this.clientId || this.exerciceId == null) return;
     this.service.get(this.clientId, this.exerciceId).subscribe((data) => {
       if (data) {
         this.form.patchValue(data);
