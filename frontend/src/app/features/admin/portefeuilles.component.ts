@@ -117,7 +117,7 @@ interface CollabCard {
                   <span class="collab-name">{{ card.user.firstName }} {{ card.user.lastName }}</span>
                   <span class="collab-role">{{ getRoleLabel(card.user.role) }}</span>
                 </div>
-                <button class="btn-manage" (click)="card.expanded = !card.expanded"
+                <button class="btn-manage" (click)="toggleCard(card.user.id)"
                         [matTooltip]="card.expanded ? 'Réduire' : 'Gérer les dossiers'">
                   <mat-icon>{{ card.expanded ? 'expand_less' : 'tune' }}</mat-icon>
                   <span>{{ card.expanded ? 'Réduire' : 'Gérer' }}</span>
@@ -884,6 +884,7 @@ export class PortefeuillesComponent implements OnInit {
   allClients: Client[] = [];
   siteFilter: string | null = null;
   unassignedExpanded = false;
+  expandedCardIds = new Set<number>();
 
   // ── Getters calculés ────────────────────────────────────────────────────
 
@@ -925,9 +926,17 @@ export class PortefeuillesComponent implements OnInit {
       .map(user => ({
         user,
         clients: this.filteredClients.filter(c => c.responsable?.id === user.id),
-        expanded: false,
+        expanded: this.expandedCardIds.has(user.id),
       }))
       .filter(card => card.clients.length > 0);
+  }
+
+  toggleCard(userId: number) {
+    if (this.expandedCardIds.has(userId)) {
+      this.expandedCardIds.delete(userId);
+    } else {
+      this.expandedCardIds.add(userId);
+    }
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
