@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -80,5 +80,12 @@ export class PointageController {
     @Body() body: { latitude: number; longitude: number; radiusMeters?: number; adresse?: string },
   ) {
     return this.svc.upsertSiteLocation(site, body.latitude, body.longitude, body.radiusMeters ?? 300, body.adresse);
+  }
+
+  @Delete('site-location/:site')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: '[Admin] Supprimer la configuration GPS du bureau' })
+  deleteSiteLocation(@Param('site') site: string) {
+    return this.svc.deleteSiteLocation(site);
   }
 }

@@ -8,6 +8,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRippleModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Subscription, debounceTime } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
@@ -26,7 +27,7 @@ type ViewMode = 'grid' | 'list';
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatDialogModule,
-    MatTooltipModule, MatRippleModule, MatSnackBarModule,
+    MatTooltipModule, MatRippleModule, MatSnackBarModule, MatProgressBarModule,
   ],
   template: `
     <div class="explorer">
@@ -135,8 +136,18 @@ type ViewMode = 'grid' | 'list';
         }
       </div>
 
+      <!-- ══ LOADING ═══════════════════════════════════════ -->
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" class="list-loading-bar"></mat-progress-bar>
+        <div class="sk-grid">
+          @for (_ of [1,2,3,4,5,6,7,8]; track $index) {
+            <div class="sk-folder"></div>
+          }
+        </div>
+      }
+
       <!-- ══ GRID VIEW ══════════════════════════════════════ -->
-      @if (viewMode() === 'grid') {
+      @if (!loading() && viewMode() === 'grid') {
         @if (filteredClients().length === 0) {
           <div class="empty">
             <mat-icon>folder_off</mat-icon>
@@ -230,7 +241,7 @@ type ViewMode = 'grid' | 'list';
       }
 
       <!-- ══ LIST VIEW ══════════════════════════════════════ -->
-      @if (viewMode() === 'list') {
+      @if (!loading() && viewMode() === 'list') {
         <div class="file-list">
           <!-- Header -->
           <div class="list-header">
@@ -242,7 +253,7 @@ type ViewMode = 'grid' | 'list';
             <span class="lh-action"></span>
           </div>
 
-          @if (filteredClients().length === 0) {
+          @if (!loading() && filteredClients().length === 0) {
             <div class="empty">
               <mat-icon>folder_off</mat-icon>
               <p>Aucun dossier trouvé</p>
@@ -442,6 +453,30 @@ type ViewMode = 'grid' | 'list';
     .empty mat-icon { font-size: 52px; width: 52px; height: 52px; }
     .empty p { font-size: 15px; font-weight: 500; margin: 0; }
 
+    /* ══ SKELETON LOADING ════════════════════════════════ */
+    .list-loading-bar { margin-bottom: 16px; }
+    .sk-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 0 4px;
+    }
+    .sk-folder {
+      height: 180px; border-radius: 16px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: sk-shimmer 1.4s infinite;
+    }
+    @keyframes sk-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    :host-context([data-theme="dark"]) .sk-folder,
+    :host-context(.dark-theme) .sk-folder {
+      background: linear-gradient(90deg, #2a2d3a 25%, #333748 50%, #2a2d3a 75%);
+      background-size: 200% 100%;
+    }
+
     /* ══ GRID VIEW ════════════════════════════════════════ */
     .file-grid {
       display: grid;
@@ -637,6 +672,7 @@ type ViewMode = 'grid' | 'list';
 })
 export class ClientListComponent implements OnInit, OnDestroy {
   clients         = signal<Client[]>([]);
+  loading         = signal(true);
   searchQuery     = signal('');
   healthFilter    = signal('');
   siteFilter      = signal('');
@@ -715,7 +751,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() { this.sub.unsubscribe(); }
 
-  load() { this.clientsService.getAll().subscribe(data => this.clients.set(data)); }
+  load() {
+    this.loading.set(true);
+    this.clientsService.getAll().subscribe({
+      next: data => { this.clients.set(data); this.loading.set(false); },
+      error: ()   => this.loading.set(false),
+    });
+  }
 
   initDelete(id: number, e: Event) {
     e.stopPropagation();

@@ -17,14 +17,15 @@ import { AnalyseStrategiqueTabComponent } from './tabs/analyse-strategique-tab/a
 import { MissionsTabComponent } from './tabs/missions-tab/missions-tab.component';
 import { ObjectifsTabComponent } from './tabs/objectifs-tab/objectifs-tab.component';
 import { ControleInterneTabComponent } from './tabs/controle-interne-tab/controle-interne-tab.component';
-import { TachesTabComponent } from './tabs/taches-tab/taches-tab.component';
+
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
+import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'taches' | 'historique';
+  | 'documents' | 'historique' | 'dossier-travail';
 
 interface TabGroup {
   label: string;
@@ -56,8 +57,8 @@ interface TabGroup {
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
-    TachesTabComponent, HistoriqueTabComponent,
-    AdnTabComponent,
+    HistoriqueTabComponent,
+    AdnTabComponent, DossierTravailTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -350,10 +351,10 @@ interface TabGroup {
                 @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('missions')     { <app-missions-tab            [clientId]="client.id" /> }
                 @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('objectifs')    { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
-                @case ('taches')       { <app-taches-tab              [clientId]="client.id" /> }
-                @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+@case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
           </div>
@@ -894,10 +895,11 @@ export class ClientDetailComponent implements OnInit {
       label: 'Analyse',
       icon: 'query_stats',
       tabs: [
-        { id: 'strategie', icon: 'grid_view',   label: 'Stratégie' },
-        { id: 'missions',  icon: 'assignment',  label: 'Missions' },
-        { id: 'controle',  icon: 'shield',      label: 'Contrôle Interne' },
-        { id: 'objectifs', icon: 'flag',        label: 'Objectifs' },
+        { id: 'strategie',        icon: 'grid_view',    label: 'Stratégie' },
+        { id: 'missions',         icon: 'assignment',   label: 'Missions' },
+        { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
+        { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
+        { id: 'dossier-travail',  icon: 'work_history', label: 'Dossier de travail' },
       ],
     },
     {
@@ -905,7 +907,6 @@ export class ClientDetailComponent implements OnInit {
       icon: 'inventory_2',
       tabs: [
         { id: 'documents',  icon: 'attach_file', label: 'Documents' },
-        { id: 'taches',     icon: 'task_alt',    label: 'Tâches' },
         { id: 'historique', icon: 'history',     label: 'Historique' },
       ],
     },

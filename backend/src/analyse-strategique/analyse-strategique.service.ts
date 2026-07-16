@@ -33,4 +33,29 @@ export class AnalyseStrategiqueService {
     Object.assign(record, data);
     return this.repo.save(record);
   }
+
+  /** Copie l'analyse stratégique de l'exercice source vers le nouvel exercice (reprise annuelle). */
+  async reprendreVersExercice(clientId: number, sourceExerciceId: number, destExerciceId: number): Promise<void> {
+    const source = await this.repo.findOne({ where: { clientId, exerciceId: sourceExerciceId } });
+    if (!source) return;
+    const hasDonnees = source.forces?.length || source.faiblesses?.length ||
+      source.opportunites?.length || source.menaces?.length ||
+      source.porterConcurrence || source.businessModelCanvas;
+    if (!hasDonnees) return;
+
+    let dest = await this.repo.findOne({ where: { clientId, exerciceId: destExerciceId } });
+    if (!dest) dest = this.repo.create({ clientId, exerciceId: destExerciceId });
+
+    dest.forces              = source.forces ?? [];
+    dest.faiblesses          = source.faiblesses ?? [];
+    dest.opportunites        = source.opportunites ?? [];
+    dest.menaces             = source.menaces ?? [];
+    dest.porterConcurrence   = source.porterConcurrence ?? '';
+    dest.porterNouveauxEntrants = source.porterNouveauxEntrants ?? '';
+    dest.porterClients       = source.porterClients ?? '';
+    dest.porterFournisseurs  = source.porterFournisseurs ?? '';
+    dest.porterSubstituts    = source.porterSubstituts ?? '';
+    dest.businessModelCanvas = source.businessModelCanvas ?? '';
+    await this.repo.save(dest);
+  }
 }

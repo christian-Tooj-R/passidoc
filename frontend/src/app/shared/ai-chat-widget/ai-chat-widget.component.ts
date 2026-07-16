@@ -290,6 +290,7 @@ import { ClientsService } from '../../core/services/clients.service';
 })
 export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('inputArea') inputAreaEl!: ElementRef;
 
   private router      = inject(Router);
   private aiService   = inject(AiAssistantService);
@@ -328,6 +329,15 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
       this.router.events
         .pipe(filter(e => e instanceof NavigationEnd))
         .subscribe((e: any) => this.extractClientFromUrl(e.urlAfterRedirects)),
+    );
+    this.sub.add(
+      this.aiService.openPanel$.subscribe(({ prefill }) => {
+        this.isOpen.set(true);
+        this.unread.set(0);
+        this.shouldScroll = true;
+        if (prefill) this.inputText = prefill;
+        setTimeout(() => this.inputAreaEl?.nativeElement?.focus(), 80);
+      }),
     );
   }
 

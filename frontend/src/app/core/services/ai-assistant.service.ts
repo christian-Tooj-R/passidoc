@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -29,6 +30,10 @@ export class AiAssistantService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private api = environment.apiUrl;
+
+  readonly openPanel$ = new Subject<{ prefill?: string }>();
+
+  requestOpen(prefill?: string) { this.openPanel$.next({ prefill }); }
 
   getContextSummary(clientId: number) {
     return this.http.get<AiContextSummary>(`${this.api}/clients/${clientId}/ai/context`);

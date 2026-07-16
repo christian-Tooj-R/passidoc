@@ -4,12 +4,18 @@ import { Repository } from 'typeorm';
 import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 import { computeExercice } from '../clients/clients.service';
 import { ControleInterneService } from '../controle-interne/controle-interne.service';
+import { AnalyseStrategiqueService } from '../analyse-strategique/analyse-strategique.service';
+import { ObjectifsService } from '../objectifs/objectifs.service';
+import { DossierTravailService } from '../dossier-travail/dossier-travail.service';
 
 @Injectable()
 export class ExerciceService {
   constructor(
     @InjectRepository(Exercice) private repo: Repository<Exercice>,
     private controleInterneService: ControleInterneService,
+    private analyseStrategiqueService: AnalyseStrategiqueService,
+    private objectifsService: ObjectifsService,
+    private dossierTravailService: DossierTravailService,
   ) {}
 
   findByClient(clientId: number): Promise<Exercice[]> {
@@ -58,8 +64,11 @@ export class ExerciceService {
       }),
     );
 
-    // Reprise annuelle : copie le contrôle interne vers le nouvel exercice
+    // Reprise annuelle vers le nouvel exercice
     await this.controleInterneService.reprendreVersExercice(exercice.clientId, exercice.id, next.id);
+    await this.analyseStrategiqueService.reprendreVersExercice(exercice.clientId, exercice.id, next.id);
+    await this.objectifsService.reprendreVersExercice(exercice.clientId, exercice.id, next.id);
+    await this.dossierTravailService.reprendreVersExercice(exercice.clientId, exercice.id, next.id);
 
     return { closed, next };
   }

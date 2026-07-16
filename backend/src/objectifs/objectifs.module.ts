@@ -9,5 +9,6 @@ import { ObjectifsController } from './objectifs.controller';
   imports: [TypeOrmModule.forFeature([ObjectifsClient, Exercice])],
   providers: [ObjectifsService],
   controllers: [ObjectifsController],
+  exports: [ObjectifsService],
 })
 export class ObjectifsModule {}
