@@ -379,6 +379,7 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
   @Input() clientId!: number;
   @Input() clientName = '';
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('inputArea') inputAreaEl!: ElementRef;
 
   private service = inject(AiAssistantService);
 
@@ -404,7 +405,7 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
         icon: 'trending_up',
         label: 'Performances financières',
         detail: this.ctx.performances
-          ? `Exercice ${this.ctx.derniereAnnee ?? '—'}`
+          ? `Exercice ${this.ctx.derniereAnnee ?? '—'} (historique complet)`
           : 'Aucune synthèse',
         available: this.ctx.performances,
       },
@@ -413,6 +414,18 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
         label: 'Analyse stratégique',
         detail: this.ctx.analyseStrategique ? 'SWOT + BMC inclus' : 'Non renseignée',
         available: this.ctx.analyseStrategique,
+      },
+      {
+        icon: 'psychology',
+        label: 'ADN Global',
+        detail: this.ctx.adnGlobal ? 'Mission, vision, valeurs, RH…' : 'Non renseigné',
+        available: this.ctx.adnGlobal,
+      },
+      {
+        icon: 'category',
+        label: 'ADN Sectoriel',
+        detail: this.ctx.adnSectoriel ? 'Questionnaire sectoriel renseigné' : 'Non renseigné',
+        available: this.ctx.adnSectoriel,
       },
       {
         icon: 'task_alt',
@@ -446,16 +459,42 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
           : 'Aucun flux',
         available: this.ctx.fluxMensuels > 0,
       },
+      {
+        icon: 'checklist',
+        label: 'Tâches',
+        detail: this.ctx.taches > 0 ? `${this.ctx.taches} tâche(s)` : 'Aucune tâche',
+        available: this.ctx.taches > 0,
+      },
+      {
+        icon: 'folder_open',
+        label: 'Documents',
+        detail: this.ctx.documents > 0 ? `${this.ctx.documents} document(s)` : 'Aucun document',
+        available: this.ctx.documents > 0,
+      },
+      {
+        icon: 'calendar_today',
+        label: 'Exercices',
+        detail: this.ctx.exercices > 0 ? `${this.ctx.exercices} exercice(s)` : 'Aucun exercice',
+        available: this.ctx.exercices > 0,
+      },
+      {
+        icon: 'manage_accounts',
+        label: 'Responsable cabinet',
+        detail: this.ctx.responsable ?? (this.ctx.collaborateurMg ? `MG : ${this.ctx.collaborateurMg}` : 'Non assigné'),
+        available: !!(this.ctx.responsable || this.ctx.collaborateurMg),
+      },
     ];
   }
 
   suggestions = [
-    { icon: 'summarize',      text: 'Résume-moi ce dossier pour une prise en charge rapide' },
+    { icon: 'summarize',       text: 'Résume-moi ce dossier pour une prise en charge rapide' },
     { icon: 'account_balance', text: 'Quels sont les points d\'attention fiscaux ?' },
-    { icon: 'cancel',         text: 'Quelles missions ont été refusées et pourquoi ?' },
-    { icon: 'handshake',      text: 'Quel est l\'état de la relation avec ce client ?' },
-    { icon: 'local_shipping', text: 'Quels fournisseurs dois-je contacter en priorité ?' },
-    { icon: 'warning',        text: 'Y a-t-il des risques identifiés sur ce dossier ?' },
+    { icon: 'psychology',      text: 'Quel est l\'ADN de cette entreprise ?' },
+    { icon: 'trending_up',     text: 'Comment évoluent les performances financières ?' },
+    { icon: 'warning',         text: 'Y a-t-il des risques identifiés sur ce dossier ?' },
+    { icon: 'checklist',       text: 'Quelles tâches sont en cours ou en retard ?' },
+    { icon: 'handshake',       text: 'Quel est l\'état de la relation avec ce client ?' },
+    { icon: 'local_shipping',  text: 'Quels fournisseurs dois-je contacter en priorité ?' },
   ];
 
   private shouldScroll = false;
@@ -466,6 +505,7 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
       this.shouldScroll = true;
     });
     this.service.getContextSummary(this.clientId).subscribe(ctx => { this.ctx = ctx; });
+    setTimeout(() => this.inputAreaEl?.nativeElement?.focus(), 100);
   }
 
   ngAfterViewChecked() {
@@ -491,8 +531,8 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
     await this.service.chatStream(
       this.clientId, toSend,
       chunk => { this.messages[assistantIndex].content += chunk; this.shouldScroll = true; },
-      ()    => { this.loading = false; this.shouldScroll = true; },
-      err   => { this.messages[assistantIndex].content = `⚠️ ${err}`; this.loading = false; },
+      ()    => { this.loading = false; this.shouldScroll = true; this.inputAreaEl?.nativeElement?.focus(); },
+      err   => { this.messages[assistantIndex].content = `⚠️ ${err}`; this.loading = false; this.inputAreaEl?.nativeElement?.focus(); },
     );
   }
 

@@ -23,6 +23,13 @@ export interface AiContextSummary {
   fluxMensuels: number;
   fluxManquants: number;
   santePassation: number;
+  adnGlobal: boolean;
+  adnSectoriel: boolean;
+  documents: number;
+  taches: number;
+  exercices: number;
+  responsable: string | null;
+  collaborateurMg: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

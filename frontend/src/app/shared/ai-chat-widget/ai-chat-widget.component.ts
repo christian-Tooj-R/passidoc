@@ -364,7 +364,14 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
     }
   }
 
-  togglePanel() { this.isOpen.update(v => !v); if (this.isOpen()) { this.unread.set(0); this.shouldScroll = true; } }
+  togglePanel() {
+    this.isOpen.update(v => !v);
+    if (this.isOpen()) {
+      this.unread.set(0);
+      this.shouldScroll = true;
+      setTimeout(() => this.inputAreaEl?.nativeElement?.focus(), 80);
+    }
+  }
   close() { this.isOpen.set(false); }
   openFullscreen() { this.close(); this.router.navigate(['/clients', this.clientId(), 'ai']); }
 
@@ -398,12 +405,13 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
         this.shouldScroll = true;
         if (!this.isOpen()) this.unread.update(n => n + 1);
       },
-      () => { this.loading.set(false); this.shouldScroll = true; },
+      () => { this.loading.set(false); this.shouldScroll = true; this.inputAreaEl?.nativeElement?.focus(); },
       err => {
         const updated = [...this.messages()];
         updated[idx] = { ...updated[idx], content: `⚠️ ${err}` };
         this.messages.set(updated);
         this.loading.set(false);
+        this.inputAreaEl?.nativeElement?.focus();
       },
     );
   }

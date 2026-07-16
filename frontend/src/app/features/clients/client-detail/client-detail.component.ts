@@ -241,13 +241,15 @@ interface TabGroup {
 
               <!-- Card 1 : illustration secteur -->
               <div class="hero-card hc-sector" [style.background]="getSectorConfig(client.secteurActivite).bg">
-                <img class="hc-sector__img"
-                     [src]="getSectorConfig(client.secteurActivite).imgSrc"
-                     [alt]="getSectorConfig(client.secteurActivite).label"
-                     onerror="this.style.display='none'" />
+                <div class="hc-sector__bar" [style.background]="getSectorConfig(client.secteurActivite).accent"></div>
+                <div class="hc-sector__deco">
+                  <div class="hc-sector__blob" [style.background]="getSectorConfig(client.secteurActivite).accent + '12'"></div>
+                  <div class="hc-sector__ring" [style.border-color]="getSectorConfig(client.secteurActivite).accent + '2A'"></div>
+                  <span class="hc-sector__emoji">{{ getSectorConfig(client.secteurActivite).emoji }}</span>
+                </div>
                 <div class="hc-sector__body">
                   <span class="hc-sector__name">{{ client.nom }}</span>
-                  <span class="hc-sector__pill" [style.background]="getSectorConfig(client.secteurActivite).accent + '22'"
+                  <span class="hc-sector__pill" [style.background]="getSectorConfig(client.secteurActivite).accent + '18'"
                         [style.color]="getSectorConfig(client.secteurActivite).accent">
                     <mat-icon>{{ getSectorConfig(client.secteurActivite).icon }}</mat-icon>
                     {{ getSectorConfig(client.secteurActivite).label }}
@@ -621,31 +623,49 @@ interface TabGroup {
       position: relative;
       display: flex; flex-direction: column;
       min-height: 158px;
+      overflow: hidden;
     }
-    .hc-sector__img {
+    .hc-sector__bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 2;
+    }
+    .hc-sector__deco {
       position: absolute; top: 0; right: 0;
-      height: 100%; width: 60%;
-      object-fit: contain;
-      padding: 12px 16px 12px 0;
-      opacity: .92;
+      width: 52%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .hc-sector__blob {
+      position: absolute;
+      width: 132px; height: 132px; border-radius: 50%;
+    }
+    .hc-sector__ring {
+      position: absolute;
+      width: 104px; height: 104px; border-radius: 50%;
+      border: 1.5px solid;
+    }
+    .hc-sector__emoji {
+      font-size: 52px; line-height: 1;
+      position: relative; z-index: 1;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,.10));
+      user-select: none;
     }
     .hc-sector__body {
       position: relative; z-index: 1;
-      padding: 18px 20px; margin-top: auto;
-      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px 20px; margin-top: auto;
+      display: flex; flex-direction: column; gap: 7px;
     }
     .hc-sector__name {
-      font-size: 15px; font-weight: 700; color: #1A1C1E;
+      font-size: 14px; font-weight: 700; color: #1A1C1E;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 180px;
+      max-width: 200px;
     }
     .hc-sector__pill {
       display: inline-flex; align-items: center; gap: 5px;
-      font-size: 11.5px; font-weight: 600;
-      padding: 4px 10px 4px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px 3px 7px; border-radius: 20px;
       width: fit-content;
     }
-    .hc-sector__pill mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hc-sector__pill mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
     /* Card 2 — ADN ring */
     .hc-adn {
@@ -1021,15 +1041,21 @@ export class ClientDetailComponent implements OnInit {
 
   ringColor(s: number): string { return s >= 80 ? '#4CAF50' : s >= 50 ? '#FF9800' : '#F44336'; }
 
-  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
-    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
-      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration',   imgSrc: 'sectors/restauration.svg' },
-      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP',            imgSrc: 'sectors/btp.svg' },
-      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association',    imgSrc: 'sectors/association.svg' },
-      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding',        imgSrc: 'sectors/holding.svg' },
-      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale', imgSrc: 'sectors/profession_liberale.svg' },
-      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI',            imgSrc: 'sectors/sci.svg' },
+  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; emoji: string } {
+    const m: Record<string, { bg: string; accent: string; icon: string; label: string; emoji: string }> = {
+      RESTAURATION:        { bg: '#FFF8F5', accent: '#C8400A', icon: 'restaurant',        label: 'Hôtellerie-Restauration', emoji: '🍽️' },
+      BTP:                 { bg: '#FFFCF0', accent: '#B85C00', icon: 'construction',       label: 'BTP',                     emoji: '🏗️' },
+      ASSOCIATION:         { bg: '#F2FCF5', accent: '#1A7A3E', icon: 'volunteer_activism', label: 'Association',             emoji: '🤝' },
+      HOLDING:             { bg: '#F0F6FF', accent: '#1255A0', icon: 'account_balance',    label: 'Holding & Groupes',       emoji: '🏢' },
+      PROFESSION_LIBERALE: { bg: '#FAF2FF', accent: '#6B21A8', icon: 'work',              label: 'Profession Libérale',     emoji: '⚖️' },
+      SCI:                 { bg: '#FFF2F2', accent: '#B91C1C', icon: 'home_work',          label: 'SCI',                     emoji: '🏠' },
+      COMMERCE:            { bg: '#F0FFF8', accent: '#0F6B42', icon: 'storefront',         label: 'Commerce',                emoji: '🛒' },
+      TRANSPORT:           { bg: '#F0F5FF', accent: '#1E40AF', icon: 'local_shipping',     label: 'Transport & Logistique',  emoji: '🚚' },
+      SANTE:               { bg: '#FFF0F3', accent: '#9D174D', icon: 'local_hospital',     label: 'Santé',                   emoji: '🏥' },
+      AGRICULTURE:         { bg: '#F6FEF0', accent: '#365314', icon: 'agriculture',        label: 'Agriculture',             emoji: '🌾' },
+      SERVICES:            { bg: '#F8F0FE', accent: '#6D28D9', icon: 'business_center',    label: 'Services',                emoji: '💼' },
+      NUMERIQUE:           { bg: '#EFF6FF', accent: '#1D4ED8', icon: 'computer',           label: 'Numérique & Tech',        emoji: '💻' },
     };
-    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg' };
+    return m[secteur!] ?? { bg: '#F8F9FB', accent: '#475569', icon: 'folder', label: 'Autre', emoji: '📁' };
   }
 }
