@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, Input, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { QuestionnaireAdnService } from '../../../../../core/services/questionnaire-adn.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
+import { SecteurService } from '../../../../../core/services/secteur.service';
+import { Secteur } from '../../../../../core/models/secteur.model';
 import { SecteurActivite, SECTEURS_LABELS, QuestionnaireAdnGlobal, QuestionnaireAdnSectoriel } from '../../../../../core/models/client.model';
 import {
   VISION_OPTS, VALEUR_OPTS, PLACE_OPTS, AMBIANCE_OPTS, ENJEUX_RH_OPTS,
@@ -84,8 +86,8 @@ import {
               <mat-label>Secteur</mat-label>
               <mat-select [(ngModel)]="secteurSelectionne">
                 <mat-option [value]="null">— Aucun —</mat-option>
-                @for (e of secteurEntries; track e.value) {
-                  <mat-option [value]="e.value">{{ e.label }}</mat-option>
+                @for (s of allSecteurs(); track s.code) {
+                  <mat-option [value]="s.code">{{ s.label }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -190,23 +192,80 @@ import {
             </div>
 
             @if (!editMode()) {
-              <!-- LECTURE SECTORIELLE -->
-              <div class="fiche-grid">
-                @for (item of ficheItems(); track item.label) {
-                  <div class="fiche-field" [class.full]="item.full">
-                    <span class="ff-label">{{ item.label }}</span>
-                    <span class="ff-value" [class.ff-chip]="item.chip" [class.ff-chip--warn]="item.warn">{{ item.value }}</span>
-                  </div>
-                }
-              </div>
+              <!-- LECTURE SECTORIELLE — secteurs codés en dur -->
+              @if (isBuiltinSecteur(secteurSelectionne!)) {
+                <div class="fiche-grid">
+                  @for (item of ficheItems(); track item.label) {
+                    <div class="fiche-field" [class.full]="item.full">
+                      <span class="ff-label">{{ item.label }}</span>
+                      <span class="ff-value" [class.ff-chip]="item.chip" [class.ff-chip--warn]="item.warn">{{ item.value }}</span>
+                    </div>
+                  }
+                </div>
+              }
+              <!-- LECTURE SECTORIELLE — secteurs dynamiques -->
+              @if (!isBuiltinSecteur(secteurSelectionne!) && currentSecteur()?.questions?.length) {
+                <div class="fiche-grid">
+                  @for (q of currentSecteur()!.questions; track q.id) {
+                    <div class="fiche-field" [class.full]="q.type === 'textarea' || q.type === 'multiselect'">
+                      <span class="ff-label">{{ q.label }}</span>
+                      <span class="ff-value">{{ formatDynRead(q, r[q.id]) }}</span>
+                    </div>
+                  }
+                </div>
+              }
             } @else {
-              <!-- ÉDITION SECTORIELLE — même formulaire que l'onglet précédent -->
+              <!-- ÉDITION SECTORIELLE — secteurs codés en dur -->
               @if (secteurSelectionne === 'RESTAURATION') { <ng-container [ngTemplateOutlet]="tplRestauEdit"></ng-container> }
               @if (secteurSelectionne === 'BTP')           { <ng-container [ngTemplateOutlet]="tplBtpEdit"></ng-container> }
               @if (secteurSelectionne === 'ASSOCIATION')   { <ng-container [ngTemplateOutlet]="tplAssoEdit"></ng-container> }
               @if (secteurSelectionne === 'HOLDING')       { <ng-container [ngTemplateOutlet]="tplHoldingEdit"></ng-container> }
               @if (secteurSelectionne === 'PROFESSION_LIBERALE') { <ng-container [ngTemplateOutlet]="tplLiberalEdit"></ng-container> }
               @if (secteurSelectionne === 'SCI')           { <ng-container [ngTemplateOutlet]="tplSciEdit"></ng-container> }
+              <!-- ÉDITION SECTORIELLE — secteurs dynamiques -->
+              @if (!isBuiltinSecteur(secteurSelectionne!) && currentSecteur()?.questions?.length) {
+                @for (q of currentSecteur()!.questions; track q.id) {
+                  <div class="q-block">
+                    <label class="q-label">{{ q.label }}</label>
+                    @if (q.hint) { <span class="q-hint">{{ q.hint }}</span> }
+                    @if (q.type === 'text') {
+                      <mat-form-field appearance="outline" class="field-wide">
+                        <input matInput [(ngModel)]="r[q.id]" [placeholder]="q.placeholder || ''" />
+                      </mat-form-field>
+                    }
+                    @if (q.type === 'textarea') {
+                      <mat-form-field appearance="outline" class="field-wide">
+                        <textarea matInput [(ngModel)]="r[q.id]" rows="3" [placeholder]="q.placeholder || ''"></textarea>
+                      </mat-form-field>
+                    }
+                    @if (q.type === 'number') {
+                      <mat-form-field appearance="outline">
+                        <input matInput type="number" [(ngModel)]="r[q.id]" [placeholder]="q.placeholder || ''" />
+                      </mat-form-field>
+                    }
+                    @if (q.type === 'radio' && q.options?.length) {
+                      <div class="q-radio q-radio--compact">
+                        @for (o of q.options!; track o.value) {
+                          <label class="q-opt" [class.sel]="r[q.id] === o.value" (click)="r[q.id] = o.value">
+                            @if (o.icon) { <mat-icon>{{ o.icon }}</mat-icon> }
+                            <span>{{ o.label }}</span>
+                          </label>
+                        }
+                      </div>
+                    }
+                    @if (q.type === 'multiselect' && q.options?.length) {
+                      <div class="q-check">
+                        @for (o of q.options!; track o.value) {
+                          <label class="q-opt" [class.sel]="isIn(r[q.id], o.value)" (click)="toggleDyn(q.id, o.value)">
+                            @if (o.icon) { <mat-icon>{{ o.icon }}</mat-icon> }
+                            <span>{{ o.label }}</span>
+                          </label>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
             }
           </div>
         }
@@ -377,6 +436,7 @@ import {
     .note-btn:hover { border-color: #1565C0; background: #E8F0FE; color: #1565C0; }
     .note-btn.active { border-color: #1565C0; background: #1565C0; color: white; }
     .note-hint { font-size: 12px; color: #74777F; }
+    .q-hint { display: block; font-size: 11px; color: #94A3B8; margin: -4px 0 6px; }
   `],
 })
 export class AdnTabComponent implements OnInit {
@@ -393,6 +453,19 @@ export class AdnTabComponent implements OnInit {
   private sectorielSnapshot: QuestionnaireAdnSectoriel = {};
 
   secteurSelectionne: SecteurActivite | null = null;
+  allSecteurs = signal<Secteur[]>([]);
+
+  currentSecteur = computed(() =>
+    this.allSecteurs().find(s => s.code === this.secteurSelectionne) ?? null
+  );
+
+  private readonly BUILTIN_SECTEURS = new Set([
+    'RESTAURATION', 'BTP', 'ASSOCIATION', 'HOLDING', 'PROFESSION_LIBERALE', 'SCI',
+  ]);
+
+  isBuiltinSecteur(code: string | null) {
+    return code ? this.BUILTIN_SECTEURS.has(code) : false;
+  }
 
   get r(): any {
     if (!this.sectoriel.reponses) this.sectoriel.reponses = {};
@@ -429,11 +502,15 @@ export class AdnTabComponent implements OnInit {
   constructor(
     private svc: QuestionnaireAdnService,
     private clientsSvc: ClientsService,
+    private secteurSvc: SecteurService,
     private snack: MatSnackBar,
   ) {}
 
   ngOnInit() {
     this.secteurSelectionne = this.secteurInitial ?? null;
+    // Chargement des secteurs dynamiques (admin)
+    this.secteurSvc.getAll().subscribe(secteurs => this.allSecteurs.set(secteurs));
+
     Promise.all([
       this.svc.getGlobal(this.clientId).toPromise(),
       this.svc.getSectoriel(this.clientId).toPromise(),
@@ -500,7 +577,31 @@ export class AdnTabComponent implements OnInit {
     this.sectoriel.reponses[field] = arr;
   }
 
-  secteurLabel(s: SecteurActivite) { return SECTEURS_LABELS[s] ?? s; }
+  toggleDyn(fieldId: string, val: string) {
+    if (!this.sectoriel.reponses) this.sectoriel.reponses = {};
+    const arr = [...((this.sectoriel.reponses[fieldId] as string[]) ?? [])];
+    const i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); else arr.push(val);
+    this.sectoriel.reponses[fieldId] = arr;
+  }
+
+  formatDynRead(q: any, val: any): string {
+    if (val == null || val === '') return '—';
+    if (Array.isArray(val)) {
+      if (!val.length) return '—';
+      if (q.options?.length) {
+        return val.map((v: string) => q.options.find((o: any) => o.value === v)?.label ?? v).join(', ');
+      }
+      return val.join(', ');
+    }
+    if (q.options?.length) {
+      return q.options.find((o: any) => o.value === val)?.label ?? val;
+    }
+    return String(val);
+  }
+
+  secteurLabel(s: SecteurActivite) {
+    return this.allSecteurs().find(sec => sec.code === s)?.label ?? SECTEURS_LABELS[s] ?? s;
+  }
   noteLabel(n?: number) { return n ? (['','Débutant','Faible','Moyen','À l\'aise','Expert'][n] ?? '') : ''; }
 
   // Génère les champs de la fiche lecture selon le secteur

@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { RolePermissionsService } from '../../core/services/role-permissions.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { HelpService } from '../../core/services/help.service';
 import { filter } from 'rxjs/operators';
 
 type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'rh';
@@ -64,6 +65,14 @@ interface AppModule {
 
         <div class="rail-spacer"></div>
         <div class="rail-divider"></div>
+
+        <!-- Aide -->
+        <button class="rail-help"
+                (click)="helpSvc.toggle()"
+                matTooltip="Centre d'aide (touche ?)"
+                matTooltipPosition="right">
+          <mat-icon>help_outline</mat-icon>
+        </button>
 
         <!-- Personnalisation (tous les utilisateurs) -->
         <a routerLink="/personnalisation"
@@ -235,6 +244,20 @@ interface AppModule {
       transition: color .18s;
     }
 
+
+    /* Bouton aide */
+    .rail-help {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; cursor: pointer; margin-bottom: 4px;
+      color: var(--rail-text-dim, rgba(255,255,255,.45));
+      transition: background .15s, color .15s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .rail-help:hover {
+      background: var(--rail-hover, rgba(255,255,255,.07));
+      color: rgba(255,255,255,.90);
+    }
 
     /* Icône personnalisation en bas */
     .rail-settings {
@@ -438,7 +461,8 @@ export class SidebarComponent implements OnInit {
   isPersonnalisation = signal(false);
 
   private rolePerms = inject(RolePermissionsService);
-  theme = inject(ThemeService);
+  theme   = inject(ThemeService);
+  helpSvc = inject(HelpService);
   constructor(public auth: AuthService, private router: Router) {}
 
   canSeeMenu(id: string): boolean {

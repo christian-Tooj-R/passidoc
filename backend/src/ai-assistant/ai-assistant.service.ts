@@ -6,6 +6,7 @@ import { Response } from 'express';
 import Groq from 'groq-sdk';
 import { Client } from '../entities/client.entity';
 import { ConversationIA, MessageRole } from '../entities/conversation-ia.entity';
+import { DossierTravail } from '../entities/dossier-travail.entity';
 
 @Injectable()
 export class AiAssistantService {
@@ -15,6 +16,7 @@ export class AiAssistantService {
   constructor(
     @InjectRepository(Client)  private clientRepo: Repository<Client>,
     @InjectRepository(ConversationIA) private convRepo: Repository<ConversationIA>,
+    @InjectRepository(DossierTravail) private dossierRepo: Repository<DossierTravail>,
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
@@ -78,15 +80,22 @@ export class AiAssistantService {
     user: any,
     res: Response,
   ) {
-    const client = await this.clientRepo.findOne({
-      where: { id: clientId },
-      relations: [
-        'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
-        'missions', 'objectifsItems', 'controlesInternes',
-        'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
-        'exercices', 'responsable', 'collaborateurMg',
-      ],
-    });
+    const [client, dossiers] = await Promise.all([
+      this.clientRepo.findOne({
+        where: { id: clientId },
+        relations: [
+          'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
+          'missions', 'objectifsItems', 'controlesInternes',
+          'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
+          'exercices', 'responsable', 'collaborateurMg',
+        ],
+      }),
+      this.dossierRepo.find({
+        where: { clientId },
+        relations: ['cycles'],
+        order: { exerciceId: 'DESC' },
+      }),
+    ]);
 
     if (!client) { res.status(404).end('Client introuvable'); return; }
 
@@ -102,7 +111,7 @@ export class AiAssistantService {
     }
 
     const groqMessages = [
-      { role: 'system' as const, content: this.buildSystemPrompt(client) },
+      { role: 'system' as const, content: this.buildSystemPrompt(client, dossiers) },
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
 
@@ -141,7 +150,7 @@ export class AiAssistantService {
     }
   }
 
-  private buildSystemPrompt(client: Client): string {
+  private buildSystemPrompt(client: Client, dossiers: DossierTravail[] = []): string {
     const fi        = client.ficheIdentite;
     const analyses  = (client.analysesStrategiques || []).sort((a: any, b: any) => b.id - a.id);
     const objectifs = client.objectifsItems?.[0];
@@ -151,6 +160,8 @@ export class AiAssistantService {
     const adn       = client.questionnaireAdnGlobal;
     const adnSec    = client.questionnaireAdnSectoriel;
     const exercices = (client.exercices || []).sort((a: any, b: any) => b.annee - a.annee);
+    const dossiersAvecNote = dossiers.filter(d => d.noteSynthese?.trim());
+    const dossiersAvecCycles = dossiers.filter(d => d.cycles?.some(c => c.diligences?.trim() || c.conclusion?.trim()));
 
     // Inventaire des sections disponibles dans ce prompt
     const sections: string[] = [];
@@ -163,6 +174,9 @@ export class AiAssistantService {
     if (missions.length) sections.push(`Missions cabinet (${missions.length} mission(s))`);
     if (objectifs)       sections.push('Objectifs client (court, moyen, long terme, attentes cabinet)');
     if (ci)              sections.push('Contrôle interne (process OK, process défaillants, outils de pilotage, note générale)');
+    if (dossiersAvecNote.length)   sections.push(`Dossier de travail — Note de synthèse (${dossiersAvecNote.length} exercice(s))`);
+    if (dossiersAvecCycles.length) sections.push(`Dossier de travail — Cycles de révision Ventes/Achats/Social (${dossiersAvecCycles.length} exercice(s))`);
+    if (dossiers.length && !dossiersAvecNote.length && !dossiersAvecCycles.length) sections.push(`Dossier de travail présent (${dossiers.length} exercice(s)) — contenu non encore renseigné`);
 
     const lines: string[] = [];
 
@@ -216,6 +230,30 @@ export class AiAssistantService {
       exercices.forEach((e: any) => lines.push(
         `  ${e.annee} — ${e.statut} (du ${e.dateOuverture} au ${e.dateCloture})`,
       ));
+    }
+
+    // ── Dossiers de travail ────────────────────────────────────────────────────
+    if (dossiers.length) {
+      lines.push(`\n=== DOSSIERS DE TRAVAIL (${dossiers.length} exercice(s)) ===`);
+      for (const d of dossiers) {
+        const exLabel = exercices.find(e => e.id === d.exerciceId)?.annee ?? `exercice #${d.exerciceId}`;
+        lines.push(`\n-- Dossier de travail ${exLabel} --`);
+        if (d.noteSynthese?.trim()) {
+          lines.push(`NOTE DE SYNTHÈSE :\n${d.noteSynthese.trim()}`);
+        }
+        if (d.cycles?.length) {
+          for (const c of d.cycles) {
+            const cycleLabel = { VENTE: 'Ventes', ACHAT: 'Achats', SOCIAL: 'Social' }[c.typeCycle] ?? c.typeCycle;
+            const hasContent = (c.diligences?.trim() || c.conclusion?.trim() || c.pourcentageCouverture > 0);
+            if (hasContent) {
+              lines.push(`  Cycle ${cycleLabel} :`);
+              if (c.pourcentageCouverture > 0) lines.push(`    Taux de couverture : ${c.pourcentageCouverture}%`);
+              if (c.diligences?.trim())         lines.push(`    Diligences : ${c.diligences.trim()}`);
+              if (c.conclusion?.trim())          lines.push(`    Conclusion : ${c.conclusion.trim()}`);
+            }
+          }
+        }
+      }
     }
 
     // ── ADN Global ─────────────────────────────────────────────────────────────
@@ -310,8 +348,7 @@ export class AiAssistantService {
       if (ci.noteGenerale)               lines.push(`Note générale : ${ci.noteGenerale}`);
     }
 
-
     const prompt = lines.join('\n');
-    return prompt.length > 6000 ? prompt.substring(0, 6000) + '\n[... données tronquées]' : prompt;
+    return prompt.length > 8000 ? prompt.substring(0, 8000) + '\n[... données tronquées]' : prompt;
   }
 }
