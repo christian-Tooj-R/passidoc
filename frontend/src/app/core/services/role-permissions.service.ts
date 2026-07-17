@@ -19,8 +19,11 @@ export const MENU_ITEMS: MenuItemDef[] = [
 ];
 
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  EXPERT_COMPTABLE: MENU_ITEMS.map(m => m.id),
-  COLLABORATEUR:    ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  EXPERT_COMPTABLE:  MENU_ITEMS.map(m => m.id),
+  CHEF_ANTENNE:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  CHEF_MISSION:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  GERANT_MADAGASCAR: ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  COLLABORATEUR:     ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
 };
 
 @Injectable({ providedIn: 'root' })

@@ -34,6 +34,8 @@ import { SalariesModule } from './salaries/salaries.module';
 import { ExerciceModule } from './exercice/exercice.module';
 import { SecteursModule } from './secteurs/secteurs.module';
 import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
+import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
+import { HelpModule } from './help/help.module';
 
 @Module({
   imports: [
@@ -96,6 +98,8 @@ import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
     ExerciceModule,
     SecteursModule,
     CongesAbsencesModule,
+    DossierTravailModule,
+    HelpModule,
   ],
   controllers: [AppController],
   providers: [

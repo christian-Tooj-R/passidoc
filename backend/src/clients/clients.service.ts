@@ -59,15 +59,10 @@ export class ClientsService {
   }
 
   async findAll(currentUser: User, site?: string, collaborateurId?: number) {
+    // Liste allégée : seules les relations nécessaires pour les cartes
     const query = this.repo.createQueryBuilder('client')
-      .leftJoinAndSelect('client.ficheIdentite', 'fiche')
       .leftJoinAndSelect('client.responsable', 'responsable')
       .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
-      .leftJoinAndSelect('client.questionnaireAdnGlobal', 'adnGlobal')
-      .leftJoinAndSelect('client.questionnaireAdnSectoriel', 'adnSectoriel')
-      .leftJoinAndSelect('client.missions', 'missions')
-      .leftJoinAndSelect('client.fluxMensuels', 'fluxMensuels')
-      .leftJoinAndSelect('client.objectifsItems', 'objectifsItems')
       .where('client.isActive = :active', { active: true });
 
     if (currentUser.role !== UserRole.ADMIN) {
@@ -93,7 +88,7 @@ export class ClientsService {
   async findOne(id: number) {
     const client = await this.repo.findOne({
       where: { id },
-      relations: ['ficheIdentite', 'fluxMensuels', 'fournisseurs', 'synthesesCloture', 'documents', 'responsable', 'analysesStrategiques', 'missions', 'controlesInternes'],
+      relations: ['ficheIdentite', 'responsable', 'collaborateurMg'],
     });
     if (!client) throw new NotFoundException('Dossier client introuvable');
     return client;

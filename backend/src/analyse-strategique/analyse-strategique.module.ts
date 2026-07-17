@@ -9,5 +9,6 @@ import { AnalyseStrategiqueController } from './analyse-strategique.controller';
   imports: [TypeOrmModule.forFeature([AnalyseStrategique, Exercice])],
   providers: [AnalyseStrategiqueService],
   controllers: [AnalyseStrategiqueController],
+  exports: [AnalyseStrategiqueService],
 })
 export class AnalyseStrategiqueModule {}

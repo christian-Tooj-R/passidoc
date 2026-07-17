@@ -9,8 +9,11 @@ export const ALL_MENU_ITEMS = [
 ];
 
 const DEFAULTS: Record<string, string[]> = {
-  EXPERT_COMPTABLE: ALL_MENU_ITEMS,
-  COLLABORATEUR:    ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  EXPERT_COMPTABLE:   ALL_MENU_ITEMS,
+  CHEF_ANTENNE:       ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  CHEF_MISSION:       ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  GERANT_MADAGASCAR:  ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  COLLABORATEUR:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
 };
 
 @Injectable()

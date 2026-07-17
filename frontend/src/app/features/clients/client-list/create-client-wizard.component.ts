@@ -544,6 +544,54 @@ interface WizardStep { id: StepId; label: string; }
               <div class="q-block"><label class="q-label">Objectif principal de la SCI</label><div class="q-radio q-radio--compact">@for(o of OBJECTIF_SCI_OPTS;track o.value){<label class="q-opt" [class.sel]="r.objectif_sci===o.value" (click)="toggleRadioR('objectif_sci',o.value)"><span>{{o.label}}</span></label>}</div></div>
               <div class="q-block"><label class="q-label">Régime fiscal</label><div class="q-radio q-radio--compact">@for(o of REGIME_SCI_OPTS;track o.value){<label class="q-opt" [class.sel]="r.regime_fiscal===o.value" (click)="toggleRadioR('regime_fiscal',o.value)"><span>{{o.label}}</span></label>}</div></div>
             }
+
+            <!-- SECTEURS DYNAMIQUES (créés depuis l'admin) -->
+            @for (group of groupedDynQuestions(); track group.section) {
+              @if (group.section) {
+                <div class="q-section-title">{{ group.section }}</div>
+              }
+              @for (q of group.questions; track q.id) {
+                <div class="q-block">
+                  <label class="q-label">{{ q.label }}</label>
+                  @if (q.hint) { <span class="q-hint">{{ q.hint }}</span> }
+                  @if (q.type === 'text') {
+                    <mat-form-field appearance="outline" class="full">
+                      <input matInput [(ngModel)]="r[q.id]" [placeholder]="q.placeholder || ''" />
+                    </mat-form-field>
+                  }
+                  @if (q.type === 'textarea') {
+                    <mat-form-field appearance="outline" class="full">
+                      <textarea matInput [(ngModel)]="r[q.id]" rows="3" [placeholder]="q.placeholder || ''"></textarea>
+                    </mat-form-field>
+                  }
+                  @if (q.type === 'number') {
+                    <mat-form-field appearance="outline">
+                      <input matInput type="number" [(ngModel)]="r[q.id]" [placeholder]="q.placeholder || ''" />
+                    </mat-form-field>
+                  }
+                  @if (q.type === 'radio' && q.options?.length) {
+                    <div class="q-radio q-radio--compact">
+                      @for (o of q.options!; track o.value) {
+                        <label class="q-opt" [class.sel]="r[q.id] === o.value" (click)="r[q.id] = r[q.id] === o.value ? undefined : o.value">
+                          @if (o.icon) { <mat-icon>{{ o.icon }}</mat-icon> }
+                          <span>{{ o.label }}</span>
+                        </label>
+                      }
+                    </div>
+                  }
+                  @if (q.type === 'multiselect' && q.options?.length) {
+                    <div class="q-check">
+                      @for (o of q.options!; track o.value) {
+                        <label class="q-opt" [class.sel]="isIn(r[q.id], o.value)" (click)="toggleR(q.id, o.value)">
+                          @if (o.icon) { <mat-icon>{{ o.icon }}</mat-icon> }
+                          <span>{{ o.label }}</span>
+                        </label>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
           }
 
           <!-- ═══ ÉTAPE FINALE — RÉCAPITULATIF ══════════════════ -->
@@ -1151,6 +1199,29 @@ export class CreateClientWizardComponent implements OnInit, OnDestroy {
   secteurLabel(code: string | null): string {
     return this.secteurs.find(s => s.code === code)?.label ?? code ?? '';
   }
+  private readonly BUILTIN_SECTEURS = new Set([
+    'RESTAURATION', 'BTP', 'ASSOCIATION', 'HOLDING', 'PROFESSION_LIBERALE', 'SCI',
+  ]);
+
+  /** Questions du secteur dynamique, groupées par section pour affichage */
+  groupedDynQuestions(): { section: string | undefined; questions: import('../../../core/models/secteur.model').SecteurQuestion[] }[] {
+    if (!this.secteurSelectionne) return [];
+    if (this.BUILTIN_SECTEURS.has(this.secteurSelectionne)) return [];
+    const questions = this.secteurs.find(s => s.code === this.secteurSelectionne)?.questions ?? [];
+    if (!questions.length) return [];
+    const groups: { section: string | undefined; questions: import('../../../core/models/secteur.model').SecteurQuestion[] }[] = [];
+    let lastSection: string | undefined;
+    for (const q of questions) {
+      const sec = q.section;
+      if (sec !== lastSection) {
+        groups.push({ section: sec, questions: [] });
+        lastSection = sec;
+      }
+      groups[groups.length - 1].questions.push(q);
+    }
+    return groups;
+  }
+
   secteurLabelShort() {
     const s = this.secteurs.find(x => x.code === this.secteurSelectionne);
     if (!s) return this.secteurSelectionne ?? '';

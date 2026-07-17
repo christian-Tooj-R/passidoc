@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { RolePermissionsService } from '../../core/services/role-permissions.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { HelpService } from '../../core/services/help.service';
 import { filter } from 'rxjs/operators';
 
 type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'rh';
@@ -64,6 +65,14 @@ interface AppModule {
 
         <div class="rail-spacer"></div>
         <div class="rail-divider"></div>
+
+        <!-- Aide -->
+        <button class="rail-help"
+                (click)="helpSvc.toggle()"
+                matTooltip="Centre d'aide (touche ?)"
+                matTooltipPosition="right">
+          <mat-icon>help_outline</mat-icon>
+        </button>
 
         <!-- Personnalisation (tous les utilisateurs) -->
         <a routerLink="/personnalisation"
@@ -235,6 +244,20 @@ interface AppModule {
       transition: color .18s;
     }
 
+
+    /* Bouton aide */
+    .rail-help {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; cursor: pointer; margin-bottom: 4px;
+      color: var(--rail-text-dim, rgba(255,255,255,.45));
+      transition: background .15s, color .15s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .rail-help:hover {
+      background: var(--rail-hover, rgba(255,255,255,.07));
+      color: rgba(255,255,255,.90);
+    }
 
     /* Icône personnalisation en bas */
     .rail-settings {
@@ -438,7 +461,8 @@ export class SidebarComponent implements OnInit {
   isPersonnalisation = signal(false);
 
   private rolePerms = inject(RolePermissionsService);
-  theme = inject(ThemeService);
+  theme   = inject(ThemeService);
+  helpSvc = inject(HelpService);
   constructor(public auth: AuthService, private router: Router) {}
 
   canSeeMenu(id: string): boolean {
@@ -458,6 +482,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
+    else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
     else if (url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
@@ -468,7 +493,7 @@ export class SidebarComponent implements OnInit {
   }
 
   get allModules(): AppModule[] {
-    const isAdmin   = this.auth.isAdmin();
+    const isAdmin   = this.auth.isAdmin() || this.auth.isExpert();
     const canPortef = this.auth.canManagePortefeuilles();
     return [
       ...(this.canSeeMenu('dashboard') ? [{
@@ -508,13 +533,14 @@ export class SidebarComponent implements OnInit {
         ]}],
       }] : []),
       ...(this.canSeeMenu('equipes') ? [{
-        id: 'equipe' as ModuleId, icon: 'groups', label: isAdmin ? 'Équipes' : 'Équipe',
+        id: 'equipe' as ModuleId, icon: 'groups',
+        label: isAdmin ? 'Équipes' : (this.auth.isChefAntenne() ? 'Mon antenne' : (this.auth.isChefMission() ? 'Mon équipe' : 'Équipe')),
         color: '#7C3AED', activeBg: '#EDE9FE',
         groups: [{ label: '', items: [
-          { label: isAdmin ? 'Toutes les équipes' : 'Mon équipe', route: '/equipes', icon: 'people' },
-          ...(isAdmin ? [
+          { label: isAdmin ? 'Hiérarchie des équipes' : (this.auth.isChefAntenne() ? 'Mon antenne' : 'Mon équipe'), route: '/equipes', icon: 'people' },
+          ...(this.auth.isAdmin() ? [
             { label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' },
-            { label: "Secteurs d'activité",   route: '/admin/secteurs',    icon: 'category' },
+            { label: "Secteurs d'activité",   route: '/admin/secteurs',       icon: 'category'     },
           ] : []),
         ]}],
       }] : []),
@@ -523,19 +549,17 @@ export class SidebarComponent implements OnInit {
         color: '#0F766E', activeBg: '#CCFBF1',
         groups: [{ label: '', items: [
           { label: 'Présences du jour', route: '/pointage', icon: 'fingerprint' },
+          ...(isAdmin ? [
+            { label: 'Config. pointage', route: '/admin/pointage-config', icon: 'location_on' },
+          ] : []),
         ]}],
       },
       {
-        id: 'rh' as ModuleId,icon: 'badge',label: 'RH',color: '#2563EB',activeBg: '#DBEAFE',groups: [{ label: '', items: [
-            ...(this.canSeeMenu('salaries') ? [{
-              label: 'Salariés',
-              route: '/salaries',
-              icon: 'badge',
-            }] : []),
-            ...(this.canSeeMenu('conges') ? [{
-              label: 'Congés & absences',
-              route: '/conges',
-              icon: 'event_busy',
+        id: 'rh' as ModuleId, icon: 'manage_accounts', label: 'RH', color: '#7C3AED', activeBg: '#EDE9FE', groups: [{ label: '', items: [
+            ...(this.canSeeMenu('salaries') || this.canSeeMenu('conges') ? [{
+              label: 'Ressources Humaines',
+              route: '/rh',
+              icon: 'manage_accounts',
             }] : []),
           ],
         }],
@@ -552,9 +576,15 @@ export class SidebarComponent implements OnInit {
 
   roleLabel(): string {
     const role = this.auth.currentUser()?.role;
-    if (role === 'ADMIN') return 'Administrateur';
-    if (role === 'EXPERT_COMPTABLE') return 'Expert-comptable';
-    return 'Collaborateur';
+    const labels: Record<string, string> = {
+      ADMIN:             'Administrateur',
+      EXPERT_COMPTABLE:  'Expert-comptable',
+      CHEF_ANTENNE:      'Chef d\'antenne',
+      CHEF_MISSION:      'Chef de mission',
+      COLLABORATEUR:     'Collaborateur',
+      GERANT_MADAGASCAR: 'Gérant Madagascar',
+    };
+    return labels[role ?? ''] ?? 'Collaborateur';
   }
 
   /** True si le panel est en mode sombre */

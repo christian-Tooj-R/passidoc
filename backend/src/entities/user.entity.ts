@@ -7,12 +7,20 @@ import {
 export enum UserRole {
   ADMIN = 'ADMIN',
   EXPERT_COMPTABLE = 'EXPERT_COMPTABLE',
+  CHEF_ANTENNE = 'CHEF_ANTENNE',
+  CHEF_MISSION = 'CHEF_MISSION',
   COLLABORATEUR = 'COLLABORATEUR',
+  GERANT_MADAGASCAR = 'GERANT_MADAGASCAR',
 }
 
 export enum UserSite {
   REUNION = 'REUNION',
   MADAGASCAR = 'MADAGASCAR',
+}
+
+export enum UserAntenne {
+  EST = 'EST',
+  OUEST = 'OUEST',
 }
 
 @Entity('users')
@@ -50,7 +58,11 @@ export class User {
   @Column({ nullable: true, default: 'Indian/Reunion' })
   timezone: string;
 
-  // Collaborateur Réunion référent (pour les collaborateurs Madagascar)
+  /** Antenne rattachée — EST ou OUEST (null pour les utilisateurs Réunion) */
+  @Column({ type: 'enum', enum: UserAntenne, nullable: true })
+  antenne: UserAntenne | null;
+
+  /** Superviseur direct : Chef de mission pour un Collaborateur, Chef d'antenne pour un Chef de mission */
   @Column({ nullable: true })
   referentId: number;
 

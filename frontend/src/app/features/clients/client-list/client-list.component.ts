@@ -8,6 +8,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRippleModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Subscription, debounceTime } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
@@ -26,7 +27,7 @@ type ViewMode = 'grid' | 'list';
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatDialogModule,
-    MatTooltipModule, MatRippleModule, MatSnackBarModule,
+    MatTooltipModule, MatRippleModule, MatSnackBarModule, MatProgressBarModule,
   ],
   template: `
     <div class="explorer">
@@ -135,8 +136,18 @@ type ViewMode = 'grid' | 'list';
         }
       </div>
 
+      <!-- ══ LOADING ═══════════════════════════════════════ -->
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" class="list-loading-bar"></mat-progress-bar>
+        <div class="sk-grid">
+          @for (_ of [1,2,3,4,5,6,7,8]; track $index) {
+            <div class="sk-folder"></div>
+          }
+        </div>
+      }
+
       <!-- ══ GRID VIEW ══════════════════════════════════════ -->
-      @if (viewMode() === 'grid') {
+      @if (!loading() && viewMode() === 'grid') {
         @if (filteredClients().length === 0) {
           <div class="empty">
             <mat-icon>folder_off</mat-icon>
@@ -148,15 +159,20 @@ type ViewMode = 'grid' | 'list';
               <div class="folder-item" matRipple
                    [routerLink]="confirmDeleteId() === c.id ? null : ['/clients', c.id]">
 
-                <!-- Bouton supprimer (admin uniquement) -->
-                @if (auth.isAdmin() && confirmDeleteId() !== c.id) {
-                  <button class="folder-del-btn" matTooltip="Supprimer le dossier"
-                          (click)="initDelete(c.id, $event)">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                }
+                <!-- Cover : fond clair + barre d'accent + emoji -->
+                <div class="folder-cover" [style.background]="getSectorConfig(c.secteurActivite).bg">
+                  <div class="folder-cover__bar" [style.background]="getSectorConfig(c.secteurActivite).accent"></div>
+                  <span class="folder-cover__emoji">{{ getSectorConfig(c.secteurActivite).emoji }}</span>
+                  <span [class]="statusDotClass(score(c))" [matTooltip]="getStatusLabel(score(c))"></span>
+                  @if (auth.isAdmin() && confirmDeleteId() !== c.id) {
+                    <button class="folder-del-btn" matTooltip="Supprimer le dossier"
+                            (click)="initDelete(c.id, $event)">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  }
+                </div>
 
-                <!-- Confirmation de suppression inline -->
+                <!-- Confirmation suppression -->
                 @if (confirmDeleteId() === c.id) {
                   <div class="folder-confirm" (click)="$event.stopPropagation()">
                     <mat-icon class="fc-icon">warning_amber</mat-icon>
@@ -172,56 +188,27 @@ type ViewMode = 'grid' | 'list';
                   </div>
                 }
 
-                <!-- Sector illustration -->
-                <div class="folder-illus" [style.background]="getSectorConfig(c.secteurActivite).bg">
-                  <img class="folder-illus__img"
-                       [src]="getSectorConfig(c.secteurActivite).imgSrc"
-                       [alt]="getSectorConfig(c.secteurActivite).label"
-                       onerror="this.style.display='none'" />
-                  <mat-icon class="folder-illus__fallback" [style.color]="getSectorConfig(c.secteurActivite).accent">
-                    {{ getSectorConfig(c.secteurActivite).icon }}
-                  </mat-icon>
-                </div>
-
-                <!-- Name & meta -->
-                <div class="folder-meta">
+                <!-- Body -->
+                <div class="folder-body">
                   <span class="folder-name">{{ c.nom }}</span>
-                  @if (c.secteurActivite) {
-                    <span class="folder-sector-pill"
-                          [style.background]="getSectorConfig(c.secteurActivite).bg"
-                          [style.color]="getSectorConfig(c.secteurActivite).accent">
-                      {{ getSectorConfig(c.secteurActivite).label }}
+                  <div class="folder-sub-row">
+                    <span class="folder-site" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
+                      {{ c.site === 'REUNION' ? '🇷🇪 Réunion' : '🇲🇬 Madagascar' }}
                     </span>
-                  }
-                  <span class="folder-sub" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
-                    {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
-                  </span>
-
-                  <!-- Complétude compacte -->
-                  <div class="completude-row">
-                    <div class="ring-wrap">
-                      <svg class="ring-svg" viewBox="0 0 52 52">
-                        <circle cx="26" cy="26" r="20" fill="none" stroke="#E8EAED" stroke-width="4.5"/>
-                        <circle cx="26" cy="26" r="20" fill="none"
-                                [attr.stroke]="ringColor(score(c))"
-                                stroke-width="4.5" stroke-linecap="round"
-                                stroke-dasharray="125.7"
-                                [attr.stroke-dashoffset]="ringOffset(score(c))"
-                                transform="rotate(-90 26 26)"/>
-                      </svg>
-                      <div class="ring-center">
-                        <span class="ring-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
-                      </div>
+                    @if (c.secteurActivite) {
+                      <span class="folder-sec-sep">·</span>
+                      <span class="folder-sec-label" [style.color]="getSectorConfig(c.secteurActivite).accent">
+                        {{ getSectorConfig(c.secteurActivite).shortLabel }}
+                      </span>
+                    }
+                  </div>
+                  <div class="folder-prog-row">
+                    <div class="fp-track">
+                      <div class="fp-fill" [style.width.%]="score(c)" [style.background]="ringColor(score(c))"></div>
                     </div>
-                    <div class="completude-info">
-                      <span class="completude-status" [style.color]="ringColor(score(c))">{{ getStatusLabel(score(c)) }}</span>
-                      <span class="completude-lbl">ADN Complétude</span>
-                    </div>
+                    <span class="fp-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
                   </div>
                 </div>
-
-                <!-- Status dot -->
-                <span class="folder-status" [class]="statusDotClass(score(c))" [matTooltip]="getStatusLabel(score(c))"></span>
 
               </div>
             }
@@ -230,7 +217,7 @@ type ViewMode = 'grid' | 'list';
       }
 
       <!-- ══ LIST VIEW ══════════════════════════════════════ -->
-      @if (viewMode() === 'list') {
+      @if (!loading() && viewMode() === 'list') {
         <div class="file-list">
           <!-- Header -->
           <div class="list-header">
@@ -242,7 +229,7 @@ type ViewMode = 'grid' | 'list';
             <span class="lh-action"></span>
           </div>
 
-          @if (filteredClients().length === 0) {
+          @if (!loading() && filteredClients().length === 0) {
             <div class="empty">
               <mat-icon>folder_off</mat-icon>
               <p>Aucun dossier trouvé</p>
@@ -442,12 +429,36 @@ type ViewMode = 'grid' | 'list';
     .empty mat-icon { font-size: 52px; width: 52px; height: 52px; }
     .empty p { font-size: 15px; font-weight: 500; margin: 0; }
 
+    /* ══ SKELETON LOADING ════════════════════════════════ */
+    .list-loading-bar { margin-bottom: 16px; }
+    .sk-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+      padding: 16px 20px;
+    }
+    .sk-folder {
+      height: 158px; border-radius: 14px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: sk-shimmer 1.4s infinite;
+    }
+    @keyframes sk-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    :host-context([data-theme="dark"]) .sk-folder,
+    :host-context(.dark-theme) .sk-folder {
+      background: linear-gradient(90deg, #2a2d3a 25%, #333748 50%, #2a2d3a 75%);
+      background-size: 200% 100%;
+    }
+
     /* ══ GRID VIEW ════════════════════════════════════════ */
     .file-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      padding: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+      padding: 16px 20px 24px;
       overflow-y: auto;
       align-content: start;
     }
@@ -455,55 +466,73 @@ type ViewMode = 'grid' | 'list';
     .folder-item {
       display: flex; flex-direction: column;
       background: #fff;
-      border-radius: 16px;
-      border: 1px solid #E8EAED;
-      box-shadow: 0 2px 6px rgba(0,0,0,.06);
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.08);
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
       overflow: hidden;
       cursor: pointer;
       position: relative;
       transition: box-shadow .15s, transform .15s;
     }
-    .folder-item:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); transform: translateY(-2px); }
-    .folder-item:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+    .folder-item:hover { box-shadow: 0 6px 20px rgba(0,0,0,.11); transform: translateY(-2px); }
+    .folder-item:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 
-    /* Sector illustration zone */
-    .folder-illus {
-      width: 100%; height: 120px;
+    /* Cover fond clair */
+    .folder-cover {
+      width: 100%; height: 90px;
       display: flex; align-items: center; justify-content: center;
       position: relative; flex-shrink: 0; overflow: hidden;
     }
-    .folder-illus__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; box-sizing: border-box; }
-    .folder-illus__fallback { font-size: 48px; width: 48px; height: 48px; opacity: .7; }
-
-    .folder-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px 12px; width: 100%; box-sizing: border-box; }
-    .folder-name { font-size: 13px; font-weight: 700; color: #1A1C1E; line-height: 1.3; word-break: break-word; }
-    .folder-sector-pill {
-      font-size: 10.5px; font-weight: 700;
-      padding: 2px 8px; border-radius: 6px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    /* Barre d'accent colorée en haut */
+    .folder-cover__bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
     }
-    .folder-sub { font-size: 11px; font-weight: 500; }
-    .sub--re { color: #006B57; }
-    .sub--mg { color: #162351; }
-
-    /* Complétude compacte */
-    .completude-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; width: 100%; }
-    .ring-wrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
-    .ring-svg { width: 100%; height: 100%; }
-    .ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-    .ring-pct { font-size: 11px; font-weight: 800; line-height: 1; }
-    .completude-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .completude-status { font-size: 12.5px; font-weight: 700; }
-    .completude-lbl { font-size: 10px; color: #94a3b8; font-weight: 500; }
-
-    .folder-status {
+    .folder-cover__emoji {
+      font-size: 2.5rem; line-height: 1;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.10));
+      user-select: none;
+    }
+    /* Status dot */
+    .folder-dot {
       position: absolute; top: 10px; right: 10px;
-      width: 9px; height: 9px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,.75);
+      width: 8px; height: 8px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.9);
     }
-    .fs--high { background: #386A20; }
-    .fs--mid  { background: #7B4F00; }
-    .fs--low  { background: #BA1A1A; }
+    .fd--high { background: #4CAF50; }
+    .fd--mid  { background: #F59E0B; }
+    .fd--low  { background: #EF4444; }
+    /* Bouton supprimer sur la cover */
+    .folder-del-btn {
+      position: absolute; top: 8px; left: 8px;
+      width: 26px; height: 26px; border: none; border-radius: 7px;
+      background: rgba(0,0,0,.12); color: #374151; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      transition: background .12s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: rgba(185,28,28,.15); color: #B91C1C; }
+    }
+    .folder-item:hover .folder-del-btn { display: flex; }
+
+    /* Body de la carte */
+    .folder-body {
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 9px 12px 11px;
+    }
+    .folder-name {
+      font-size: 13px; font-weight: 700; color: #1A1C1E; line-height: 1.35;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .folder-sub-row { display: flex; align-items: center; gap: 4px; overflow: hidden; margin-top: 1px; }
+    .folder-site { font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .sub--re { color: #006B57; }
+    .sub--mg { color: #1E3A5F; }
+    .folder-sec-sep { font-size: 10px; color: #C4C9D4; flex-shrink: 0; }
+    .folder-sec-label { font-size: 11px; font-weight: 500; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Progress bar */
+    .folder-prog-row { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+    .fp-track { flex: 1; height: 4px; background: #EEF0F4; border-radius: 3px; overflow: hidden; }
+    .fp-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+    .fp-pct { font-size: 11px; font-weight: 700; min-width: 28px; text-align: right; color: #64748B; }
 
     /* ══ LIST VIEW ════════════════════════════════════════ */
     .file-list { display: flex; flex-direction: column; overflow-y: auto; padding: 12px 20px; gap: 0; }
@@ -637,6 +666,7 @@ type ViewMode = 'grid' | 'list';
 })
 export class ClientListComponent implements OnInit, OnDestroy {
   clients         = signal<Client[]>([]);
+  loading         = signal(true);
   searchQuery     = signal('');
   healthFilter    = signal('');
   siteFilter      = signal('');
@@ -715,7 +745,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() { this.sub.unsubscribe(); }
 
-  load() { this.clientsService.getAll().subscribe(data => this.clients.set(data)); }
+  load() {
+    this.loading.set(true);
+    this.clientsService.getAll().subscribe({
+      next: data => { this.clients.set(data); this.loading.set(false); },
+      error: ()   => this.loading.set(false),
+    });
+  }
 
   initDelete(id: number, e: Event) {
     e.stopPropagation();
@@ -765,16 +801,16 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   score(c: Client) { return c.completude || c.santePassation; }
 
-  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string } {
-    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string }> = {
-      RESTAURATION:        { bg: 'linear-gradient(135deg,#FFF3E0 0%,#FFCC80 100%)', accent: '#E65100', icon: 'restaurant',        label: 'Restauration',   imgSrc: 'sectors/restauration.svg' },
-      BTP:                 { bg: 'linear-gradient(135deg,#FFFDE7 0%,#FFE082 100%)', accent: '#F57F17', icon: 'construction',       label: 'BTP',            imgSrc: 'sectors/btp.svg' },
-      ASSOCIATION:         { bg: 'linear-gradient(135deg,#E8F5E9 0%,#A5D6A7 100%)', accent: '#2E7D32', icon: 'volunteer_activism', label: 'Association',    imgSrc: 'sectors/association.svg' },
-      HOLDING:             { bg: 'linear-gradient(135deg,#E3F2FD 0%,#90CAF9 100%)', accent: '#1565C0', icon: 'account_balance',    label: 'Holding',        imgSrc: 'sectors/holding.svg' },
-      PROFESSION_LIBERALE: { bg: 'linear-gradient(135deg,#F3E5F5 0%,#CE93D8 100%)', accent: '#6A1B9A', icon: 'work',              label: 'Prof. Libérale', imgSrc: 'sectors/profession_liberale.svg' },
-      SCI:                 { bg: 'linear-gradient(135deg,#FBE9E7 0%,#FFAB91 100%)', accent: '#BF360C', icon: 'home_work',          label: 'SCI',            imgSrc: 'sectors/sci.svg' },
+  getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string; emoji: string; shortLabel: string } {
+    const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string; emoji: string; shortLabel: string }> = {
+      RESTAURATION:        { bg: '#FFF7F2', accent: '#D0440A', icon: 'restaurant',        label: 'Hôtellerie-Restauration', imgSrc: 'sectors/restauration.svg', emoji: '🍽️', shortLabel: 'Restauration' },
+      BTP:                 { bg: '#FFFBF0', accent: '#C46200', icon: 'construction',       label: 'BTP',                     imgSrc: 'sectors/btp.svg',          emoji: '🏗️', shortLabel: 'BTP' },
+      ASSOCIATION:         { bg: '#F2FCF5', accent: '#1A7A3E', icon: 'volunteer_activism', label: 'Association',             imgSrc: 'sectors/association.svg',  emoji: '🤝', shortLabel: 'Association' },
+      HOLDING:             { bg: '#F0F6FF', accent: '#1255A0', icon: 'account_balance',    label: 'Holding & Groupes',       imgSrc: 'sectors/holding.svg',      emoji: '🏢', shortLabel: 'Holding' },
+      PROFESSION_LIBERALE: { bg: '#FAF2FF', accent: '#6B21A8', icon: 'work',              label: 'Profession Libérale',     imgSrc: 'sectors/prof_lib.svg',     emoji: '⚖️', shortLabel: 'Prof. Libérale' },
+      SCI:                 { bg: '#FFF2F2', accent: '#B91C1C', icon: 'home_work',          label: 'SCI',                     imgSrc: 'sectors/sci.svg',          emoji: '🏠', shortLabel: 'SCI' },
     };
-    return m[secteur!] ?? { bg: 'linear-gradient(135deg,#ECEFF1 0%,#CFD8DC 100%)', accent: '#455A64', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg' };
+    return m[secteur!] ?? { bg: '#F8F9FB', accent: '#475569', icon: 'folder', label: 'Autre', imgSrc: 'sectors/default.svg', emoji: '📁', shortLabel: 'Autre' };
   }
 
   getScoreLevel(s: number): string { return s >= 80 ? 'high' : s >= 50 ? 'mid' : 'low'; }
@@ -788,7 +824,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   }
 
   folderColorClass(s: number) { return s >= 80 ? 'fc--high' : s >= 50 ? 'fc--mid' : 'fc--low'; }
-  statusDotClass(s: number)   { return s >= 80 ? 'folder-status fs--high' : s >= 50 ? 'folder-status fs--mid' : 'folder-status fs--low'; }
+  statusDotClass(s: number)   { return s >= 80 ? 'folder-dot fd--high' : s >= 50 ? 'folder-dot fd--mid' : 'folder-dot fd--low'; }
   scoreBarClass(s: number)    { return s >= 80 ? 'score-fill sf--high' : s >= 50 ? 'score-fill sf--mid' : 'score-fill sf--low'; }
   scoreTxtClass(s: number)    { return s >= 80 ? 'score-pct sp--high' : s >= 50 ? 'score-pct sp--mid' : 'score-pct sp--low'; }
   statusPillClass(s: number)  { return s >= 80 ? 'lr-status stp--high' : s >= 50 ? 'lr-status stp--mid' : 'lr-status stp--low'; }

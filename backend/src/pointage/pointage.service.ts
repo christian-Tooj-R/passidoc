@@ -132,6 +132,12 @@ export class PointageService {
     return this.siteRepo.findOne({ where: { site: site as any } });
   }
 
+  async deleteSiteLocation(site: string): Promise<{ deleted: boolean }> {
+    const existing = await this.siteRepo.findOne({ where: { site: site as any } });
+    if (existing) await this.siteRepo.remove(existing);
+    return { deleted: !!existing };
+  }
+
   async upsertSiteLocation(
     site: string, latitude: number, longitude: number,
     radiusMeters: number, adresse?: string,

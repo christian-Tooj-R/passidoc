@@ -2,7 +2,8 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User, UserRole, UserSite } from '../entities/user.entity';
+import { User, UserAntenne, UserRole, UserSite } from '../entities/user.entity';
+import { Task, TaskStatut } from '../entities/task.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -11,6 +12,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class UsersService {
   constructor(
     @InjectRepository(User) private repo: Repository<User>,
+    @InjectRepository(Task) private taskRepo: Repository<Task>,
     private notifications: NotificationsService,
   ) {}
 
@@ -24,7 +26,11 @@ export class UsersService {
     return this.sanitize(saved);
   }
 
-  async findAll() {
+  async findAll(currentUser?: User) {
+    if (currentUser && currentUser.role === UserRole.CHEF_ANTENNE) {
+      const users = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne }, order: { createdAt: 'DESC' } });
+      return users.map(this.sanitize);
+    }
     const users = await this.repo.find({ order: { createdAt: 'DESC' } });
     return users.map(this.sanitize);
   }
@@ -52,28 +58,48 @@ export class UsersService {
   }
 
   async getAssignable(currentUser: User) {
-    if (currentUser.role === UserRole.ADMIN) {
+    if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
       return this.findAll();
     }
+    if (currentUser.role === UserRole.CHEF_ANTENNE) {
+      const team = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, isActive: true } });
+      const self = await this.repo.findOne({ where: { id: currentUser.id } });
+      const all = self ? [self, ...team.filter(u => u.id !== currentUser.id)] : team;
+      return all.map(u => this.sanitize(u));
+    }
+    if (currentUser.role === UserRole.CHEF_MISSION) {
+      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      const self = await this.repo.findOne({ where: { id: currentUser.id } });
+      const all = self ? [self, ...team] : team;
+      return all.map(u => this.sanitize(u));
+    }
     if (currentUser.site === UserSite.REUNION) {
-      // Tous les collaborateurs Madagascar actifs + lui-même
       const mgTeam = await this.repo.find({ where: { site: UserSite.MADAGASCAR, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const result = self ? [self, ...mgTeam] : mgTeam;
       return result.map(u => this.sanitize(u));
     }
-    // Collaborateur Madagascar : uniquement lui-même
     const self = await this.repo.findOne({ where: { id: currentUser.id } });
     return self ? [this.sanitize(self)] : [];
   }
 
   async getMyTeam(currentUser: User) {
-    if (currentUser.site === UserSite.REUNION) {
-      // Mes collaborateurs Madagascar
+    if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
+      const team = await this.repo.find({ where: { isActive: true }, order: { lastName: 'ASC', firstName: 'ASC' } });
+      return { referent: null, team: team.map(u => this.sanitize(u)) };
+    }
+    if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
+      const team = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, isActive: true } });
+      return { referent: null, team: team.map(u => this.sanitize(u)) };
+    }
+    if (currentUser.role === UserRole.CHEF_MISSION) {
       const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
-    // Collaborateur Madagascar : mon référent Réunion
+    if (currentUser.site === UserSite.REUNION) {
+      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      return { referent: null, team: team.map(u => this.sanitize(u)) };
+    }
     const referent = currentUser.referentId
       ? await this.repo.findOne({ where: { id: currentUser.referentId } })
       : null;
@@ -172,6 +198,18 @@ export class UsersService {
   async saveTheme(userId: number, prefs: Record<string, any>): Promise<Record<string, any>> {
     await this.repo.update(userId, { themePrefs: prefs });
     return prefs;
+  }
+
+  async getTaskCounts(): Promise<{ userId: number; count: number }[]> {
+    const rows = await this.taskRepo
+      .createQueryBuilder('t')
+      .select('t.assigneeId', 'userId')
+      .addSelect('COUNT(*)', 'count')
+      .where('t.assigneeId IS NOT NULL')
+      .andWhere('t.statut != :done', { done: TaskStatut.TERMINEE })
+      .groupBy('t.assigneeId')
+      .getRawMany();
+    return rows.map(r => ({ userId: Number(r.userId), count: Number(r.count) }));
   }
 
   private sanitize(user: User) {

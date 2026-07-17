@@ -23,10 +23,10 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Liste tous les utilisateurs' })
-  findAll() {
-    return this.usersService.findAll();
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE)
+  @ApiOperation({ summary: 'Liste les utilisateurs (filtrée selon le rôle)' })
+  findAll(@Req() req: any) {
+    return this.usersService.findAll(req.user);
   }
 
   /* ── Thème de l'utilisateur connecté ──────────────────────── */
@@ -68,6 +68,10 @@ export class UsersController {
   ) {
     return this.usersService.updateRH(id, dto);
   }
+
+  @Get('task-counts')
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE)
+  getTaskCounts() { return this.usersService.getTaskCounts(); }
 
   @Get('assignable')
   @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })

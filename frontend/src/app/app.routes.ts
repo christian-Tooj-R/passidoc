@@ -29,6 +29,31 @@ export const routes: Routes = [
     canActivate: [authGuard, pointageGuard],
     loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
   },
+  {
+    path: 'clients/:id/ai',
+    canActivate: [authGuard, pointageGuard],
+    loadComponent: () => import('./features/clients/ai-chat-fullscreen/ai-chat-fullscreen.component').then((m) => m.AiChatFullscreenComponent),
+  },
+  {
+    path: 'rh',
+    canActivate: [authGuard, pointageGuard],
+    loadComponent: () => import('./features/rh/rh.component').then((m) => m.RhComponent),
+    children: [
+      { path: '', redirectTo: 'salaries', pathMatch: 'full' },
+      {
+        path: 'salaries',
+        loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
+      },
+      {
+        path: 'salaries/:id',
+        loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
+      },
+      {
+        path: 'conges',
+        loadComponent: () => import('./features/conges-absences/conges-absences.component').then((m) => m.CongesAbsencesComponent),
+      },
+    ],
+  },
   
   // ── Layout principal (avec sidebar) ──────────────────────────────────────
   {
@@ -89,22 +114,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/secteurs-admin.component').then((m) => m.SecteursAdminComponent),
       },
       {
+        path: 'admin/pointage-config',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('./features/admin/pointage-config.component').then((m) => m.PointageConfigComponent),
+      },
+      {
         path: 'personnalisation',
         loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
       },
-      {
-        path: 'salaries',
-        canActivate: [authGuard, pointageGuard],
-        loadComponent: () => import('./features/salaries/salaries.component').then((m) => m.SalariesComponent),
-      },
-      {
-        path: 'salaries/:id',
-        loadComponent: () => import('./features/salaries/salaries-detail.component').then((m) => m.SalariesDetailComponent),
-      },
-      {
-        path: 'conges',
-        loadComponent: () => import('./features/conges-absences/conges-absences.component').then((m) => m.CongesAbsencesComponent),
-      },
+      { path: 'salaries',     redirectTo: '/rh/salaries',  pathMatch: 'full' },
+      { path: 'salaries/:id', redirectTo: '/rh/salaries/:id' },
+      { path: 'conges',       redirectTo: '/rh/conges',    pathMatch: 'full' },
     ],
   },
   {

@@ -393,7 +393,7 @@ export class CongesAbsencesComponent implements OnInit {
   });
 
   topTypes = computed(() =>
-    (this.stats()?.parType ?? []).filter(t => t.jours > 0).sort((a,b) => b.jours - a.jours).slice(0, 3)
+    (this.stats()?.parType ?? []).filter(t => t.jours > 0 && t.type !== 'RTT').sort((a,b) => b.jours - a.jours).slice(0, 3)
   );
 
   demandesFiltrees = computed(() => {
@@ -414,7 +414,7 @@ export class CongesAbsencesComponent implements OnInit {
   typesActifs = computed(() => {
     const seen = new Set<string>();
     this.allSoldes().forEach(r => Object.keys(r.soldes).forEach(t => seen.add(t)));
-    return [...seen] as TypeConge[];
+    return ([...seen] as TypeConge[]).filter(t => t !== 'RTT');
   });
 
   soldesRows = computed(() => {

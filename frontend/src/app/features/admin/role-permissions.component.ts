@@ -48,8 +48,7 @@ import { ToastService } from '../../core/services/toast.service';
         <div class="info-row">
           <mat-icon>info</mat-icon>
           <span>
-            Les administrateurs ont toujours accès à tout. Seuls les rôles
-            <strong>Expert Comptable</strong> et <strong>Collaborateur</strong> sont configurables.
+            Les administrateurs ont toujours accès à tout. Configurez les sections accessibles pour chaque rôle ci-dessous.
           </span>
         </div>
 
@@ -109,10 +108,10 @@ import { ToastService } from '../../core/services/toast.service';
     .perm-card { background: white; border: 1px solid #e8ecf0; border-radius: 20px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 
     /* Role tabs */
-    .role-tabs { display: flex; gap: 12px; margin-bottom: 24px; }
+    .role-tabs { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 24px; }
     .role-tab {
-      flex: 1; display: flex; align-items: center; gap: 14px;
-      padding: 16px 20px; border-radius: 14px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: 14px;
       border: 2px solid #e8ecf0; background: #f8fafc;
       cursor: pointer; transition: all .15s; text-align: left;
     }
@@ -208,8 +207,11 @@ export class RolePermissionsComponent implements OnInit {
 
   menuItems: MenuItemDef[] = MENU_ITEMS;
   roles = [
-    { key: 'EXPERT_COMPTABLE', label: 'Expert Comptable', icon: 'badge' },
-    { key: 'COLLABORATEUR',    label: 'Collaborateur',    icon: 'person' },
+    { key: 'EXPERT_COMPTABLE',  label: 'Expert-comptable',  icon: 'badge'           },
+    { key: 'CHEF_ANTENNE',      label: 'Chef d\'antenne',   icon: 'supervisor_account' },
+    { key: 'CHEF_MISSION',      label: 'Chef de mission',   icon: 'manage_accounts' },
+    { key: 'GERANT_MADAGASCAR', label: 'Gérant Madagascar', icon: 'business'        },
+    { key: 'COLLABORATEUR',     label: 'Collaborateur',     icon: 'person'          },
   ];
 
   activeRole = signal<string>('EXPERT_COMPTABLE');

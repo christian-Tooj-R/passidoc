@@ -59,13 +59,30 @@ export class AuthService {
   getToken(): string | null { return this._token(); }
   currentUser(): User | null { return this._user(); }
   isLoggedIn(): boolean { return !!this._token(); }
-  isAdmin(): boolean { return this._user()?.role === 'ADMIN'; }
-  isExpert(): boolean { return this._user()?.role === 'EXPERT_COMPTABLE'; }
-  isCollaborateur(): boolean { return this._user()?.role === 'COLLABORATEUR'; }
-  isReunion(): boolean { return this._user()?.site === 'REUNION'; }
-  isMadagascar(): boolean { return this._user()?.site === 'MADAGASCAR'; }
-  canManagePortefeuilles(): boolean { return this.isAdmin() || this.isExpert() || this.isReunion(); }
-  canCreateDossier(): boolean { return this.isAdmin() || this.isExpert() || this.isCollaborateur(); }
+  isAdmin(): boolean           { return this._user()?.role === 'ADMIN'; }
+  isExpert(): boolean          { return this._user()?.role === 'EXPERT_COMPTABLE'; }
+  isChefAntenne(): boolean     { return this._user()?.role === 'CHEF_ANTENNE'; }
+  isChefMission(): boolean     { return this._user()?.role === 'CHEF_MISSION'; }
+  isCollaborateur(): boolean   { return this._user()?.role === 'COLLABORATEUR'; }
+  isGerantMadagascar(): boolean{ return this._user()?.role === 'GERANT_MADAGASCAR'; }
+  isReunion(): boolean         { return this._user()?.site === 'REUNION'; }
+  isMadagascar(): boolean      { return this._user()?.site === 'MADAGASCAR'; }
+
+  hasFullVisibility(): boolean {
+    const r = this._user()?.role;
+    return r === 'ADMIN' || r === 'EXPERT_COMPTABLE';
+  }
+  canManagePortefeuilles(): boolean {
+    return this.isAdmin() || this.isExpert() || this.isChefAntenne() || this.isReunion();
+  }
+  canCreateDossier(): boolean {
+    const r = this._user()?.role;
+    return ['ADMIN','EXPERT_COMPTABLE','CHEF_ANTENNE','CHEF_MISSION','COLLABORATEUR'].includes(r ?? '');
+  }
+  canAssignTasks(): boolean {
+    const r = this._user()?.role;
+    return ['ADMIN','EXPERT_COMPTABLE','CHEF_ANTENNE','CHEF_MISSION'].includes(r ?? '') || this.isReunion();
+  }
 
   private setSession(res: any) {
     localStorage.setItem('token', res.access_token);

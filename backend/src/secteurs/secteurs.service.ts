@@ -53,7 +53,8 @@ export class SecteursService {
 
   async update(id: number, dto: UpdateSecteurDto): Promise<Secteur> {
     const secteur = await this.findOne(id);
-    Object.assign(secteur, dto);
+    const patch = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== undefined));
+    Object.assign(secteur, patch);
     return this.repo.save(secteur);
   }
 
