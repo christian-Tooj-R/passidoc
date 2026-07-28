@@ -1,18 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { CongeAbsence, TypeConge, StatutConge } from '../entities/conge-absence.entity';
 import { SoldeConge } from '../entities/solde-conge.entity';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class CongesAbsencesService {
+  private readonly logger = new Logger(CongesAbsencesService.name);
+
   private readonly TYPE_LABELS: Record<string, string> = {
     CONGES_PAYES:       'Congés payés',
-    RTT:                'RTT',
     MALADIE:            'Maladie',
     MATERNITE:          'Maternité',
     PATERNITE:          'Paternité',
@@ -74,7 +76,7 @@ export class CongesAbsencesService {
 
     const solde = await this.getSoldeForType(dto.userId, dto.typeConge, new Date(dto.dateDebut).getFullYear());
     const disponible = Number(solde.joursAcquis) - Number(solde.joursPris) - Number(solde.joursEnAttente);
-    if (['CONGES_PAYES', 'RTT', 'RECUPERATION'].includes(dto.typeConge) && dto.nombreJours > disponible) {
+    if (['CONGES_PAYES', 'RECUPERATION'].includes(dto.typeConge) && dto.nombreJours > disponible) {
       throw new BadRequestException(`Solde insuffisant. Disponible : ${disponible} jours`);
     }
 
@@ -238,17 +240,17 @@ export class CongesAbsencesService {
 
     const conges = await qb.getMany();
 
-    // Ne retourner que les infos nécessaires (motif masqué)
     return conges.map(c => ({
       id:          c.id,
       userId:      c.userId,
       firstName:   (c as any).user?.firstName ?? '',
       lastName:    (c as any).user?.lastName  ?? '',
+      site:        (c as any).user?.site       ?? '',
+      typeConge:   c.typeConge,
       dateDebut:   c.dateDebut,
       dateFin:     c.dateFin,
       nombreJours: Number(c.nombreJours),
       statut:      c.statut,
-      // typeConge volontairement omis
     }));
   }
 
@@ -349,5 +351,196 @@ export class CongesAbsencesService {
       commentaire:   conge.commentaireRH,
       appUrl,
     });
+  }
+
+  /* ── Acquisition mensuelle automatique (2,5 j/mois) ───────────── */
+
+  // Tous les 1ers du mois à 00:05
+  @Cron('5 0 1 * *')
+  async crediterAcquisitionMensuelle(): Promise<void> {
+    const now   = new Date();
+    const annee = now.getFullYear();
+    const mois  = now.getMonth() + 1;
+
+    // Tous les utilisateurs actifs sauf ADMIN
+    const users = await this.userRepo.find({
+      where: [
+        { role: UserRole.COLLABORATEUR },
+        { role: UserRole.CHEF_MISSION },
+        { role: UserRole.CHEF_ANTENNE },
+        { role: UserRole.EXPERT_COMPTABLE },
+      ],
+    });
+
+    let credites = 0;
+
+    for (const user of users) {
+      // Trouver ou créer le solde CONGES_PAYES de l'année
+      let solde = await this.soldeRepo.findOne({
+        where: { userId: user.id, typeConge: TypeConge.CONGES_PAYES, annee },
+      });
+
+      if (!solde) {
+        solde = this.soldeRepo.create({
+          userId:         user.id,
+          typeConge:      TypeConge.CONGES_PAYES,
+          annee,
+          joursAcquis:    0,
+          joursPris:      0,
+          joursEnAttente: 0,
+        });
+      }
+
+      // Garde-fou : ne pas créditer deux fois le même mois
+      // On vérifie que joursAcquis < mois * 2.5 (plafond attendu)
+      const plafondAttendu = mois * 2.5;
+      if (Number(solde.joursAcquis) >= plafondAttendu) {
+        continue;
+      }
+
+      solde.joursAcquis = Number(solde.joursAcquis) + 2.5;
+      await this.soldeRepo.save(solde);
+      credites++;
+    }
+
+    this.logger.log(
+      `Acquisition mensuelle ${mois}/${annee} : ${credites}/${users.length} utilisateurs crédités de 2,5 j`,
+    );
+  }
+
+  // Déclencher manuellement (admin uniquement, via endpoint dédié)
+  async declencherAcquisitionManuellement(): Promise<{ credites: number; total: number }> {
+    await this.crediterAcquisitionMensuelle();
+    const total = await this.userRepo.count({
+      where: [
+        { role: UserRole.COLLABORATEUR },
+        { role: UserRole.CHEF_MISSION },
+        { role: UserRole.CHEF_ANTENNE },
+        { role: UserRole.EXPERT_COMPTABLE },
+      ],
+    });
+    return { credites: total, total };
+  }
+
+  /* ── Basculement annuel du reliquat (1er janvier) ──────────────── */
+
+  // Le 1er janvier à 00h10 (après le crédit mensuel de 00h05)
+  @Cron('10 0 1 1 *')
+  async basculerReliquatAnnuel(): Promise<void> {
+    const anneeNouvelle   = new Date().getFullYear();
+    const anneePrecedente = anneeNouvelle - 1;
+
+    const users = await this.userRepo.find({
+      where: [
+        { role: UserRole.COLLABORATEUR },
+        { role: UserRole.CHEF_MISSION },
+        { role: UserRole.CHEF_ANTENNE },
+        { role: UserRole.EXPERT_COMPTABLE },
+      ],
+    });
+
+    let bascules = 0;
+
+    for (const user of users) {
+      const soldePrev = await this.soldeRepo.findOne({
+        where: { userId: user.id, typeConge: TypeConge.CONGES_PAYES, annee: anneePrecedente },
+      });
+
+      if (!soldePrev) continue;
+
+      const reliquat = Math.max(
+        0,
+        Number(soldePrev.joursAcquis) - Number(soldePrev.joursPris) - Number(soldePrev.joursEnAttente),
+      );
+
+      if (reliquat === 0) continue;
+
+      // Trouver ou créer le solde de la nouvelle année
+      let soldeNew = await this.soldeRepo.findOne({
+        where: { userId: user.id, typeConge: TypeConge.CONGES_PAYES, annee: anneeNouvelle },
+      });
+
+      if (!soldeNew) {
+        soldeNew = this.soldeRepo.create({
+          userId:         user.id,
+          typeConge:      TypeConge.CONGES_PAYES,
+          annee:          anneeNouvelle,
+          joursAcquis:    0,
+          joursPris:      0,
+          joursEnAttente: 0,
+        });
+      }
+
+      soldeNew.joursAcquis = Number(soldeNew.joursAcquis) + reliquat;
+      await this.soldeRepo.save(soldeNew);
+
+      // Zéroter le reliquat de l'année source pour garantir l'idempotence
+      soldePrev.joursAcquis = Number(soldePrev.joursPris) + Number(soldePrev.joursEnAttente);
+      await this.soldeRepo.save(soldePrev);
+
+      bascules++;
+    }
+
+    this.logger.log(
+      `Basculement reliquat ${anneePrecedente}→${anneeNouvelle} : ${bascules} utilisateurs`,
+    );
+  }
+
+  async declencherBasculementManuellement(anneeSource?: number): Promise<{ bascules: number; details: { userId: number; nom: string; reliquat: number }[] }> {
+    const anneePrecedente = anneeSource ?? (new Date().getFullYear() - 1);
+    const anneeNouvelle   = anneePrecedente + 1;
+
+    const users = await this.userRepo.find({
+      where: [
+        { role: UserRole.COLLABORATEUR },
+        { role: UserRole.CHEF_MISSION },
+        { role: UserRole.CHEF_ANTENNE },
+        { role: UserRole.EXPERT_COMPTABLE },
+      ],
+    });
+
+    const details: { userId: number; nom: string; reliquat: number }[] = [];
+
+    for (const user of users) {
+      const soldePrev = await this.soldeRepo.findOne({
+        where: { userId: user.id, typeConge: TypeConge.CONGES_PAYES, annee: anneePrecedente },
+      });
+
+      if (!soldePrev) continue;
+
+      const reliquat = Math.max(
+        0,
+        Number(soldePrev.joursAcquis) - Number(soldePrev.joursPris) - Number(soldePrev.joursEnAttente),
+      );
+
+      if (reliquat === 0) continue;
+
+      let soldeNew = await this.soldeRepo.findOne({
+        where: { userId: user.id, typeConge: TypeConge.CONGES_PAYES, annee: anneeNouvelle },
+      });
+
+      if (!soldeNew) {
+        soldeNew = this.soldeRepo.create({
+          userId:         user.id,
+          typeConge:      TypeConge.CONGES_PAYES,
+          annee:          anneeNouvelle,
+          joursAcquis:    0,
+          joursPris:      0,
+          joursEnAttente: 0,
+        });
+      }
+
+      soldeNew.joursAcquis = Number(soldeNew.joursAcquis) + reliquat;
+      await this.soldeRepo.save(soldeNew);
+
+      // Zéroter le reliquat de l'année source pour garantir l'idempotence
+      soldePrev.joursAcquis = Number(soldePrev.joursPris) + Number(soldePrev.joursEnAttente);
+      await this.soldeRepo.save(soldePrev);
+
+      details.push({ userId: user.id, nom: `${user.firstName} ${user.lastName}`, reliquat });
+    }
+
+    this.logger.log(`Basculement manuel ${anneePrecedente}→${anneeNouvelle} : ${details.length} utilisateurs`);
+    return { bascules: details.length, details };
   }
 }

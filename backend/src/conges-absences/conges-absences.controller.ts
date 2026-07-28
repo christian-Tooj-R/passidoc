@@ -180,4 +180,24 @@ export class CongesAbsencesController {
   ) {
     return this.svc.updateSolde(userId, dto.typeConge, dto.annee, dto.joursAcquis);
   }
+
+  @Post('admin/acquisition-mensuelle')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Déclencher manuellement l\'acquisition mensuelle (+2,5 j)' })
+  declencherAcquisition() {
+    return this.svc.declencherAcquisitionManuellement();
+  }
+
+  @Post('admin/basculement-reliquat')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Basculer le reliquat de l\'année N vers l\'année N+1' })
+  declencherBasculement(@Body() body?: { anneeSource?: number }) {
+    return this.svc.declencherBasculementManuellement(body?.anneeSource);
+  }
 }

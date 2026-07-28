@@ -10,7 +10,7 @@ interface NavItem { label: string; icon: string; route: string; }
 const NAV: NavItem[] = [
   { label: 'Collaborateurs',    icon: 'badge',        route: '/rh/salaries'    },
   { label: 'Congés & Absences', icon: 'event_busy',   route: '/rh/conges'      },
-  { label: 'Calendrier',        icon: 'calendar_month', route: '/rh/calendrier' },
+  { label: 'Agenda',            icon: 'calendar_month', route: '/rh/calendrier' },
 ];
 
 @Component({
