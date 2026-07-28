@@ -126,6 +126,15 @@ export class Client {
   @Column({ type: 'simple-json', nullable: true })
   typesFluxActifs: TypeFlux[];
 
+  // Directeur / associé responsable du dossier
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'directeurId' })
+  directeur: User;
+
+  @Column({ nullable: true })
+  directeurId: number;
+
+  // Collaborateur Réunion qui traite le dossier au quotidien
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'responsableId' })
   responsable: User;

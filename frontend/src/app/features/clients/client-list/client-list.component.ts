@@ -111,15 +111,29 @@ type ViewMode = 'grid' | 'list';
         </button>
 
         @if (auth.isAdmin()) {
-          <!-- Filtre collaborateur -->
-          <div class="collab-select-wrap">
-            <mat-icon class="collab-icon">group</mat-icon>
-            <select class="collab-select" [value]="collabFilter() ?? ''"
-                    (change)="setCollabFilter(+$any($event.target).value || null)">
-              <option value="">Tous les collaborateurs</option>
-              @for (u of uniqueCollabs(); track u.id) {
-                <option [value]="u.id">{{ u.label }}</option>
-              }
+          <!-- Filtre intervenants -->
+          <div class="iv-filter">
+            <mat-icon class="iv-icon">group</mat-icon>
+            @if (collabFilter()) {
+              <span class="iv-chip">
+                {{ collabFilterLabel() }}
+                <button class="iv-chip-x" (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+              </span>
+            } @else {
+              <select class="iv-select"
+                (change)="setCollabFilter(+$any($event.target).value || null); $any($event.target).value = ''">
+                <option value="">Intervenants…</option>
+                @for (u of uniqueCollabs(); track u.id) {
+                  <option [value]="u.id">{{ u.label }}</option>
+                }
+              </select>
+            }
+            <select class="iv-fonc"
+              (change)="fonctionFilter.set($any($event.target).value)">
+              <option value="" [selected]="fonctionFilter()===''">Toutes fonctions</option>
+              <option value="DIRECTEUR"   [selected]="fonctionFilter()==='DIRECTEUR'">Directeur</option>
+              <option value="COLLAB_RUN"  [selected]="fonctionFilter()==='COLLAB_RUN'">Collab. RUN</option>
+              <option value="COLLAB_MADA" [selected]="fonctionFilter()==='COLLAB_MADA'">Collab. MADA</option>
             </select>
           </div>
 
@@ -208,6 +222,27 @@ type ViewMode = 'grid' | 'list';
                     </div>
                     <span class="fp-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
                   </div>
+                  <!-- Intervenants -->
+                  <div class="folder-interv">
+                    @if (c.directeur) {
+                      <span class="fi-av fi-av--dir" [title]="'Directeur : ' + c.directeur.firstName + ' ' + c.directeur.lastName">
+                        {{ c.directeur.firstName[0] }}{{ c.directeur.lastName[0] }}
+                      </span>
+                    }
+                    @if (c.responsable) {
+                      <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                        {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
+                      </span>
+                    }
+                    @if (c.collaborateurMg) {
+                      <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
+                        {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                      </span>
+                    }
+                    @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
+                      <span class="fi-none">Non assigné</span>
+                    }
+                  </div>
                 </div>
 
               </div>
@@ -223,7 +258,7 @@ type ViewMode = 'grid' | 'list';
           <div class="list-header">
             <span class="lh-name">Nom</span>
             <span class="lh-site">Site</span>
-            <span class="lh-resp">Responsable</span>
+            <span class="lh-resp">Intervenants</span>
             <span class="lh-score">Complétude</span>
             <span class="lh-status">Statut</span>
             <span class="lh-action"></span>
@@ -256,12 +291,24 @@ type ViewMode = 'grid' | 'list';
                 {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
               </span>
 
-              <!-- Responsable -->
+              <!-- Intervenants -->
               <div class="lr-resp">
+                @if (c.directeur) {
+                  <span class="fi-av fi-av--dir" [title]="'Directeur : ' + c.directeur.firstName + ' ' + c.directeur.lastName">
+                    {{ c.directeur.firstName[0] }}{{ c.directeur.lastName[0] }}
+                  </span>
+                }
                 @if (c.responsable) {
-                  <div class="resp-av">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
-                  <span>{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                } @else {
+                  <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                    {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
+                  </span>
+                }
+                @if (c.collaborateurMg) {
+                  <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
+                    {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                  </span>
+                }
+                @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
                   <span class="resp-none">—</span>
                 }
               </div>
@@ -400,19 +447,43 @@ type ViewMode = 'grid' | 'list';
     .fdot--red    { background: #BA1A1A; }
     .fchip-sep { width: 1px; height: 20px; background: #E0E2EC; margin: 0 2px; }
     .fchip--me.fchip--active { background: #E3F2FD !important; border-color: #1565C0; color: #1565C0; }
-    /* Sélecteur collaborateur */
-    .collab-select-wrap {
+    /* Filtre intervenants */
+    .iv-filter {
       display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid #C8C6CA; border-radius: 8px; padding: 5px 10px;
+      border: 1px solid #C8C6CA; border-radius: 8px; padding: 4px 10px;
       background: transparent; transition: border-color .12s;
     }
-    .collab-select-wrap:focus-within { border-color: #1565C0; }
-    .collab-icon { font-size: 14px; width: 14px; height: 14px; color: #44474F; }
-    .collab-select {
+    .iv-filter:focus-within { border-color: #6366f1; }
+    .iv-icon { font-size: 14px; width: 14px; height: 14px; color: #44474F; }
+    .iv-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #EEF2FF; color: #3730A3; font-size: 12px; font-weight: 600;
+      padding: 1px 4px 1px 8px; border-radius: 6px;
+    }
+    .iv-chip-x {
+      background: none; border: none; cursor: pointer; padding: 0;
+      display: flex; align-items: center; color: #6366f1;
+    }
+    .iv-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .iv-select, .iv-fonc {
       border: none; background: transparent; outline: none;
       font-size: 12.5px; font-weight: 500; color: #44474F;
       font-family: 'Inter', sans-serif; cursor: pointer;
     }
+    .iv-fonc {
+      border-left: 1px solid #E0E2EC; padding-left: 8px; margin-left: 2px;
+    }
+    /* Avatars intervenants */
+    .folder-interv { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+    .fi-av {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      font-size: 8.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      cursor: default; text-transform: uppercase;
+    }
+    .fi-av--dir { background: #EDE9FE; color: #5B21B6; }
+    .fi-av--run { background: #C8F8EE; color: #006B57; }
+    .fi-av--mg  { background: #DDE3EA; color: #162351; }
+    .fi-none { font-size: 10px; color: #C8C6CA; font-style: italic; }
     /* Barre de complétude sur les folder cards */
     .folder-completude { width: 100%; margin-top: 6px; }
     .fc-track { height: 3px; background: #E8EAED; border-radius: 2px; overflow: hidden; }
@@ -672,6 +743,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   siteFilter      = signal('');
   mesDossiers     = signal(false);
   collabFilter    = signal<number | null>(null);
+  fonctionFilter  = signal<string>('');
   sortKey         = signal<SortKey>('nom');
   sortDir         = signal<'asc'|'desc'>('asc');
   viewMode        = signal<ViewMode>('grid');
@@ -688,7 +760,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const seen = new Set<number>();
     const out: CollabOption[] = [];
     for (const c of this.clients()) {
-      for (const u of [c.responsable, c.collaborateurMg]) {
+      for (const u of [c.directeur, c.responsable, c.collaborateurMg]) {
         if (u && !seen.has(u.id)) {
           seen.add(u.id);
           out.push({ id: u.id, label: `${u.firstName} ${u.lastName}` });
@@ -696,6 +768,11 @@ export class ClientListComponent implements OnInit, OnDestroy {
       }
     }
     return out.sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  collabFilterLabel = computed(() => {
+    const id = this.collabFilter();
+    return id ? (this.uniqueCollabs().find(u => u.id === id)?.label ?? '') : '';
   });
 
   filteredClients = computed(() => {
@@ -715,8 +792,14 @@ export class ClientListComponent implements OnInit, OnDestroy {
       if (h === 'ok'      && score < 80)                    return false;
       if (h === 'partial' && (score < 50 || score >= 80))   return false;
       if (h === 'alert'   && score >= 50)                   return false;
-      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId) return false;
-      if (collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab)  return false;
+      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId && c.directeur?.id !== meId) return false;
+      if (collab) {
+        const fonc = this.fonctionFilter();
+        if (fonc === 'DIRECTEUR'   && c.directeur?.id     !== collab) return false;
+        if (fonc === 'COLLAB_RUN'  && c.responsable?.id   !== collab) return false;
+        if (fonc === 'COLLAB_MADA' && c.collaborateurMg?.id !== collab) return false;
+        if (!fonc && c.directeur?.id !== collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab) return false;
+      }
       return true;
     });
 

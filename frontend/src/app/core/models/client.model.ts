@@ -69,6 +69,7 @@ export interface Client {
   completude: number;
   isActive: boolean;
   typesFluxActifs?: TypeFlux[];
+  directeur?: Responsable;
   responsable?: Responsable;
   collaborateurMg?: Responsable;
   ficheIdentite?: FicheIdentite;

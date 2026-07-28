@@ -286,13 +286,24 @@ interface TabGroup {
                 <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
                   {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                 </div>
+                @if (client.directeur) {
+                  <div class="hc-info__row">
+                    <div class="hc-info__ico-wrap hc-info__ico-wrap--purple">
+                      <mat-icon>manage_accounts</mat-icon>
+                    </div>
+                    <div class="hc-info__text">
+                      <span class="hc-info__lbl">Directeur</span>
+                      <span class="hc-info__val">{{ client.directeur.firstName }} {{ client.directeur.lastName }}</span>
+                    </div>
+                  </div>
+                }
                 @if (client.responsable) {
                   <div class="hc-info__row">
                     <div class="hc-info__ico-wrap hc-info__ico-wrap--blue">
                       <mat-icon>person</mat-icon>
                     </div>
                     <div class="hc-info__text">
-                      <span class="hc-info__lbl">Expert-comptable</span>
+                      <span class="hc-info__lbl">Collaborateur RUN</span>
                       <span class="hc-info__val">{{ client.responsable.firstName }} {{ client.responsable.lastName }}</span>
                     </div>
                   </div>
@@ -303,7 +314,7 @@ interface TabGroup {
                       <mat-icon>supervisor_account</mat-icon>
                     </div>
                     <div class="hc-info__text">
-                      <span class="hc-info__lbl">Collaborateur</span>
+                      <span class="hc-info__lbl">Collaborateur MADA</span>
                       <span class="hc-info__val">{{ client.collaborateurMg.firstName }} {{ client.collaborateurMg.lastName }}</span>
                     </div>
                   </div>
@@ -730,6 +741,8 @@ interface TabGroup {
       display: flex; align-items: center; justify-content: center;
     }
     .hc-info__ico-wrap mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .hc-info__ico-wrap--purple { background: #EDE9FE; }
+    .hc-info__ico-wrap--purple mat-icon { color: #5B21B6; }
     .hc-info__ico-wrap--blue { background: #E8F0FE; }
     .hc-info__ico-wrap--blue mat-icon { color: #1565C0; }
     .hc-info__ico-wrap--teal { background: #D7F5EC; }
