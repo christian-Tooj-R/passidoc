@@ -21,7 +21,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../../../../shar
       <div class="tab-header">
         <h3>Documents</h3>
         <label class="upload-btn">
-          <mat-icon>upload</mat-icon> Uploader un fichier
+          <mat-icon>upload</mat-icon> Importer un fichier
           <input type="file" hidden (change)="upload($event)" />
         </label>
       </div>
@@ -65,7 +65,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../../../../shar
       @if (documents.length === 0 && !uploading) {
         <div class="empty-state">
           <mat-icon>cloud_upload</mat-icon>
-          <p>Aucun document. Uploadez votre premier fichier.</p>
+          <p>Aucun document. Importez votre premier fichier.</p>
         </div>
       }
     </div>
@@ -96,7 +96,7 @@ export class DocumentsTabComponent implements OnInit {
   readonly colonnes: ColumnDef[] = [
     { key: 'nom',        label: 'Fichier' },
     { key: 'taille',     label: 'Taille' },
-    { key: 'uploadePar', label: 'Uploadé par' },
+    { key: 'uploadePar', label: 'Importé par' },
     { key: 'date',       label: 'Date' },
     { key: 'actions',    label: '' },
   ];
@@ -112,8 +112,8 @@ export class DocumentsTabComponent implements OnInit {
     if (!file) return;
     this.uploading = true;
     this.service.upload(this.clientId, file).subscribe({
-      next: () => { this.load(); this.uploading = false; this.toast.success('Fichier uploadé'); },
-      error: () => { this.uploading = false; this.toast.error('Erreur upload'); },
+      next: () => { this.load(); this.uploading = false; this.toast.success('Fichier importé'); },
+      error: () => { this.uploading = false; this.toast.error('Erreur lors de l\'import'); },
     });
   }
 
