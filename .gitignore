@@ -44,3 +44,4 @@ backend/src/migrations/*.js
 *.pdf
 ETAT_AVANCEMENT.md
 frontend/PRESENTATION_PROJET.md
+RAPPORT_*.md

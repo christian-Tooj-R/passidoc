@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsDateString, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatut, TaskPriorite, TaskType } from '../../entities/task.entity';
 
@@ -13,4 +13,5 @@ export class UpdateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() semaine?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() tempsExecution?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() heuresSup?: number;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() anyoneCanTake?: boolean;
 }

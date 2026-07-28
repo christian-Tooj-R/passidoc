@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskPriorite, TaskType } from '../../entities/task.entity';
 
@@ -13,4 +13,7 @@ export class CreateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() mois?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() annee?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() commentaire?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() anyoneCanTake?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() recurrenceType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() recurrenceJour?: number;
 }

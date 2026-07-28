@@ -21,11 +21,12 @@ import { ControleInterneTabComponent } from './tabs/controle-interne-tab/control
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
+import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'historique' | 'dossier-travail';
+  | 'documents' | 'historique' | 'dossier-travail' | 'canvas';
 
 interface TabGroup {
   label: string;
@@ -58,7 +59,7 @@ interface TabGroup {
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
-    AdnTabComponent, DossierTravailTabComponent,
+    AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -355,8 +356,9 @@ interface TabGroup {
                 @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
-@case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+                @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
           </div>
@@ -920,6 +922,7 @@ export class ClientDetailComponent implements OnInit {
         { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
         { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
         { id: 'dossier-travail',  icon: 'work_history', label: 'Dossier de travail' },
+        { id: 'canvas',           icon: 'grid_view',    label: 'Modèle Canvas' },
       ],
     },
     {

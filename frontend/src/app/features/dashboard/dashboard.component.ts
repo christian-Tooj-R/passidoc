@@ -85,6 +85,71 @@ const TYPE_LABELS: Record<string, string> = {
         }
       </div>
 
+      <!-- ══ QUALITÉ PAR PÔLE ═════════════════════════════════ -->
+      @if (clients.length > 0) {
+        <div class="pole-section">
+          <div class="pole-section__head">
+            <mat-icon class="pole-head-icon">public</mat-icon>
+            <span class="pole-head-title">Qualité de la relation par pôle</span>
+            <span class="pole-head-sub">Score moyen de santé des dossiers</span>
+          </div>
+          <div class="pole-grid">
+            <div class="pole-card pole-card--re">
+              <div class="pole-card__top">
+                <span class="pole-flag">🇷🇪</span>
+                <div class="pole-card__info">
+                  <h3 class="pole-card__name">La Réunion</h3>
+                  <span class="pole-card__total">{{ poleStats.reunion.total }} dossier{{ poleStats.reunion.total > 1 ? 's' : '' }}</span>
+                </div>
+                <div class="pole-card__score">
+                  <span class="pole-score-val" [class.psv--high]="poleStats.reunion.avg>=80" [class.psv--mid]="poleStats.reunion.avg>=50&&poleStats.reunion.avg<80" [class.psv--low]="poleStats.reunion.avg<50">{{ poleStats.reunion.avg }}%</span>
+                  <span class="pole-score-lbl">Score moy.</span>
+                </div>
+              </div>
+              <div class="pole-bar-wrap">
+                <div class="pole-bar"
+                  [style.width.%]="poleStats.reunion.avg"
+                  [class.pole-bar--high]="poleStats.reunion.avg>=80"
+                  [class.pole-bar--mid]="poleStats.reunion.avg>=50&&poleStats.reunion.avg<80"
+                  [class.pole-bar--low]="poleStats.reunion.avg<50">
+                </div>
+              </div>
+              <div class="pole-chips">
+                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.reunion.transmissibles }} Transmissibles</span>
+                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.reunion.encours }} En cours</span>
+                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.reunion.alertes }} En alerte</span>
+              </div>
+            </div>
+            <div class="pole-card pole-card--mg">
+              <div class="pole-card__top">
+                <span class="pole-flag">🇲🇬</span>
+                <div class="pole-card__info">
+                  <h3 class="pole-card__name">Madagascar</h3>
+                  <span class="pole-card__total">{{ poleStats.madagascar.total }} dossier{{ poleStats.madagascar.total > 1 ? 's' : '' }}</span>
+                </div>
+                <div class="pole-card__score">
+                  <span class="pole-score-val" [class.psv--high]="poleStats.madagascar.avg>=80" [class.psv--mid]="poleStats.madagascar.avg>=50&&poleStats.madagascar.avg<80" [class.psv--low]="poleStats.madagascar.avg<50">{{ poleStats.madagascar.avg }}%</span>
+                  <span class="pole-score-lbl">Score moy.</span>
+                </div>
+              </div>
+              <div class="pole-bar-wrap">
+                <div class="pole-bar"
+                  [style.width.%]="poleStats.madagascar.avg"
+                  [class.pole-bar--high]="poleStats.madagascar.avg>=80"
+                  [class.pole-bar--mid]="poleStats.madagascar.avg>=50&&poleStats.madagascar.avg<80"
+                  [class.pole-bar--low]="poleStats.madagascar.avg<50">
+                </div>
+              </div>
+              <div class="pole-chips">
+                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.madagascar.transmissibles }} Transmissibles</span>
+                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.madagascar.encours }} En cours</span>
+                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.madagascar.alertes }} En alerte</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- ══ PERFORMANCE ÉQUIPE ════════════════════════════════ -->
       @if (collabStats.length > 0) {
         <div class="perf-section">
@@ -303,6 +368,43 @@ const TYPE_LABELS: Record<string, string> = {
     .metric__icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .metric__value { font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -.5px; }
     .metric__tag { font-size: 11px; font-weight: 500; }
+
+    /* ── Qualité par pôle ─────────────────────────────── */
+    .pole-section {
+      background: #FFFBFE; border: 1px solid #E0E2EC;
+      border-radius: 24px; padding: 20px 24px; margin-bottom: 20px;
+    }
+    .pole-section__head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .pole-head-icon { color: #6366f1; font-size: 22px; width: 22px; height: 22px; }
+    .pole-head-title { font-size: 15px; font-weight: 700; color: #1A1C1E; }
+    .pole-head-sub { font-size: 12px; color: #6F7978; }
+    .pole-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pole-card { border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .pole-card--re { background: #EBF8F5; border: 1px solid #B2E5D8; }
+    .pole-card--mg { background: #EEF2FF; border: 1px solid #C7D2FE; }
+    .pole-card__top { display: flex; align-items: center; gap: 12px; }
+    .pole-flag { font-size: 28px; line-height: 1; flex-shrink: 0; }
+    .pole-card__info { flex: 1; min-width: 0; }
+    .pole-card__name { font-size: 15px; font-weight: 700; color: #1A1C1E; margin: 0 0 2px; }
+    .pole-card__total { font-size: 12px; color: #6F7978; }
+    .pole-card__score { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+    .pole-score-val { font-size: 28px; font-weight: 800; line-height: 1; letter-spacing: -.5px; }
+    .psv--high { color: #386A20; }
+    .psv--mid  { color: #7B4F00; }
+    .psv--low  { color: #BA1A1A; }
+    .pole-score-lbl { font-size: 10px; color: #6F7978; margin-top: 1px; }
+    .pole-bar-wrap { height: 8px; background: rgba(0,0,0,.08); border-radius: 6px; overflow: hidden; }
+    .pole-bar { height: 100%; border-radius: 6px; transition: width .6s ease; }
+    .pole-bar--high { background: linear-gradient(90deg, #4ade80, #22c55e); }
+    .pole-bar--mid  { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+    .pole-bar--low  { background: linear-gradient(90deg, #f87171, #ef4444); }
+    .pole-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pole-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; }
+    .pole-chip mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .pole-chip--green  { background: #C3EFAD; color: #386A20; }
+    .pole-chip--orange { background: #FFDDB0; color: #7B4F00; }
+    .pole-chip--red    { background: #FFDAD6; color: #BA1A1A; }
+    @media (max-width: 760px) { .pole-grid { grid-template-columns: 1fr; } }
 
     /* ── Performance équipe ──────────────────────────── */
     .perf-section {
@@ -611,6 +713,22 @@ export class DashboardComponent implements OnInit {
         y: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11, family: 'Inter' } } },
       },
     };
+  }
+
+  get poleStats() {
+    const calc = (site: string) => {
+      const list = this.clients.filter(c => c.site === site);
+      const total = list.length;
+      if (total === 0) return { total: 0, avg: 0, transmissibles: 0, encours: 0, alertes: 0 };
+      const avg = Math.round(list.reduce((s, c) => s + c.santePassation, 0) / total);
+      return {
+        total, avg,
+        transmissibles: list.filter(c => c.santePassation >= 80).length,
+        encours: list.filter(c => c.santePassation >= 50 && c.santePassation < 80).length,
+        alertes: list.filter(c => c.santePassation < 50).length,
+      };
+    };
+    return { reunion: calc('REUNION'), madagascar: calc('MADAGASCAR') };
   }
 
   get dossiersTransmissibles() { return this.clients.filter(c => c.santePassation >= 80).length; }

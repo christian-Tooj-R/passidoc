@@ -71,15 +71,15 @@ export class TasksService {
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
       // Voir toutes les tâches — pas de filtre
     } else if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
-      qb.andWhere('(assignee.antenne = :antenne OR task.assigneeId = :userId)', {
+      qb.andWhere('(assignee.antenne = :antenne OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', {
         antenne: currentUser.antenne, userId: currentUser.id,
       });
     } else if (currentUser.role === UserRole.CHEF_MISSION) {
-      qb.andWhere('(task.creePar = :userId OR assignee.referentId = :userId OR task.assigneeId = :userId)', {
+      qb.andWhere('(task.creePar = :userId OR assignee.referentId = :userId OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', {
         userId: currentUser.id,
       });
     } else {
-      qb.andWhere('(client.responsableId = :userId OR task.assigneeId = :userId)', { userId: currentUser.id });
+      qb.andWhere('(client.responsableId = :userId OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', { userId: currentUser.id });
     }
 
     return qb.getMany();
