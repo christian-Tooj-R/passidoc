@@ -123,4 +123,21 @@ export class CongesAbsencesService {
   annuler(id: number) {
     return this.http.patch<CongeAbsence>(`${this.base}/${id}/annuler`, {});
   }
+
+  getCalendrier(mois: number, annee: number, site?: string) {
+    let params = new HttpParams().set('mois', mois).set('annee', annee);
+    if (site) params = params.set('site', site);
+    return this.http.get<CalendrierAbsence[]>(`${this.base}/calendrier`, { params });
+  }
+}
+
+export interface CalendrierAbsence {
+  id: number;
+  userId: number;
+  firstName: string;
+  lastName:  string;
+  dateDebut:   string;
+  dateFin:     string;
+  nombreJours: number;
+  statut: StatutConge;
 }

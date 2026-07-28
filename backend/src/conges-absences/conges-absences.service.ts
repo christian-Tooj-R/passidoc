@@ -1,16 +1,34 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { CongeAbsence, TypeConge, StatutConge } from '../entities/conge-absence.entity';
 import { SoldeConge } from '../entities/solde-conge.entity';
 import { User } from '../entities/user.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class CongesAbsencesService {
+  private readonly TYPE_LABELS: Record<string, string> = {
+    CONGES_PAYES:       'Congés payés',
+    RTT:                'RTT',
+    MALADIE:            'Maladie',
+    MATERNITE:          'Maternité',
+    PATERNITE:          'Paternité',
+    SANS_SOLDE:         'Sans solde',
+    EVENEMENT_FAMILIAL: 'Événement familial',
+    RECUPERATION:       'Récupération',
+    AUTRE:              'Autre',
+  };
+
   constructor(
     @InjectRepository(CongeAbsence) private congeRepo: Repository<CongeAbsence>,
     @InjectRepository(SoldeConge)   private soldeRepo: Repository<SoldeConge>,
     @InjectRepository(User)         private userRepo: Repository<User>,
+    private readonly mailSvc: MailService,
+    private readonly jwtSvc:  JwtService,
+    private readonly config:  ConfigService,
   ) {}
 
   /* ── Demandes ──────────────────────────────────────────────── */
@@ -68,6 +86,9 @@ export class CongesAbsencesService {
       { joursEnAttente: () => `"joursEnAttente" + ${dto.nombreJours}` },
     );
 
+    // Notification email au manager
+    this._notifyManager(saved, user).catch(() => {});
+
     return this.findOne(saved.id);
   }
 
@@ -92,6 +113,9 @@ export class CongesAbsencesService {
       },
     );
 
+    // Notifier l'employé
+    this._notifyEmployee(await this.findOne(id), 'APPROUVEE').catch(() => {});
+
     return this.findOne(id);
   }
 
@@ -112,6 +136,9 @@ export class CongesAbsencesService {
       { userId: conge.userId, typeConge: conge.typeConge, annee },
       { joursEnAttente: () => `"joursEnAttente" - ${conge.nombreJours}` },
     );
+
+    // Notifier l'employé
+    this._notifyEmployee(await this.findOne(id), 'REFUSEE').catch(() => {});
 
     return this.findOne(id);
   }
@@ -189,6 +216,80 @@ export class CongesAbsencesService {
     return { annee: year, totalApprouves: total, enAttente, parType };
   }
 
+  /* ── Calendrier des absences ─────────────────────────────── */
+
+  async getCalendrier(mois: number, annee: number, site?: string): Promise<any[]> {
+    // Charger toutes les absences approuvées et en attente qui chevauchent le mois
+    const debut = `${annee}-${String(mois).padStart(2, '0')}-01`;
+    const finDuMois = new Date(annee, mois, 0); // dernier jour du mois
+    const fin   = `${annee}-${String(mois).padStart(2, '0')}-${String(finDuMois.getDate()).padStart(2, '0')}`;
+
+    const qb = this.congeRepo.createQueryBuilder('c')
+      .leftJoinAndSelect('c.user', 'u')
+      .where('c.statut IN (:...statuts)', { statuts: [StatutConge.APPROUVEE, StatutConge.EN_ATTENTE] })
+      .andWhere('c.dateDebut <= :fin',   { fin })
+      .andWhere('c.dateFin   >= :debut', { debut })
+      .orderBy('u.lastName', 'ASC')
+      .addOrderBy('c.dateDebut', 'ASC');
+
+    if (site) {
+      qb.andWhere('u.site = :site', { site });
+    }
+
+    const conges = await qb.getMany();
+
+    // Ne retourner que les infos nécessaires (motif masqué)
+    return conges.map(c => ({
+      id:          c.id,
+      userId:      c.userId,
+      firstName:   (c as any).user?.firstName ?? '',
+      lastName:    (c as any).user?.lastName  ?? '',
+      dateDebut:   c.dateDebut,
+      dateFin:     c.dateFin,
+      nombreJours: Number(c.nombreJours),
+      statut:      c.statut,
+      // typeConge volontairement omis
+    }));
+  }
+
+  /* ── Action email (validation sans login) ─────────────────── */
+
+  generateEmailActionToken(congeId: number): string {
+    return this.jwtSvc.sign({ sub: congeId, pur: 'email-action' });
+  }
+
+  async approuverParEmailToken(
+    congeId: number,
+    action: 'approuver' | 'refuser',
+    token: string,
+  ): Promise<{ statut: string; message: string }> {
+    // Vérifier le token
+    let payload: any;
+    try {
+      payload = this.jwtSvc.verify(token);
+    } catch {
+      throw new ForbiddenException('Lien expiré ou invalide');
+    }
+
+    if (payload.sub !== congeId || payload.pur !== 'email-action') {
+      throw new ForbiddenException('Token invalide pour cette demande');
+    }
+
+    const conge = await this.congeRepo.findOne({ where: { id: congeId } });
+    if (!conge) throw new NotFoundException('Demande introuvable');
+    if (conge.statut !== StatutConge.EN_ATTENTE) {
+      return { statut: conge.statut, message: 'Demande déjà traitée' };
+    }
+
+    if (action === 'approuver') {
+      await this.approuver(congeId, 0, 'Approuvé via email');
+      return { statut: StatutConge.APPROUVEE, message: 'Demande approuvée' };
+    } else {
+      await this.refuser(congeId, 0, 'Refusé via email');
+      return { statut: StatutConge.REFUSEE, message: 'Demande refusée' };
+    }
+  }
+
   /* ── Helpers ─────────────────────────────────────────────── */
 
   private async getSoldeForType(userId: number, typeConge: TypeConge, annee: number) {
@@ -206,5 +307,47 @@ export class CongesAbsencesService {
       ...rest,
       user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, site: user.site } : undefined,
     };
+  }
+
+  private async _notifyManager(conge: CongeAbsence, employee: User): Promise<void> {
+    if (!employee.referentId) return;
+
+    const manager = await this.userRepo.findOne({ where: { id: employee.referentId } });
+    if (!manager?.email) return;
+
+    const appUrl   = this.config.get<string>('APP_URL') ?? 'http://localhost:4200';
+    const apiUrl   = this.config.get<string>('API_URL') ?? 'http://localhost:3000/api';
+    const token    = this.generateEmailActionToken(conge.id);
+
+    await this.mailSvc.sendCongeNotificationManager({
+      managerEmail: manager.email,
+      managerName:  `${manager.firstName} ${manager.lastName}`,
+      employeeName: `${employee.firstName} ${employee.lastName}`,
+      typeConge:    this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge,
+      dateDebut:    conge.dateDebut,
+      dateFin:      conge.dateFin,
+      nombreJours:  Number(conge.nombreJours),
+      motif:        conge.motif,
+      approuverUrl: `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=approuver&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
+      refuserUrl:   `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=refuser&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
+    });
+  }
+
+  private async _notifyEmployee(conge: any, statut: 'APPROUVEE' | 'REFUSEE'): Promise<void> {
+    if (!conge.userId) return;
+    const employee = await this.userRepo.findOne({ where: { id: conge.userId } });
+    if (!employee?.email) return;
+
+    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:4200';
+    await this.mailSvc.sendCongeStatutEmployee({
+      employeeEmail: employee.email,
+      employeeName:  `${employee.firstName} ${employee.lastName}`,
+      statut,
+      typeConge:     this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge,
+      dateDebut:     conge.dateDebut,
+      dateFin:       conge.dateFin,
+      commentaire:   conge.commentaireRH,
+      appUrl,
+    });
   }
 }

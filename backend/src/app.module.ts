@@ -36,6 +36,7 @@ import { SecteursModule } from './secteurs/secteurs.module';
 import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
 import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
 import { HelpModule } from './help/help.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { HelpModule } from './help/help.module';
     CongesAbsencesModule,
     DossierTravailModule,
     HelpModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

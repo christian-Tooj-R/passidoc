@@ -1,7 +1,8 @@
 import {
   Controller, Get, Post, Patch, Body, Param, Query,
-  UseGuards, Req, ParseIntPipe, HttpCode,
+  UseGuards, Req, ParseIntPipe, HttpCode, Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { CongesAbsencesService } from './conges-absences.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -11,15 +12,54 @@ import { UserRole } from '../entities/user.entity';
 import { TypeConge, StatutConge } from '../entities/conge-absence.entity';
 
 @ApiTags('Congés & Absences')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('conges')
 export class CongesAbsencesController {
   constructor(private svc: CongesAbsencesService) {}
 
-  /* ── Demandes ─────────────────────────────────────────── */
+  /* ── Calendrier (public auth) ─────────────────────────────── */
+
+  @Get('calendrier')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Calendrier des absences (motif masqué)' })
+  @ApiQuery({ name: 'mois',  required: true  })
+  @ApiQuery({ name: 'annee', required: true  })
+  @ApiQuery({ name: 'site',  required: false })
+  getCalendrier(
+    @Query('mois')  mois:  string,
+    @Query('annee') annee: string,
+    @Query('site')  site?: string,
+  ) {
+    return this.svc.getCalendrier(Number(mois), Number(annee), site);
+  }
+
+  /* ── Action email (sans auth — token JWT dans l'URL) ────────── */
+
+  @Get(':id/email-action')
+  @ApiOperation({ summary: 'Approuver ou refuser via lien email' })
+  async emailAction(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('token')    token:    string,
+    @Query('action')   action:   'approuver' | 'refuser',
+    @Query('redirect') redirect: string,
+    @Res() res: Response,
+  ) {
+    const appUrl = redirect ?? 'http://localhost:4200/rh/conges';
+    try {
+      const result = await this.svc.approuverParEmailToken(id, action, token);
+      const msg = encodeURIComponent(result.message);
+      return res.redirect(`${appUrl}?email_action=${result.statut}&msg=${msg}`);
+    } catch (e: any) {
+      const msg = encodeURIComponent(e.message ?? 'Erreur');
+      return res.redirect(`${appUrl}?email_action=ERROR&msg=${msg}`);
+    }
+  }
+
+  /* ── Demandes ─────────────────────────────────────────────── */
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Liste toutes les demandes' })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'statut', required: false, enum: StatutConge })
@@ -37,6 +77,8 @@ export class CongesAbsencesController {
   }
 
   @Get('stats')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Statistiques congés' })
   @ApiQuery({ name: 'annee', required: false })
   getStats(@Query('annee') annee?: string) {
@@ -44,6 +86,8 @@ export class CongesAbsencesController {
   }
 
   @Get('mes-demandes')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Mes demandes de congés' })
   mesDemandes(@Req() req: any, @Query('annee') annee?: string) {
     return this.svc.findAll({
@@ -53,12 +97,16 @@ export class CongesAbsencesController {
   }
 
   @Get('mes-soldes')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Mes soldes de congés' })
   mesSoldes(@Req() req: any, @Query('annee') annee?: string) {
     return this.svc.getSoldes(req.user.id, annee ? Number(annee) : undefined);
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @HttpCode(201)
   @ApiOperation({ summary: 'Soumettre une demande de congé' })
   create(@Req() req: any, @Body() dto: {
@@ -74,6 +122,8 @@ export class CongesAbsencesController {
   }
 
   @Patch(':id/approuver')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Approuver une demande' })
   approuver(
@@ -85,6 +135,8 @@ export class CongesAbsencesController {
   }
 
   @Patch(':id/refuser')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Refuser une demande' })
   refuser(
@@ -96,14 +148,18 @@ export class CongesAbsencesController {
   }
 
   @Patch(':id/annuler')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Annuler sa propre demande' })
   annuler(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.svc.annuler(id, req.user.id);
   }
 
-  /* ── Soldes ───────────────────────────────────────────── */
+  /* ── Soldes ───────────────────────────────────────────────── */
 
   @Get('soldes/:userId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Soldes d\'un collaborateur' })
   getSoldes(
@@ -114,6 +170,8 @@ export class CongesAbsencesController {
   }
 
   @Patch('soldes/:userId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Mettre à jour le solde d\'un collaborateur' })
   updateSolde(

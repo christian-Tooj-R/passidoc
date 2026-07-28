@@ -52,6 +52,10 @@ export const routes: Routes = [
         path: 'conges',
         loadComponent: () => import('./features/conges-absences/conges-absences.component').then((m) => m.CongesAbsencesComponent),
       },
+      {
+        path: 'calendrier',
+        loadComponent: () => import('./features/conges-absences/conges-calendrier.component').then((m) => m.CongesCalendrierComponent),
+      },
     ],
   },
   
