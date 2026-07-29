@@ -39,6 +39,8 @@ import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
 import { HelpModule } from './help/help.module';
 import { MailModule } from './mail/mail.module';
 import { CanvasModule } from './canvas/canvas.module';
+import { SetupModule } from './setup/setup.module';
+import { TenantModule } from './tenant/tenant.module';
 
 @Module({
   imports: [
@@ -106,6 +108,8 @@ import { CanvasModule } from './canvas/canvas.module';
     HelpModule,
     MailModule,
     CanvasModule,
+    SetupModule,
+    TenantModule,
   ],
   controllers: [AppController],
   providers: [

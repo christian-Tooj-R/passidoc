@@ -14,6 +14,7 @@ import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
 import { ClientsService } from '../../../core/services/clients.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { Client } from '../../../core/models/client.model';
 import { CreateClientWizardComponent } from './create-client-wizard.component';
 
@@ -42,7 +43,7 @@ type ViewMode = 'grid' | 'list';
           <span class="bc-current">{{ auth.isAdmin() ? 'Tous les dossiers' : 'Mes dossiers' }}</span>
           @if (siteFilter()) {
             <mat-icon class="bc-sep">chevron_right</mat-icon>
-            <span class="bc-current">{{ siteFilter() === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}</span>
+            <span class="bc-current">{{ siteFilter() === 'REUNION' ? ('🇷🇪 ' + tenantSvc.poleLabel1()) : ('🇲🇬 ' + tenantSvc.poleLabel2()) }}</span>
           }
         </div>
 
@@ -132,8 +133,8 @@ type ViewMode = 'grid' | 'list';
               (change)="fonctionFilter.set($any($event.target).value)">
               <option value="" [selected]="fonctionFilter()===''">Toutes fonctions</option>
               <option value="DIRECTEUR"   [selected]="fonctionFilter()==='DIRECTEUR'">Directeur</option>
-              <option value="COLLAB_RUN"  [selected]="fonctionFilter()==='COLLAB_RUN'">Collab. RUN</option>
-              <option value="COLLAB_MADA" [selected]="fonctionFilter()==='COLLAB_MADA'">Collab. MADA</option>
+              <option value="COLLAB_RUN"  [selected]="fonctionFilter()==='COLLAB_RUN'">Collab. {{ tenantSvc.poleLabel1() }}</option>
+              <option value="COLLAB_MADA" [selected]="fonctionFilter()==='COLLAB_MADA'">Collab. {{ tenantSvc.poleLabel2() }}</option>
             </select>
           </div>
 
@@ -142,10 +143,10 @@ type ViewMode = 'grid' | 'list';
             <mat-icon>public</mat-icon> Tous les sites
           </button>
           <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
-            🇷🇪 La Réunion
+            🇷🇪 {{ tenantSvc.poleLabel1() }}
           </button>
           <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
-            🇲🇬 Madagascar
+            🇲🇬 {{ tenantSvc.poleLabel2() }}
           </button>
         }
       </div>
@@ -207,7 +208,7 @@ type ViewMode = 'grid' | 'list';
                   <span class="folder-name">{{ c.nom }}</span>
                   <div class="folder-sub-row">
                     <span class="folder-site" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
-                      {{ c.site === 'REUNION' ? '🇷🇪 Réunion' : '🇲🇬 Madagascar' }}
+                      {{ c.site === 'REUNION' ? ('🇷🇪 ' + tenantSvc.poleLabel1()) : ('🇲🇬 ' + tenantSvc.poleLabel2()) }}
                     </span>
                     @if (c.secteurActivite) {
                       <span class="folder-sec-sep">·</span>
@@ -288,7 +289,7 @@ type ViewMode = 'grid' | 'list';
 
               <!-- Site -->
               <span class="lr-site" [class]="c.site==='REUNION' ? 'site--re' : 'site--mg'">
-                {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                {{ c.site === 'REUNION' ? ('🇷🇪 ' + tenantSvc.poleLabel1()) : ('🇲🇬 ' + tenantSvc.poleLabel2()) }}
               </span>
 
               <!-- Intervenants -->
@@ -755,6 +756,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   private dialog      = inject(MatDialog);
   private notifStream = inject(NotificationStreamService);
   private sub         = new Subscription();
+  tenantSvc           = inject(TenantService);
 
   uniqueCollabs = computed<CollabOption[]>(() => {
     const seen = new Set<number>();

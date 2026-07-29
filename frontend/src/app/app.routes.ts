@@ -2,11 +2,18 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { pointageGuard } from './core/guards/pointage.guard';
+import { setupGuard, alreadySetupGuard } from './core/guards/setup.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   {
+    path: 'setup',
+    canActivate: [alreadySetupGuard],
+    loadComponent: () => import('./features/setup/setup-wizard.component').then(m => m.SetupWizardComponent),
+  },
+  {
     path: 'auth',
+    canActivate: [setupGuard],
     children: [
       {
         path: 'login',
@@ -26,17 +33,17 @@ export const routes: Routes = [
   // ── Pages plein écran (sans sidebar principale) ──────────────────────────
   {
     path: 'clients/:id',
-    canActivate: [authGuard, pointageGuard],
+    canActivate: [setupGuard, authGuard, pointageGuard],
     loadComponent: () => import('./features/clients/client-detail/client-detail.component').then((m) => m.ClientDetailComponent),
   },
   {
     path: 'clients/:id/ai',
-    canActivate: [authGuard, pointageGuard],
+    canActivate: [setupGuard, authGuard, pointageGuard],
     loadComponent: () => import('./features/clients/ai-chat-fullscreen/ai-chat-fullscreen.component').then((m) => m.AiChatFullscreenComponent),
   },
   {
     path: 'rh',
-    canActivate: [authGuard, pointageGuard],
+    canActivate: [setupGuard, authGuard, pointageGuard],
     loadComponent: () => import('./features/rh/rh.component').then((m) => m.RhComponent),
     children: [
       { path: '', redirectTo: 'salaries', pathMatch: 'full' },
@@ -62,7 +69,7 @@ export const routes: Routes = [
   // ── Layout principal (avec sidebar) ──────────────────────────────────────
   {
     path: '',
-    canActivate: [authGuard, pointageGuard],
+    canActivate: [setupGuard, authGuard, pointageGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
       {

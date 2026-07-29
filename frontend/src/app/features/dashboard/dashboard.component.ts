@@ -12,6 +12,7 @@ import { TasksService, Task } from '../../core/services/tasks.service';
 import { Client } from '../../core/models/client.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 Chart.register(...registerables);
 
@@ -98,7 +99,7 @@ const TYPE_LABELS: Record<string, string> = {
               <div class="pole-card__top">
                 <span class="pole-flag">🇷🇪</span>
                 <div class="pole-card__info">
-                  <h3 class="pole-card__name">La Réunion</h3>
+                  <h3 class="pole-card__name">{{ tenantSvc.poleLabel1() }}</h3>
                   <span class="pole-card__total">{{ poleStats.reunion.total }} dossier{{ poleStats.reunion.total > 1 ? 's' : '' }}</span>
                 </div>
                 <div class="pole-card__score">
@@ -124,7 +125,7 @@ const TYPE_LABELS: Record<string, string> = {
               <div class="pole-card__top">
                 <span class="pole-flag">🇲🇬</span>
                 <div class="pole-card__info">
-                  <h3 class="pole-card__name">Madagascar</h3>
+                  <h3 class="pole-card__name">{{ tenantSvc.poleLabel2() }}</h3>
                   <span class="pole-card__total">{{ poleStats.madagascar.total }} dossier{{ poleStats.madagascar.total > 1 ? 's' : '' }}</span>
                 </div>
                 <div class="pole-card__score">
@@ -278,10 +279,10 @@ const TYPE_LABELS: Record<string, string> = {
             <mat-icon>public</mat-icon> Tous
           </button>
           <button class="md-chip" [class.md-chip--active]="siteFilter==='REUNION'" (click)="filterSite('REUNION')">
-            🇷🇪 La Réunion
+            🇷🇪 {{ tenantSvc.poleLabel1() }}
           </button>
           <button class="md-chip" [class.md-chip--active]="siteFilter==='MADAGASCAR'" (click)="filterSite('MADAGASCAR')">
-            🇲🇬 Madagascar
+            🇲🇬 {{ tenantSvc.poleLabel2() }}
           </button>
         </div>
       </div>
@@ -299,7 +300,7 @@ const TYPE_LABELS: Record<string, string> = {
                 <h3 class="c-card__name">{{ client.nom }}</h3>
                 <span class="c-card__site" [class.site--re]="client.site==='REUNION'" [class.site--mg]="client.site==='MADAGASCAR'">
                   <mat-icon>location_on</mat-icon>
-                  {{ client.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
+                  {{ client.site === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
                 </span>
               </div>
               <div class="c-card__score-badge" [class.sb--high]="client.santePassation>=80" [class.sb--mid]="client.santePassation>=50&&client.santePassation<80" [class.sb--low]="client.santePassation<50">
@@ -750,7 +751,8 @@ export class DashboardComponent implements OnInit {
     ];
   }
 
-  private theme = inject(ThemeService);
+  private theme  = inject(ThemeService);
+  tenantSvc = inject(TenantService);
 
   /** Couleurs adaptatives selon le thème actif */
   private get chartTheme() {
