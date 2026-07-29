@@ -718,6 +718,7 @@ interface SiteGroup {
 })
 export class CongesCalendrierComponent implements OnInit {
   private cSvc  = inject(CongesAbsencesService);
+  private auth  = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router= inject(Router);
 
@@ -904,15 +905,19 @@ export class CongesCalendrierComponent implements OnInit {
 
   getTypeLabel(row: CollabRow, date: Date): string {
     const a = this._absence(row, date);
-    if (!a?.typeConge) return 'Absent';
+    if (!a) return 'Absent';
+    if (!this.auth.isAdmin()) return 'Absent';
     return TYPE_CONGE_LABELS[a.typeConge] ?? 'Absent';
   }
 
   getTooltip(row: CollabRow, date: Date): string {
     const a = this._absence(row, date);
     if (!a) return '';
-    const type   = TYPE_CONGE_LABELS[a.typeConge] ?? a.typeConge;
     const statut = a.statut === 'APPROUVEE' ? '✓ Approuvée' : '⏳ En attente';
+    if (!this.auth.isAdmin()) {
+      return `${row.lastName} ${row.firstName}\n${a.dateDebut} → ${a.dateFin} (${a.nombreJours}j)\n${statut}`;
+    }
+    const type = TYPE_CONGE_LABELS[a.typeConge] ?? a.typeConge;
     return `${row.lastName} ${row.firstName}\n${type}\n${a.dateDebut} → ${a.dateFin} (${a.nombreJours}j)\n${statut}`;
   }
 
