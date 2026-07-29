@@ -39,6 +39,10 @@ export class ClientsService {
     return this.http.patch<Client>(`${this.api}/${clientId}/assign-mg`, { collaborateurMgId });
   }
 
+  assignDirecteur(clientId: number, directeurId: number | null) {
+    return this.http.patch<Client>(`${this.api}/${clientId}/assign-directeur`, { directeurId });
+  }
+
 
   exportPdf(id: number) {
     return this.http.get(`${this.api}/${id}/export/pdf`, { responseType: 'blob' });

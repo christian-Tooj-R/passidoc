@@ -87,7 +87,7 @@ type ViewMode = 'grid' | 'list';
 
       </div>
 
-      <!-- ══ FILTER CHIPS ═══════════════════════════════════ -->
+      <!-- ══ FILTER BAR ══════════════════════════════════════ -->
       <div class="filter-bar">
 
         <!-- Complétude -->
@@ -111,45 +111,90 @@ type ViewMode = 'grid' | 'list';
           <mat-icon>person</mat-icon> Mes dossiers
         </button>
 
-        @if (auth.isAdmin()) {
-          <!-- Filtre intervenants -->
-          <div class="iv-filter">
-            <mat-icon class="iv-icon">group</mat-icon>
+        <div class="toolbar__spacer"></div>
+
+        <!-- Résumé filtres actifs -->
+        @if (activeFilterCount() > 0 && !showFilterPanel()) {
+          <div class="filter-active-summary">
             @if (collabFilter()) {
-              <span class="iv-chip">
-                {{ collabFilterLabel() }}
-                <button class="iv-chip-x" (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+              <span class="fas-chip">
+                <mat-icon>person</mat-icon>{{ collabFilterLabel() }}
+                <button (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
               </span>
-            } @else {
-              <select class="iv-select"
-                (change)="setCollabFilter(+$any($event.target).value || null); $any($event.target).value = ''">
-                <option value="">Intervenants…</option>
-                @for (u of uniqueCollabs(); track u.id) {
-                  <option [value]="u.id">{{ u.label }}</option>
-                }
-              </select>
             }
-            <select class="iv-fonc"
-              (change)="fonctionFilter.set($any($event.target).value)">
-              <option value="" [selected]="fonctionFilter()===''">Toutes fonctions</option>
-              <option value="DIRECTEUR"   [selected]="fonctionFilter()==='DIRECTEUR'">Directeur</option>
-              <option value="COLLAB_RUN"  [selected]="fonctionFilter()==='COLLAB_RUN'">Collab. {{ tenantSvc.poleLabel1() }}</option>
-              <option value="COLLAB_MADA" [selected]="fonctionFilter()==='COLLAB_MADA'">Collab. {{ tenantSvc.poleLabel2() }}</option>
-            </select>
+            @if (siteFilter()) {
+              <span class="fas-chip">
+                {{ siteFilter() === 'REUNION' ? '🇷🇪' : '🇲🇬' }} {{ siteFilter() === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
+                <button (click)="siteFilter.set('')"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+          </div>
+        }
+
+        <!-- Bouton Filtrer -->
+        <button class="btn-filter" [class.btn-filter--active]="showFilterPanel()" (click)="showFilterPanel.set(!showFilterPanel())">
+          <mat-icon>tune</mat-icon>
+          Filtrer
+          @if (activeFilterCount() > 0) {
+            <span class="btn-filter__badge">{{ activeFilterCount() }}</span>
+          }
+        </button>
+
+      </div>
+
+      <!-- ══ FILTER PANEL ══════════════════════════════════════ -->
+      @if (showFilterPanel()) {
+        <div class="filter-panel">
+
+          <!-- Intervenants / Fonction -->
+          <div class="fp-group">
+            <label class="fp-label">Intervenants / Fonction</label>
+            <div class="fp-interv">
+              <div class="iv-filter">
+                <mat-icon class="iv-icon">group</mat-icon>
+                @if (collabFilter()) {
+                  <span class="iv-chip">
+                    {{ collabFilterLabel() }}
+                    <button class="iv-chip-x" (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+                  </span>
+                } @else {
+                  <select class="iv-select"
+                    (change)="setCollabFilter(+$any($event.target).value || null); $any($event.target).value = ''">
+                    <option value="">— Sélectionner un intervenant —</option>
+                    @for (u of uniqueCollabs(); track u.id) {
+                      <option [value]="u.id">{{ u.label }}</option>
+                    }
+                  </select>
+                }
+              </div>
+            </div>
           </div>
 
-          <div class="fchip-sep"></div>
-          <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
-            <mat-icon>public</mat-icon> Tous les sites
-          </button>
-          <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
-            🇷🇪 {{ tenantSvc.poleLabel1() }}
-          </button>
-          <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
-            🇲🇬 {{ tenantSvc.poleLabel2() }}
-          </button>
-        }
-      </div>
+          <!-- Site -->
+          <div class="fp-group">
+            <label class="fp-label">Site</label>
+            <div class="fp-site-chips">
+              <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
+                <mat-icon>public</mat-icon> Tous
+              </button>
+              <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
+                🇷🇪 {{ tenantSvc.poleLabel1() }}
+              </button>
+              <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
+                🇲🇬 {{ tenantSvc.poleLabel2() }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Réinitialiser -->
+          @if (activeFilterCount() > 0) {
+            <button class="fp-reset" (click)="resetFilters()">
+              <mat-icon>restart_alt</mat-icon> Réinitialiser les filtres
+            </button>
+          }
+
+        </div>
+      }
 
       <!-- ══ LOADING ═══════════════════════════════════════ -->
       @if (loading()) {
@@ -474,6 +519,74 @@ type ViewMode = 'grid' | 'list';
     .iv-fonc {
       border-left: 1px solid #E0E2EC; padding-left: 8px; margin-left: 2px;
     }
+
+    /* Bouton Filtrer */
+    .btn-filter {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid #C8C6CA; background: transparent;
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 12.5px; font-weight: 600; color: #44474F;
+      cursor: pointer; font-family: 'Inter', sans-serif; transition: all .12s;
+      white-space: nowrap;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+    .btn-filter:hover { background: #E8EAED; }
+    .btn-filter--active { background: #E8DEF8; border-color: #6B4EFF; color: #21005D; }
+    .btn-filter__badge {
+      background: #6B4EFF; color: #fff; font-size: 10px; font-weight: 700;
+      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Résumé filtres actifs */
+    .filter-active-summary { display: flex; align-items: center; gap: 6px; }
+    .fas-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #EEF2FF; color: #3730A3; font-size: 11.5px; font-weight: 600;
+      padding: 2px 4px 2px 8px; border-radius: 6px;
+      mat-icon { font-size: 13px; width: 13px; height: 13px; }
+      button { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: #6366f1; }
+    }
+
+    /* ══ FILTER PANEL ══════════════════════════════════════ */
+    .filter-panel {
+      display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+      padding: 14px 20px 14px;
+      background: #F8F9FF;
+      border-bottom: 1px solid #C7CAFF;
+      flex-shrink: 0;
+      animation: fp-slide-in .15s ease;
+    }
+    @keyframes fp-slide-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fp-group { display: flex; flex-direction: column; gap: 7px; }
+    .fp-label {
+      font-size: 10px; font-weight: 700; color: #6366f1;
+      text-transform: uppercase; letter-spacing: .7px;
+    }
+    .fp-interv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .fp-interv .iv-filter {
+      background: #fff; border-color: #C7CAFF; min-width: 220px;
+    }
+    .fp-interv .iv-fonc {
+      border: 1px solid #C7CAFF; border-radius: 7px; padding: 5px 8px;
+      background: #fff; font-size: 12.5px; outline: none; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    .fp-site-chips { display: flex; align-items: center; gap: 6px; }
+    .fp-reset {
+      align-self: flex-end; margin-left: auto;
+      display: inline-flex; align-items: center; gap: 5px;
+      border: none; background: transparent; color: #B91C1C;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: 'Inter', sans-serif; padding: 4px 8px; border-radius: 7px;
+      transition: background .12s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: #FEE2E2; }
+    }
+
     /* Avatars intervenants */
     .folder-interv { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
     .fi-av {
@@ -750,6 +863,14 @@ export class ClientListComponent implements OnInit, OnDestroy {
   viewMode        = signal<ViewMode>('grid');
   confirmDeleteId = signal<number | null>(null);
   deleting        = signal(false);
+  showFilterPanel = signal(false);
+
+  activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.collabFilter()) count++;
+    if (this.siteFilter()) count++;
+    return count;
+  });
 
   searchCtrl = new FormControl('');
 
@@ -923,5 +1044,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
   setCollabFilter(id: number | null) {
     this.collabFilter.set(id);
     if (id !== null) this.mesDossiers.set(false);
+  }
+
+  resetFilters() {
+    this.collabFilter.set(null);
+    this.fonctionFilter.set('');
+    this.siteFilter.set('');
+    this.healthFilter.set('');
+    this.mesDossiers.set(false);
   }
 }
