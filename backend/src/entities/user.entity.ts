@@ -3,6 +3,7 @@ import {
   CreateDateColumn, UpdateDateColumn,
   ManyToOne, JoinColumn,
 } from 'typeorm';
+import { TenantConfig } from './tenant-config.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -27,6 +28,13 @@ export enum UserAntenne {
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  tenantId: number;
+
+  @ManyToOne(() => TenantConfig, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'tenantId' })
+  tenant: TenantConfig;
 
   @Column({ unique: true })
   email: string;

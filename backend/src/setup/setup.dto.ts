@@ -1,6 +1,9 @@
-import { IsString, IsEmail, MinLength, IsOptional } from 'class-validator';
+import { IsString, IsEmail, MinLength, IsOptional, Matches } from 'class-validator';
 
 export class SetupDto {
+  @IsString() @MinLength(2) @Matches(/^[a-z0-9-]+$/, { message: 'Le slug ne doit contenir que des lettres minuscules, chiffres ou tirets' })
+  slug: string;
+
   @IsString() @MinLength(2)
   nomSociete: string;
 

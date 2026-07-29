@@ -5,6 +5,9 @@ export class TenantConfig {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ unique: true, nullable: true })
+  slug: string;
+
   @Column()
   nomSociete: string;
 

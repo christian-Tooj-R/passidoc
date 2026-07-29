@@ -5,6 +5,7 @@ import {
 } from 'typeorm';
 import { TypeFlux } from './flux-mensuel.entity';
 import { User } from './user.entity';
+import { TenantConfig } from './tenant-config.entity';
 import { FicheIdentite } from './fiche-identite.entity';
 import { FluxMensuel } from './flux-mensuel.entity';
 import { Fournisseur } from './fournisseur.entity';
@@ -39,6 +40,13 @@ export enum SecteurActivite {
 export class Client {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  tenantId: number;
+
+  @ManyToOne(() => TenantConfig, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'tenantId' })
+  tenant: TenantConfig;
 
   @Column()
   nom: string;

@@ -9,12 +9,13 @@ export class TenantService {
     @InjectRepository(TenantConfig) private repo: Repository<TenantConfig>,
   ) {}
 
-  async getConfig(): Promise<TenantConfig | null> {
+  async getConfig(tenantId?: number): Promise<TenantConfig | null> {
+    if (tenantId) return this.repo.findOne({ where: { id: tenantId } });
     return this.repo.findOne({ where: {} });
   }
 
-  async updateConfig(dto: Partial<TenantConfig>): Promise<TenantConfig> {
-    const config = await this.repo.findOne({ where: {} });
+  async updateConfig(tenantId: number, dto: Partial<TenantConfig>): Promise<TenantConfig> {
+    const config = await this.repo.findOne({ where: { id: tenantId } });
     if (!config) throw new NotFoundException('Configuration introuvable');
     Object.assign(config, dto);
     return this.repo.save(config);

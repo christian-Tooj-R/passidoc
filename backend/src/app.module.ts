@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -41,6 +41,8 @@ import { MailModule } from './mail/mail.module';
 import { CanvasModule } from './canvas/canvas.module';
 import { SetupModule } from './setup/setup.module';
 import { TenantModule } from './tenant/tenant.module';
+import { TenantMiddleware } from './tenant/tenant.middleware';
+import { TenantConfig } from './entities/tenant-config.entity';
 
 @Module({
   imports: [
@@ -110,11 +112,17 @@ import { TenantModule } from './tenant/tenant.module';
     CanvasModule,
     SetupModule,
     TenantModule,
+    TypeOrmModule.forFeature([TenantConfig]),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    TenantMiddleware,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

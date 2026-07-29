@@ -1,10 +1,13 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { TenantService } from './tenant.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../entities/user.entity';
+import { UserRole, User } from '../entities/user.entity';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { TenantConfig } from '../entities/tenant-config.entity';
 
 @ApiTags('Tenant')
 @Controller('tenant')
@@ -13,8 +16,8 @@ export class TenantController {
 
   @Get('config')
   @ApiOperation({ summary: 'Récupère la configuration du cabinet (public)' })
-  getConfig() {
-    return this.tenantService.getConfig();
+  getConfig(@Req() req: Request & { tenant?: TenantConfig | null }) {
+    return this.tenantService.getConfig(req.tenant?.id);
   }
 
   @ApiBearerAuth()
@@ -22,7 +25,7 @@ export class TenantController {
   @Roles(UserRole.ADMIN)
   @Patch('config')
   @ApiOperation({ summary: 'Modifie la configuration du cabinet (admin)' })
-  updateConfig(@Body() dto: any) {
-    return this.tenantService.updateConfig(dto);
+  updateConfig(@CurrentUser() user: User, @Body() dto: any) {
+    return this.tenantService.updateConfig(user.tenantId, dto);
   }
 }

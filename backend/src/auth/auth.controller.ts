@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, ConflictException } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, HttpCode, ConflictException, Req } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -72,8 +72,8 @@ export class AuthController {
   @HttpCode(200)
   @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
   @ApiOperation({ summary: 'Connexion utilisateur' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: any) {
+    return this.authService.login(dto, req.tenant?.id);
   }
 
   @Post('2fa/verify')

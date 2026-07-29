@@ -19,8 +19,10 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
-  async login(dto: LoginDto) {
-    const user = await this.userRepo.findOne({ where: { email: dto.email } });
+  async login(dto: LoginDto, tenantId?: number) {
+    const where: any = { email: dto.email };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.userRepo.findOne({ where });
     if (!user || !user.isActive) throw new UnauthorizedException('Identifiants invalides');
 
     const match = await bcrypt.compare(dto.password, user.password);
@@ -82,7 +84,7 @@ export class AuthService {
   }
 
   private generateToken(user: User) {
-    return this.jwtService.sign({ sub: user.id, email: user.email, role: user.role });
+    return this.jwtService.sign({ sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
   }
 
   private sanitize(user: User) {

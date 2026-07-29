@@ -27,6 +27,7 @@ export class ClientsService {
     if (currentUser.role !== UserRole.ADMIN) {
       client.responsable = currentUser;
     }
+    if (currentUser.tenantId) client.tenantId = currentUser.tenantId;
     const saved = await this.repo.save(client);
 
     const ficheData = dto.ficheData ?? {};
@@ -65,6 +66,10 @@ export class ClientsService {
       .leftJoinAndSelect('client.responsable', 'responsable')
       .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
       .where('client.isActive = :active', { active: true });
+
+    if (currentUser.tenantId) {
+      query.andWhere('client.tenantId = :tenantId', { tenantId: currentUser.tenantId });
+    }
 
     if (currentUser.role !== UserRole.ADMIN) {
       if (currentUser.site === UserSite.REUNION) {

@@ -163,6 +163,19 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
           </div>
 
           <mat-form-field appearance="outline" class="sw-field--full">
+            <mat-label>Sous-domaine *</mat-label>
+            <mat-icon matPrefix>link</mat-icon>
+            <input matInput formControlName="slug" placeholder="ex : afym" [readonly]="!!tenant.slug()" />
+            <mat-hint>{{ step0.value.slug || '…' }}.passidoc.re</mat-hint>
+            @if (step0.get('slug')?.hasError('required') && step0.get('slug')?.touched) {
+              <mat-error>Le sous-domaine est obligatoire</mat-error>
+            }
+            @if (step0.get('slug')?.hasError('pattern') && step0.get('slug')?.touched) {
+              <mat-error>Lettres minuscules, chiffres et tirets uniquement</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="sw-field--full">
             <mat-label>Nom du cabinet *</mat-label>
             <mat-icon matPrefix>corporate_fare</mat-icon>
             <input matInput formControlName="nomSociete" placeholder="ex : AFYM Audit Expertise" />
@@ -1064,8 +1077,8 @@ export class SetupWizardComponent {
 
   private fb      = inject(FormBuilder);
   private router  = inject(Router);
-  private http    = inject(HttpClient);
-  private tenant  = inject(TenantService);
+  private  http   = inject(HttpClient);
+  protected tenant = inject(TenantService);
 
   screen        = signal<'welcome' | 'wizard'>('welcome');
   welcomeExit   = signal(false);
@@ -1107,6 +1120,7 @@ export class SetupWizardComponent {
   ];
 
   step0: FormGroup = this.fb.group({
+    slug:       [this.tenant.slug() ?? '', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
     nomSociete: ['', [Validators.required, Validators.minLength(2)]],
     slogan:     [''],
     ville:      [''],
@@ -1146,6 +1160,7 @@ export class SetupWizardComponent {
     this.loading.set(true);
 
     const payload = {
+      slug:           this.step0.value.slug,
       nomSociete:     this.step0.value.nomSociete,
       slogan:         this.step0.value.slogan   || undefined,
       ville:          this.step0.value.ville    || undefined,
