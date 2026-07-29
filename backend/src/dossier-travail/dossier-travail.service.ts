@@ -71,21 +71,14 @@ export class DossierTravailService {
 
   /** Reprise annuelle : copie le dossier de l'exercice source vers le nouvel exercice. */
   async reprendreVersExercice(clientId: number, sourceExerciceId: number, destExerciceId: number): Promise<void> {
-    const source = await this.dossierRepo.findOne({
-      where: { clientId, exerciceId: sourceExerciceId },
-      relations: ['cycles'],
-    });
-    if (!source) return;
-
+    // Le dossier de l'exercice précédent est conservé tel quel (accessible en lecture seule)
+    // Le nouvel exercice reçoit un dossier vide avec des cycles vierges
     let dest = await this.dossierRepo.findOne({ where: { clientId, exerciceId: destExerciceId } });
     if (!dest) {
-      dest = this.dossierRepo.create({ clientId, exerciceId: destExerciceId });
+      dest = this.dossierRepo.create({ clientId, exerciceId: destExerciceId, noteSynthese: '' });
+      dest = await this.dossierRepo.save(dest);
     }
-    // Copier la note de synthèse telle quelle (pas de génération IA)
-    dest.noteSynthese = source.noteSynthese ?? '';
-    dest = await this.dossierRepo.save(dest);
 
-    // Créer des cycles vierges pour le nouvel exercice (on ne copie pas les diligences/conclusions)
     for (const type of CYCLES_ALL) {
       const existing = await this.cycleRepo.findOne({ where: { dossierTravailId: dest.id, typeCycle: type } });
       if (!existing) {

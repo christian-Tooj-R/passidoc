@@ -9,6 +9,8 @@ import { MatRippleModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FormsModule } from '@angular/forms';
 import { PointageService, Pointage, PausePointage, MonStatut, EntreeJournee, SiteLocation } from '../../core/services/pointage.service';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { AuthService } from '../../core/services/auth.service';
 import { GeoLocationService } from '../../core/services/geo-location.service';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
@@ -281,8 +283,12 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
           Relevé des présences
         </h3>
         <button class="btn-export" matRipple (click)="exportCsv()">
-          <mat-icon>download</mat-icon>
+          <mat-icon>table_view</mat-icon>
           Export CSV
+        </button>
+        <button class="btn-export btn-export--pdf" matRipple (click)="exportPdf()">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Export PDF
         </button>
       </div>
 
@@ -764,6 +770,60 @@ export class PointageComponent implements OnInit, OnDestroy {
     a.download = `pointages_${date}.csv`;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  // ── Export PDF ───────────────────────────────────────────────
+  exportPdf() {
+    const date  = this.dateAdmin();
+    const label = new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W   = doc.internal.pageSize.getWidth();
+
+    // En-tête
+    doc.setFillColor(79, 70, 229);
+    doc.rect(0, 0, W, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Relevé des présences', 14, 13);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, W - 14, 13, { align: 'right' });
+
+    // KPIs
+    doc.setTextColor(55, 65, 81);
+    doc.setFontSize(9);
+    const presents = this.nbPresentsAdmin();
+    const absents  = this.nbAbsentsAdmin();
+    const total    = this.minToStr(this.totalTravailAdmin());
+    doc.text(`Présents : ${presents}   Absents : ${absents}   Total travail : ${total}`, 14, 28);
+
+    // Tableau
+    const rows = this.employesAdmin().map(u => {
+      const p = this.pointagePour(u.id);
+      return [
+        `${u.firstName} ${u.lastName}`,
+        u.site === 'REUNION' ? 'Réunion' : 'Madagascar',
+        p ? this.fmt(p.heureArrivee) : '—',
+        p?.heureDepart ? this.fmt(p.heureDepart) : (p ? 'En cours' : '—'),
+        p ? this.minToStr(this.calcPauseE(p)) : '—',
+        p ? this.minToStr(this.calcNetteE(p)) : '—',
+        this.labelEtatL(u.id),
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['Employé', 'Site', 'Arrivée', 'Départ', 'Pause', 'Travail net', 'Statut']],
+      body: rows,
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 247, 255] },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 50 } },
+    });
+
+    doc.save(`pointages_${date}.pdf`);
   }
 
   // ── Greeting ──────────────────────────────────────────────────

@@ -3,6 +3,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,7 +49,10 @@ interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolea
         <button mat-stroked-button class="sd-cur" (click)="semaine = currentWeek; load()">Actuelle</button>
       </div>
       <button mat-stroked-button class="sd-export" (click)="exportExcel()" [disabled]="!dashboard">
-        <mat-icon>download</mat-icon> Export Excel
+        <mat-icon>table_view</mat-icon> Excel
+      </button>
+      <button mat-stroked-button class="sd-export sd-export--pdf" (click)="exportPdf()" [disabled]="!dashboard">
+        <mat-icon>picture_as_pdf</mat-icon> PDF
       </button>
       <button mat-icon-button (click)="dialogRef.close()" class="sd-close"><mat-icon>close</mat-icon></button>
     </div>
@@ -137,6 +142,7 @@ interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolea
     .sd-cur { font-size: 12px !important; border-color: #e2e8f0 !important; color: #64748b; border-radius: 8px !important; height: 32px; line-height: 32px; }
     .sd-export { font-size: 12px !important; border-color: #bbf7d0 !important; color: #15803d !important; border-radius: 8px !important; height: 32px; line-height: 32px; gap: 4px; }
     .sd-export mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .sd-export--pdf { border-color: #fecaca !important; color: #dc2626 !important; }
     .sd-close { color: #94a3b8 !important; }
     .sd-body { padding: 20px; overflow-y: auto; flex: 1; }
     .sd-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -269,6 +275,69 @@ export class SyntheseDialogComponent implements OnInit {
       ws['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 28 }, { wch: 30 }, { wch: 8 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 22 }, { wch: 8 }];
       XLSX.utils.book_append_sheet(wb, ws, `Semaine ${this.semaine}`);
       XLSX.writeFile(wb, `Rapport_hebdo_S${this.semaine}.xlsx`);
+    });
+  }
+
+  exportPdf() {
+    if (!this.dashboard) return;
+    this.tasksService.getAllGlobal().subscribe(allTasks => {
+      const tasks = allTasks.filter(t => t.semaine === this.semaine);
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+
+      // En-tête
+      doc.setFillColor(99, 102, 241);
+      doc.rect(0, 0, pageW, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Rapport hebdomadaire — Semaine ${this.semaine}`, 14, 12);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
+
+      // KPIs
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total : ${this.dashboard!.total}   Terminées : ${this.dashboard!.terminees}   Taux : ${this.dashboard!.tauxCompletion}%   Temps moyen : ${this.dashboard!.tempsMoyen} min`, 14, 26);
+
+      // Tableau tâches
+      autoTable(doc, {
+        startY: 30,
+        head: [['ID', 'Client', 'Tâche', 'Type', 'Assigné à', 'Statut', 'Temps (min)']],
+        body: tasks.map(t => [
+          t.taskId ?? '—',
+          t.client?.nom ?? '—',
+          t.titre,
+          t.type ?? '—',
+          t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '—',
+          this.statutLabelFr(t.statut),
+          t.tempsExecution ? String(t.tempsExecution) : '—',
+        ]),
+        headStyles: { fillColor: [99, 102, 241], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5 },
+        alternateRowStyles: { fillColor: [245, 245, 255] },
+        columnStyles: { 2: { cellWidth: 55 } },
+        margin: { left: 14, right: 14 },
+      });
+
+      const afterTasks = (doc as any).lastAutoTable.finalY + 8;
+
+      // Tableau par collaborateur
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30);
+      doc.text('Par collaborateur', 14, afterTasks);
+      autoTable(doc, {
+        startY: afterTasks + 3,
+        head: [['Collaborateur', 'Total', 'Terminées', 'Temps total (min)']],
+        body: this.dashboard!.parCollaborateur.map(c => [c.name, c.total, c.terminees, c.tempsTotal]),
+        headStyles: { fillColor: [16, 185, 129], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5 },
+        tableWidth: 110,
+        margin: { left: 14 },
+      });
+
+      doc.save(`Rapport_hebdo_S${this.semaine}.pdf`);
     });
   }
 
