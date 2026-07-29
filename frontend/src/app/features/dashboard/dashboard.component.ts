@@ -97,7 +97,7 @@ const TYPE_LABELS: Record<string, string> = {
           <div class="pole-grid">
             <div class="pole-card pole-card--re">
               <div class="pole-card__top">
-                <span class="pole-flag">🇷🇪</span>
+                <span class="pole-flag">{{ tenantSvc.poleFlag1() }}</span>
                 <div class="pole-card__info">
                   <h3 class="pole-card__name">{{ tenantSvc.poleLabel1() }}</h3>
                   <span class="pole-card__total">{{ poleStats.reunion.total }} dossier{{ poleStats.reunion.total > 1 ? 's' : '' }}</span>
@@ -123,7 +123,7 @@ const TYPE_LABELS: Record<string, string> = {
             </div>
             <div class="pole-card pole-card--mg">
               <div class="pole-card__top">
-                <span class="pole-flag">🇲🇬</span>
+                <span class="pole-flag">{{ tenantSvc.poleFlag2() }}</span>
                 <div class="pole-card__info">
                   <h3 class="pole-card__name">{{ tenantSvc.poleLabel2() }}</h3>
                   <span class="pole-card__total">{{ poleStats.madagascar.total }} dossier{{ poleStats.madagascar.total > 1 ? 's' : '' }}</span>
@@ -279,10 +279,10 @@ const TYPE_LABELS: Record<string, string> = {
             <mat-icon>public</mat-icon> Tous
           </button>
           <button class="md-chip" [class.md-chip--active]="siteFilter==='REUNION'" (click)="filterSite('REUNION')">
-            🇷🇪 {{ tenantSvc.poleLabel1() }}
+            {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}
           </button>
           <button class="md-chip" [class.md-chip--active]="siteFilter==='MADAGASCAR'" (click)="filterSite('MADAGASCAR')">
-            🇲🇬 {{ tenantSvc.poleLabel2() }}
+            {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}
           </button>
         </div>
       </div>

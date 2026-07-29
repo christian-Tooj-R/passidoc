@@ -35,6 +35,8 @@ export class SetupService {
       pays:        dto.pays,
       poleLabel1:  dto.poleLabel1 || 'La Réunion',
       poleLabel2:  dto.poleLabel2 || 'Madagascar',
+      poleFlag1:   dto.poleFlag1  || '🇷🇪',
+      poleFlag2:   dto.poleFlag2  || '🇲🇬',
       isConfigured: true,
     });
     const savedConfig = await this.configRepo.save(config);

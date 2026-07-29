@@ -18,15 +18,28 @@ export class TenantService {
   readonly logoUrl     = computed(() => this._config()?.logoUrl     ?? null);
   readonly poleLabel1  = computed(() => this._config()?.poleLabel1  ?? 'La Réunion');
   readonly poleLabel2  = computed(() => this._config()?.poleLabel2  ?? 'Madagascar');
+  readonly poleFlag1   = computed(() => this._config()?.poleFlag1   ?? '🇷🇪');
+  readonly poleFlag2   = computed(() => this._config()?.poleFlag2   ?? '🇲🇬');
   readonly isConfigured = computed(() => this._configured());
   readonly slug         = computed(() => this._slug());
 
   private _detectSlug(): string | null {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
-    // "afym.passidoc.re" → ["afym","passidoc","re"] → slug = "afym"
-    // "localhost" ou "passidoc.re" → pas de sous-domaine
+
+    // Sous-domaine réel : "afym.passidoc.re" → slug = "afym"
     if (parts.length >= 3) return parts[0].toLowerCase();
+
+    // Fallback dev : ?tenant=afym dans l'URL (sauvegardé en localStorage)
+    const params = new URLSearchParams(window.location.search);
+    const qSlug  = params.get('tenant');
+    if (qSlug) {
+      localStorage.setItem('dev_tenant_slug', qSlug);
+      return qSlug.toLowerCase();
+    }
+    const stored = localStorage.getItem('dev_tenant_slug');
+    if (stored) return stored.toLowerCase();
+
     return null;
   }
 

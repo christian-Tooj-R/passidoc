@@ -25,6 +25,12 @@ export class SetupDto {
   @IsOptional() @IsString()
   poleLabel2?: string;
 
+  @IsOptional() @IsString()
+  poleFlag1?: string;
+
+  @IsOptional() @IsString()
+  poleFlag2?: string;
+
   @IsString() @MinLength(1)
   adminFirstName: string;
 

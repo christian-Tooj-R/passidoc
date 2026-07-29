@@ -30,6 +30,12 @@ export class TenantConfig {
   poleLabel2: string;
 
   @Column({ nullable: true })
+  poleFlag1: string;
+
+  @Column({ nullable: true })
+  poleFlag2: string;
+
+  @Column({ nullable: true })
   couleurPrimaire: string;
 
   @Column({ default: false })
