@@ -68,9 +68,9 @@ export class TenantService {
           }),
           map(s => s.configured),
           catchError(() => {
-            this._configured.set(true); // fail open
+            this._configured.set(false); // fail closed → redirige vers setup
             this._checkObs = null;
-            return of(true);
+            return of(false);
           }),
           shareReplay(1),
         );
