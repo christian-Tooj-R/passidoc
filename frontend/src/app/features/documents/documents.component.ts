@@ -471,7 +471,7 @@ export class DocumentsComponent implements OnInit {
         },
         error: () => {
           done++;
-          this.snack.open(`Erreur upload : ${file.name}`, undefined, { duration: 3000 });
+          this.snack.open(`Erreur lors de l'import : ${file.name}`, undefined, { duration: 3000 });
           if (done === files.length) this.uploading.set(false);
         },
       });

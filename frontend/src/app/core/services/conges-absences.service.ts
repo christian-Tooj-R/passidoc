@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 export type TypeConge =
-  'CONGES_PAYES' | 'RTT' | 'MALADIE' | 'MATERNITE' | 'PATERNITE' |
+  'CONGES_PAYES' | 'MALADIE' | 'MATERNITE' | 'PATERNITE' |
   'SANS_SOLDE' | 'EVENEMENT_FAMILIAL' | 'RECUPERATION' | 'AUTRE';
 
 export type StatutConge = 'EN_ATTENTE' | 'APPROUVEE' | 'REFUSEE' | 'ANNULEE';
@@ -42,7 +42,6 @@ export interface CongeStats {
 
 export const TYPE_CONGE_LABELS: Record<TypeConge, string> = {
   CONGES_PAYES:       'Congés payés',
-  RTT:                'RTT',
   MALADIE:            'Maladie',
   MATERNITE:          'Maternité',
   PATERNITE:          'Paternité',
@@ -54,7 +53,6 @@ export const TYPE_CONGE_LABELS: Record<TypeConge, string> = {
 
 export const TYPE_CONGE_COLORS: Record<TypeConge, string> = {
   CONGES_PAYES:       '#2563eb',
-  RTT:                '#7c3aed',
   MALADIE:            '#dc2626',
   MATERNITE:          '#db2777',
   PATERNITE:          '#0891b2',
@@ -123,4 +121,23 @@ export class CongesAbsencesService {
   annuler(id: number) {
     return this.http.patch<CongeAbsence>(`${this.base}/${id}/annuler`, {});
   }
+
+  getCalendrier(mois: number, annee: number, site?: string) {
+    let params = new HttpParams().set('mois', mois).set('annee', annee);
+    if (site) params = params.set('site', site);
+    return this.http.get<CalendrierAbsence[]>(`${this.base}/calendrier`, { params });
+  }
+}
+
+export interface CalendrierAbsence {
+  id: number;
+  userId: number;
+  firstName:   string;
+  lastName:    string;
+  site:        string;
+  typeConge:   TypeConge;
+  dateDebut:   string;
+  dateFin:     string;
+  nombreJours: number;
+  statut: StatutConge;
 }

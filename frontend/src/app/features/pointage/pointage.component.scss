@@ -543,6 +543,13 @@ $light:  #F9FAFB;
 
   mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
   &:hover { background: #D1FAE5; }
+
+  &--pdf {
+    border-color: #fecaca;
+    background: #fff5f5;
+    color: #dc2626;
+    &:hover { background: #fee2e2; }
+  }
 }
 
 // ── Filtres ───────────────────────────────────────────────────

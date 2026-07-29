@@ -3,6 +3,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +28,8 @@ import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 
+interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolean; tasks: Task[]; }
+
 // ─── Rapport hebdomadaire ─────────────────────────────────────────────────────
 @Component({
   selector: 'app-synthese-dialog',
@@ -45,7 +49,10 @@ import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.direc
         <button mat-stroked-button class="sd-cur" (click)="semaine = currentWeek; load()">Actuelle</button>
       </div>
       <button mat-stroked-button class="sd-export" (click)="exportExcel()" [disabled]="!dashboard">
-        <mat-icon>download</mat-icon> Export Excel
+        <mat-icon>table_view</mat-icon> Excel
+      </button>
+      <button mat-stroked-button class="sd-export sd-export--pdf" (click)="exportPdf()" [disabled]="!dashboard">
+        <mat-icon>picture_as_pdf</mat-icon> PDF
       </button>
       <button mat-icon-button (click)="dialogRef.close()" class="sd-close"><mat-icon>close</mat-icon></button>
     </div>
@@ -59,6 +66,36 @@ import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.direc
           <div class="sd-kpi sd-orange"><span class="sd-kpi__val">{{ dashboard.tauxCompletion }}%</span><span class="sd-kpi__lbl">Complétion</span></div>
           <div class="sd-kpi sd-purple"><span class="sd-kpi__val">{{ formatTime(dashboard.tempsMoyen) }}</span><span class="sd-kpi__lbl">Temps moyen</span></div>
         </div>
+        @if (calDays.length > 0) {
+          <div class="sd-cal-section">
+            <div class="sd-section-head">
+              <mat-icon>calendar_month</mat-icon>
+              <span>Calendrier de la semaine</span>
+            </div>
+            <div class="sd-cal">
+              @for (day of calDays; track day.dayLabel) {
+                <div class="sd-cal-col" [class.sd-cal-today]="day.isToday">
+                  <div class="sd-cal-head">
+                    <span class="sd-cal-dow">{{ day.dayLabel }}</span>
+                    <span class="sd-cal-dn">{{ day.dayNum }}</span>
+                  </div>
+                  <div class="sd-cal-tasks">
+                    @for (t of day.tasks; track t.id) {
+                      <div class="sct"
+                        [class.sct--done]="t.statut==='TERMINEE'"
+                        [class.sct--cours]="t.statut==='EN_COURS'"
+                        [class.sct--late]="t.statut==='NON_FAIT'">
+                        <span class="sct-dot"></span>
+                        <span class="sct-titre" [title]="t.titre">{{ t.titre }}</span>
+                      </div>
+                    }
+                    @if (day.tasks.length === 0) { <div class="sct-empty">—</div> }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
         <div class="sd-grid">
           <div class="sd-card">
             <h4><mat-icon>people</mat-icon> Par collaborateur</h4>
@@ -105,6 +142,7 @@ import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.direc
     .sd-cur { font-size: 12px !important; border-color: #e2e8f0 !important; color: #64748b; border-radius: 8px !important; height: 32px; line-height: 32px; }
     .sd-export { font-size: 12px !important; border-color: #bbf7d0 !important; color: #15803d !important; border-radius: 8px !important; height: 32px; line-height: 32px; gap: 4px; }
     .sd-export mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .sd-export--pdf { border-color: #fecaca !important; color: #dc2626 !important; }
     .sd-close { color: #94a3b8 !important; }
     .sd-body { padding: 20px; overflow-y: auto; flex: 1; }
     .sd-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -135,12 +173,35 @@ import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.direc
     .sd-empty-row { text-align: center; color: #cbd5e1; font-size: 12px; padding: 12px 0; }
     .sd-loading { display: flex; flex-direction: column; align-items: center; padding: 48px; color: #94a3b8; gap: 8px; }
     .sd-loading mat-icon { font-size: 40px; width: 40px; height: 40px; }
+    .sd-cal-section { margin-bottom: 20px; }
+    .sd-section-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #475569; margin-bottom: 10px; }
+    .sd-section-head mat-icon { font-size: 16px; width: 16px; height: 16px; color: #6366f1; }
+    .sd-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .sd-cal-col { display: flex; flex-direction: column; gap: 3px; }
+    .sd-cal-head { display: flex; flex-direction: column; align-items: center; padding: 4px 2px 5px; border-bottom: 1px solid #e8ecf0; margin-bottom: 3px; border-radius: 6px 6px 0 0; }
+    .sd-cal-today .sd-cal-head { background: #eef2ff; border-bottom-color: #c7d2fe; }
+    .sd-cal-dow { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; }
+    .sd-cal-today .sd-cal-dow { color: #6366f1; }
+    .sd-cal-dn { font-size: 14px; font-weight: 800; color: #1e293b; line-height: 1.1; }
+    .sd-cal-today .sd-cal-dn { color: #4f46e5; }
+    .sd-cal-tasks { display: flex; flex-direction: column; gap: 2px; max-height: 120px; overflow-y: auto; }
+    .sct { display: flex; align-items: flex-start; gap: 3px; background: white; border: 1px solid #e8ecf0; border-radius: 4px; padding: 2px 5px; }
+    .sct--done  { background: #f0fdf4; border-color: #bbf7d0; }
+    .sct--cours { background: #fffbeb; border-color: #fde68a; }
+    .sct--late  { background: #fff1f2; border-color: #fecdd3; }
+    .sct-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; background: #6366f1; }
+    .sct--done  .sct-dot { background: #22c55e; }
+    .sct--cours .sct-dot { background: #f59e0b; }
+    .sct--late  .sct-dot { background: #dc2626; }
+    .sct-titre { font-size: 9px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; line-height: 1.4; }
+    .sct-empty { font-size: 10px; color: #cbd5e1; text-align: center; padding: 6px 0; }
   `],
 })
 export class SyntheseDialogComponent implements OnInit {
   private tasksService = inject(TasksService);
   dialogRef = inject(MatDialogRef<SyntheseDialogComponent>);
   dashboard: TaskDashboard | null = null;
+  calDays: CalDay[] = [];
   semaine!: number;
 
   get currentWeek(): number {
@@ -152,7 +213,41 @@ export class SyntheseDialogComponent implements OnInit {
   }
 
   ngOnInit() { this.semaine = this.currentWeek; this.load(); }
-  load() { this.dashboard = null; this.tasksService.getDashboard(this.semaine).subscribe(d => this.dashboard = d); }
+
+  load() {
+    this.dashboard = null;
+    this.calDays = [];
+    this.tasksService.getDashboard(this.semaine).subscribe(d => this.dashboard = d);
+    this.tasksService.getAllGlobal().subscribe(tasks => {
+      this.buildCalendar(tasks.filter(t => t.semaine === this.semaine));
+    });
+  }
+
+  buildCalendar(tasks: Task[]) {
+    const year = new Date().getFullYear();
+    const jan4 = new Date(year, 0, 4);
+    const daysFromMon = (jan4.getDay() + 6) % 7;
+    const w1Mon = new Date(jan4.getTime() - daysFromMon * 86400000);
+    const weekStart = new Date(w1Mon.getTime() + (this.semaine - 1) * 7 * 86400000);
+    const today = new Date();
+    const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    this.calDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(weekStart.getTime() + i * 86400000);
+      return {
+        date, dayLabel: JOURS[i], dayNum: date.getDate(),
+        isToday: date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate(),
+        tasks: [],
+      };
+    });
+    for (const task of tasks) {
+      if (!task.dateEcheance) continue;
+      const d = new Date(task.dateEcheance);
+      const idx = this.calDays.findIndex(day =>
+        day.date.getFullYear() === d.getFullYear() && day.date.getMonth() === d.getMonth() && day.date.getDate() === d.getDate()
+      );
+      if (idx >= 0) this.calDays[idx].tasks.push(task);
+    }
+  }
 
   exportExcel() {
     if (!this.dashboard) return;
@@ -180,6 +275,69 @@ export class SyntheseDialogComponent implements OnInit {
       ws['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 28 }, { wch: 30 }, { wch: 8 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 22 }, { wch: 8 }];
       XLSX.utils.book_append_sheet(wb, ws, `Semaine ${this.semaine}`);
       XLSX.writeFile(wb, `Rapport_hebdo_S${this.semaine}.xlsx`);
+    });
+  }
+
+  exportPdf() {
+    if (!this.dashboard) return;
+    this.tasksService.getAllGlobal().subscribe(allTasks => {
+      const tasks = allTasks.filter(t => t.semaine === this.semaine);
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+
+      // En-tête
+      doc.setFillColor(99, 102, 241);
+      doc.rect(0, 0, pageW, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Rapport hebdomadaire — Semaine ${this.semaine}`, 14, 12);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
+
+      // KPIs
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total : ${this.dashboard!.total}   Terminées : ${this.dashboard!.terminees}   Taux : ${this.dashboard!.tauxCompletion}%   Temps moyen : ${this.dashboard!.tempsMoyen} min`, 14, 26);
+
+      // Tableau tâches
+      autoTable(doc, {
+        startY: 30,
+        head: [['ID', 'Client', 'Tâche', 'Type', 'Assigné à', 'Statut', 'Temps (min)']],
+        body: tasks.map(t => [
+          t.taskId ?? '—',
+          t.client?.nom ?? '—',
+          t.titre,
+          t.type ?? '—',
+          t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '—',
+          this.statutLabelFr(t.statut),
+          t.tempsExecution ? String(t.tempsExecution) : '—',
+        ]),
+        headStyles: { fillColor: [99, 102, 241], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5 },
+        alternateRowStyles: { fillColor: [245, 245, 255] },
+        columnStyles: { 2: { cellWidth: 55 } },
+        margin: { left: 14, right: 14 },
+      });
+
+      const afterTasks = (doc as any).lastAutoTable.finalY + 8;
+
+      // Tableau par collaborateur
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30);
+      doc.text('Par collaborateur', 14, afterTasks);
+      autoTable(doc, {
+        startY: afterTasks + 3,
+        head: [['Collaborateur', 'Total', 'Terminées', 'Temps total (min)']],
+        body: this.dashboard!.parCollaborateur.map(c => [c.name, c.total, c.terminees, c.tempsTotal]),
+        headStyles: { fillColor: [16, 185, 129], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5 },
+        tableWidth: 110,
+        margin: { left: 14 },
+      });
+
+      doc.save(`Rapport_hebdo_S${this.semaine}.pdf`);
     });
   }
 
@@ -247,12 +405,22 @@ export class SyntheseDialogComponent implements OnInit {
           </div>
           <div class="ct-field">
             <div class="ct-section-label">Assigner à</div>
-            <select class="ct-select" [(ngModel)]="assigneeId">
-              <option [value]="null">— Non assignée —</option>
-              @for (u of data.users; track u.id) {
-                <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
-              }
-            </select>
+            @if (!anyoneCanTake) {
+              <select class="ct-select" [(ngModel)]="assigneeId">
+                <option [value]="null">— Non assignée —</option>
+                @for (u of data.users; track u.id) {
+                  <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                }
+              </select>
+            } @else {
+              <div class="ct-anyone-badge">
+                <mat-icon>group</mat-icon> Premier disponible
+              </div>
+            }
+            <label class="ct-anyone-toggle">
+              <input type="checkbox" [(ngModel)]="anyoneCanTake" (change)="onAnyoneChange()" />
+              <span>N'importe qui (premier qui prend)</span>
+            </label>
           </div>
         </div>
 
@@ -275,6 +443,25 @@ export class SyntheseDialogComponent implements OnInit {
           <div class="ct-field">
             <div class="ct-section-label">Échéance</div>
             <input class="ct-date-input" type="date" [(ngModel)]="dateEcheance" />
+          </div>
+        </div>
+
+        <!-- Récurrence -->
+        <div>
+          <div class="ct-section-label">Récurrence</div>
+          <div class="ct-recurrence">
+            <label class="ct-anyone-toggle">
+              <input type="checkbox" [(ngModel)]="recurrenceActive" />
+              <span>Tâche récurrente mensuelle</span>
+            </label>
+            @if (recurrenceActive) {
+              <div class="ct-recurrence__detail">
+                <span class="ct-recurrence__label">Créer le</span>
+                <input class="ct-date-input ct-recurrence__day" type="number" min="1" max="28"
+                  [(ngModel)]="recurrenceJour" placeholder="20" />
+                <span class="ct-recurrence__label">de chaque mois</span>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -394,6 +581,18 @@ export class SyntheseDialogComponent implements OnInit {
     .ct-btn-create:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99,102,241,.40); }
     .ct-btn-create:disabled { opacity: .5; cursor: not-allowed; }
     .ct-btn-create mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+    /* N'importe qui */
+    .ct-anyone-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; cursor: pointer; margin-top: 6px; }
+    .ct-anyone-toggle input { cursor: pointer; accent-color: #6366f1; }
+    .ct-anyone-badge { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: #ede9fe; color: #5b21b6; font-size: 13px; font-weight: 600; }
+    .ct-anyone-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    /* Récurrence */
+    .ct-recurrence { display: flex; flex-direction: column; gap: 8px; }
+    .ct-recurrence__detail { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f1f5f9; border-radius: 8px; }
+    .ct-recurrence__label { font-size: 12px; color: #64748b; }
+    .ct-recurrence__day { width: 60px; padding: 4px 8px; text-align: center; }
   `],
 })
 export class CreateTaskDialogComponent {
@@ -409,6 +608,13 @@ export class CreateTaskDialogComponent {
   assigneeId: number | null = null;
   priorite = 'NORMALE';
   dateEcheance = '';
+  anyoneCanTake = false;
+  recurrenceActive = false;
+  recurrenceJour = 20;
+
+  onAnyoneChange() {
+    if (this.anyoneCanTake) this.assigneeId = null;
+  }
 
   taskTypes = [
     { value: 'TVA',    label: 'TVA',    icon: 'receipt_long',    color: '#854d0e', bg: '#fef9c3' },
@@ -424,13 +630,16 @@ export class CreateTaskDialogComponent {
   create() {
     if (!this.titre.trim() || !this.clientId) return;
     this.tasksService.create(this.clientId!, {
-      titre:        this.titre,
-      description:  this.commentaire || undefined,
-      type:         this.selectedType as any,
-      priorite:     this.priorite as any,
-      dateEcheance: this.dateEcheance || undefined,
-      assigneeId:   this.assigneeId  || undefined,
-    }).subscribe(() => {
+      titre:          this.titre,
+      description:    this.commentaire || undefined,
+      type:           this.selectedType as any,
+      priorite:       this.priorite as any,
+      dateEcheance:   this.dateEcheance || undefined,
+      assigneeId:     this.anyoneCanTake ? undefined : (this.assigneeId ?? undefined),
+      anyoneCanTake:  this.anyoneCanTake || undefined,
+      recurrenceType: this.recurrenceActive ? 'MENSUELLE' : undefined,
+      recurrenceJour: this.recurrenceActive ? this.recurrenceJour : undefined,
+    } as any).subscribe(() => {
       this.toast.success('Tâche créée');
       this.dialogRef.close('created');
     });
@@ -1398,9 +1607,20 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                       </a>
                     }
 
+                    <!-- Badge "N'importe qui" -->
+                    @if (t.anyoneCanTake && !t.assignee) {
+                      <button class="card-prendre-btn" (click)="$event.stopPropagation(); prendreTache(t)"
+                              matTooltip="Prendre cette tâche">
+                        <mat-icon>pan_tool</mat-icon> Prendre
+                      </button>
+                    }
+
                     <!-- Footer carte -->
                     <div class="card-footer">
                       <div class="card-footer__left">
+                        @if (t.anyoneCanTake && !t.assignee) {
+                          <span class="card-anyone"><mat-icon>group</mat-icon>Ouvert</span>
+                        }
                         @if (t.dateEcheance) {
                           <span class="card-due" [class.card-due--overdue]="isOverdue(t)">
                             <mat-icon>event</mat-icon>{{ t.dateEcheance | localDate:'dd MMM' }}
@@ -1828,6 +2048,18 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     .card-del:hover { color: #ef4444 !important; }
     .card-del mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
+    /* N'importe qui */
+    .card-prendre-btn {
+      display: flex; align-items: center; gap: 4px; width: 100%; padding: 5px 8px;
+      border: 1.5px dashed #8b5cf6; border-radius: 8px; background: #f5f3ff;
+      color: #6d28d9; font-size: 11px; font-weight: 700; cursor: pointer;
+      margin-bottom: 4px; transition: all .12s;
+    }
+    .card-prendre-btn:hover { background: #ede9fe; }
+    .card-prendre-btn mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .card-anyone { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #8b5cf6; font-weight: 600; }
+    .card-anyone mat-icon { font-size: 12px; width: 12px; height: 12px; }
+
     /* Type chips */
     .type-chip { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
     .type-tva { background: #fef9c3; color: #854d0e; } .type-paie { background: #dbeafe; color: #1e40af; }
@@ -2209,6 +2441,13 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   changeStatut(t: Task, statut: TaskStatut) {
     const prev = t.statut; t.statut = statut;
     this.tasksService.update(t.clientId, t.id, { statut }).subscribe({ next: () => this.applyFilter(), error: () => { t.statut = prev; } });
+  }
+
+  prendreTache(t: Task) {
+    this.tasksService.prendreTache(t.id).subscribe({
+      next: () => { this.load(); this.toast.success('Tâche prise — elle vous est maintenant assignée'); },
+      error: () => this.toast.error('Impossible de prendre cette tâche'),
+    });
   }
 
   remove(t: Task) {

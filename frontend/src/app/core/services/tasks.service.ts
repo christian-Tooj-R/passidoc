@@ -30,6 +30,9 @@ export interface Task {
   debutEnCours?: string;
   tempsTotalSecondes?: number;
   createdAt: string;
+  anyoneCanTake?: boolean;
+  recurrenceType?: string;
+  recurrenceJour?: number;
 }
 
 export interface TaskComment {
@@ -117,6 +120,10 @@ export class TasksService {
     type: TaskType; dateEcheance: string; assigneeId: number; tempsExecution: number; heuresSup: number;
   }>) {
     return this.http.patch<Task>(`${this.api(clientId)}/${id}`, data);
+  }
+
+  prendreTache(id: number) {
+    return this.http.patch<Task>(`${environment.apiUrl}/tasks/${id}/prendre`, {});
   }
 
   delete(clientId: number, id: number) {

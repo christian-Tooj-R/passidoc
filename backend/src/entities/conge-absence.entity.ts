@@ -14,7 +14,6 @@ export enum StatutConge {
 
 export enum TypeConge {
   CONGES_PAYES      = 'CONGES_PAYES',
-  RTT               = 'RTT',
   MALADIE           = 'MALADIE',
   MATERNITE         = 'MATERNITE',
   PATERNITE         = 'PATERNITE',

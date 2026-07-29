@@ -90,6 +90,15 @@ export class Task {
   @Column({ type: 'int', default: 0 })
   tempsTotalSecondes: number;
 
+  @Column({ type: 'boolean', default: false })
+  anyoneCanTake: boolean;
+
+  @Column({ nullable: true, length: 20 })
+  recurrenceType: string; // 'MENSUELLE' ou null
+
+  @Column({ nullable: true, type: 'int' })
+  recurrenceJour: number; // 1-28 : jour du mois pour la récurrence mensuelle
+
   @OneToMany(() => TaskComment, (c) => c.task, { cascade: false })
   comments: TaskComment[];
 

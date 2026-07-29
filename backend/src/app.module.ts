@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -36,9 +37,16 @@ import { SecteursModule } from './secteurs/secteurs.module';
 import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
 import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
 import { HelpModule } from './help/help.module';
+import { MailModule } from './mail/mail.module';
+import { CanvasModule } from './canvas/canvas.module';
+import { SetupModule } from './setup/setup.module';
+import { TenantModule } from './tenant/tenant.module';
+import { TenantMiddleware } from './tenant/tenant.middleware';
+import { TenantConfig } from './entities/tenant-config.entity';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -100,11 +108,21 @@ import { HelpModule } from './help/help.module';
     CongesAbsencesModule,
     DossierTravailModule,
     HelpModule,
+    MailModule,
+    CanvasModule,
+    SetupModule,
+    TenantModule,
+    TypeOrmModule.forFeature([TenantConfig]),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    TenantMiddleware,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

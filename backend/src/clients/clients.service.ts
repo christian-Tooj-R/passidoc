@@ -27,6 +27,7 @@ export class ClientsService {
     if (currentUser.role !== UserRole.ADMIN) {
       client.responsable = currentUser;
     }
+    if (currentUser.tenantId) client.tenantId = currentUser.tenantId;
     const saved = await this.repo.save(client);
 
     const ficheData = dto.ficheData ?? {};
@@ -61,9 +62,14 @@ export class ClientsService {
   async findAll(currentUser: User, site?: string, collaborateurId?: number) {
     // Liste allégée : seules les relations nécessaires pour les cartes
     const query = this.repo.createQueryBuilder('client')
+      .leftJoinAndSelect('client.directeur', 'directeur')
       .leftJoinAndSelect('client.responsable', 'responsable')
       .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
       .where('client.isActive = :active', { active: true });
+
+    if (currentUser.tenantId) {
+      query.andWhere('client.tenantId = :tenantId', { tenantId: currentUser.tenantId });
+    }
 
     if (currentUser.role !== UserRole.ADMIN) {
       if (currentUser.site === UserSite.REUNION) {
@@ -88,7 +94,7 @@ export class ClientsService {
   async findOne(id: number) {
     const client = await this.repo.findOne({
       where: { id },
-      relations: ['ficheIdentite', 'responsable', 'collaborateurMg'],
+      relations: ['ficheIdentite', 'directeur', 'responsable', 'collaborateurMg'],
     });
     if (!client) throw new NotFoundException('Dossier client introuvable');
     return client;
@@ -98,9 +104,27 @@ export class ClientsService {
   async findOneForUser(id: number, currentUser: User) {
     const client = await this.findOne(id);
     if (currentUser.role === UserRole.ADMIN) return client;
+    if (client.directeurId === currentUser.id) return client;
     if (currentUser.site === UserSite.REUNION && client.responsableId === currentUser.id) return client;
     if (currentUser.site === UserSite.MADAGASCAR && client.collaborateurMgId === currentUser.id) return client;
     throw new ForbiddenException('Vous n\'avez pas accès à ce dossier');
+  }
+
+  async assignDirecteur(clientId: number, directeurId: number | null, currentUser: User) {
+    if (currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Seul un administrateur peut assigner un directeur');
+    }
+    const client = await this.findOne(clientId);
+    await this.repo.update(clientId, { directeurId: directeurId as any });
+    if (directeurId && directeurId !== currentUser.id) {
+      await this.notifications.emit(directeurId, {
+        type: 'CLIENT_ASSIGNED',
+        message: `Vous avez été désigné directeur du dossier "${client.nom}"`,
+        titre: client.nom,
+        clientId,
+      });
+    }
+    return this.findOne(clientId);
   }
 
   async update(id: number, dto: UpdateClientDto, currentUser: User) {

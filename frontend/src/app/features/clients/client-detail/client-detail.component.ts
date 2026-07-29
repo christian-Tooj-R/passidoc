@@ -1,5 +1,6 @@
-import { Component, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { ClientsService } from '../../../core/services/clients.service';
 import { ExerciceService } from '../../../core/services/exercice.service';
+import { UsersService } from '../../../core/services/users.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Client, Exercice } from '../../../core/models/client.model';
+import { User } from '../../../core/models/user.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
 import { FluxMensuelTabComponent } from './tabs/flux-mensuel-tab/flux-mensuel-tab.component';
 import { FournisseursTabComponent } from './tabs/fournisseurs-tab/fournisseurs-tab.component';
@@ -21,11 +25,12 @@ import { ControleInterneTabComponent } from './tabs/controle-interne-tab/control
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
+import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'historique' | 'dossier-travail';
+  | 'documents' | 'historique' | 'dossier-travail' | 'canvas';
 
 interface TabGroup {
   label: string;
@@ -51,14 +56,14 @@ interface TabGroup {
     ]),
   ],
   imports: [
-    CommonModule, RouterLink,
+    CommonModule, FormsModule, RouterLink,
     MatButtonModule, MatIconModule, MatTooltipModule,
     FicheIdentiteTabComponent, FluxMensuelTabComponent,
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
-    AdnTabComponent, DossierTravailTabComponent,
+    AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -285,28 +290,71 @@ interface TabGroup {
                 <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
                   {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
                 </div>
-                @if (client.responsable) {
-                  <div class="hc-info__row">
-                    <div class="hc-info__ico-wrap hc-info__ico-wrap--blue">
-                      <mat-icon>person</mat-icon>
-                    </div>
-                    <div class="hc-info__text">
-                      <span class="hc-info__lbl">Expert-comptable</span>
-                      <span class="hc-info__val">{{ client.responsable.firstName }} {{ client.responsable.lastName }}</span>
-                    </div>
+
+                <!-- ── Intervenants ───────────────────── -->
+                <div class="hc-interv">
+                  <div class="hc-interv__header">
+                    <span class="hc-interv__title">Intervenants</span>
+                    <button class="hc-interv__edit-btn"
+                            (click)="editIntervenants.set(!editIntervenants())"
+                            [matTooltip]="editIntervenants() ? 'Fermer' : 'Ajouter / modifier'">
+                      <mat-icon>{{ editIntervenants() ? 'close' : 'person_add' }}</mat-icon>
+                    </button>
                   </div>
-                }
-                @if (client.collaborateurMg) {
-                  <div class="hc-info__row">
-                    <div class="hc-info__ico-wrap hc-info__ico-wrap--teal">
-                      <mat-icon>supervisor_account</mat-icon>
+
+                  <!-- Lignes affichage -->
+                  @if (client.directeur) {
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">Directeur</span>
+                      <span class="hc-interv__val">{{ client.directeur.firstName }} {{ client.directeur.lastName }}</span>
+                      @if (auth.isAdmin()) {
+                        <button class="hc-interv__del" (click)="removeIntervenant('DIRECTEUR')" matTooltip="Retirer">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      }
                     </div>
-                    <div class="hc-info__text">
-                      <span class="hc-info__lbl">Collaborateur</span>
-                      <span class="hc-info__val">{{ client.collaborateurMg.firstName }} {{ client.collaborateurMg.lastName }}</span>
+                  }
+                  @if (client.responsable) {
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">Collab. RUN</span>
+                      <span class="hc-interv__val">{{ client.responsable.firstName }} {{ client.responsable.lastName }}</span>
+                      <button class="hc-interv__del" (click)="removeIntervenant('COLLAB_RUN')" matTooltip="Retirer">
+                        <mat-icon>close</mat-icon>
+                      </button>
                     </div>
-                  </div>
-                }
+                  }
+                  @if (client.collaborateurMg) {
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">Collab. MADA</span>
+                      <span class="hc-interv__val">{{ client.collaborateurMg.firstName }} {{ client.collaborateurMg.lastName }}</span>
+                      <button class="hc-interv__del" (click)="removeIntervenant('COLLAB_MADA')" matTooltip="Retirer">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  }
+                  @if (!client.directeur && !client.responsable && !client.collaborateurMg) {
+                    <span class="hc-interv__empty">Aucun intervenant assigné</span>
+                  }
+
+                  <!-- Formulaire d'ajout -->
+                  @if (editIntervenants()) {
+                    <div class="hc-interv__form">
+                      <select class="hc-edit-select hc-edit-select--full" [(ngModel)]="newIntervUserId">
+                        <option [ngValue]="null">— Sélectionner un intervenant —</option>
+                        @for (u of allUsers(); track u.id) {
+                          <option [ngValue]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                        }
+                      </select>
+                      <button class="hc-edit-btn hc-edit-btn--save"
+                              [disabled]="!newIntervUserId || savingIntervenants()"
+                              (click)="assignIntervenant()">
+                        @if (savingIntervenants()) { <mat-icon class="spin">sync</mat-icon> }
+                        @else { <mat-icon>check</mat-icon> }
+                        Assigner
+                      </button>
+                    </div>
+                  }
+                </div>
                 <div class="hc-info__row">
                   <div class="hc-info__ico-wrap hc-info__ico-wrap--grey">
                     <mat-icon>calendar_today</mat-icon>
@@ -355,8 +403,9 @@ interface TabGroup {
                 @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" /> }
                 @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
-@case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+                @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
           </div>
@@ -728,6 +777,8 @@ interface TabGroup {
       display: flex; align-items: center; justify-content: center;
     }
     .hc-info__ico-wrap mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .hc-info__ico-wrap--purple { background: #EDE9FE; }
+    .hc-info__ico-wrap--purple mat-icon { color: #5B21B6; }
     .hc-info__ico-wrap--blue { background: #E8F0FE; }
     .hc-info__ico-wrap--blue mat-icon { color: #1565C0; }
     .hc-info__ico-wrap--teal { background: #D7F5EC; }
@@ -737,6 +788,56 @@ interface TabGroup {
     .hc-info__text { display: flex; flex-direction: column; }
     .hc-info__lbl { font-size: 10px; font-weight: 600; color: #89909A; text-transform: uppercase; letter-spacing: .6px; }
     .hc-info__val { font-size: 13px; font-weight: 600; color: #1A1C1E; }
+
+    /* ── Intervenants section ──────────────────────────── */
+    .hc-interv { display: flex; flex-direction: column; gap: 5px; }
+    .hc-interv__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+    .hc-interv__title { font-size: 10px; font-weight: 700; color: #89909A; text-transform: uppercase; letter-spacing: .7px; }
+    .hc-interv__edit-btn {
+      width: 22px; height: 22px; border: none; background: transparent; cursor: pointer;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      color: #94A3B8; transition: background .15s, color .15s;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      &:hover { background: #EDE9FE; color: #5B21B6; }
+    }
+    .hc-interv__row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 3px 0;
+    }
+    .hc-interv__fonc {
+      font-size: 10.5px; font-weight: 700; color: #6366f1;
+      min-width: 76px; flex-shrink: 0;
+    }
+    .hc-interv__val { font-size: 12.5px; font-weight: 600; color: #1A1C1E; flex: 1; }
+    .hc-interv__del {
+      width: 18px; height: 18px; border: none; background: transparent; cursor: pointer;
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      color: #CBD5E1; transition: background .12s, color .12s; flex-shrink: 0;
+      mat-icon { font-size: 12px; width: 12px; height: 12px; }
+      &:hover { background: #FEE2E2; color: #DC2626; }
+    }
+    .hc-interv__empty { font-size: 11.5px; color: #C4C7CF; font-style: italic; padding: 4px 0; }
+    .hc-interv__form {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      margin-top: 6px; padding-top: 8px;
+      border-top: 1px dashed #C7CAFF;
+    }
+    .hc-edit-select {
+      border: 1px solid #C4C7CF; border-radius: 7px; padding: 5px 8px;
+      font-size: 12px; background: #fff; outline: none; cursor: pointer; font-family: inherit;
+      &:focus { border-color: #6366f1; }
+    }
+    .hc-edit-select--full { flex: 1; min-width: 0; }
+    .hc-edit-btn {
+      padding: 5px 12px; border: none; border-radius: 7px; font-size: 12px;
+      font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px;
+      white-space: nowrap; transition: background .15s;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      &:disabled { opacity: .5; cursor: not-allowed; }
+    }
+    .hc-edit-btn--save { background: #6366f1; color: #fff; &:hover:not(:disabled) { background: #4F46E5; } }
+    @keyframes spin-icon { to { transform: rotate(360deg); } }
+    .spin { animation: spin-icon .8s linear infinite; }
 
     /* ══ SKELETON LOADER ═════════════════════════════════ */
     @keyframes shimmer {
@@ -920,6 +1021,7 @@ export class ClientDetailComponent implements OnInit {
         { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
         { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
         { id: 'dossier-travail',  icon: 'work_history', label: 'Dossier de travail' },
+        { id: 'canvas',           icon: 'grid_view',    label: 'Modèle Canvas' },
       ],
     },
     {
@@ -931,6 +1033,14 @@ export class ClientDetailComponent implements OnInit {
       ],
     },
   ];
+
+  auth             = inject(AuthService);
+  private users    = inject(UsersService);
+
+  allUsers           = signal<User[]>([]);
+  editIntervenants   = signal(false);
+  savingIntervenants = signal(false);
+  newIntervUserId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -952,6 +1062,41 @@ export class ClientDetailComponent implements OnInit {
       const courant = list.find(e => e.statut === 'OUVERT') ?? list[0] ?? null;
       this.exerciceCourant.set(courant);
     });
+    this.users.getAll().subscribe(list => this.allUsers.set(list));
+  }
+
+  assignIntervenant() {
+    if (!this.client || !this.newIntervUserId) return;
+    const id     = this.client.id;
+    const user   = this.allUsers().find(u => u.id === this.newIntervUserId);
+    if (!user) return;
+
+    this.savingIntervenants.set(true);
+    const done = () => {
+      this.savingIntervenants.set(false);
+      this.newIntervUserId = null;
+      this.editIntervenants.set(false);
+      this.clientsService.getOne(id).subscribe(c => this.client = c);
+    };
+
+    const isAdmin = ['ADMIN', 'EXPERT_COMPTABLE', 'CHEF_ANTENNE'].includes(user.role);
+    if (isAdmin && this.auth.isAdmin()) {
+      this.clientsService.assignDirecteur(id, user.id).subscribe({ next: done, error: done });
+    } else if (user.site === 'REUNION') {
+      this.clientsService.assign(id, user.id).subscribe({ next: done, error: done });
+    } else {
+      this.clientsService.assignMg(id, user.id).subscribe({ next: done, error: done });
+    }
+  }
+
+  removeIntervenant(fonc: 'DIRECTEUR' | 'COLLAB_RUN' | 'COLLAB_MADA') {
+    if (!this.client) return;
+    const id = this.client.id;
+    const done = () => this.clientsService.getOne(id).subscribe(c => this.client = c);
+
+    if (fonc === 'DIRECTEUR')   this.clientsService.assignDirecteur(id, null).subscribe({ next: done, error: done });
+    if (fonc === 'COLLAB_RUN')  this.clientsService.assign(id, null as any).subscribe({ next: done, error: done });
+    if (fonc === 'COLLAB_MADA') this.clientsService.assignMg(id, null).subscribe({ next: done, error: done });
   }
 
   onTypesChanged(types: any[]) {

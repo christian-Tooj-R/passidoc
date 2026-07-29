@@ -43,9 +43,14 @@ interface CycleUI {
         <p class="dt-header__sub">Révision par cycle — exercice {{ exerciceId }}</p>
       </div>
     </div>
-    @if (readonly) {
-      <span class="dt-badge dt-badge--readonly"><mat-icon>lock</mat-icon> Lecture seule</span>
-    }
+    <div class="dt-header__actions">
+      <button mat-stroked-button class="dt-copy-btn" (click)="copyContent()" matTooltip="Copier tout le contenu">
+        <mat-icon>content_copy</mat-icon> Copier
+      </button>
+      @if (readonly) {
+        <span class="dt-badge dt-badge--readonly"><mat-icon>lock</mat-icon> Lecture seule</span>
+      }
+    </div>
   </div>
 
   @if (loading) {
@@ -235,6 +240,9 @@ interface CycleUI {
 
     /* Save button override */
     .dt-save-btn { height: 32px; font-size: 0.8rem; }
+
+    .dt-header__actions { display: flex; align-items: center; gap: 8px; }
+    .dt-copy-btn { height: 32px; font-size: 0.8rem; }
   `],
 })
 export class DossierTravailTabComponent implements OnInit, OnChanges {
@@ -309,5 +317,22 @@ export class DossierTravailTabComponent implements OnInit, OnChanges {
     const pct = cycle.data?.pourcentageCouverture ?? 0;
     const prefill = `Cycle ${cycle.label} — exercice ${this.exerciceId}. Taux de couverture : ${pct}%. `;
     this.aiSvc.requestOpen(prefill);
+  }
+
+  copyContent() {
+    if (!this.dossier) return;
+    const lines: string[] = [`DOSSIER DE TRAVAIL — Exercice ${this.exerciceId}`];
+    if (this.dossier.noteSynthese) {
+      lines.push('', '== NOTE DE SYNTHÈSE ==', this.dossier.noteSynthese);
+    }
+    for (const cycle of this.cycles) {
+      if (!cycle.data) continue;
+      lines.push('', `== ${cycle.label.toUpperCase()} (${cycle.data.pourcentageCouverture}%) ==`);
+      if (cycle.data.diligences) lines.push('Diligences :', cycle.data.diligences);
+      if (cycle.data.conclusion) lines.push('Conclusion :', cycle.data.conclusion);
+    }
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      this.toast.success('Contenu copié dans le presse-papiers');
+    });
   }
 }

@@ -7,6 +7,7 @@ import Groq from 'groq-sdk';
 import { Client } from '../entities/client.entity';
 import { ConversationIA, MessageRole } from '../entities/conversation-ia.entity';
 import { DossierTravail } from '../entities/dossier-travail.entity';
+import { FluxMensuel, TypeFlux, StatutDepot } from '../entities/flux-mensuel.entity';
 
 @Injectable()
 export class AiAssistantService {
@@ -14,9 +15,10 @@ export class AiAssistantService {
   private model: string;
 
   constructor(
-    @InjectRepository(Client)  private clientRepo: Repository<Client>,
+    @InjectRepository(Client)       private clientRepo: Repository<Client>,
     @InjectRepository(ConversationIA) private convRepo: Repository<ConversationIA>,
     @InjectRepository(DossierTravail) private dossierRepo: Repository<DossierTravail>,
+    @InjectRepository(FluxMensuel)  private fluxRepo: Repository<FluxMensuel>,
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
@@ -24,19 +26,23 @@ export class AiAssistantService {
   }
 
   async getContextSummary(clientId: number) {
-    const client = await this.clientRepo.findOne({
-      where: { id: clientId },
-      relations: [
-        'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
-        'missions', 'objectifsItems', 'controlesInternes',
-        'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
-        'exercices', 'responsable', 'collaborateurMg',
-      ],
-    });
+    const [client, flux] = await Promise.all([
+      this.clientRepo.findOne({
+        where: { id: clientId },
+        relations: [
+          'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
+          'missions', 'objectifsItems', 'controlesInternes',
+          'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
+          'exercices', 'responsable', 'collaborateurMg',
+        ],
+      }),
+      this.fluxRepo.find({ where: { client: { id: clientId } } }),
+    ]);
     if (!client) return null;
 
     const fi = client.ficheIdentite;
-    const fluxManquants = 0;
+    const fluxManquants = flux.filter(f => f.statut === StatutDepot.MANQUANT || f.statut === StatutDepot.EN_RETARD).length;
+    const relevesBancairesManquants = flux.filter(f => f.type === TypeFlux.RELEVE_BANCAIRE && (f.statut === StatutDepot.MANQUANT || f.statut === StatutDepot.EN_RETARD)).length;
 
     return {
       ficheIdentite:      !!fi && !!(fi.raisonSociale || fi.siren),
@@ -49,8 +55,9 @@ export class AiAssistantService {
       objectifs:          (client.objectifsItems?.length ?? 0) > 0,
       controleInterne:    (client.controlesInternes?.length ?? 0) > 0,
       fournisseurs:       0,
-      fluxMensuels:       0,
+      fluxMensuels:       flux.length,
       fluxManquants,
+      relevesBancairesManquants,
       santePassation:     client.santePassation,
       adnGlobal:          !!client.questionnaireAdnGlobal,
       adnSectoriel:       !!client.questionnaireAdnSectoriel,
@@ -80,7 +87,7 @@ export class AiAssistantService {
     user: any,
     res: Response,
   ) {
-    const [client, dossiers] = await Promise.all([
+    const [client, dossiers, flux] = await Promise.all([
       this.clientRepo.findOne({
         where: { id: clientId },
         relations: [
@@ -94,6 +101,10 @@ export class AiAssistantService {
         where: { clientId },
         relations: ['cycles'],
         order: { exerciceId: 'DESC' },
+      }),
+      this.fluxRepo.find({
+        where: { client: { id: clientId } },
+        order: { annee: 'DESC', mois: 'ASC' },
       }),
     ]);
 
@@ -111,7 +122,7 @@ export class AiAssistantService {
     }
 
     const groqMessages = [
-      { role: 'system' as const, content: this.buildSystemPrompt(client, dossiers) },
+      { role: 'system' as const, content: this.buildSystemPrompt(client, dossiers, flux) },
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
 
@@ -150,7 +161,19 @@ export class AiAssistantService {
     }
   }
 
-  private buildSystemPrompt(client: Client, dossiers: DossierTravail[] = []): string {
+  private readonly MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  private readonly TYPE_LABEL: Record<string, string> = {
+    RELEVE_BANCAIRE:   'Relevé bancaire',
+    TVA_MENSUELLE:     'TVA mensuelle',
+    TVA_TRIMESTRIELLE: 'TVA trimestrielle',
+    TVA_ANNUELLE:      'TVA annuelle',
+    PAIE:              'Bulletin de paie',
+    RAPPORT_VENTE:     'Rapport de vente',
+    RECETTE_AMENITIZ:  'Recette Amenitiz',
+    PIECES_COMPTABLES: 'Pièces comptables',
+  };
+
+  private buildSystemPrompt(client: Client, dossiers: DossierTravail[] = [], flux: FluxMensuel[] = []): string {
     const fi        = client.ficheIdentite;
     const analyses  = (client.analysesStrategiques || []).sort((a: any, b: any) => b.id - a.id);
     const objectifs = client.objectifsItems?.[0];
@@ -177,6 +200,9 @@ export class AiAssistantService {
     if (dossiersAvecNote.length)   sections.push(`Dossier de travail — Note de synthèse (${dossiersAvecNote.length} exercice(s))`);
     if (dossiersAvecCycles.length) sections.push(`Dossier de travail — Cycles de révision Ventes/Achats/Social (${dossiersAvecCycles.length} exercice(s))`);
     if (dossiers.length && !dossiersAvecNote.length && !dossiersAvecCycles.length) sections.push(`Dossier de travail présent (${dossiers.length} exercice(s)) — contenu non encore renseigné`);
+    const fluxManquants = flux.filter(f => f.statut === StatutDepot.MANQUANT || f.statut === StatutDepot.EN_RETARD);
+    const relevesBancairesManquants = fluxManquants.filter(f => f.type === TypeFlux.RELEVE_BANCAIRE);
+    if (flux.length) sections.push(`Flux mensuels (${flux.length} entrée(s)) — ${relevesBancairesManquants.length} relevé(s) bancaire(s) manquant(s)/en retard, ${fluxManquants.length} document(s) manquants au total`);
 
     const lines: string[] = [];
 
@@ -200,7 +226,7 @@ export class AiAssistantService {
     lines.push(`4. Tu réponds exclusivement en français, de façon concise et professionnelle.`);
     lines.push(`5. Tu ne divulgues jamais de données d'un autre client.`);
     lines.push(`6. IMPORTANT : Tu as accès à toutes les données listées ci-dessus. Tu NE DIS JAMAIS "je n'ai pas accès à ces informations" ni "je ne dispose pas de ces données" si la section correspondante est listée — consulte les données ci-dessous et réponds avec les informations réelles. Si une section n'est pas renseignée (absente de la liste), indique-le clairement.`);
-    lines.push(`7. Quand on te parle de "pilotage", réfère-toi à la section Contrôle interne (outils de pilotage), aux Flux mensuels, et aux Performances financières. Quand on te parle d'"ADN" ou de "portrait" de l'entreprise, réfère-toi aux sections ADN Global et ADN Sectoriel.`);
+    lines.push(`7. Quand on te parle de "pilotage", réfère-toi à la section Contrôle interne, aux Flux mensuels, et aux Performances financières. Quand on te parle d'"ADN" ou de "portrait" de l'entreprise, réfère-toi aux sections ADN Global et ADN Sectoriel. Quand on te demande les "relevés manquants", "documents manquants" ou "relevés bancaires", réfère-toi à la section FLUX MENSUELS et cite précisément les mois et les types de documents concernés.`);
 
     // ── Fiche identité ─────────────────────────────────────────────────────────
     lines.push(`\n=== FICHE IDENTITÉ ===`);
@@ -230,6 +256,50 @@ export class AiAssistantService {
       exercices.forEach((e: any) => lines.push(
         `  ${e.annee} — ${e.statut} (du ${e.dateOuverture} au ${e.dateCloture})`,
       ));
+    }
+
+    // ── Flux mensuels ─────────────────────────────────────────────────────────
+    if (flux.length) {
+      lines.push(`\n=== FLUX MENSUELS — DOCUMENTS ET RELEVÉS BANCAIRES ===`);
+
+      // Grouper par année puis par type
+      const annees = [...new Set(flux.map(f => f.annee))].sort((a, b) => b - a);
+      for (const annee of annees) {
+        const fluxAnnee = flux.filter(f => f.annee === annee);
+        lines.push(`\n-- Exercice ${annee} --`);
+
+        const types = [...new Set(fluxAnnee.map(f => f.type))];
+        for (const type of types) {
+          const fluxType = fluxAnnee.filter(f => f.type === type).sort((a, b) => a.mois - b.mois);
+          const label = this.TYPE_LABEL[type] ?? type;
+
+          const deposes    = fluxType.filter(f => f.statut === StatutDepot.DEPOSE).map(f => this.MOIS_FR[f.mois - 1]);
+          const manquants  = fluxType.filter(f => f.statut === StatutDepot.MANQUANT).map(f => this.MOIS_FR[f.mois - 1]);
+          const enRetard   = fluxType.filter(f => f.statut === StatutDepot.EN_RETARD).map(f => this.MOIS_FR[f.mois - 1]);
+
+          lines.push(`  ${label} :`);
+          if (deposes.length)   lines.push(`    Déposés   (${deposes.length}) : ${deposes.join(', ')}`);
+          if (manquants.length) lines.push(`    Manquants (${manquants.length}) : ${manquants.join(', ')}`);
+          if (enRetard.length)  lines.push(`    En retard (${enRetard.length}) : ${enRetard.join(', ')}`);
+        }
+      }
+
+      // Résumé rapide pour les questions directes
+      lines.push(`\nRÉSUMÉ FLUX MANQUANTS :`);
+      const typesAvecManque = [...new Set(fluxManquants.map(f => f.type))];
+      if (typesAvecManque.length === 0) {
+        lines.push(`  Aucun document manquant — tous les flux sont déposés.`);
+      } else {
+        for (const type of typesAvecManque) {
+          const label = this.TYPE_LABEL[type] ?? type;
+          const items = fluxManquants.filter(f => f.type === type);
+          const parAnnee = [...new Set(items.map(f => f.annee))].sort((a, b) => b - a);
+          for (const annee of parAnnee) {
+            const moisConcernes = items.filter(f => f.annee === annee).map(f => this.MOIS_FR[f.mois - 1]).join(', ');
+            lines.push(`  ${label} ${annee} : ${moisConcernes}`);
+          }
+        }
+      }
     }
 
     // ── Dossiers de travail ────────────────────────────────────────────────────

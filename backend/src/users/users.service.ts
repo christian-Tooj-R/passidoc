@@ -27,11 +27,12 @@ export class UsersService {
   }
 
   async findAll(currentUser?: User) {
+    const tid = currentUser?.tenantId;
     if (currentUser && currentUser.role === UserRole.CHEF_ANTENNE) {
-      const users = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne }, order: { createdAt: 'DESC' } });
+      const users = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, ...(tid ? { tenantId: tid } : {}) }, order: { createdAt: 'DESC' } });
       return users.map(this.sanitize);
     }
-    const users = await this.repo.find({ order: { createdAt: 'DESC' } });
+    const users = await this.repo.find({ where: tid ? { tenantId: tid } : {}, order: { createdAt: 'DESC' } });
     return users.map(this.sanitize);
   }
 
@@ -58,23 +59,25 @@ export class UsersService {
   }
 
   async getAssignable(currentUser: User) {
+    const tid = currentUser.tenantId;
+    const base = tid ? { tenantId: tid } : {};
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
-      return this.findAll();
+      return this.findAll(currentUser);
     }
     if (currentUser.role === UserRole.CHEF_ANTENNE) {
-      const team = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, isActive: true } });
+      const team = await this.repo.find({ where: { ...base, antenne: currentUser.antenne as UserAntenne, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const all = self ? [self, ...team.filter(u => u.id !== currentUser.id)] : team;
       return all.map(u => this.sanitize(u));
     }
     if (currentUser.role === UserRole.CHEF_MISSION) {
-      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const all = self ? [self, ...team] : team;
       return all.map(u => this.sanitize(u));
     }
     if (currentUser.site === UserSite.REUNION) {
-      const mgTeam = await this.repo.find({ where: { site: UserSite.MADAGASCAR, isActive: true } });
+      const mgTeam = await this.repo.find({ where: { ...base, site: UserSite.MADAGASCAR, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const result = self ? [self, ...mgTeam] : mgTeam;
       return result.map(u => this.sanitize(u));
@@ -84,20 +87,22 @@ export class UsersService {
   }
 
   async getMyTeam(currentUser: User) {
+    const tid = currentUser.tenantId;
+    const base = tid ? { tenantId: tid } : {};
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
-      const team = await this.repo.find({ where: { isActive: true }, order: { lastName: 'ASC', firstName: 'ASC' } });
+      const team = await this.repo.find({ where: { ...base, isActive: true }, order: { lastName: 'ASC', firstName: 'ASC' } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
     if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
-      const team = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, isActive: true } });
+      const team = await this.repo.find({ where: { ...base, antenne: currentUser.antenne as UserAntenne, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
     if (currentUser.role === UserRole.CHEF_MISSION) {
-      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
     if (currentUser.site === UserSite.REUNION) {
-      const team = await this.repo.find({ where: { referentId: currentUser.id, isActive: true } });
+      const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
     const referent = currentUser.referentId

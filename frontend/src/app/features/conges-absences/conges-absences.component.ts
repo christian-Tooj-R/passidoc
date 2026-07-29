@@ -197,15 +197,20 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
 
 </div>
 
-<!-- Formulaire nouvelle demande -->
+<!-- Panel nouvelle demande -->
 @if (showNewForm()) {
   <div class="overlay" (click)="showNewForm.set(false)"></div>
-  <div class="modal">
-    <div class="modal__header">
-      <span>Nouvelle demande de congé</span>
-      <button mat-icon-button (click)="showNewForm.set(false)"><mat-icon>close</mat-icon></button>
+  <div class="drawer">
+    <div class="drawer__header">
+      <div class="drawer__header-icon"><mat-icon>event_busy</mat-icon></div>
+      <div class="drawer__header-text">
+        <span class="drawer__title">Nouvelle demande d'absence</span>
+        <span class="drawer__sub">Remplissez les informations ci-dessous</span>
+      </div>
+      <button mat-icon-button (click)="showNewForm.set(false)" class="drawer__close"><mat-icon>close</mat-icon></button>
     </div>
-    <form [formGroup]="newForm" (ngSubmit)="submitNew()" class="modal__body">
+    <form [formGroup]="newForm" (ngSubmit)="submitNew()" class="drawer__body">
+      <span class="drawer__section">Collaborateur</span>
       <mat-form-field appearance="outline" class="full">
         <mat-label>Collaborateur</mat-label>
         <mat-select formControlName="userId">
@@ -214,8 +219,10 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
           }
         </mat-select>
       </mat-form-field>
+
+      <span class="drawer__section">Type &amp; période</span>
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Type de congé</mat-label>
+        <mat-label>Type d'absence</mat-label>
         <mat-select formControlName="typeConge">
           @for (t of types; track t.value) { <mat-option [value]="t.value">{{ t.label }}</mat-option> }
         </mat-select>
@@ -226,16 +233,20 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
       </div>
       <mat-form-field appearance="outline" class="full">
         <mat-label>Nombre de jours</mat-label>
-        <input matInput type="number" formControlName="nombreJours" />
+        <input matInput type="number" min="0.5" step="0.5" formControlName="nombreJours" />
       </mat-form-field>
+
+      <span class="drawer__section">Informations complémentaires</span>
       <mat-form-field appearance="outline" class="full">
         <mat-label>Motif (optionnel)</mat-label>
-        <input matInput formControlName="motif" />
+        <input matInput formControlName="motif" placeholder="Ex : Vacances été, Rendez-vous médical…" />
       </mat-form-field>
-      <div class="modal-actions">
+
+      <div class="drawer__actions">
         <button mat-button type="button" (click)="showNewForm.set(false)">Annuler</button>
         <button mat-flat-button color="primary" type="submit" [disabled]="newForm.invalid || submitting()">
-          {{ submitting() ? 'Envoi...' : 'Créer la demande' }}
+          <mat-icon>{{ submitting() ? 'hourglass_empty' : 'send' }}</mat-icon>
+          {{ submitting() ? 'Envoi…' : 'Soumettre la demande' }}
         </button>
       </div>
     </form>
@@ -341,19 +352,72 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
     .solde-chip--low  { background: #fee2e2; color: #991b1b; }
     .solde-chip--none { background: transparent; color: #c0c9de; }
 
-    /* Modales */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 999; }
+    /* Overlay */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 999; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Drawer (panel droit) */
+    .drawer {
+      position: fixed; right: 0; top: 0; bottom: 0;
+      width: min(480px, 100vw);
+      background: #fff;
+      box-shadow: -8px 0 40px rgba(22,35,81,.16);
+      z-index: 1000;
+      display: flex; flex-direction: column;
+      animation: slideIn .25s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+    .drawer__header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px;
+      background: linear-gradient(135deg, #4c1d95, #6d28d9);
+      flex-shrink: 0;
+    }
+    .drawer__header-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
+    }
+    .drawer__header-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .drawer__title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.25; }
+    .drawer__sub   { font-size: 11px; color: rgba(255,255,255,.65); }
+    .drawer__close { color: rgba(255,255,255,.7) !important; margin-left: auto; }
+
+    .drawer__body {
+      flex: 1; overflow-y: auto;
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .drawer__section {
+      display: block;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: #6d28d9;
+      border-bottom: 1px solid #ede9f8;
+      padding-bottom: 5px; margin: 10px 0 6px;
+    }
+    .drawer__section:first-child { margin-top: 0; }
+    .drawer__actions {
+      display: flex; justify-content: flex-end; gap: 10px;
+      margin-top: 12px; padding-top: 14px;
+      border-top: 1px solid #eee;
+      button mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
+    }
+
+    /* Modal refus (centré, reste un vrai modal car c'est une petite confirmation) */
     .modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
-      z-index: 1000; width: 480px; max-height: 90vh; display: flex; flex-direction: column;
+      z-index: 1000; width: 380px; max-height: 90vh; display: flex; flex-direction: column;
     }
-    .modal--sm { width: 380px; }
     .modal__header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e4e8f4; font-size: 14px; font-weight: 700; color: #162351; flex-shrink: 0; }
     .modal__body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .full { width: 100%; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
   `],
 })
 export class CongesAbsencesComponent implements OnInit {
@@ -365,7 +429,7 @@ export class CongesAbsencesComponent implements OnInit {
   annee          = signal(new Date().getFullYear());
   view           = signal<ViewMode>('demandes');
   search         = signal('');
-  statutFiltre   = signal('');
+  statutFiltre   = signal('EN_ATTENTE');
   typeFiltre     = signal('');
   siteFiltre     = signal('');
   loading        = signal(false);
@@ -393,7 +457,7 @@ export class CongesAbsencesComponent implements OnInit {
   });
 
   topTypes = computed(() =>
-    (this.stats()?.parType ?? []).filter(t => t.jours > 0 && t.type !== 'RTT').sort((a,b) => b.jours - a.jours).slice(0, 3)
+    (this.stats()?.parType ?? []).filter(t => t.jours > 0).sort((a,b) => b.jours - a.jours).slice(0, 3)
   );
 
   demandesFiltrees = computed(() => {
@@ -414,7 +478,7 @@ export class CongesAbsencesComponent implements OnInit {
   typesActifs = computed(() => {
     const seen = new Set<string>();
     this.allSoldes().forEach(r => Object.keys(r.soldes).forEach(t => seen.add(t)));
-    return ([...seen] as TypeConge[]).filter(t => t !== 'RTT');
+    return [...seen] as TypeConge[];
   });
 
   soldesRows = computed(() => {

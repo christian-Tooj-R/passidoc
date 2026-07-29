@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { RolePermissionsService } from '../../core/services/role-permissions.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { HelpService } from '../../core/services/help.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { filter } from 'rxjs/operators';
 
 type ModuleId = 'apercu' | 'dossiers' | 'travail' | 'documents' | 'notes' | 'equipe' | 'pointage' | 'rh';
@@ -34,8 +35,12 @@ interface AppModule {
       <aside class="rail">
 
         <!-- Logo -->
-        <a routerLink="/dashboard" class="rail-logo" matTooltip="Passidoc" matTooltipPosition="right">
-          <mat-icon>description</mat-icon>
+        <a routerLink="/dashboard" class="rail-logo" [matTooltip]="tenant.nomSociete()" matTooltipPosition="right">
+          @if (tenant.logoUrl()) {
+            <img [src]="tenant.logoUrl()!" alt="logo" class="rail-logo__img" />
+          } @else {
+            <mat-icon>description</mat-icon>
+          }
         </a>
 
         <div class="rail-divider"></div>
@@ -210,6 +215,7 @@ interface AppModule {
     }
     .rail-logo:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(96,165,250,.45); }
     .rail-logo mat-icon { color: #fff; font-size: 18px; width: 18px; height: 18px; }
+    .rail-logo__img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
 
     .rail-divider { width: 36px; height: 1px; background: var(--rail-divider, rgba(255,255,255,.08)); margin: 6px 0; flex-shrink: 0; }
     .rail-spacer  { flex: 1; }
@@ -463,6 +469,7 @@ export class SidebarComponent implements OnInit {
   private rolePerms = inject(RolePermissionsService);
   theme   = inject(ThemeService);
   helpSvc = inject(HelpService);
+  tenant  = inject(TenantService);
   constructor(public auth: AuthService, private router: Router) {}
 
   canSeeMenu(id: string): boolean {

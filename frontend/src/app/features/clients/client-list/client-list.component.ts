@@ -14,6 +14,7 @@ import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
 import { ClientsService } from '../../../core/services/clients.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { Client } from '../../../core/models/client.model';
 import { CreateClientWizardComponent } from './create-client-wizard.component';
 
@@ -42,7 +43,7 @@ type ViewMode = 'grid' | 'list';
           <span class="bc-current">{{ auth.isAdmin() ? 'Tous les dossiers' : 'Mes dossiers' }}</span>
           @if (siteFilter()) {
             <mat-icon class="bc-sep">chevron_right</mat-icon>
-            <span class="bc-current">{{ siteFilter() === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}</span>
+            <span class="bc-current">{{ siteFilter() === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
           }
         </div>
 
@@ -86,7 +87,7 @@ type ViewMode = 'grid' | 'list';
 
       </div>
 
-      <!-- ══ FILTER CHIPS ═══════════════════════════════════ -->
+      <!-- ══ FILTER BAR ══════════════════════════════════════ -->
       <div class="filter-bar">
 
         <!-- Complétude -->
@@ -110,31 +111,90 @@ type ViewMode = 'grid' | 'list';
           <mat-icon>person</mat-icon> Mes dossiers
         </button>
 
-        @if (auth.isAdmin()) {
-          <!-- Filtre collaborateur -->
-          <div class="collab-select-wrap">
-            <mat-icon class="collab-icon">group</mat-icon>
-            <select class="collab-select" [value]="collabFilter() ?? ''"
-                    (change)="setCollabFilter(+$any($event.target).value || null)">
-              <option value="">Tous les collaborateurs</option>
-              @for (u of uniqueCollabs(); track u.id) {
-                <option [value]="u.id">{{ u.label }}</option>
-              }
-            </select>
+        <div class="toolbar__spacer"></div>
+
+        <!-- Résumé filtres actifs -->
+        @if (activeFilterCount() > 0 && !showFilterPanel()) {
+          <div class="filter-active-summary">
+            @if (collabFilter()) {
+              <span class="fas-chip">
+                <mat-icon>person</mat-icon>{{ collabFilterLabel() }}
+                <button (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            @if (siteFilter()) {
+              <span class="fas-chip">
+                {{ siteFilter() === 'REUNION' ? tenantSvc.poleFlag1() : tenantSvc.poleFlag2() }} {{ siteFilter() === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
+                <button (click)="siteFilter.set('')"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+          </div>
+        }
+
+        <!-- Bouton Filtrer -->
+        <button class="btn-filter" [class.btn-filter--active]="showFilterPanel()" (click)="showFilterPanel.set(!showFilterPanel())">
+          <mat-icon>tune</mat-icon>
+          Filtrer
+          @if (activeFilterCount() > 0) {
+            <span class="btn-filter__badge">{{ activeFilterCount() }}</span>
+          }
+        </button>
+
+      </div>
+
+      <!-- ══ FILTER PANEL ══════════════════════════════════════ -->
+      @if (showFilterPanel()) {
+        <div class="filter-panel">
+
+          <!-- Intervenants / Fonction -->
+          <div class="fp-group">
+            <label class="fp-label">Intervenants / Fonction</label>
+            <div class="fp-interv">
+              <div class="iv-filter">
+                <mat-icon class="iv-icon">group</mat-icon>
+                @if (collabFilter()) {
+                  <span class="iv-chip">
+                    {{ collabFilterLabel() }}
+                    <button class="iv-chip-x" (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+                  </span>
+                } @else {
+                  <select class="iv-select"
+                    (change)="setCollabFilter(+$any($event.target).value || null); $any($event.target).value = ''">
+                    <option value="">— Sélectionner un intervenant —</option>
+                    @for (u of uniqueCollabs(); track u.id) {
+                      <option [value]="u.id">{{ u.label }}</option>
+                    }
+                  </select>
+                }
+              </div>
+            </div>
           </div>
 
-          <div class="fchip-sep"></div>
-          <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
-            <mat-icon>public</mat-icon> Tous les sites
-          </button>
-          <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
-            🇷🇪 La Réunion
-          </button>
-          <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
-            🇲🇬 Madagascar
-          </button>
-        }
-      </div>
+          <!-- Site -->
+          <div class="fp-group">
+            <label class="fp-label">Site</label>
+            <div class="fp-site-chips">
+              <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
+                <mat-icon>public</mat-icon> Tous
+              </button>
+              <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
+                {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}
+              </button>
+              <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
+                {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Réinitialiser -->
+          @if (activeFilterCount() > 0) {
+            <button class="fp-reset" (click)="resetFilters()">
+              <mat-icon>restart_alt</mat-icon> Réinitialiser les filtres
+            </button>
+          }
+
+        </div>
+      }
 
       <!-- ══ LOADING ═══════════════════════════════════════ -->
       @if (loading()) {
@@ -193,7 +253,7 @@ type ViewMode = 'grid' | 'list';
                   <span class="folder-name">{{ c.nom }}</span>
                   <div class="folder-sub-row">
                     <span class="folder-site" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
-                      {{ c.site === 'REUNION' ? '🇷🇪 Réunion' : '🇲🇬 Madagascar' }}
+                      {{ c.site === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
                     </span>
                     @if (c.secteurActivite) {
                       <span class="folder-sec-sep">·</span>
@@ -207,6 +267,27 @@ type ViewMode = 'grid' | 'list';
                       <div class="fp-fill" [style.width.%]="score(c)" [style.background]="ringColor(score(c))"></div>
                     </div>
                     <span class="fp-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
+                  </div>
+                  <!-- Intervenants -->
+                  <div class="folder-interv">
+                    @if (c.directeur) {
+                      <span class="fi-av fi-av--dir" [title]="'Directeur : ' + c.directeur.firstName + ' ' + c.directeur.lastName">
+                        {{ c.directeur.firstName[0] }}{{ c.directeur.lastName[0] }}
+                      </span>
+                    }
+                    @if (c.responsable) {
+                      <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                        {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
+                      </span>
+                    }
+                    @if (c.collaborateurMg) {
+                      <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
+                        {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                      </span>
+                    }
+                    @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
+                      <span class="fi-none">Non assigné</span>
+                    }
                   </div>
                 </div>
 
@@ -223,7 +304,7 @@ type ViewMode = 'grid' | 'list';
           <div class="list-header">
             <span class="lh-name">Nom</span>
             <span class="lh-site">Site</span>
-            <span class="lh-resp">Responsable</span>
+            <span class="lh-resp">Intervenants</span>
             <span class="lh-score">Complétude</span>
             <span class="lh-status">Statut</span>
             <span class="lh-action"></span>
@@ -253,15 +334,27 @@ type ViewMode = 'grid' | 'list';
 
               <!-- Site -->
               <span class="lr-site" [class]="c.site==='REUNION' ? 'site--re' : 'site--mg'">
-                {{ c.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                {{ c.site === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
               </span>
 
-              <!-- Responsable -->
+              <!-- Intervenants -->
               <div class="lr-resp">
+                @if (c.directeur) {
+                  <span class="fi-av fi-av--dir" [title]="'Directeur : ' + c.directeur.firstName + ' ' + c.directeur.lastName">
+                    {{ c.directeur.firstName[0] }}{{ c.directeur.lastName[0] }}
+                  </span>
+                }
                 @if (c.responsable) {
-                  <div class="resp-av">{{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}</div>
-                  <span>{{ c.responsable.firstName }} {{ c.responsable.lastName }}</span>
-                } @else {
+                  <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                    {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
+                  </span>
+                }
+                @if (c.collaborateurMg) {
+                  <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
+                    {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                  </span>
+                }
+                @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
                   <span class="resp-none">—</span>
                 }
               </div>
@@ -400,19 +493,111 @@ type ViewMode = 'grid' | 'list';
     .fdot--red    { background: #BA1A1A; }
     .fchip-sep { width: 1px; height: 20px; background: #E0E2EC; margin: 0 2px; }
     .fchip--me.fchip--active { background: #E3F2FD !important; border-color: #1565C0; color: #1565C0; }
-    /* Sélecteur collaborateur */
-    .collab-select-wrap {
+    /* Filtre intervenants */
+    .iv-filter {
       display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid #C8C6CA; border-radius: 8px; padding: 5px 10px;
+      border: 1px solid #C8C6CA; border-radius: 8px; padding: 4px 10px;
       background: transparent; transition: border-color .12s;
     }
-    .collab-select-wrap:focus-within { border-color: #1565C0; }
-    .collab-icon { font-size: 14px; width: 14px; height: 14px; color: #44474F; }
-    .collab-select {
+    .iv-filter:focus-within { border-color: #6366f1; }
+    .iv-icon { font-size: 14px; width: 14px; height: 14px; color: #44474F; }
+    .iv-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #EEF2FF; color: #3730A3; font-size: 12px; font-weight: 600;
+      padding: 1px 4px 1px 8px; border-radius: 6px;
+    }
+    .iv-chip-x {
+      background: none; border: none; cursor: pointer; padding: 0;
+      display: flex; align-items: center; color: #6366f1;
+    }
+    .iv-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .iv-select, .iv-fonc {
       border: none; background: transparent; outline: none;
       font-size: 12.5px; font-weight: 500; color: #44474F;
       font-family: 'Inter', sans-serif; cursor: pointer;
     }
+    .iv-fonc {
+      border-left: 1px solid #E0E2EC; padding-left: 8px; margin-left: 2px;
+    }
+
+    /* Bouton Filtrer */
+    .btn-filter {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid #C8C6CA; background: transparent;
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 12.5px; font-weight: 600; color: #44474F;
+      cursor: pointer; font-family: 'Inter', sans-serif; transition: all .12s;
+      white-space: nowrap;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+    .btn-filter:hover { background: #E8EAED; }
+    .btn-filter--active { background: #E8DEF8; border-color: #6B4EFF; color: #21005D; }
+    .btn-filter__badge {
+      background: #6B4EFF; color: #fff; font-size: 10px; font-weight: 700;
+      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Résumé filtres actifs */
+    .filter-active-summary { display: flex; align-items: center; gap: 6px; }
+    .fas-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #EEF2FF; color: #3730A3; font-size: 11.5px; font-weight: 600;
+      padding: 2px 4px 2px 8px; border-radius: 6px;
+      mat-icon { font-size: 13px; width: 13px; height: 13px; }
+      button { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: #6366f1; }
+    }
+
+    /* ══ FILTER PANEL ══════════════════════════════════════ */
+    .filter-panel {
+      display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+      padding: 14px 20px 14px;
+      background: #F8F9FF;
+      border-bottom: 1px solid #C7CAFF;
+      flex-shrink: 0;
+      animation: fp-slide-in .15s ease;
+    }
+    @keyframes fp-slide-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fp-group { display: flex; flex-direction: column; gap: 7px; }
+    .fp-label {
+      font-size: 10px; font-weight: 700; color: #6366f1;
+      text-transform: uppercase; letter-spacing: .7px;
+    }
+    .fp-interv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .fp-interv .iv-filter {
+      background: #fff; border-color: #C7CAFF; min-width: 220px;
+    }
+    .fp-interv .iv-fonc {
+      border: 1px solid #C7CAFF; border-radius: 7px; padding: 5px 8px;
+      background: #fff; font-size: 12.5px; outline: none; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    .fp-site-chips { display: flex; align-items: center; gap: 6px; }
+    .fp-reset {
+      align-self: flex-end; margin-left: auto;
+      display: inline-flex; align-items: center; gap: 5px;
+      border: none; background: transparent; color: #B91C1C;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: 'Inter', sans-serif; padding: 4px 8px; border-radius: 7px;
+      transition: background .12s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { background: #FEE2E2; }
+    }
+
+    /* Avatars intervenants */
+    .folder-interv { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+    .fi-av {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      font-size: 8.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      cursor: default; text-transform: uppercase;
+    }
+    .fi-av--dir { background: #EDE9FE; color: #5B21B6; }
+    .fi-av--run { background: #C8F8EE; color: #006B57; }
+    .fi-av--mg  { background: #DDE3EA; color: #162351; }
+    .fi-none { font-size: 10px; color: #C8C6CA; font-style: italic; }
     /* Barre de complétude sur les folder cards */
     .folder-completude { width: 100%; margin-top: 6px; }
     .fc-track { height: 3px; background: #E8EAED; border-radius: 2px; overflow: hidden; }
@@ -672,23 +857,33 @@ export class ClientListComponent implements OnInit, OnDestroy {
   siteFilter      = signal('');
   mesDossiers     = signal(false);
   collabFilter    = signal<number | null>(null);
+  fonctionFilter  = signal<string>('');
   sortKey         = signal<SortKey>('nom');
   sortDir         = signal<'asc'|'desc'>('asc');
   viewMode        = signal<ViewMode>('grid');
   confirmDeleteId = signal<number | null>(null);
   deleting        = signal(false);
+  showFilterPanel = signal(false);
+
+  activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.collabFilter()) count++;
+    if (this.siteFilter()) count++;
+    return count;
+  });
 
   searchCtrl = new FormControl('');
 
   private dialog      = inject(MatDialog);
   private notifStream = inject(NotificationStreamService);
   private sub         = new Subscription();
+  tenantSvc           = inject(TenantService);
 
   uniqueCollabs = computed<CollabOption[]>(() => {
     const seen = new Set<number>();
     const out: CollabOption[] = [];
     for (const c of this.clients()) {
-      for (const u of [c.responsable, c.collaborateurMg]) {
+      for (const u of [c.directeur, c.responsable, c.collaborateurMg]) {
         if (u && !seen.has(u.id)) {
           seen.add(u.id);
           out.push({ id: u.id, label: `${u.firstName} ${u.lastName}` });
@@ -696,6 +891,11 @@ export class ClientListComponent implements OnInit, OnDestroy {
       }
     }
     return out.sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  collabFilterLabel = computed(() => {
+    const id = this.collabFilter();
+    return id ? (this.uniqueCollabs().find(u => u.id === id)?.label ?? '') : '';
   });
 
   filteredClients = computed(() => {
@@ -715,8 +915,14 @@ export class ClientListComponent implements OnInit, OnDestroy {
       if (h === 'ok'      && score < 80)                    return false;
       if (h === 'partial' && (score < 50 || score >= 80))   return false;
       if (h === 'alert'   && score >= 50)                   return false;
-      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId) return false;
-      if (collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab)  return false;
+      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId && c.directeur?.id !== meId) return false;
+      if (collab) {
+        const fonc = this.fonctionFilter();
+        if (fonc === 'DIRECTEUR'   && c.directeur?.id     !== collab) return false;
+        if (fonc === 'COLLAB_RUN'  && c.responsable?.id   !== collab) return false;
+        if (fonc === 'COLLAB_MADA' && c.collaborateurMg?.id !== collab) return false;
+        if (!fonc && c.directeur?.id !== collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab) return false;
+      }
       return true;
     });
 
@@ -838,5 +1044,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
   setCollabFilter(id: number | null) {
     this.collabFilter.set(id);
     if (id !== null) this.mesDossiers.set(false);
+  }
+
+  resetFilters() {
+    this.collabFilter.set(null);
+    this.fonctionFilter.set('');
+    this.siteFilter.set('');
+    this.healthFilter.set('');
+    this.mesDossiers.set(false);
   }
 }
