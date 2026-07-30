@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService } from '../../core/services/notification-stream.service';
 import { TaskNotification } from '../../core/services/notification-stream.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 @Component({
   selector: 'app-top-nav',
@@ -39,17 +40,17 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
 
         <span class="nav-label">Principal</span>
 
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
           <div class="nav-icon-wrap"><mat-icon>space_dashboard</mat-icon></div>
           <span>Tableau de bord</span>
         </a>
 
-        <a routerLink="/clients" routerLinkActive="active" class="nav-item">
+        <a routerLink="/clients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
           <div class="nav-icon-wrap"><mat-icon>folder_shared</mat-icon></div>
           <span>Dossiers clients</span>
         </a>
 
-        <a routerLink="/tasks" routerLinkActive="active" class="nav-item">
+        <a routerLink="/tasks" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
           <div class="nav-icon-wrap"><mat-icon>task_alt</mat-icon></div>
           <span>Tâches</span>
         </a>
@@ -59,19 +60,19 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
           <span class="nav-label">Gestion</span>
 
           @if (auth.canManagePortefeuilles()) {
-            <a routerLink="/portefeuilles" routerLinkActive="active" class="nav-item">
+            <a routerLink="/portefeuilles" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
               <div class="nav-icon-wrap"><mat-icon>account_tree</mat-icon></div>
               <span>Portefeuilles</span>
             </a>
           }
 
-          <a routerLink="/equipes" routerLinkActive="active" class="nav-item">
+          <a routerLink="/equipes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
             <div class="nav-icon-wrap"><mat-icon>people</mat-icon></div>
             <span>Équipes</span>
           </a>
 
           @if (auth.isAdmin()) {
-            <a routerLink="/admin" routerLinkActive="active" class="nav-item">
+            <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false, queryParams: 'ignored' }" class="nav-item">
               <div class="nav-icon-wrap"><mat-icon>manage_accounts</mat-icon></div>
               <span>Utilisateurs</span>
             </a>
@@ -85,7 +86,7 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
       <!-- ── Site indicator ────────────────────────── -->
       <div class="site-chip" [class.site-mg]="auth.currentUser()?.site === 'MADAGASCAR'">
         <span class="site-dot"></span>
-        {{ auth.currentUser()?.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
+        {{ tenantSvc.poleLabel(auth.currentUser()?.site ?? '') }}
       </div>
 
       <!-- ── Notifications ─────────────────────────── -->
@@ -454,6 +455,8 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
 })
 export class TopNavComponent implements OnInit, OnDestroy {
   bellOpen = false;
+
+  tenantSvc = inject(TenantService);
 
   constructor(
     public auth: AuthService,

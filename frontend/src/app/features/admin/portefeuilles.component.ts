@@ -12,6 +12,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { UsersService } from '../../core/services/users.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { User } from '../../core/models/user.model';
 import { Client } from '../../core/models/client.model';
 
@@ -96,10 +97,10 @@ interface CollabCard {
             <mat-icon>layers</mat-icon> Tous ({{ allClients.length }})
           </button>
           <button class="filter-chip" [class.active]="siteFilter === 'REUNION'" (click)="setSiteFilter('REUNION')">
-            <span>🇷🇪</span> Réunion ({{ countSite('REUNION') }})
+            <span>{{ tenantSvc.poleFlag1() }}</span> {{ tenantSvc.poleLabel1() }} ({{ countSite('REUNION') }})
           </button>
           <button class="filter-chip" [class.active]="siteFilter === 'MADAGASCAR'" (click)="setSiteFilter('MADAGASCAR')">
-            <span>🇲🇬</span> Madagascar ({{ countSite('MADAGASCAR') }})
+            <span>{{ tenantSvc.poleFlag2() }}</span> {{ tenantSvc.poleLabel2() }} ({{ countSite('MADAGASCAR') }})
           </button>
         </div>
 
@@ -240,7 +241,7 @@ interface CollabCard {
                           </td>
                           <td>
                             <span [class]="c.site === 'REUNION' ? 'badge-re' : 'badge-mg'">
-                              {{ c.site === 'REUNION' ? '🇷🇪 Réunion' : '🇲🇬 Madagascar' }}
+                              {{ tenantSvc.poleFlag(c.site) }} {{ tenantSvc.poleLabel(c.site) }}
                             </span>
                           </td>
                           <td>
@@ -338,7 +339,7 @@ interface CollabCard {
             </div>
             <div class="stat-card__body">
               <span class="stat-card__value">{{ mgDistributedCount }} / {{ allClients.length }}</span>
-              <span class="stat-card__label">Distribués à Madagascar</span>
+              <span class="stat-card__label">Distribués à {{ tenantSvc.poleLabel2() }}</span>
             </div>
           </div>
         </div>
@@ -389,7 +390,7 @@ interface CollabCard {
         <!-- Section distribution Madagascar -->
         <div class="section-header" style="margin-top: 36px;">
           <h2 class="section-title-h2">
-            <mat-icon>south_america</mat-icon> Distribution Madagascar
+            <mat-icon>south_america</mat-icon> Distribution {{ tenantSvc.poleLabel2() }}
           </h2>
           @if (unassignedMgCount === 0 && allClients.length > 0) {
             <div class="badge-all-distributed">
@@ -875,6 +876,7 @@ interface CollabCard {
 })
 export class PortefeuillesComponent implements OnInit {
   auth = inject(AuthService);
+  tenantSvc = inject(TenantService);
   private usersService = inject(UsersService);
   private clientsService = inject(ClientsService);
   private toast = inject(ToastService);

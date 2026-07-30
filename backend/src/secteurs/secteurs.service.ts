@@ -41,13 +41,16 @@ export class SecteursService {
 
   /** Crée les secteurs par défaut pour un tenant donné (appelé lors du setup) */
   async seedForTenant(tenantId: number): Promise<void> {
-    const existing = await this.repo.count({ where: { tenantId } });
-    if (existing > 0) return;
     const templates = await this.repo.find({ where: { tenantId: null as any, isActive: true } });
     const source = templates.length > 0 ? templates : SEED_SECTEURS.map(s => ({ ...s, questions: [] as any }));
     for (const s of source) {
       const { id, createdAt, updatedAt, tenantId: _tid, ...fields } = s as any;
-      await this.repo.save(this.repo.create({ ...fields, tenantId, questions: (s as any).questions ?? [] }));
+      await this.repo.createQueryBuilder()
+        .insert()
+        .into(Secteur)
+        .values({ ...fields, tenantId, questions: (s as any).questions ?? [] })
+        .orIgnore()  // INSERT ... ON CONFLICT DO NOTHING — idempotent
+        .execute();
     }
   }
 

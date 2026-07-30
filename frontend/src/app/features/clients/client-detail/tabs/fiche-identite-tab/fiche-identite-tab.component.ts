@@ -16,6 +16,7 @@ import { FiscalReferenceService, FiscalRef } from '../../../../../core/services/
 import { ClientsService } from '../../../../../core/services/clients.service';
 import { ClientSite, TypeFlux } from '../../../../../core/models/client.model';
 import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
+import { TenantService } from '../../../../../core/services/tenant.service';
 
 const PLATFORM_SVGS: Record<string, string> = {
   Facebook:  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#1877F2"/><path fill="#fff" d="M13 10.5V8.8c0-.6.3-.9.8-.9H16V5h-2.5C11.4 5 10 6.5 10 8.8v1.7H8V13h2v7h3v-7h2l.5-2.5H13z"/></svg>`,
@@ -105,7 +106,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                 <mat-panel-title>
                   <mat-icon>account_balance</mat-icon>&nbsp;Spécificités fiscales
                   <span class="site-badge" [class]="site === 'REUNION' ? 'badge-re' : 'badge-mg'">
-                    {{ site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
+                    {{ tenantSvc.poleLabel(site) }}
                   </span>
                 </mat-panel-title>
               </mat-expansion-panel-header>
@@ -628,6 +629,7 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   saving = false;
 
+  tenantSvc = inject(TenantService);
   private toast = inject(ToastService);
 
   get actionnaires(): FormArray { return this.form.get('actionnaires') as FormArray; }

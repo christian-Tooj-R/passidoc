@@ -15,7 +15,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   CHEF_ANTENNE:      'Chef d\'antenne',
   CHEF_MISSION:      'Chef de mission',
   COLLABORATEUR:     'Collaborateur',
-  GERANT_MADAGASCAR: 'Gérant Madagascar',
+  GERANT_MADAGASCAR: 'Gérant Pôle 2',
 };
 
 export interface User {

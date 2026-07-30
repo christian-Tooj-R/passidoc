@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RolePermissionsService, MENU_ITEMS, MenuItemDef } from '../../core/services/role-permissions.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 @Component({
   selector: 'app-role-permissions',
@@ -203,16 +204,19 @@ import { ToastService } from '../../core/services/toast.service';
 export class RolePermissionsComponent implements OnInit {
   private rolePermsSvc = inject(RolePermissionsService);
   private toast        = inject(ToastService);
-  auth = inject(AuthService);
+  auth      = inject(AuthService);
+  tenantSvc = inject(TenantService);
 
   menuItems: MenuItemDef[] = MENU_ITEMS;
-  roles = [
-    { key: 'EXPERT_COMPTABLE',  label: 'Expert-comptable',  icon: 'badge'           },
-    { key: 'CHEF_ANTENNE',      label: 'Chef d\'antenne',   icon: 'supervisor_account' },
-    { key: 'CHEF_MISSION',      label: 'Chef de mission',   icon: 'manage_accounts' },
-    { key: 'GERANT_MADAGASCAR', label: 'Gérant Madagascar', icon: 'business'        },
-    { key: 'COLLABORATEUR',     label: 'Collaborateur',     icon: 'person'          },
-  ];
+  get roles() {
+    return [
+      { key: 'EXPERT_COMPTABLE',  label: 'Expert-comptable',                      icon: 'badge'              },
+      { key: 'CHEF_ANTENNE',      label: "Chef d'antenne",                        icon: 'supervisor_account' },
+      { key: 'CHEF_MISSION',      label: 'Chef de mission',                       icon: 'manage_accounts'    },
+      { key: 'GERANT_MADAGASCAR', label: `Gérant ${this.tenantSvc.poleLabel2()}`, icon: 'business'           },
+      { key: 'COLLABORATEUR',     label: 'Collaborateur',                         icon: 'person'             },
+    ];
+  }
 
   activeRole = signal<string>('EXPERT_COMPTABLE');
   saving     = signal(false);

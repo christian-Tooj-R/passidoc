@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError, takeUntil } from 'rxjs';
 import { PappersService, PappersResult } from '../../../core/services/pappers.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { ClientsService } from '../../../core/services/clients.service';
 import { QuestionnaireAdnService } from '../../../core/services/questionnaire-adn.service';
 import { SecteurService } from '../../../core/services/secteur.service';
@@ -217,11 +218,11 @@ interface WizardStep { id: StepId; label: string; }
             <div class="site-cards">
               <label class="site-card" [class.selected]="siteCtrl.value === 'REUNION'"
                      (click)="siteCtrl.setValue('REUNION')">
-                <span class="site-flag">🇷🇪</span><span>La Réunion</span>
+                <span class="site-flag">{{ tenantSvc.poleFlag1() }}</span><span>{{ tenantSvc.poleLabel1() }}</span>
               </label>
               <label class="site-card" [class.selected]="siteCtrl.value === 'MADAGASCAR'"
                      (click)="siteCtrl.setValue('MADAGASCAR')">
-                <span class="site-flag">🇲🇬</span><span>Madagascar</span>
+                <span class="site-flag">{{ tenantSvc.poleFlag2() }}</span><span>{{ tenantSvc.poleLabel2() }}</span>
               </label>
             </div>
 
@@ -605,7 +606,7 @@ interface WizardStep { id: StepId; label: string; }
               <div class="recap-row">
                 <mat-icon>location_on</mat-icon>
                 <span class="recap-label">Site</span>
-                <span class="recap-val">{{ siteCtrl.value === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}</span>
+                <span class="recap-val">{{ tenantSvc.poleFlag(siteCtrl.value ?? 'REUNION') }} {{ tenantSvc.poleLabel(siteCtrl.value ?? 'REUNION') }}</span>
               </div>
               @if (secteurSelectionne) {
                 <div class="recap-row">
@@ -997,6 +998,7 @@ interface WizardStep { id: StepId; label: string; }
 export class CreateClientWizardComponent implements OnInit, OnDestroy {
   private dialogRef   = inject(MatDialogRef<CreateClientWizardComponent>);
   private pappers     = inject(PappersService);
+  tenantSvc           = inject(TenantService);
   private clientsSvc  = inject(ClientsService);
   private qSvc        = inject(QuestionnaireAdnService);
   private secteurSvc  = inject(SecteurService);

@@ -143,7 +143,7 @@ interface AppModule {
               @for (item of group.items; track item.route) {
                 <a [routerLink]="item.route"
                    routerLinkActive="active"
-                   [routerLinkActiveOptions]="{ exact: true }"
+                   [routerLinkActiveOptions]="{ exact: true, queryParams: 'ignored' }"
                    #rla="routerLinkActive"
                    class="panel-item"
                    [class.panel-item--active]="rla.isActive"
@@ -179,7 +179,7 @@ interface AppModule {
               <span class="panel-user__role">{{ roleLabel() }}</span>
             </div>
             <span class="panel-user__flag">
-              {{ auth.currentUser()?.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}
+              {{ tenant.poleFlag(auth.currentUser()?.site ?? 'REUNION') }}
             </span>
           </div>
         </div>
@@ -589,7 +589,7 @@ export class SidebarComponent implements OnInit {
       CHEF_ANTENNE:      'Chef d\'antenne',
       CHEF_MISSION:      'Chef de mission',
       COLLABORATEUR:     'Collaborateur',
-      GERANT_MADAGASCAR: 'Gérant Madagascar',
+      GERANT_MADAGASCAR: `Gérant ${this.tenant.poleLabel2()}`,
     };
     return labels[role ?? ''] ?? 'Collaborateur';
   }

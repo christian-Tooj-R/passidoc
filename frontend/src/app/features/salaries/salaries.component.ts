@@ -11,6 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterModule } from '@angular/router';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
+import { TenantService } from '../../core/services/tenant.service';
 const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', 'Freelance', 'Autre'];
 
 @Component({
@@ -47,8 +48,8 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     </div>
     <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
       <option value="">Tous les sites</option>
-      <option value="REUNION">La Réunion</option>
-      <option value="MADAGASCAR">Madagascar</option>
+      <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
+      <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
     </select>
     <select class="filter-select" [value]="statutFiltre()" (change)="statutFiltre.set($any($event.target).value)">
       <option value="">Tous statuts</option>
@@ -67,7 +68,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     (rowClick)="router.navigate(['/rh/salaries',$event.id])">
 
     <ng-template appCol="site" let-c>
-      {{ c.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
+      {{ tenantSvc.poleLabel(c.site) }}
     </ng-template>
 
     <ng-template appCol="dateEntree" let-c>
@@ -124,8 +125,8 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
       <label>Site</label>
       <mat-form-field appearance="outline" class="w100">
         <mat-select formControlName="site">
-          <mat-option value="REUNION">La Réunion</mat-option>
-          <mat-option value="MADAGASCAR">Madagascar</mat-option>
+          <mat-option value="REUNION">{{ tenantSvc.poleLabel1() }}</mat-option>
+          <mat-option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</mat-option>
         </mat-select>
       </mat-form-field>
       <label>Poste</label>
@@ -259,6 +260,7 @@ export class SalariesComponent implements OnInit {
   private fb    = inject(FormBuilder);
   router        = inject(Router);
 
+  tenantSvc   = inject(TenantService);
   liste       = signal<Collaborateur[]>([]);
   loading     = signal(true);
   formVisible = signal(false);

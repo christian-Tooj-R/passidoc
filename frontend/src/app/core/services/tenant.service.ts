@@ -23,6 +23,13 @@ export class TenantService {
   readonly isConfigured = computed(() => this._configured());
   readonly slug         = computed(() => this._slug());
 
+  poleLabel(site: string): string {
+    return site === 'REUNION' ? this.poleLabel1() : this.poleLabel2();
+  }
+  poleFlag(site: string): string {
+    return site === 'REUNION' ? this.poleFlag1() : this.poleFlag2();
+  }
+
   private _detectSlug(): string | null {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
@@ -58,9 +65,7 @@ export class TenantService {
   setSlug(slug: string) {
     localStorage.setItem('tenant_slug', slug.toLowerCase());
     this._slug.set(slug.toLowerCase());
-    // Réinitialiser le cache de checkSetup pour forcer une nouvelle vérification avec le bon slug
-    this._configured.set(null);
-    this._checkObs = null;
+    // Ne pas réinitialiser _configured : le tenant vient d'être créé, il est forcément configuré
   }
 
   /** Appelé après le setup wizard pour mettre à jour le cache local */
