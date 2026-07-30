@@ -55,10 +55,14 @@ export class TenantService {
 
     if (!this._checkObs) {
       this._checkObs = this.http
-        .get<{ configured: boolean }>(`${environment.apiUrl}/setup/status`)
+        .get<{ configured: boolean; slug?: string }>(`${environment.apiUrl}/setup/status`)
         .pipe(
           tap(s => {
             this._configured.set(s.configured);
+            // Render / démo : le backend peut renvoyer un slug différent de celui de l'URL
+            if (s.slug && s.slug !== this._slug()) {
+              this._slug.set(s.slug);
+            }
             if (s.configured) {
               this.http.get<TenantConfig>(`${environment.apiUrl}/tenant/config`)
                 .pipe(catchError(() => of(null)))

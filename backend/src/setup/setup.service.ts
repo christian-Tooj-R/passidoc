@@ -16,10 +16,19 @@ export class SetupService {
     private                         secteursService:       SecteursService,
   ) {}
 
-  async getStatus(slug?: string): Promise<{ configured: boolean }> {
+  async getStatus(slug?: string): Promise<{ configured: boolean; slug?: string }> {
     if (!slug) return { configured: false };
-    const config = await this.configRepo.findOne({ where: { slug } });
-    return { configured: config?.isConfigured ?? false };
+    let config = await this.configRepo.findOne({ where: { slug } });
+    // Fallback single-tenant (démo Render) : si aucun tenant pour ce slug
+    // mais qu'un seul tenant existe, on l'utilise
+    if (!config) {
+      const all = await this.configRepo.find({ take: 2 });
+      if (all.length === 1) config = all[0];
+    }
+    return {
+      configured: config?.isConfigured ?? false,
+      slug: config?.slug,
+    };
   }
 
   async setup(dto: SetupDto): Promise<{ message: string }> {
