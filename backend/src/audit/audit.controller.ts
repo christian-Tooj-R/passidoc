@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditService } from './audit.service';
@@ -11,7 +11,7 @@ export class AuditController {
   constructor(private audit: AuditService) {}
 
   @Get()
-  findByClient(@Param('clientId', ParseIntPipe) clientId: number) {
-    return this.audit.findByClient(clientId);
+  findByClient(@Req() req: any, @Param('clientId', ParseIntPipe) clientId: number) {
+    return this.audit.findByClient(clientId, req.user?.tenantId);
   }
 }

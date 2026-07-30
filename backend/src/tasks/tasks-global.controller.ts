@@ -22,8 +22,8 @@ export class AllTasksController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Dashboard hebdomadaire des tâches' })
-  getDashboard(@Query('semaine') semaine?: string) {
-    return this.service.getDashboard(semaine ? parseInt(semaine) : undefined);
+  getDashboard(@Req() req: any, @Query('semaine') semaine?: string) {
+    return this.service.getDashboard(semaine ? parseInt(semaine) : undefined, req.user?.tenantId);
   }
 
   @Get('mes-taches')

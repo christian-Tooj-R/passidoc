@@ -26,7 +26,7 @@ export class PointageController {
     @CurrentUser() user: User,
     @Body() body: { latitude?: number; longitude?: number; action?: 'debut_pause' | 'fin_pause' | 'depart' },
   ) {
-    return this.svc.pointer(user.id, body.latitude, body.longitude, body.action);
+    return this.svc.pointer(user.id, body.latitude, body.longitude, body.action, user.tenantId);
   }
 
   @Get('journee')
@@ -34,9 +34,9 @@ export class PointageController {
   @ApiOperation({ summary: 'Vue journalière de tous les collaborateurs (admin/expert)' })
   @ApiQuery({ name: 'date', required: false, example: '2026-05-18' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  getJournee(@Query('date') date?: string, @Query('site') site?: string) {
+  getJournee(@CurrentUser() user: User, @Query('date') date?: string, @Query('site') site?: string) {
     const d = date ?? new Date().toISOString().split('T')[0];
-    return this.svc.getJournee(d, site);
+    return this.svc.getJournee(d, site, user.tenantId);
   }
 
   @Get('mon-statut')
@@ -55,8 +55,8 @@ export class PointageController {
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Historique global tous utilisateurs (admin/expert)' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  getHistoriqueAll(@Query('site') site?: string) {
-    return this.svc.getHistoriqueAll(site);
+  getHistoriqueAll(@CurrentUser() user: User, @Query('site') site?: string) {
+    return this.svc.getHistoriqueAll(site, user.tenantId);
   }
 
   // ── Emplacement bureau ─────────────────────────────────────────

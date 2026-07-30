@@ -157,8 +157,10 @@ export class UsersService {
   }
 
   /** Vue salariés : tous les users actifs + anciens, triés par nom */
-  async findSalaries(site?: string) {
-    const where: any = site ? { site } : {};
+  async findSalaries(site?: string, tenantId?: number) {
+    const where: any = {};
+    if (site) where.site = site;
+    if (tenantId) where.tenantId = tenantId;
     const users = await this.repo.find({ where, order: { lastName: 'ASC', firstName: 'ASC' } });
     return users.map(this.sanitize);
   }

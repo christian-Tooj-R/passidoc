@@ -13,16 +13,14 @@ export class EspacesService {
     @InjectRepository(EspaceDoc) private docRepo: Repository<EspaceDoc>,
   ) {}
 
-  findAll(userId: number) {
-    return this.espaceRepo.find({
-      where: { userId },
-      relations: ['documents'],
-      order: { createdAt: 'DESC' },
-    });
+  findAll(userId: number, tenantId?: number) {
+    const where: any = { userId };
+    if (tenantId) where.tenantId = tenantId;
+    return this.espaceRepo.find({ where, relations: ['documents'], order: { createdAt: 'DESC' } });
   }
 
-  async create(nom: string, userId: number, couleur?: string | null) {
-    const espace = this.espaceRepo.create({ nom: nom.trim(), userId, couleur: couleur ?? null });
+  async create(nom: string, userId: number, couleur?: string | null, tenantId?: number) {
+    const espace = this.espaceRepo.create({ nom: nom.trim(), userId, couleur: couleur ?? null, ...(tenantId ? { tenantId } : {}) });
     return this.espaceRepo.save(espace);
   }
 

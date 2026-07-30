@@ -13,6 +13,9 @@ export class Espace {
   @Column()
   userId: number;
 
+  @Column({ nullable: true })
+  tenantId: number;
+
   @Column({ nullable: true, type: 'text' })
   couleur: string | null;
 

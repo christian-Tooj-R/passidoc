@@ -50,8 +50,8 @@ export class UsersController {
   @Get('salaries')
   @ApiOperation({ summary: 'Liste des collaborateurs (vue RH)' })
   @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
-  findSalaries(@Query('site') site?: string) {
-    return this.usersService.findSalaries(site);
+  findSalaries(@Req() req: any, @Query('site') site?: string) {
+    return this.usersService.findSalaries(site, req.user?.tenantId);
   }
 
   @Get('salaries/:id')

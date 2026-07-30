@@ -69,7 +69,7 @@ export class TasksService {
       .orderBy('task.createdAt', 'DESC');
 
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
-      // Voir toutes les tâches — pas de filtre
+      if (currentUser.tenantId) qb.andWhere('task.tenantId = :tenantId', { tenantId: currentUser.tenantId });
     } else if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
       qb.andWhere('(assignee.antenne = :antenne OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', {
         antenne: currentUser.antenne, userId: currentUser.id,
@@ -85,15 +85,14 @@ export class TasksService {
     return qb.getMany();
   }
 
-  async getDashboard(semaine?: number) {
+  async getDashboard(semaine?: number, tenantId?: number) {
     const qb = this.repo.createQueryBuilder('task')
       .leftJoinAndSelect('task.assignee', 'assignee')
       .leftJoinAndSelect('task.client', 'client')
       .where('task.annee IS NULL');
 
-    if (semaine) {
-      qb.andWhere('task.semaine = :semaine', { semaine });
-    }
+    if (semaine) qb.andWhere('task.semaine = :semaine', { semaine });
+    if (tenantId) qb.andWhere('task.tenantId = :tenantId', { tenantId });
 
     const tasks = await qb.getMany();
 

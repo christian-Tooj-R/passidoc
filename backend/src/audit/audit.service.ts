@@ -9,23 +9,19 @@ export class AuditService {
   constructor(@InjectRepository(AuditLog) private repo: Repository<AuditLog>) {}
 
   async log(action: string, ressource: string, ressourceId: number, clientId: number | null, avant: any, apres: any, user?: User, ip?: string) {
-    const entry = this.repo.create({ action, ressource, ressourceId, clientId: clientId ?? undefined, avant, apres, user, userId: user?.id, ipAddress: ip });
+    const entry = this.repo.create({ action, ressource, ressourceId, clientId: clientId ?? undefined, avant, apres, user, userId: user?.id, ipAddress: ip, ...(user?.tenantId ? { tenantId: user.tenantId } : {}) });
     await this.repo.save(entry);
   }
 
-  findByClient(clientId: number) {
-    return this.repo.find({
-      where: { clientId },
-      order: { createdAt: 'DESC' },
-      take: 100,
-    });
+  findByClient(clientId: number, tenantId?: number) {
+    const where: any = { clientId };
+    if (tenantId) where.tenantId = tenantId;
+    return this.repo.find({ where, order: { createdAt: 'DESC' }, take: 100 });
   }
 
-  findByUser(userId: number) {
-    return this.repo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      take: 50,
-    });
+  findByUser(userId: number, tenantId?: number) {
+    const where: any = { userId };
+    if (tenantId) where.tenantId = tenantId;
+    return this.repo.find({ where, order: { createdAt: 'DESC' }, take: 50 });
   }
 }
