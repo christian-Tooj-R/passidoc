@@ -702,7 +702,7 @@ function generateSlug(name: string): string {
       <div class="sc-url-block">
         <span class="sc-url-label">Adresse de votre application</span>
         <div class="sc-url-row">
-          <span class="sc-url-val">{{ appUrl() }}</span>
+          <span class="sc-url-val">{{ appUrlDisplay() }}</span>
           <button class="sc-copy-btn" (click)="copyUrl()" [class.sc-copy-btn--done]="urlCopied()" type="button">
             <mat-icon>{{ urlCopied() ? 'check' : 'content_copy' }}</mat-icon>
           </button>
@@ -1471,6 +1471,7 @@ export class SetupWizardComponent {
   showPw        = signal(false);
   showPageTurn  = signal(false);
   appUrl        = signal('');
+  appUrlDisplay = signal('');
   urlCopied     = signal(false);
 
   // Logo upload
@@ -1627,14 +1628,19 @@ export class SetupWizardComponent {
         const isOnRender = hostname.includes('onrender.com');
         const isLocalhost = hostname === 'localhost';
         let appUrl: string;
+        let appUrlDisplay: string;
         if (isOnRender || isLocalhost) {
           appUrl = `${window.location.origin}/?tenant=${payload.slug}`;
+          // Affichage cosmétique : slug-passidoc-app.onrender.com
+          appUrlDisplay = `${payload.slug}-${window.location.hostname}`;
         } else {
           const parts = hostname.split('.');
           const baseDomain = parts.length >= 3 ? parts.slice(1).join('.') : 'passidoc.re';
           appUrl = `https://${payload.slug}.${baseDomain}`;
+          appUrlDisplay = appUrl;
         }
         this.appUrl.set(appUrl);
+        this.appUrlDisplay.set(appUrlDisplay);
         this.showPageTurn.set(true);
         setTimeout(() => {
           this.showPageTurn.set(false);
