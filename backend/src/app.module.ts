@@ -56,7 +56,7 @@ import { TenantConfig } from './entities/tenant-config.entity';
         const common = {
           type: dbType as any,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: config.get<string>('DB_SYNC') === 'true' || (config.get<string>('NODE_ENV') !== 'production' && config.get<string>('DB_SYNC') !== 'false'),
+          synchronize: config.get<string>('DB_SYNC') === 'true',
           logging: config.get<string>('NODE_ENV') === 'development',
         };
         if (dbType === 'postgres') {

@@ -72,7 +72,7 @@ export class SetupService {
     if (dbType === 'postgres') {
       await this.dataSource.query('DROP SCHEMA public CASCADE');
       await this.dataSource.query('CREATE SCHEMA public');
-      await this.dataSource.query('GRANT ALL ON SCHEMA public TO public');
+      await this.dataSource.query('GRANT ALL ON SCHEMA public TO CURRENT_USER');
     } else {
       // MySQL fallback
       const rows = await this.dataSource.query('SHOW TABLES');

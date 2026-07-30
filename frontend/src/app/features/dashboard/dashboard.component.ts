@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -605,7 +606,8 @@ const TYPE_LABELS: Record<string, string> = {
     @media (max-width: 760px) { .hero { flex-direction: column; align-items: flex-start; } }
   `],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  private _destroy$ = new Subject<void>();
   clients: Client[] = [];
   filteredClients: Client[] = [];
   alertes: any[] = [];
@@ -776,12 +778,17 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.clientsService.getAll().subscribe(data => {
+    this.clientsService.getAll().pipe(takeUntil(this._destroy$)).subscribe(data => {
       this.clients = data;
       this.filteredClients = data;
     });
-    this.fluxService.getAlertesGlobales().subscribe(data => this.alertes = data);
-    this.tasksService.getAllGlobal().subscribe(tasks => this.buildCollabStats(tasks));
+    this.fluxService.getAlertesGlobales().pipe(takeUntil(this._destroy$)).subscribe(data => this.alertes = data);
+    this.tasksService.getAllGlobal().pipe(takeUntil(this._destroy$)).subscribe(tasks => this.buildCollabStats(tasks));
+  }
+
+  ngOnDestroy() {
+    this._destroy$.next();
+    this._destroy$.complete();
   }
 
   buildCollabStats(tasks: Task[]) {

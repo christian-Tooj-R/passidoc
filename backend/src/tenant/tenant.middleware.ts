@@ -28,8 +28,8 @@ export class TenantMiddleware implements NestMiddleware {
     const header = req.headers['x-tenant-slug'] as string | undefined;
     if (header) return header.toLowerCase().trim();
 
-    // 2. Sous-domaine du Host
-    const host = (req.headers['x-forwarded-host'] as string) || req.hostname || '';
+    // 2. Sous-domaine — utiliser req.hostname (Express le résout via trust proxy)
+    const host = req.hostname || '';
     const bare = host.split(':')[0]; // retire le port
     const parts = bare.split('.');
 

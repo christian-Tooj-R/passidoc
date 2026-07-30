@@ -56,8 +56,8 @@ export class UsersController {
 
   @Get('salaries/:id')
   @ApiOperation({ summary: 'Détail d\'un collaborateur (vue RH)' })
-  findOneSalarie(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
+  findOneSalarie(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.usersService.findOne(id, req.user?.tenantId);
   }
 
   @Patch(':id/rh')
@@ -65,13 +65,14 @@ export class UsersController {
   updateRH(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: { poste?: string; typeContrat?: string; dateEntree?: string; dateSortie?: string; telephone?: string; firstName?: string; lastName?: string; site?: string },
+    @Req() req: any,
   ) {
-    return this.usersService.updateRH(id, dto);
+    return this.usersService.updateRH(id, dto, req.user?.tenantId);
   }
 
   @Get('task-counts')
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE)
-  getTaskCounts() { return this.usersService.getTaskCounts(); }
+  getTaskCounts(@Req() req: any) { return this.usersService.getTaskCounts(req.user?.tenantId); }
 
   @Get('assignable')
   @ApiOperation({ summary: 'Utilisateurs assignables selon le rôle courant' })
@@ -99,21 +100,21 @@ export class UsersController {
   @Get(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Détail d\'un utilisateur' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.usersService.findOne(id, req.user.tenantId);
   }
 
   @Patch(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Modifier un utilisateur' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto, @Req() req: any) {
+    return this.usersService.update(id, dto, req.user.tenantId);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Désactiver un utilisateur' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.usersService.remove(id, req.user.tenantId);
   }
 }

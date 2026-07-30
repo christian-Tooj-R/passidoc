@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, ConflictException, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, HttpCode, ConflictException, ForbiddenException, Req } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -19,49 +19,24 @@ export class AuthController {
     @InjectRepository(User) private userRepo: Repository<User>,
   ) {}
 
-  // Endpoint de bootstrap — créé le premier admin si aucun user n'existe
-  @Post('seed')
-  @HttpCode(201)
-  async seed() {
-    const hash = await bcrypt.hash('admin', 10);
-    const existing = await this.userRepo.findOne({ where: { email: 'admin@passidoc.com' } });
-    if (existing) {
-      await this.userRepo.update(existing.id, { password: hash });
-      return { message: 'Mot de passe réinitialisé : admin@passidoc.com / admin' };
-    }
-    const user = this.userRepo.create({
-      firstName: 'Admin', lastName: 'Passidoc', email: 'admin@passidoc.com',
-      password: hash, role: 'ADMIN' as any, site: 'REUNION' as any, isActive: true,
-    });
-    await this.userRepo.save(user);
-    return { message: 'Admin créé : admin@passidoc.com / admin' };
-  }
-
-  // Reset one-time : aro@afym.eu → rakotomamonjy
-  @Post('reset-aro')
-  @HttpCode(200)
-  async resetAro() {
-    const user = await this.userRepo.findOne({ where: { email: 'aro@afym.eu' } });
-    if (!user) return { message: 'Utilisateur aro@afym.eu introuvable' };
-    const hash = await bcrypt.hash('rakotomamonjy', 10);
-    await this.userRepo.update(user.id, { password: hash });
-    return { message: 'Mot de passe réinitialisé : aro@afym.eu / rakotomamonjy' };
-  }
-
   @Post('register')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Créer un compte (auto-inscription)' })
-  async register(@Body() dto: {
-    firstName: string; lastName: string;
-    email: string; password: string; site: string;
-  }) {
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ApiOperation({ summary: 'Créer un compte (auto-inscription, tenant requis)' })
+  async register(
+    @Req() req: any,
+    @Body() dto: { firstName: string; lastName: string; email: string; password: string; site: string },
+  ) {
+    // L'inscription est liée à un tenant — refusée sans contexte tenant valide
+    if (!req.tenant?.id) throw new ForbiddenException('Inscription impossible sans contexte tenant');
     const exists = await this.userRepo.findOne({ where: { email: dto.email } });
     if (exists) throw new ConflictException('Cet email est déjà utilisé');
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = this.userRepo.create({
       firstName: dto.firstName, lastName: dto.lastName,
       email: dto.email, password: hashed,
-      site: dto.site as any, role: 'COLLABORATEUR' as any, isActive: true,
+      site: dto.site as any, role: 'COLLABORATEUR' as any,
+      isActive: true, tenantId: req.tenant.id,
     });
     const saved = await this.userRepo.save(user);
     const { password, twoFactorSecret, ...safe } = saved as any;
@@ -70,7 +45,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Connexion utilisateur' })
   login(@Body() dto: LoginDto, @Req() req: any) {
     return this.authService.login(dto, req.tenant?.id);
@@ -78,7 +53,7 @@ export class AuthController {
 
   @Post('2fa/verify')
   @HttpCode(200)
-  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 tentatives / minute
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Vérification code 2FA après login' })
   verify2fa(@Body() dto: Verify2faDto & { userId: number }) {
     return this.authService.verify2FA(dto.userId, dto.token);

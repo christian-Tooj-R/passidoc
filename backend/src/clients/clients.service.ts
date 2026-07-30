@@ -216,8 +216,11 @@ export class ClientsService {
     return this.findOne(clientId);
   }
 
-  async uploadLogo(id: number, file: Express.Multer.File): Promise<Client> {
-    const client = await this.findOne(id);
+  async uploadLogo(id: number, file: Express.Multer.File, tenantId?: number): Promise<Client> {
+    const where: any = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const client = await this.repo.findOne({ where });
+    if (!client) throw new NotFoundException('Client introuvable');
     const ext = file.originalname.split('.').pop();
     const objectName = `logos/${id}/${Date.now()}.${ext}`;
     const url = await this.minio.uploadFile('passidoc-logos', objectName, file.buffer, file.mimetype);

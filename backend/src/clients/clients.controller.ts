@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Req, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
@@ -73,10 +73,22 @@ export class ClientsController {
   }
 
   @Post(':id/logo')
-  @UseInterceptors(FileInterceptor('logo'))
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @UseInterceptors(FileInterceptor('logo', {
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
+    fileFilter: (_req, file, cb) => {
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      cb(null, allowed.includes(file.mimetype));
+    },
+  }))
   @ApiOperation({ summary: 'Upload logo du client' })
-  uploadLogo(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
-    return this.clientsService.uploadLogo(id, file);
+  uploadLogo(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) throw new BadRequestException('Fichier image requis (jpeg/png/webp, max 2 Mo)');
+    return this.clientsService.uploadLogo(id, file, req.user?.tenantId);
   }
 
   @Delete(':id')

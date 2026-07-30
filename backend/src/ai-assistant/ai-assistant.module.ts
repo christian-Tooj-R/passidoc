@@ -6,9 +6,10 @@ import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel } from '../entities/flux-mensuel.entity';
 import { AiAssistantService } from './ai-assistant.service';
 import { AiAssistantController } from './ai-assistant.controller';
+import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel])],
+  imports: [TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel]), ClientsModule],
   controllers: [AiAssistantController],
   providers: [AiAssistantService],
 })

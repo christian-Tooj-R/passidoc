@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -36,14 +36,18 @@ export class UsersService {
     return users.map(this.sanitize);
   }
 
-  async findOne(id: number) {
-    const user = await this.repo.findOne({ where: { id } });
+  async findOne(id: number, tenantId?: number) {
+    const where: any = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.repo.findOne({ where });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
     return this.sanitize(user);
   }
 
-  async update(id: number, dto: UpdateUserDto) {
-    const user = await this.repo.findOne({ where: { id } });
+  async update(id: number, dto: UpdateUserDto, tenantId?: number) {
+    const where: any = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.repo.findOne({ where });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
 
     if (dto.password) dto.password = await bcrypt.hash(dto.password, 10);
@@ -51,8 +55,10 @@ export class UsersService {
     return this.findOne(id);
   }
 
-  async remove(id: number) {
-    const user = await this.repo.findOne({ where: { id } });
+  async remove(id: number, tenantId?: number) {
+    const where: any = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.repo.findOne({ where });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
     await this.repo.update(id, { isActive: false });
     return { message: 'Utilisateur désactivé' };
@@ -186,9 +192,12 @@ export class UsersService {
     // Paie
     salaireBase?: number | null; modePaiement?: string | null;
     banque?: string | null; iban?: string | null; devise?: string | null;
-  }) {
+  }, tenantId?: number) {
     const user = await this.repo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
+    if (tenantId && user.tenantId && user.tenantId !== tenantId) {
+      throw new ForbiddenException('Accès refusé');
+    }
     Object.assign(user, dto);
     // Si une date de sortie est renseignée, désactiver le compte
     if (dto.dateSortie) user.isActive = false;
@@ -207,15 +216,15 @@ export class UsersService {
     return prefs;
   }
 
-  async getTaskCounts(): Promise<{ userId: number; count: number }[]> {
-    const rows = await this.taskRepo
+  async getTaskCounts(tenantId?: number): Promise<{ userId: number; count: number }[]> {
+    const qb = this.taskRepo
       .createQueryBuilder('t')
       .select('t.assigneeId', 'userId')
       .addSelect('COUNT(*)', 'count')
       .where('t.assigneeId IS NOT NULL')
-      .andWhere('t.statut != :done', { done: TaskStatut.TERMINEE })
-      .groupBy('t.assigneeId')
-      .getRawMany();
+      .andWhere('t.statut != :done', { done: TaskStatut.TERMINEE });
+    if (tenantId) qb.andWhere('t.tenantId = :tenantId', { tenantId });
+    const rows = await qb.groupBy('t.assigneeId').getRawMany();
     return rows.map(r => ({ userId: Number(r.userId), count: Number(r.count) }));
   }
 

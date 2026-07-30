@@ -11,6 +11,18 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 import { TypeConge, StatutConge } from '../entities/conge-absence.entity';
 
+const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || 'http://localhost:4200').split(',').map(o => o.trim());
+
+function isSafeRedirect(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_ORIGINS.some(o => {
+      const allowed = new URL(o);
+      return parsed.origin === allowed.origin;
+    });
+  } catch { return false; }
+}
+
 @ApiTags('Congés & Absences')
 @Controller('conges')
 export class CongesAbsencesController {
@@ -45,14 +57,16 @@ export class CongesAbsencesController {
     @Query('redirect') redirect: string,
     @Res() res: Response,
   ) {
-    const appUrl = redirect ?? 'http://localhost:4200/rh/conges';
+    const safeUrl = redirect && isSafeRedirect(redirect)
+      ? redirect
+      : (ALLOWED_ORIGINS[0] + '/rh/conges');
     try {
       const result = await this.svc.approuverParEmailToken(id, action, token);
       const msg = encodeURIComponent(result.message);
-      return res.redirect(`${appUrl}?email_action=${result.statut}&msg=${msg}`);
+      return res.redirect(`${safeUrl}?email_action=${result.statut}&msg=${msg}`);
     } catch (e: any) {
       const msg = encodeURIComponent(e.message ?? 'Erreur');
-      return res.redirect(`${appUrl}?email_action=ERROR&msg=${msg}`);
+      return res.redirect(`${safeUrl}?email_action=ERROR&msg=${msg}`);
     }
   }
 

@@ -1,6 +1,7 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, RouterOutlet, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -288,16 +289,17 @@ const NAV: NavItem[] = [
     }
   `],
 })
-export class RhComponent implements OnInit {
+export class RhComponent implements OnInit, OnDestroy {
   router     = inject(Router);
   entering   = signal(true);
   navLoading = signal(false);
   readonly nav = NAV;
+  private _destroy$ = new Subject<void>();
 
   ngOnInit() {
     setTimeout(() => this.entering.set(false), 1600);
 
-    this.router.events.subscribe(e => {
+    this.router.events.pipe(takeUntil(this._destroy$)).subscribe(e => {
       if (e instanceof NavigationStart && this.router.url.startsWith('/rh')) {
         this.navLoading.set(true);
       }
@@ -305,6 +307,11 @@ export class RhComponent implements OnInit {
         setTimeout(() => this.navLoading.set(false), 280);
       }
     });
+  }
+
+  ngOnDestroy() {
+    this._destroy$.next();
+    this._destroy$.complete();
   }
 
   startNavLoading() { this.navLoading.set(true); }

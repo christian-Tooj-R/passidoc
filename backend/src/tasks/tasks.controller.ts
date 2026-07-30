@@ -18,8 +18,8 @@ export class TasksController {
 
   @Get()
   @ApiOperation({ summary: 'Liste des tâches du dossier' })
-  findAll(@Param('clientId', ParseIntPipe) clientId: number) {
-    return this.service.findAllByClient(clientId);
+  findAll(@Param('clientId', ParseIntPipe) clientId: number, @Req() req: any) {
+    return this.service.findAllByClient(clientId, req.user?.tenantId);
   }
 
   @Post()
@@ -49,8 +49,9 @@ export class TasksController {
   findGrille(
     @Param('clientId', ParseIntPipe) clientId: number,
     @Query('annee') annee: string,
+    @Req() req: any,
   ) {
-    return this.service.findGrille(clientId, parseInt(annee) || new Date().getFullYear());
+    return this.service.findGrille(clientId, parseInt(annee) || new Date().getFullYear(), req.user?.tenantId);
   }
 
   @Post('toggle-mensuel')
@@ -74,8 +75,9 @@ export class TasksController {
   updateCommentaire(
     @Param('clientId', ParseIntPipe) clientId: number,
     @Body() dto: { type: string; annee: number; commentaire: string },
+    @Req() req: any,
   ) {
-    return this.service.updateCommentaire(clientId, dto.type, dto.annee, dto.commentaire);
+    return this.service.updateCommentaire(clientId, dto.type, dto.annee, dto.commentaire, req.user?.tenantId);
   }
 
   // ─── Comments ──────────────────────────────────────────────────────────────

@@ -60,6 +60,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Faire confiance au reverse proxy (Render, Nginx) pour x-forwarded-* headers
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Passidoc API démarrée sur : http://localhost:${process.env.PORT ?? 3000}/api`);
   console.log(`Swagger disponible sur : http://localhost:${process.env.PORT ?? 3000}/api/docs`);

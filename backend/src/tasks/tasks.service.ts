@@ -50,14 +50,15 @@ export class TasksService {
       .getMany();
   }
 
-  findAllByClient(clientId: number) {
-    return this.repo.createQueryBuilder('task')
+  findAllByClient(clientId: number, tenantId?: number) {
+    const qb = this.repo.createQueryBuilder('task')
       .leftJoinAndSelect('task.assignee', 'assignee')
       .leftJoinAndSelect('task.createdBy', 'createdBy')
       .where('task.clientId = :clientId', { clientId })
       .andWhere('task.annee IS NULL')
-      .orderBy('task.createdAt', 'DESC')
-      .getMany();
+      .orderBy('task.createdAt', 'DESC');
+    if (tenantId) qb.andWhere('task.tenantId = :tenantId', { tenantId });
+    return qb.getMany();
   }
 
   findAll(currentUser: User) {
@@ -251,9 +252,11 @@ export class TasksService {
     'Calcul IS',
   ] as const;
 
-  async findGrille(clientId: number, annee: number) {
+  async findGrille(clientId: number, annee: number, tenantId?: number) {
+    const where: any = { clientId, annee };
+    if (tenantId) where.tenantId = tenantId;
     const tasks = await this.repo.find({
-      where: { clientId, annee },
+      where,
       relations: ['assignee'],
       order: { mois: 'ASC' },
     });
@@ -283,6 +286,7 @@ export class TasksService {
           clientId,
           annee,
           mois: undefined,
+          ...(tenantId ? { tenantId } : {}),
         }));
       const saved = await this.repo.save(nouvelles);
       drTaches.push(...saved);
@@ -347,7 +351,7 @@ export class TasksService {
     return this.repo.findOne({ where: { id } });
   }
 
-  async updateCommentaire(clientId: number, type: string, annee: number, commentaire: string) {
+  async updateCommentaire(clientId: number, type: string, annee: number, commentaire: string, tenantId?: number) {
     // Le commentaire est stocké sur une tâche sentinelle mois=0
     let sentinel = await this.repo.findOne({
       where: { clientId, type: type as any, annee, mois: 0 },
@@ -362,6 +366,7 @@ export class TasksService {
         annee,
         mois: 0,
         commentaire,
+        ...(tenantId ? { tenantId } : {}),
       });
     } else {
       sentinel.commentaire = commentaire;
