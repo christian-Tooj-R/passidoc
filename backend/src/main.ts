@@ -31,7 +31,7 @@ async function bootstrap() {
       }
     },
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-slug', 'x-reset-token'],
     credentials: true,
   });
 
