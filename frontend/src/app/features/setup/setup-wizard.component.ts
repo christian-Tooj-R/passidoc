@@ -1641,6 +1641,8 @@ export class SetupWizardComponent {
         }
         this.appUrl.set(appUrl);
         this.appUrlDisplay.set(appUrlDisplay);
+        // Met à jour le TenantService (signal + localStorage) pour que les navigations internes restent sur ce tenant
+        this.tenant.setSlug(payload.slug);
         this.showPageTurn.set(true);
         setTimeout(() => {
           this.showPageTurn.set(false);
@@ -1654,7 +1656,7 @@ export class SetupWizardComponent {
     });
   }
 
-  goToLogin() { this.router.navigate(['/auth/login']); }
+  goToLogin() { this.router.navigate(['/auth/login'], { replaceUrl: true }); }
 
   copyUrl() {
     navigator.clipboard.writeText(this.appUrl()).then(() => {

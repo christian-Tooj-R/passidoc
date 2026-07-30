@@ -30,21 +30,37 @@ export class TenantService {
     const qSlug  = params.get('tenant');
 
     if (parts.length >= 3) {
-      // Sur Render (*.onrender.com) : le param ?tenant= permet d'accéder à un tenant spécifique
-      // Sans param → slug = "passidoc-app" → aucun tenant → setup wizard
-      if (qSlug) return qSlug.toLowerCase();
+      // Sur Render (*.onrender.com) ou domaine custom multi-niveaux
+      if (qSlug) {
+        // Persist pour que les navigations internes sans ?tenant= restent sur le bon tenant
+        localStorage.setItem('tenant_slug', qSlug.toLowerCase());
+        return qSlug.toLowerCase();
+      }
+      // Navigation interne (pas de ?tenant=) : lire depuis localStorage
+      const stored = localStorage.getItem('tenant_slug');
+      if (stored) return stored;
+      // Aucun slug connu → hostname = "passidoc-app" → pas de tenant → setup wizard
       return parts[0].toLowerCase();
     }
 
     // localhost / dev : ?tenant= ou localStorage
     if (qSlug) {
-      localStorage.setItem('dev_tenant_slug', qSlug);
+      localStorage.setItem('tenant_slug', qSlug.toLowerCase());
       return qSlug.toLowerCase();
     }
-    const stored = localStorage.getItem('dev_tenant_slug');
+    const stored = localStorage.getItem('tenant_slug');
     if (stored) return stored.toLowerCase();
 
     return null;
+  }
+
+  /** Appelé après le setup wizard pour mettre à jour le slug courant */
+  setSlug(slug: string) {
+    localStorage.setItem('tenant_slug', slug.toLowerCase());
+    this._slug.set(slug.toLowerCase());
+    // Réinitialiser le cache de checkSetup pour forcer une nouvelle vérification avec le bon slug
+    this._configured.set(null);
+    this._checkObs = null;
   }
 
   /** Appelé après le setup wizard pour mettre à jour le cache local */
