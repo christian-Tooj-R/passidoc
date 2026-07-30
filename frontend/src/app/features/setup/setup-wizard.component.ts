@@ -233,6 +233,16 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
   return pw && cpw && pw !== cpw ? { mismatch: true } : null;
 }
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 @Component({
   selector: 'app-setup-wizard',
   standalone: true,
@@ -377,19 +387,6 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
               <p class="sw-step-desc">Ces informations apparaîtront dans toute l'application.</p>
             </div>
           </div>
-
-          <mat-form-field appearance="outline" class="sw-field--full">
-            <mat-label>Sous-domaine *</mat-label>
-            <mat-icon matPrefix>link</mat-icon>
-            <input matInput formControlName="slug" placeholder="ex : afym" [readonly]="!!tenant.slug()" />
-            <mat-hint>{{ step0.value.slug || '…' }}.passidoc.re</mat-hint>
-            @if (step0.get('slug')?.hasError('required') && step0.get('slug')?.touched) {
-              <mat-error>Le sous-domaine est obligatoire</mat-error>
-            }
-            @if (step0.get('slug')?.hasError('pattern') && step0.get('slug')?.touched) {
-              <mat-error>Lettres minuscules, chiffres et tirets uniquement</mat-error>
-            }
-          </mat-form-field>
 
           <mat-form-field appearance="outline" class="sw-field--full">
             <mat-label>Nom du cabinet *</mat-label>
@@ -1508,7 +1505,6 @@ export class SetupWizardComponent {
   ];
 
   step0: FormGroup = this.fb.group({
-    slug:       [this.tenant.slug() ?? '', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
     nomSociete: ['', [Validators.required, Validators.minLength(2)]],
     slogan:     [''],
     ville:      [''],
@@ -1595,7 +1591,7 @@ export class SetupWizardComponent {
     const p2 = COUNTRIES.find(c => c.code === this.step1.value.poleCode2);
 
     const payload = {
-      slug:           this.step0.value.slug,
+      slug:           generateSlug(this.step0.value.nomSociete),
       nomSociete:     this.step0.value.nomSociete,
       slogan:         this.step0.value.slogan   || undefined,
       ville:          this.step0.value.ville    || undefined,
