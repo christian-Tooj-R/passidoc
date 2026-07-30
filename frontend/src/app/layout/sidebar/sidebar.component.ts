@@ -589,7 +589,7 @@ export class SidebarComponent implements OnInit {
       CHEF_ANTENNE:      'Chef d\'antenne',
       CHEF_MISSION:      'Chef de mission',
       COLLABORATEUR:     'Collaborateur',
-      GERANT_MADAGASCAR: 'Gérant Madagascar',
+      GERANT_MADAGASCAR: `Gérant ${this.tenant.poleLabel2()}`,
     };
     return labels[role ?? ''] ?? 'Collaborateur';
   }

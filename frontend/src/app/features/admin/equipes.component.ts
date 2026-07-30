@@ -1790,6 +1790,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
     return (u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '');
   }
   roleLabel(role: string): string {
+    if (role === 'GERANT_MADAGASCAR') return `Gérant ${this.tenantSvc.poleLabel2()}`;
     return ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role;
   }
   avatarClass(u: User): string {
