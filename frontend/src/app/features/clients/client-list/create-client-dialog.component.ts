@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError, takeUntil } from 'rxjs';
 import { PappersService, PappersResult } from '../../../core/services/pappers.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { SecteurActivite, SECTEURS_LABELS } from '../../../core/models/client.model';
 
 @Component({
@@ -158,8 +159,8 @@ import { SecteurActivite, SECTEURS_LABELS } from '../../../core/models/client.mo
           <mat-label>Site de rattachement</mat-label>
           <mat-icon matPrefix>location_on</mat-icon>
           <mat-select [formControl]="siteCtrl">
-            <mat-option value="REUNION">🇷🇪 &nbsp;La Réunion</mat-option>
-            <mat-option value="MADAGASCAR">🇲🇬 &nbsp;Madagascar</mat-option>
+            <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+            <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
           </mat-select>
           @if (siteCtrl.touched && siteCtrl.hasError('required')) {
             <mat-error>Le site est requis</mat-error>
@@ -324,6 +325,7 @@ export class CreateClientDialogComponent implements OnInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<CreateClientDialogComponent>);
   private pappers   = inject(PappersService);
   private elRef     = inject(ElementRef);
+  tenantSvc         = inject(TenantService);
   private destroy$  = new Subject<void>();
 
   searchCtrl    = new FormControl('');

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService } from '../../core/services/notification-stream.service';
 import { TaskNotification } from '../../core/services/notification-stream.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 @Component({
   selector: 'app-top-nav',
@@ -85,7 +86,7 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
       <!-- ── Site indicator ────────────────────────── -->
       <div class="site-chip" [class.site-mg]="auth.currentUser()?.site === 'MADAGASCAR'">
         <span class="site-dot"></span>
-        {{ auth.currentUser()?.site === 'REUNION' ? 'La Réunion' : 'Madagascar' }}
+        {{ tenantSvc.poleLabel(auth.currentUser()?.site ?? '') }}
       </div>
 
       <!-- ── Notifications ─────────────────────────── -->
@@ -454,6 +455,8 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
 })
 export class TopNavComponent implements OnInit, OnDestroy {
   bellOpen = false;
+
+  tenantSvc = inject(TenantService);
 
   constructor(
     public auth: AuthService,

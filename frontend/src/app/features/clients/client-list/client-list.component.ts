@@ -43,7 +43,7 @@ type ViewMode = 'grid' | 'list';
           <span class="bc-current">{{ auth.isAdmin() ? 'Tous les dossiers' : 'Mes dossiers' }}</span>
           @if (siteFilter()) {
             <mat-icon class="bc-sep">chevron_right</mat-icon>
-            <span class="bc-current">{{ siteFilter() === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
+            <span class="bc-current">{{ siteFilter() === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
           }
         </div>
 
@@ -253,7 +253,7 @@ type ViewMode = 'grid' | 'list';
                   <span class="folder-name">{{ c.nom }}</span>
                   <div class="folder-sub-row">
                     <span class="folder-site" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
-                      {{ c.site === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
+                      {{ c.site === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
                     </span>
                     @if (c.secteurActivite) {
                       <span class="folder-sec-sep">·</span>
@@ -334,7 +334,7 @@ type ViewMode = 'grid' | 'list';
 
               <!-- Site -->
               <span class="lr-site" [class]="c.site==='REUNION' ? 'site--re' : 'site--mg'">
-                {{ c.site === 'REUNION' ? ('tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
+                {{ c.site === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
               </span>
 
               <!-- Intervenants -->

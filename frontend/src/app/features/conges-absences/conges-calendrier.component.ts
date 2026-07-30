@@ -10,6 +10,7 @@ import {
   TYPE_CONGE_LABELS, TypeConge,
 } from '../../core/services/conges-absences.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 const MOIS_LABELS = [
   'Janvier','Février','Mars','Avril','Mai','Juin',
@@ -17,14 +18,6 @@ const MOIS_LABELS = [
 ];
 const JOURS_COURTS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 
-const SITE_LABELS: Record<string, string> = {
-  REUNION:    'Antenne La Réunion',
-  MADAGASCAR: 'Antenne Madagascar',
-};
-const SITE_FLAGS: Record<string, string> = {
-  REUNION:    '🇷🇪',
-  MADAGASCAR: '🇲🇬',
-};
 
 function isoWeek(d: Date): number {
   const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -102,8 +95,8 @@ interface SiteGroup {
       </div>
       <div class="site-chips">
         <button class="site-chip" [class.active]="siteFilter === ''"           (click)="setSite('')">Tous les sites</button>
-        <button class="site-chip" [class.active]="siteFilter === 'REUNION'"    (click)="setSite('REUNION')">🇷🇪 La Réunion</button>
-        <button class="site-chip" [class.active]="siteFilter === 'MADAGASCAR'" (click)="setSite('MADAGASCAR')">🇲🇬 Madagascar</button>
+        <button class="site-chip" [class.active]="siteFilter === 'REUNION'"    (click)="setSite('REUNION')">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</button>
+        <button class="site-chip" [class.active]="siteFilter === 'MADAGASCAR'" (click)="setSite('MADAGASCAR')">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</button>
       </div>
     </div>
 
@@ -721,6 +714,7 @@ export class CongesCalendrierComponent implements OnInit {
   private auth  = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router= inject(Router);
+  tenantSvc     = inject(TenantService);
 
   today = new Date();
   mois  = signal(this.today.getMonth() + 1);
@@ -780,8 +774,8 @@ export class CongesCalendrierComponent implements OnInit {
 
     return [...siteMap.entries()].map(([site, rows]) => ({
       site,
-      label: SITE_LABELS[site] ?? site,
-      flag:  SITE_FLAGS[site] ?? '🏢',
+      label: this.tenantSvc.poleLabel(site) ?? site,
+      flag:  this.tenantSvc.poleFlag(site) ?? '🏢',
       rows,
     }));
   });

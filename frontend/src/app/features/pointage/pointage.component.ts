@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,7 @@ import autoTable from 'jspdf-autotable';
 import { AuthService } from '../../core/services/auth.service';
 import { GeoLocationService } from '../../core/services/geo-location.service';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
+import { TenantService } from '../../core/services/tenant.service';
 
 type GeoEtat = 'idle' | 'checking' | 'ok' | 'trop_loin' | 'refuse' | 'indisponible';
 
@@ -316,8 +317,8 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
         </div>
         <mat-button-toggle-group [(ngModel)]="siteFiltre" (ngModelChange)="chargerJourAdmin()">
           <mat-button-toggle value="">Tous</mat-button-toggle>
-          <mat-button-toggle value="REUNION">🇷🇪 Réunion</mat-button-toggle>
-          <mat-button-toggle value="MADAGASCAR">🇲🇬 Madagascar</mat-button-toggle>
+          <mat-button-toggle value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-button-toggle>
+          <mat-button-toggle value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
 
@@ -377,8 +378,8 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
           <span class="site-badge"
                 [class.site-badge--re]="e.user.site === 'REUNION'"
                 [class.site-badge--mg]="e.user.site === 'MADAGASCAR'">
-            {{ e.user.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}
-            {{ e.user.site === 'REUNION' ? 'Réunion' : 'Madagascar' }}
+            {{ tenantSvc.poleFlag(e.user.site) }}
+            {{ tenantSvc.poleLabel(e.user.site) }}
           </span>
         </ng-template>
 
@@ -536,6 +537,8 @@ export class PointageComponent implements OnInit, OnDestroy {
   });
 
   private timers: ReturnType<typeof setInterval>[] = [];
+
+  tenantSvc = inject(TenantService);
 
   constructor(
     private svc: PointageService,
@@ -804,7 +807,7 @@ export class PointageComponent implements OnInit, OnDestroy {
       const p = this.pointagePour(u.id);
       return [
         `${u.firstName} ${u.lastName}`,
-        u.site === 'REUNION' ? 'Réunion' : 'Madagascar',
+        this.tenantSvc.poleLabel(u.site),
         p ? this.fmt(p.heureArrivee) : '—',
         p?.heureDepart ? this.fmt(p.heureDepart) : (p ? 'En cours' : '—'),
         p ? this.minToStr(this.calcPauseE(p)) : '—',

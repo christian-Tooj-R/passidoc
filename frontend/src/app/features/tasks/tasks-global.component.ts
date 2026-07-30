@@ -23,6 +23,7 @@ import { NotificationStreamService } from '../../core/services/notification-stre
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { Client } from '../../core/models/client.model';
 import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
@@ -858,7 +859,7 @@ export class CreateTaskDialogComponent {
                         <span class="tdc-mention-name">{{ u.firstName }} {{ u.lastName }}</span>
                         <span class="tdc-mention-role">{{ roleLabel(u) }}</span>
                       </div>
-                      <span class="tdc-mention-site">{{ u.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}</span>
+                      <span class="tdc-mention-site">{{ tenantSvc.poleFlag(u.site) }}</span>
                     </div>
                   }
                 </div>
@@ -2253,6 +2254,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   private notifStream = inject(NotificationStreamService);
   private sub = new Subscription();
   private auth = inject(AuthService);
+  tenantSvc    = inject(TenantService);
 
   tasks: Task[] = [];
   filteredTasks: Task[] = [];

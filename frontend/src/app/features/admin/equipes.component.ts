@@ -11,6 +11,7 @@ import { filter } from 'rxjs/operators';
 import { ToastService } from '../../core/services/toast.service';
 import { UsersService } from '../../core/services/users.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { NotificationStreamService } from '../../core/services/notification-stream.service';
 import { User, ROLE_LABELS } from '../../core/models/user.model';
 
@@ -114,7 +115,7 @@ interface CreateForm {
           @let gm = gerantMadagascar(antenne);
           @if (gm) {
             <div class="section-row">
-              <span class="section-title">Gérant Madagascar</span>
+              <span class="section-title">Gérant {{ tenantSvc.poleLabel2() }}</span>
               <div class="user-pill user-pill--gerant">
                 <div class="avatar gerant sm">{{ initials(gm) }}</div>
                 <div>
@@ -299,7 +300,7 @@ interface CreateForm {
                           <div class="org-avatar ge">{{ initials(gm) }}</div>
                           <div>
                             <div class="org-name">{{ gm.firstName }} {{ gm.lastName }}</div>
-                            <div class="org-role">Gérant Madagascar</div>
+                            <div class="org-role">Gérant {{ tenantSvc.poleLabel2() }}</div>
                           </div>
                         </div>
                       </li>
@@ -343,7 +344,7 @@ interface CreateForm {
             <option value="CHEF_ANTENNE">Chef d'antenne</option>
             <option value="CHEF_MISSION">Chef de mission</option>
             <option value="COLLABORATEUR">Collaborateur</option>
-            <option value="GERANT_MADAGASCAR">Gérant Madagascar</option>
+            <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
           </select>
           <select class="filter-select" [value]="filterAntenne()" (change)="filterAntenne.set($any($event.target).value)">
             <option value="">Toutes antennes</option>
@@ -352,8 +353,8 @@ interface CreateForm {
           </select>
           <select class="filter-select" [value]="filterSite()" (change)="filterSite.set($any($event.target).value)">
             <option value="">Tous sites</option>
-            <option value="REUNION">La Réunion</option>
-            <option value="MADAGASCAR">Madagascar</option>
+            <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
+            <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
           </select>
           @if (activeFiltersCount() > 0) {
             <button class="btn-clear-filters" (click)="clearFilters()">
@@ -397,7 +398,7 @@ interface CreateForm {
                 </td>
                 <td>
                   <span class="site-badge" [class.site-badge--mg]="u.site === 'MADAGASCAR'">
-                    {{ u.site === 'MADAGASCAR' ? '🇲🇬 Madagascar' : '🇷🇪 Réunion' }}
+                    {{ tenantSvc.poleFlag(u.site) }} {{ tenantSvc.poleLabel(u.site) }}
                   </span>
                 </td>
                 <td>
@@ -504,7 +505,7 @@ interface CreateForm {
             <div class="avatar collab lg">{{ initials(m) }}</div>
             <div>
               <div class="cell-name">{{ m.firstName }} {{ m.lastName }}</div>
-              <div style="font-size:12px;color:#059669;font-weight:600;margin-top:2px">🇲🇬 Collaborateur Madagascar</div>
+              <div style="font-size:12px;color:#059669;font-weight:600;margin-top:2px">{{ tenantSvc.poleFlag2() }} Collaborateur {{ tenantSvc.poleLabel2() }}</div>
               <div class="cell-email">{{ m.email }}</div>
             </div>
           </div>
@@ -520,7 +521,7 @@ interface CreateForm {
       <div>
         <h1 class="page-title">Mon équipe</h1>
         <p class="page-sub">
-          @if (auth.currentUser()?.site === 'REUNION') { Vos collaborateurs Madagascar rattachés }
+          @if (auth.currentUser()?.site === 'REUNION') { Vos collaborateurs {{ tenantSvc.poleLabel2() }} rattachés }
           @else { Votre superviseur direct }
         </p>
       </div>
@@ -533,14 +534,14 @@ interface CreateForm {
               <div class="avatar collab lg">{{ initials(m) }}</div>
               <div>
                 <div class="cell-name">{{ m.firstName }} {{ m.lastName }}</div>
-                <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">🇲🇬 Collaborateur Madagascar</div>
+                <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">{{ tenantSvc.poleFlag2() }} Collaborateur {{ tenantSvc.poleLabel2() }}</div>
                 <div class="cell-email">{{ m.email }}</div>
               </div>
             </div>
           }
         </div>
       } @else {
-        <div class="empty-team"><mat-icon>people_outline</mat-icon><p>Aucun collaborateur Madagascar ne vous est rattaché.</p></div>
+        <div class="empty-team"><mat-icon>people_outline</mat-icon><p>Aucun collaborateur {{ tenantSvc.poleLabel2() }} ne vous est rattaché.</p></div>
       }
     } @else {
       @if (myTeam?.referent) {
@@ -598,11 +599,11 @@ interface CreateForm {
         <label>Rôle hiérarchique</label>
         <div class="select-wrap">
           <select [(ngModel)]="editForm()!.role" (ngModelChange)="onRoleChange()">
-            <option value="COLLABORATEUR">Collaborateur Madagascar</option>
+            <option value="COLLABORATEUR">Collaborateur {{ tenantSvc.poleLabel2() }}</option>
             @if (editForm()!.antenne) {
               <option value="CHEF_MISSION">Chef de mission</option>
               <option value="CHEF_ANTENNE">Chef d'antenne</option>
-              <option value="GERANT_MADAGASCAR">Gérant Madagascar</option>
+              <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
             }
           </select>
           <mat-icon class="select-icon">expand_more</mat-icon>
@@ -785,8 +786,8 @@ interface CreateForm {
           <label>Site *</label>
           <div class="select-wrap">
             <select [(ngModel)]="createForm()!.site">
-              <option value="REUNION">🇷🇪 La Réunion</option>
-              <option value="MADAGASCAR">🇲🇬 Madagascar</option>
+              <option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</option>
+              <option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</option>
             </select>
             <mat-icon class="select-icon">expand_more</mat-icon>
           </div>
@@ -810,7 +811,7 @@ interface CreateForm {
             <option value="COLLABORATEUR">Collaborateur</option>
             <option value="CHEF_MISSION">Chef de mission</option>
             <option value="CHEF_ANTENNE">Chef d'antenne</option>
-            <option value="GERANT_MADAGASCAR">Gérant Madagascar</option>
+            <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
             <option value="EXPERT_COMPTABLE">Expert-comptable</option>
             <option value="ADMIN">Administrateur</option>
           </select>
@@ -1418,6 +1419,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
   private toast        = inject(ToastService);
   private router       = inject(Router);
   auth = inject(AuthService);
+  tenantSvc = inject(TenantService);
   private notifStream  = inject(NotificationStreamService);
   private sub = new Subscription();
 

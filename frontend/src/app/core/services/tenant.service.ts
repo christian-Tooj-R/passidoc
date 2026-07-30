@@ -23,6 +23,13 @@ export class TenantService {
   readonly isConfigured = computed(() => this._configured());
   readonly slug         = computed(() => this._slug());
 
+  poleLabel(site: string): string {
+    return site === 'REUNION' ? this.poleLabel1() : this.poleLabel2();
+  }
+  poleFlag(site: string): string {
+    return site === 'REUNION' ? this.poleFlag1() : this.poleFlag2();
+  }
+
   private _detectSlug(): string | null {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');

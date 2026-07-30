@@ -10,6 +10,7 @@ import { ClientsService } from '../../../core/services/clients.service';
 import { ExerciceService } from '../../../core/services/exercice.service';
 import { UsersService } from '../../../core/services/users.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { Client, Exercice } from '../../../core/models/client.model';
 import { User } from '../../../core/models/user.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
@@ -197,7 +198,7 @@ interface TabGroup {
               <input #logoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onLogoChange($event)" />
               <h2 class="profile__name">{{ client.nom }}</h2>
               <span class="profile__site" [class]="client.site === 'REUNION' ? 'site--re' : 'site--mg'">
-                {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
               </span>
 
               <!-- Score -->
@@ -288,7 +289,7 @@ interface TabGroup {
               <!-- Card 3 : infos clés -->
               <div class="hero-card hc-info">
                 <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
-                  {{ client.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+                  {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
                 </div>
 
                 <!-- ── Intervenants ───────────────────── -->
@@ -1035,6 +1036,7 @@ export class ClientDetailComponent implements OnInit {
   ];
 
   auth             = inject(AuthService);
+  tenantSvc        = inject(TenantService);
   private users    = inject(UsersService);
 
   allUsers           = signal<User[]>([]);

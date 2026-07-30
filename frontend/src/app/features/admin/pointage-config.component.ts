@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PointageService, SiteLocation } from '../../core/services/pointage.service';
 import { GeoLocationService } from '../../core/services/geo-location.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 interface SiteForm {
   site: 'REUNION' | 'MADAGASCAR';
@@ -229,13 +230,19 @@ export class PointageConfigComponent implements OnInit {
   private svc  = inject(PointageService);
   private geo  = inject(GeoLocationService);
   private snack = inject(MatSnackBar);
+  private tenantSvc = inject(TenantService);
 
   sites = signal<SiteForm[]>([
-    { site: 'REUNION',    label: 'La Réunion',  flag: '🇷🇪', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
-    { site: 'MADAGASCAR', label: 'Madagascar',  flag: '🇲🇬', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
+    { site: 'REUNION',    label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
+    { site: 'MADAGASCAR', label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
   ]);
 
   ngOnInit() {
+    this.sites.update(list => list.map(s => ({
+      ...s,
+      label: this.tenantSvc.poleLabel(s.site),
+      flag:  this.tenantSvc.poleFlag(s.site),
+    })));
     this.sites().forEach(s => this.charger(s));
   }
 

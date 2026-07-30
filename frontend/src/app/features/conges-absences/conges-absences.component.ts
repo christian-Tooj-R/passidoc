@@ -14,6 +14,7 @@ import {
   TypeConge, TYPE_CONGE_LABELS, TYPE_CONGE_COLORS,
 } from '../../core/services/conges-absences.service';
 import { SalariesService, Collaborateur } from '../salaries/salaries.service';
+import { TenantService } from '../../core/services/tenant.service';
 
 const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_LABELS).map(([v, l]) => ({ value: v as TypeConge, label: l }));
 type ViewMode = 'demandes' | 'soldes' | 'stats';
@@ -104,8 +105,8 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
     }
     <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
       <option value="">Tous les sites</option>
-      <option value="REUNION">La Réunion</option>
-      <option value="MADAGASCAR">Madagascar</option>
+      <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
+      <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
     </select>
   </div>
 
@@ -425,6 +426,7 @@ export class CongesAbsencesComponent implements OnInit {
   private sSvc   = inject(SalariesService);
   private snack  = inject(MatSnackBar);
   private fb     = inject(FormBuilder);
+  tenantSvc      = inject(TenantService);
 
   annee          = signal(new Date().getFullYear());
   view           = signal<ViewMode>('demandes');

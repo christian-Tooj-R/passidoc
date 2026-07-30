@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { CongesAbsencesService, SoldeConge, TYPE_CONGE_LABELS, TYPE_CONGE_COLORS } from '../../core/services/conges-absences.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { SalariesCongesComponent } from './salaries-conges.component';
@@ -63,7 +64,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
           @if (collab()!.typeContrat) {
             <span class="badge badge--blue">{{ collab()!.typeContrat }}</span>
           }
-          <span class="badge badge--site">{{ collab()!.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}</span>
+          <span class="badge badge--site">{{ tenantSvc.poleFlag(collab()!.site) }} {{ tenantSvc.poleLabel(collab()!.site) }}</span>
         </div>
       </div>
     </div>
@@ -178,7 +179,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
           <div class="field-grid">
             <div class="field"><span class="f-label">Poste / Fonction</span><span class="f-val">{{ collab()!.poste || '—' }}</span></div>
             <div class="field"><span class="f-label">Département / Service</span><span class="f-val">{{ collab()!.departement || '—' }}</span></div>
-            <div class="field"><span class="f-label">Site</span><span class="f-val">{{ collab()!.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}</span></div>
+            <div class="field"><span class="f-label">Site</span><span class="f-val">{{ tenantSvc.poleFlag(collab()!.site) }} {{ tenantSvc.poleLabel(collab()!.site) }}</span></div>
             <div class="field"><span class="f-label">Statut</span><span class="f-val">{{ statutLabel(collab()!.statut) }}</span></div>
             <div class="field"><span class="f-label">Type de contrat</span><span class="f-val">{{ collab()!.typeContrat || '—' }}</span></div>
             <div class="field"><span class="f-label">Temps de travail</span><span class="f-val">{{ tempsTravailLabel(collab()!.tempsTravail) }}{{ collab()!.heuresHebdo ? ' · ' + collab()!.heuresHebdo + 'h/sem' : '' }}</span></div>
@@ -317,8 +318,8 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         <mat-form-field appearance="outline">
           <mat-label>Site</mat-label>
           <mat-select formControlName="site">
-            <mat-option value="REUNION">🇷🇪 La Réunion</mat-option>
-            <mat-option value="MADAGASCAR">🇲🇬 Madagascar</mat-option>
+            <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+            <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
@@ -712,6 +713,7 @@ export class SalariesDetailComponent implements OnInit {
   private fb     = inject(FormBuilder);
   router         = inject(Router);
 
+  tenantSvc    = inject(TenantService);
   profilTab    = signal<ProfilTab>('identite');
   collab       = signal<Collaborateur | null>(null);
   loading      = signal(true);

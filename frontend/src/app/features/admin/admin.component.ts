@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ToastService } from '../../core/services/toast.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsersService } from '../../core/services/users.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { User } from '../../core/models/user.model';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 
@@ -41,7 +42,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
         </div>
         <div class="stat-chip">
           <mat-icon>flag</mat-icon>
-          <span>{{ countSite('REUNION') }} Réunion · {{ countSite('MADAGASCAR') }} Madagascar</span>
+          <span>{{ countSite('REUNION') }} {{ tenantSvc.poleLabel1() }} · {{ countSite('MADAGASCAR') }} {{ tenantSvc.poleLabel2() }}</span>
         </div>
       </div>
 
@@ -60,7 +61,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
 
         <ng-template appCol="site" let-u>
           <span [class]="u.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
-            {{ u.site === 'REUNION' ? '🇷🇪 La Réunion' : '🇲🇬 Madagascar' }}
+            {{ tenantSvc.poleFlag(u.site) }} {{ tenantSvc.poleLabel(u.site) }}
           </span>
         </ng-template>
 
@@ -143,6 +144,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
 export class AdminComponent implements OnInit {
   private usersService = inject(UsersService);
   private toast = inject(ToastService);
+  tenantSvc = inject(TenantService);
 
   users: User[] = [];
 

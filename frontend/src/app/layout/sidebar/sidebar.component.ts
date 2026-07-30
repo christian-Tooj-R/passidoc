@@ -179,7 +179,7 @@ interface AppModule {
               <span class="panel-user__role">{{ roleLabel() }}</span>
             </div>
             <span class="panel-user__flag">
-              {{ auth.currentUser()?.site === 'REUNION' ? '🇷🇪' : '🇲🇬' }}
+              {{ tenant.poleFlag(auth.currentUser()?.site ?? 'REUNION') }}
             </span>
           </div>
         </div>

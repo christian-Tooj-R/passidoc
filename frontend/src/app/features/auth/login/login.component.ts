@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/services/auth.service';
+import { TenantService } from '../../../core/services/tenant.service';
 
 @Component({
   selector: 'app-login',
@@ -157,8 +158,8 @@ import { AuthService } from '../../../core/services/auth.service';
                   <label>Site de rattachement</label>
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-select formControlName="site">
-                      <mat-option value="REUNION">🇷🇪 La Réunion</mat-option>
-                      <mat-option value="MADAGASCAR">🇲🇬 Madagascar</mat-option>
+                      <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+                      <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
                     </mat-select>
                   </mat-form-field>
                 </div>
@@ -293,6 +294,7 @@ export class LoginComponent {
   private fb   = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  tenantSvc = inject(TenantService);
 
   mode = signal<'login' | 'register'>('login');
   registerSuccess = signal(false);
