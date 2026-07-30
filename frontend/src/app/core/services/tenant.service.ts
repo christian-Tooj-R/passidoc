@@ -26,13 +26,17 @@ export class TenantService {
   private _detectSlug(): string | null {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
-
-    // Sous-domaine réel : "afym.passidoc.re" → slug = "afym"
-    if (parts.length >= 3) return parts[0].toLowerCase();
-
-    // Fallback dev : ?tenant=afym dans l'URL (sauvegardé en localStorage)
     const params = new URLSearchParams(window.location.search);
     const qSlug  = params.get('tenant');
+
+    if (parts.length >= 3) {
+      // Sur Render (*.onrender.com) : le param ?tenant= permet d'accéder à un tenant spécifique
+      // Sans param → slug = "passidoc-app" → aucun tenant → setup wizard
+      if (qSlug) return qSlug.toLowerCase();
+      return parts[0].toLowerCase();
+    }
+
+    // localhost / dev : ?tenant= ou localStorage
     if (qSlug) {
       localStorage.setItem('dev_tenant_slug', qSlug);
       return qSlug.toLowerCase();
@@ -55,14 +59,10 @@ export class TenantService {
 
     if (!this._checkObs) {
       this._checkObs = this.http
-        .get<{ configured: boolean; slug?: string }>(`${environment.apiUrl}/setup/status`)
+        .get<{ configured: boolean }>(`${environment.apiUrl}/setup/status`)
         .pipe(
           tap(s => {
             this._configured.set(s.configured);
-            // Render / démo : le backend peut renvoyer un slug différent de celui de l'URL
-            if (s.slug && s.slug !== this._slug()) {
-              this._slug.set(s.slug);
-            }
             if (s.configured) {
               this.http.get<TenantConfig>(`${environment.apiUrl}/tenant/config`)
                 .pipe(catchError(() => of(null)))

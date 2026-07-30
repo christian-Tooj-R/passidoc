@@ -1624,12 +1624,17 @@ export class SetupWizardComponent {
         });
         this.loading.set(false);
         const hostname = window.location.hostname;
-        const isDemo = hostname === 'localhost' || hostname.includes('onrender.com');
-        const parts = hostname.split('.');
-        const baseDomain = parts.length >= 3 ? parts.slice(1).join('.') : 'passidoc.re';
-        this.appUrl.set(isDemo
-          ? `https://${payload.slug}.passidoc.re`
-          : `https://${payload.slug}.${baseDomain}`);
+        const isOnRender = hostname.includes('onrender.com');
+        const isLocalhost = hostname === 'localhost';
+        let appUrl: string;
+        if (isOnRender || isLocalhost) {
+          appUrl = `${window.location.origin}/?tenant=${payload.slug}`;
+        } else {
+          const parts = hostname.split('.');
+          const baseDomain = parts.length >= 3 ? parts.slice(1).join('.') : 'passidoc.re';
+          appUrl = `https://${payload.slug}.${baseDomain}`;
+        }
+        this.appUrl.set(appUrl);
         this.showPageTurn.set(true);
         setTimeout(() => {
           this.showPageTurn.set(false);
