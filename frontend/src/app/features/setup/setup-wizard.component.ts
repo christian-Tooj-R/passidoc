@@ -687,6 +687,45 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 }
 
 <!-- ══════════════════════════════════════════════════════
+     ÉCRAN SUCCÈS — LIEN DE L'APPLICATION
+════════════════════════════════════════════════════════ -->
+@if (screen() === 'success') {
+  <div class="sc-page">
+    <div class="sc-bg">
+      <div class="sc-bg__orb sc-bg__orb--a"></div>
+      <div class="sc-bg__orb sc-bg__orb--b"></div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-check">
+        <mat-icon>check_circle</mat-icon>
+      </div>
+      <h2 class="sc-title">Passidoc est configuré !</h2>
+      <p class="sc-desc">Votre application est prête. Partagez ce lien avec votre équipe pour accéder à l'espace de travail.</p>
+
+      <div class="sc-url-block">
+        <span class="sc-url-label">Adresse de votre application</span>
+        <div class="sc-url-row">
+          <span class="sc-url-val">{{ appUrl() }}</span>
+          <button class="sc-copy-btn" (click)="copyUrl()" [class.sc-copy-btn--done]="urlCopied()" type="button">
+            <mat-icon>{{ urlCopied() ? 'check' : 'content_copy' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="sc-info">
+        <mat-icon>info_outline</mat-icon>
+        <span>Connectez-vous avec les identifiants administrateur que vous venez de créer.</span>
+      </div>
+
+      <button class="sc-login-btn" matRipple (click)="goToLogin()" type="button">
+        <mat-icon>login</mat-icon>
+        <span>Se connecter</span>
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════
      TRANSITION — FEUILLE DE CAHIER
 ════════════════════════════════════════════════════════ -->
 @if (showPageTurn()) {
@@ -1302,6 +1341,121 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
     .pt-sub {
       font-size: 13px; color: #94A3B8; margin: 0;
     }
+
+    /* ════════════════════════════════════════════════════
+       ÉCRAN SUCCÈS
+    ════════════════════════════════════════════════════ */
+    .sc-page {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #0f1f4a 0%, #06101f 60%, #030810 100%);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; z-index: 200;
+      animation: sc-appear .5s ease forwards;
+    }
+    @keyframes sc-appear {
+      from { opacity: 0; transform: scale(.97); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .sc-bg { position: absolute; inset: 0; pointer-events: none; }
+    .sc-bg__orb {
+      position: absolute; border-radius: 50%; filter: blur(80px);
+    }
+    .sc-bg__orb--a { width: 500px; height: 500px; background: rgba(22,163,74,.15); top: -120px; right: -100px; }
+    .sc-bg__orb--b { width: 400px; height: 400px; background: rgba(26,115,232,.12); bottom: -80px; left: -80px; }
+
+    .sc-card {
+      position: relative; z-index: 1;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 24px;
+      padding: 48px 40px 40px;
+      max-width: 520px; width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+      box-shadow: 0 24px 64px rgba(0,0,0,.4);
+      animation: sc-card-in .5s cubic-bezier(.34,1.56,.64,1) forwards;
+      animation-delay: .1s; opacity: 0; transform: translateY(20px);
+    }
+    @keyframes sc-card-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .sc-check {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #16A34A, #15803d);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 12px rgba(22,163,74,.12), 0 8px 32px rgba(22,163,74,.35);
+      margin-bottom: 24px;
+      animation: sc-check-bounce .5s cubic-bezier(.34,1.56,.64,1) forwards;
+      animation-delay: .25s; transform: scale(0);
+    }
+    @keyframes sc-check-bounce {
+      to { transform: scale(1); }
+    }
+    .sc-check mat-icon { color: #fff; font-size: 40px; width: 40px; height: 40px; }
+
+    .sc-title {
+      font-size: 26px; font-weight: 800; color: #fff;
+      margin: 0 0 12px; text-align: center; letter-spacing: -.5px;
+    }
+    .sc-desc {
+      font-size: 14px; color: rgba(255,255,255,.55); line-height: 1.65;
+      margin: 0 0 28px; text-align: center; max-width: 380px;
+    }
+
+    .sc-url-block {
+      width: 100%;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(96,165,250,.25);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .sc-url-label {
+      display: block; font-size: 11px; font-weight: 600; letter-spacing: .8px;
+      text-transform: uppercase; color: #60a5fa; margin-bottom: 8px;
+    }
+    .sc-url-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sc-url-val {
+      flex: 1; font-size: 15px; font-weight: 600; color: #e2e8f0;
+      word-break: break-all; letter-spacing: -.2px;
+    }
+    .sc-copy-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.6);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .sc-copy-btn:hover { background: rgba(255,255,255,.13); color: #fff; }
+    .sc-copy-btn--done { background: rgba(22,163,74,.2); color: #4ade80; border-color: rgba(22,163,74,.3); }
+    .sc-copy-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    .sc-info {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: rgba(251,191,36,.07);
+      border: 1px solid rgba(251,191,36,.20);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 28px; width: 100%;
+    }
+    .sc-info mat-icon { color: #fbbf24; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+    .sc-info span { font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.5; }
+
+    .sc-login-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 36px; border-radius: 100px; border: none; cursor: pointer;
+      background: linear-gradient(90deg, #1A73E8 0%, #7C3AED 100%);
+      color: #fff; font-size: 15px; font-weight: 700;
+      box-shadow: 0 8px 28px rgba(26,115,232,.4);
+      transition: transform .2s, box-shadow .2s;
+      width: 100%; justify-content: center;
+    }
+    .sc-login-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(26,115,232,.55); }
+    .sc-login-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
   `],
 })
 export class SetupWizardComponent {
@@ -1312,13 +1466,15 @@ export class SetupWizardComponent {
   private  http   = inject(HttpClient);
   protected tenant = inject(TenantService);
 
-  screen        = signal<'welcome' | 'wizard'>('welcome');
+  screen        = signal<'welcome' | 'wizard' | 'success'>('welcome');
   welcomeExit   = signal(false);
   currentStep   = signal(0);
   loading       = signal(false);
   submitError   = signal('');
   showPw        = signal(false);
   showPageTurn  = signal(false);
+  appUrl        = signal('');
+  urlCopied     = signal(false);
 
   // Logo upload
   logoPreview  = signal<string | null>(null);
@@ -1471,13 +1627,26 @@ export class SetupWizardComponent {
           isConfigured: true,
         });
         this.loading.set(false);
+        this.appUrl.set(window.location.origin);
         this.showPageTurn.set(true);
-        setTimeout(() => this.router.navigate(['/auth/login']), 2000);
+        setTimeout(() => {
+          this.showPageTurn.set(false);
+          this.screen.set('success');
+        }, 2200);
       },
       error: (err) => {
         this.loading.set(false);
         this.submitError.set(err.error?.message ?? 'Une erreur s\'est produite. Veuillez réessayer.');
       },
+    });
+  }
+
+  goToLogin() { this.router.navigate(['/auth/login']); }
+
+  copyUrl() {
+    navigator.clipboard.writeText(this.appUrl()).then(() => {
+      this.urlCopied.set(true);
+      setTimeout(() => this.urlCopied.set(false), 2000);
     });
   }
 

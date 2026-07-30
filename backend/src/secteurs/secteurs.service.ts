@@ -26,6 +26,10 @@ export class SecteursService {
   ) {}
 
   async onModuleInit() {
+    await this.seedIfEmpty();
+  }
+
+  async seedIfEmpty(): Promise<void> {
     const count = await this.repo.count();
     if (count === 0) {
       for (const s of SEED_SECTEURS) {

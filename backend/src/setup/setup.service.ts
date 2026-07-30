@@ -5,13 +5,15 @@ import * as bcrypt from 'bcrypt';
 import { TenantConfig } from '../entities/tenant-config.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
 import { SetupDto } from './setup.dto';
+import { SecteursService } from '../secteurs/secteurs.service';
 
 @Injectable()
 export class SetupService {
   constructor(
-    @InjectRepository(TenantConfig) private configRepo: Repository<TenantConfig>,
-    @InjectRepository(User)         private userRepo:   Repository<User>,
-    @InjectDataSource()             private dataSource: DataSource,
+    @InjectRepository(TenantConfig) private configRepo:    Repository<TenantConfig>,
+    @InjectRepository(User)         private userRepo:      Repository<User>,
+    @InjectDataSource()             private dataSource:    DataSource,
+    private                         secteursService:       SecteursService,
   ) {}
 
   async getStatus(slug?: string): Promise<{ configured: boolean }> {
@@ -82,6 +84,9 @@ export class SetupService {
 
     // Recrée toutes les tables à partir des entités enregistrées
     await this.dataSource.synchronize();
+
+    // Re-seeder les secteurs d'activité (onModuleInit ne se relance pas)
+    await this.secteursService.seedIfEmpty();
 
     return { message: 'Base de données réinitialisée — tous les tokens existants sont invalidés' };
   }
