@@ -61,6 +61,8 @@ export class SetupService {
       }));
     }
 
+    await this.secteursService.seedForTenant(savedConfig.id);
+
     return { message: 'Configuration terminée avec succès' };
   }
 

@@ -109,6 +109,9 @@ export class Task {
   @Column()
   clientId: number;
 
+  @Column({ nullable: true })
+  tenantId: number;
+
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'assigneeId' })
   assignee: User;

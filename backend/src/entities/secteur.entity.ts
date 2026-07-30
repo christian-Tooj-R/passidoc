@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn,
+  CreateDateColumn, UpdateDateColumn, Unique,
 } from 'typeorm';
 
 export interface SecteurQuestion {
@@ -15,12 +15,16 @@ export interface SecteurQuestion {
 }
 
 @Entity('secteurs')
+@Unique(['code', 'tenantId'])
 export class Secteur {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column()
   code: string;
+
+  @Column({ nullable: true })
+  tenantId: number;
 
   @Column()
   label: string;

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, ParseIntPipe, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -16,8 +16,8 @@ export class SecteursController {
 
   @Get()
   @ApiOperation({ summary: 'Liste des secteurs actifs' })
-  findAll(@Query('all') all?: string) {
-    return this.service.findAll(all === 'true');
+  findAll(@Req() req: any, @Query('all') all?: string) {
+    return this.service.findAll(all === 'true', req.user?.tenantId);
   }
 
   @Get(':id')
@@ -30,8 +30,8 @@ export class SecteursController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Créer un secteur (ADMIN)' })
-  create(@Body() dto: CreateSecteurDto) {
-    return this.service.create(dto);
+  create(@Req() req: any, @Body() dto: CreateSecteurDto) {
+    return this.service.create(dto, req.user?.tenantId);
   }
 
   @Patch('sync-all')

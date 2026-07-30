@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Secteur } from '../entities/secteur.entity';
 import { CreateSecteurDto, UpdateSecteurDto } from './dto/create-secteur.dto';
 
-const SEED_SECTEURS: Omit<Secteur, 'id' | 'createdAt' | 'updatedAt' | 'questions'>[] = [
+const SEED_SECTEURS: Omit<Secteur, 'id' | 'createdAt' | 'updatedAt' | 'questions' | 'tenantId'>[] = [
   { code: 'RESTAURATION',        label: 'Hôtellerie-Restauration & Métiers de bouche', icon: 'restaurant',        codeNaf: '56.10A', codeNafLibelle: 'Restaurants et services de restauration mobile', isActive: true },
   { code: 'BTP',                 label: 'BTP',                                           icon: 'construction',      codeNaf: '43.99C', codeNafLibelle: 'Travaux de construction spécialisés', isActive: true },
   { code: 'ASSOCIATION',         label: 'Association',                                   icon: 'volunteer_activism', codeNaf: '94.99Z', codeNafLibelle: 'Autres organisations fonctionnant par adhésion volontaire', isActive: true },
@@ -29,8 +29,9 @@ export class SecteursService {
     await this.seedIfEmpty();
   }
 
+  /** Seede les secteurs globaux (templates, tenantId=null) si la table est vide */
   async seedIfEmpty(): Promise<void> {
-    const count = await this.repo.count();
+    const count = await this.repo.count({ where: { tenantId: null as any } });
     if (count === 0) {
       for (const s of SEED_SECTEURS) {
         await this.repo.save(this.repo.create({ ...s, questions: [] }));
@@ -38,8 +39,21 @@ export class SecteursService {
     }
   }
 
-  findAll(includeInactive = false): Promise<Secteur[]> {
-    const where = includeInactive ? {} : { isActive: true };
+  /** Crée les secteurs par défaut pour un tenant donné (appelé lors du setup) */
+  async seedForTenant(tenantId: number): Promise<void> {
+    const existing = await this.repo.count({ where: { tenantId } });
+    if (existing > 0) return;
+    const templates = await this.repo.find({ where: { tenantId: null as any, isActive: true } });
+    const source = templates.length > 0 ? templates : SEED_SECTEURS.map(s => ({ ...s, questions: [] as any }));
+    for (const s of source) {
+      const { id, createdAt, updatedAt, tenantId: _tid, ...fields } = s as any;
+      await this.repo.save(this.repo.create({ ...fields, tenantId, questions: (s as any).questions ?? [] }));
+    }
+  }
+
+  findAll(includeInactive = false, tenantId?: number): Promise<Secteur[]> {
+    const where: any = includeInactive ? {} : { isActive: true };
+    if (tenantId) where.tenantId = tenantId;
     return this.repo.find({ where, order: { label: 'ASC' } });
   }
 
@@ -49,10 +63,12 @@ export class SecteursService {
     return s;
   }
 
-  async create(dto: CreateSecteurDto): Promise<Secteur> {
-    const exists = await this.repo.findOne({ where: { code: dto.code } });
+  async create(dto: CreateSecteurDto, tenantId?: number): Promise<Secteur> {
+    const where: any = { code: dto.code };
+    if (tenantId) where.tenantId = tenantId;
+    const exists = await this.repo.findOne({ where });
     if (exists) throw new ConflictException(`Code secteur '${dto.code}' déjà utilisé`);
-    return this.repo.save(this.repo.create({ ...dto, questions: dto.questions ?? [] }));
+    return this.repo.save(this.repo.create({ ...dto, questions: dto.questions ?? [], ...(tenantId ? { tenantId } : {}) }));
   }
 
   async update(id: number, dto: UpdateSecteurDto): Promise<Secteur> {

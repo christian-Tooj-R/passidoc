@@ -154,6 +154,7 @@ export class TasksService {
       createdBy: currentUser,
       semaine,
       heureDebut: now,
+      ...(currentUser.tenantId ? { tenantId: currentUser.tenantId } : {}),
     });
     const saved = await this.repo.save(task);
 
@@ -320,6 +321,7 @@ export class TasksService {
         heureDebut: now,
         heureFin: now,
         createdBy: currentUser,
+        ...(currentUser.tenantId ? { tenantId: currentUser.tenantId } : {}),
       });
       const saved = await this.repo.save(task);
       const year = now.getFullYear();
