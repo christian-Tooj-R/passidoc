@@ -143,7 +143,7 @@ interface AppModule {
               @for (item of group.items; track item.route) {
                 <a [routerLink]="item.route"
                    routerLinkActive="active"
-                   [routerLinkActiveOptions]="{ exact: true }"
+                   [routerLinkActiveOptions]="{ exact: true, queryParams: 'ignored' }"
                    #rla="routerLinkActive"
                    class="panel-item"
                    [class.panel-item--active]="rla.isActive"
