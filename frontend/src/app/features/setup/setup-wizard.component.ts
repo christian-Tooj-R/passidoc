@@ -702,7 +702,7 @@ function generateSlug(name: string): string {
       <div class="sc-url-block">
         <span class="sc-url-label">Adresse de votre application</span>
         <div class="sc-url-row">
-          <span class="sc-url-val">{{ appUrlDisplay() }}</span>
+          <span class="sc-url-val">{{ appUrl() }}</span>
           <button class="sc-copy-btn" (click)="copyUrl()" [class.sc-copy-btn--done]="urlCopied()" type="button">
             <mat-icon>{{ urlCopied() ? 'check' : 'content_copy' }}</mat-icon>
           </button>
