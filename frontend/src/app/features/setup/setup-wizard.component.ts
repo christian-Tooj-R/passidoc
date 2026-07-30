@@ -1457,7 +1457,19 @@ export class SetupWizardComponent {
 
     this.http.post<{ message: string }>(`${environment.apiUrl}/setup`, payload).subscribe({
       next: () => {
-        this.tenant.markConfigured();
+        this.tenant.markConfigured({
+          id:           0,
+          nomSociete:   payload.nomSociete,
+          logoUrl:      payload.logoUrl,
+          slogan:       payload.slogan,
+          ville:        payload.ville,
+          pays:         payload.pays,
+          poleLabel1:   payload.poleLabel1,
+          poleLabel2:   payload.poleLabel2,
+          poleFlag1:    payload.poleFlag1,
+          poleFlag2:    payload.poleFlag2,
+          isConfigured: true,
+        });
         this.loading.set(false);
         this.showPageTurn.set(true);
         setTimeout(() => this.router.navigate(['/auth/login']), 2000);
