@@ -23,7 +23,7 @@ export class EspacesController {
   @Get()
   @ApiOperation({ summary: 'Liste mes espaces avec leurs documents' })
   findAll(@CurrentUser() user: User) {
-    return this.svc.findAll(user.id);
+    return this.svc.findAll(user.id, user.tenantId);
   }
 
   @Post()
@@ -33,7 +33,7 @@ export class EspacesController {
     @Body('couleur') couleur: string,
     @CurrentUser() user: User,
   ) {
-    return this.svc.create(nom, user.id, couleur ?? null);
+    return this.svc.create(nom, user.id, couleur ?? null, user.tenantId);
   }
 
   @Delete(':id')

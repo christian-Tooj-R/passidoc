@@ -13,6 +13,7 @@ export class AuditLog {
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: true })
   @JoinColumn({ name: 'userId' }) user: User;
   @Column({ nullable: true }) userId: number;
+  @Column({ nullable: true }) tenantId: number;
   @Column({ nullable: true }) ipAddress: string;
   @CreateDateColumn() createdAt: Date;
 }

@@ -15,6 +15,9 @@ export class SoldeConge {
   @Column()
   userId: number;
 
+  @Column({ nullable: true })
+  tenantId: number;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE', eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;

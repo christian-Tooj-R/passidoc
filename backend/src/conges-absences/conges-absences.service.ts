@@ -35,11 +35,12 @@ export class CongesAbsencesService {
 
   /* ── Demandes ──────────────────────────────────────────────── */
 
-  async findAll(filters?: { userId?: number; statut?: StatutConge; annee?: number }) {
+  async findAll(filters?: { userId?: number; statut?: StatutConge; annee?: number; tenantId?: number }) {
     const qb = this.congeRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.user', 'u')
       .orderBy('c.dateDebut', 'DESC');
 
+    if (filters?.tenantId) qb.andWhere('c.tenantId = :tenantId', { tenantId: filters.tenantId });
     if (filters?.userId) qb.andWhere('c.userId = :userId', { userId: filters.userId });
     if (filters?.statut) qb.andWhere('c.statut = :statut', { statut: filters.statut });
     if (filters?.annee) {
@@ -63,6 +64,7 @@ export class CongesAbsencesService {
     dateFin: string;
     nombreJours: number;
     motif?: string;
+    tenantId?: number;
   }) {
     if (!dto.dateDebut || isNaN(new Date(dto.dateDebut).getTime())) {
       throw new BadRequestException('Date de début invalide');
@@ -74,13 +76,13 @@ export class CongesAbsencesService {
     const user = await this.userRepo.findOne({ where: { id: dto.userId } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
 
-    const solde = await this.getSoldeForType(dto.userId, dto.typeConge, new Date(dto.dateDebut).getFullYear());
+    const solde = await this.getSoldeForType(dto.userId, dto.typeConge, new Date(dto.dateDebut).getFullYear(), dto.tenantId);
     const disponible = Number(solde.joursAcquis) - Number(solde.joursPris) - Number(solde.joursEnAttente);
     if (['CONGES_PAYES', 'RECUPERATION'].includes(dto.typeConge) && dto.nombreJours > disponible) {
       throw new BadRequestException(`Solde insuffisant. Disponible : ${disponible} jours`);
     }
 
-    const conge = this.congeRepo.create({ ...dto, statut: StatutConge.EN_ATTENTE });
+    const conge = this.congeRepo.create({ userId: dto.userId, typeConge: dto.typeConge, dateDebut: dto.dateDebut, dateFin: dto.dateFin, nombreJours: dto.nombreJours, motif: dto.motif, statut: StatutConge.EN_ATTENTE, ...(dto.tenantId ? { tenantId: dto.tenantId } : {}) });
     const saved = await this.congeRepo.save(conge);
 
     await this.soldeRepo.update(
@@ -186,24 +188,23 @@ export class CongesAbsencesService {
     return tous;
   }
 
-  async updateSolde(userId: number, typeConge: TypeConge, annee: number, joursAcquis: number) {
+  async updateSolde(userId: number, typeConge: TypeConge, annee: number, joursAcquis: number, tenantId?: number) {
     const existing = await this.soldeRepo.findOne({ where: { userId, typeConge, annee } });
     if (existing) {
       await this.soldeRepo.update(existing.id, { joursAcquis });
     } else {
-      await this.soldeRepo.save(this.soldeRepo.create({ userId, typeConge, annee, joursAcquis }));
+      await this.soldeRepo.save(this.soldeRepo.create({ userId, typeConge, annee, joursAcquis, ...(tenantId ? { tenantId } : {}) }));
     }
     return this.getSoldes(userId, annee);
   }
 
   /* ── Stats ───────────────────────────────────────────────── */
 
-  async getStats(annee?: number) {
+  async getStats(annee?: number, tenantId?: number) {
     const year = annee ?? new Date().getFullYear();
-    const conges = await this.congeRepo.find({
-      where: { statut: StatutConge.APPROUVEE },
-      relations: ['user'],
-    });
+    const where: any = { statut: StatutConge.APPROUVEE };
+    if (tenantId) where.tenantId = tenantId;
+    const conges = await this.congeRepo.find({ where, relations: ['user'] });
 
     const total       = conges.filter(c => new Date(c.dateDebut).getFullYear() === year).length;
     const parType     = Object.values(TypeConge).map(t => ({
@@ -213,14 +214,16 @@ export class CongesAbsencesService {
                    .reduce((s, c) => s + Number(c.nombreJours), 0),
     }));
 
-    const enAttente = await this.congeRepo.count({ where: { statut: StatutConge.EN_ATTENTE } });
+    const enAttenteWhere: any = { statut: StatutConge.EN_ATTENTE };
+    if (tenantId) enAttenteWhere.tenantId = tenantId;
+    const enAttente = await this.congeRepo.count({ where: enAttenteWhere });
 
     return { annee: year, totalApprouves: total, enAttente, parType };
   }
 
   /* ── Calendrier des absences ─────────────────────────────── */
 
-  async getCalendrier(mois: number, annee: number, site?: string): Promise<any[]> {
+  async getCalendrier(mois: number, annee: number, site?: string, tenantId?: number): Promise<any[]> {
     // Charger toutes les absences approuvées et en attente qui chevauchent le mois
     const debut = `${annee}-${String(mois).padStart(2, '0')}-01`;
     const finDuMois = new Date(annee, mois, 0); // dernier jour du mois
@@ -234,9 +237,8 @@ export class CongesAbsencesService {
       .orderBy('u.lastName', 'ASC')
       .addOrderBy('c.dateDebut', 'ASC');
 
-    if (site) {
-      qb.andWhere('u.site = :site', { site });
-    }
+    if (site) qb.andWhere('u.site = :site', { site });
+    if (tenantId) qb.andWhere('c.tenantId = :tenantId', { tenantId });
 
     const conges = await qb.getMany();
 
@@ -294,10 +296,10 @@ export class CongesAbsencesService {
 
   /* ── Helpers ─────────────────────────────────────────────── */
 
-  private async getSoldeForType(userId: number, typeConge: TypeConge, annee: number) {
+  private async getSoldeForType(userId: number, typeConge: TypeConge, annee: number, tenantId?: number) {
     let solde = await this.soldeRepo.findOne({ where: { userId, typeConge, annee } });
     if (!solde) {
-      solde = this.soldeRepo.create({ userId, typeConge, annee, joursAcquis: 0, joursPris: 0, joursEnAttente: 0 });
+      solde = this.soldeRepo.create({ userId, typeConge, annee, joursAcquis: 0, joursPris: 0, joursEnAttente: 0, ...(tenantId ? { tenantId } : {}) });
       await this.soldeRepo.save(solde);
     }
     return solde;
@@ -388,6 +390,7 @@ export class CongesAbsencesService {
           joursAcquis:    0,
           joursPris:      0,
           joursEnAttente: 0,
+          ...(user.tenantId ? { tenantId: user.tenantId } : {}),
         });
       }
 
@@ -468,6 +471,7 @@ export class CongesAbsencesService {
           joursAcquis:    0,
           joursPris:      0,
           joursEnAttente: 0,
+          ...(user.tenantId ? { tenantId: user.tenantId } : {}),
         });
       }
 
@@ -527,6 +531,7 @@ export class CongesAbsencesService {
           joursAcquis:    0,
           joursPris:      0,
           joursEnAttente: 0,
+          ...(user.tenantId ? { tenantId: user.tenantId } : {}),
         });
       }
 

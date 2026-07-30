@@ -26,11 +26,12 @@ export class CongesAbsencesController {
   @ApiQuery({ name: 'annee', required: true  })
   @ApiQuery({ name: 'site',  required: false })
   getCalendrier(
+    @Req() req: any,
     @Query('mois')  mois:  string,
     @Query('annee') annee: string,
     @Query('site')  site?: string,
   ) {
-    return this.svc.getCalendrier(Number(mois), Number(annee), site);
+    return this.svc.getCalendrier(Number(mois), Number(annee), site, req.user?.tenantId);
   }
 
   /* ── Action email (sans auth — token JWT dans l'URL) ────────── */
@@ -65,6 +66,7 @@ export class CongesAbsencesController {
   @ApiQuery({ name: 'statut', required: false, enum: StatutConge })
   @ApiQuery({ name: 'annee', required: false })
   findAll(
+    @Req() req: any,
     @Query('userId') userId?: string,
     @Query('statut') statut?: StatutConge,
     @Query('annee') annee?: string,
@@ -73,6 +75,7 @@ export class CongesAbsencesController {
       userId: userId ? Number(userId) : undefined,
       statut,
       annee: annee ? Number(annee) : undefined,
+      tenantId: req.user?.tenantId,
     });
   }
 
@@ -81,8 +84,8 @@ export class CongesAbsencesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Statistiques congés' })
   @ApiQuery({ name: 'annee', required: false })
-  getStats(@Query('annee') annee?: string) {
-    return this.svc.getStats(annee ? Number(annee) : undefined);
+  getStats(@Req() req: any, @Query('annee') annee?: string) {
+    return this.svc.getStats(annee ? Number(annee) : undefined, req.user?.tenantId);
   }
 
   @Get('mes-demandes')
@@ -93,6 +96,7 @@ export class CongesAbsencesController {
     return this.svc.findAll({
       userId: req.user.id,
       annee: annee ? Number(annee) : undefined,
+      tenantId: req.user?.tenantId,
     });
   }
 
@@ -118,7 +122,7 @@ export class CongesAbsencesController {
     userId?: number;
   }) {
     const userId = dto.userId ?? req.user.id;
-    return this.svc.create({ ...dto, userId });
+    return this.svc.create({ ...dto, userId, tenantId: req.user?.tenantId });
   }
 
   @Patch(':id/approuver')
@@ -175,10 +179,11 @@ export class CongesAbsencesController {
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Mettre à jour le solde d\'un collaborateur' })
   updateSolde(
+    @Req() req: any,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: { typeConge: TypeConge; annee: number; joursAcquis: number },
   ) {
-    return this.svc.updateSolde(userId, dto.typeConge, dto.annee, dto.joursAcquis);
+    return this.svc.updateSolde(userId, dto.typeConge, dto.annee, dto.joursAcquis, req.user?.tenantId);
   }
 
   @Post('admin/acquisition-mensuelle')

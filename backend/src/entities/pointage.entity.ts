@@ -17,6 +17,9 @@ export class Pointage {
   @Column()
   userId: number;
 
+  @Column({ nullable: true })
+  tenantId: number;
+
   @Column({ type: 'date' })
   date: string; // YYYY-MM-DD
 

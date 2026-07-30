@@ -36,6 +36,7 @@ export class PointageService {
     latitude?: number,
     longitude?: number,
     action?: ActionPointage,
+    tenantId?: number,
   ): Promise<Pointage> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('Utilisateur introuvable');
@@ -66,7 +67,7 @@ export class PointageService {
     let p = await this.repo.findOne({ where: { userId, date: today }, relations: ['pauses'] });
     if (!p) {
       p = await this.repo.save(
-        this.repo.create({ userId, date: today, heureArrivee: new Date(), ...coords }),
+        this.repo.create({ userId, date: today, heureArrivee: new Date(), ...coords, ...(tenantId ? { tenantId } : {}) }),
       );
       p.pauses = [];
       return p;
@@ -155,9 +156,10 @@ export class PointageService {
   }
 
   // ── Vue journalière équipe ───────────────────────────────────
-  async getJournee(date: string, site?: string): Promise<{ user: User; pointage: Pointage | null }[]> {
+  async getJournee(date: string, site?: string, tenantId?: number): Promise<{ user: User; pointage: Pointage | null }[]> {
     const q = this.userRepo.createQueryBuilder('u').where('u.isActive = true');
     if (site) q.andWhere('u.site = :site', { site });
+    if (tenantId) q.andWhere('u.tenantId = :tenantId', { tenantId });
     const users = await q.getMany();
     const pointages = await this.repo.find({ where: { date }, relations: ['user', 'pauses'] });
     const map = new Map(pointages.map(p => [p.userId, p]));
@@ -175,14 +177,15 @@ export class PointageService {
   }
 
   // ── Historique global admin (200 lignes) ────────────────────
-  async getHistoriqueAll(site?: string): Promise<(Pointage & { user: User })[]> {
+  async getHistoriqueAll(site?: string, tenantId?: number): Promise<(Pointage & { user: User })[]> {
     const q = this.repo.createQueryBuilder('p')
       .leftJoinAndSelect('p.user', 'u')
       .leftJoinAndSelect('p.pauses', 'pp')
       .orderBy('p.date', 'DESC')
       .addOrderBy('p.heureArrivee', 'DESC')
       .limit(200);
-    if (site) q.where('u.site = :site', { site });
+    if (site) q.andWhere('u.site = :site', { site });
+    if (tenantId) q.andWhere('p.tenantId = :tenantId', { tenantId });
     return q.getMany() as any;
   }
 
