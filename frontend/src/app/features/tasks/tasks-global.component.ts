@@ -1143,6 +1143,7 @@ export class CreateTaskDialogComponent {
 export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   private tasksService = inject(TasksService);
   private toast = inject(ToastService);
+  tenantSvc = inject(TenantService);
   private confirm = inject(ConfirmService);
   private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
