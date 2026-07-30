@@ -1627,7 +1627,13 @@ export class SetupWizardComponent {
           isConfigured: true,
         });
         this.loading.set(false);
-        this.appUrl.set(window.location.origin);
+        const hostname = window.location.hostname;
+        const isDemo = hostname === 'localhost' || hostname.includes('onrender.com');
+        const parts = hostname.split('.');
+        const baseDomain = parts.length >= 3 ? parts.slice(1).join('.') : 'passidoc.re';
+        this.appUrl.set(isDemo
+          ? `https://${payload.slug}.passidoc.re`
+          : `https://${payload.slug}.${baseDomain}`);
         this.showPageTurn.set(true);
         setTimeout(() => {
           this.showPageTurn.set(false);
