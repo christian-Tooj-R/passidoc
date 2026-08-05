@@ -36,6 +36,7 @@ import { ExerciceModule } from './exercice/exercice.module';
 import { SecteursModule } from './secteurs/secteurs.module';
 import { CongesAbsencesModule } from './conges-absences/conges-absences.module';
 import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
+import { DossierMessagesModule } from './dossier-messages/dossier-messages.module';
 import { HelpModule } from './help/help.module';
 import { MailModule } from './mail/mail.module';
 import { CanvasModule } from './canvas/canvas.module';
@@ -107,6 +108,7 @@ import { TenantConfig } from './entities/tenant-config.entity';
     SecteursModule,
     CongesAbsencesModule,
     DossierTravailModule,
+    DossierMessagesModule,
     HelpModule,
     MailModule,
     CanvasModule,

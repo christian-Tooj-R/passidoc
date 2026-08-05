@@ -4,6 +4,13 @@ import {
 } from 'typeorm';
 import { Client } from './client.entity';
 
+export interface OrgNode {
+  id: string;
+  nom: string;
+  poste: string;
+  children?: OrgNode[];
+}
+
 @Entity('fiche_identite')
 export class FicheIdentite {
   @PrimaryGeneratedColumn()
@@ -109,6 +116,9 @@ export class FicheIdentite {
 
   @Column({ type: 'text', nullable: true })
   evolutionSecteur: string;
+
+  @Column({ type: 'json', nullable: true })
+  organigramme: OrgNode | null;
 
   @OneToOne(() => Client, (client) => client.ficheIdentite)
   @JoinColumn()

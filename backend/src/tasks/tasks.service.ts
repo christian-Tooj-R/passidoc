@@ -196,9 +196,24 @@ export class TasksService {
       updates.debutEnCours = null as any;
     }
 
-    // Chrono : entrée en EN_COURS
+    // Chrono : entrée en EN_COURS + auto-pause des autres tâches EN_COURS
     if (dto.statut === TaskStatut.EN_COURS && task.statut !== TaskStatut.EN_COURS) {
       updates.debutEnCours = now;
+      // Mettre en pause toute autre tâche EN_COURS du même tenant
+      const enCours = await this.repo.find({
+        where: { statut: TaskStatut.EN_COURS, tenantId: task.tenantId },
+      });
+      for (const other of enCours) {
+        if (other.id === id) continue;
+        const elapsed = other.debutEnCours
+          ? Math.floor((now.getTime() - new Date(other.debutEnCours).getTime()) / 1000)
+          : 0;
+        await this.repo.update(other.id, {
+          statut: TaskStatut.EN_PAUSE,
+          tempsTotalSecondes: (other.tempsTotalSecondes ?? 0) + elapsed,
+          debutEnCours: null as any,
+        });
+      }
     }
 
     // Compatibilité : passage à TERMINEE → enregistrer heure fin

@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,6 +30,8 @@ const PLATFORM_SVGS: Record<string, string> = {
   Autre:     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#64748B"/><path fill="#fff" d="M18 16c-.8 0-1.5.3-2 .8l-7.1-4.1c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .5.1.7L7.9 9.8C7.4 9.3 6.7 9 6 9 4.3 9 3 10.3 3 12s1.3 3 3 3c.7 0 1.4-.3 1.9-.8l7.2 4.2c-.1.2-.1.4-.1.6 0 1.7 1.3 3 3 3s3-1.3 3-3-1.3-3-3-3z"/></svg>`,
 };
 
+interface OrgNode { id: string; nom: string; poste: string; children?: OrgNode[]; }
+
 const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] = [
   { key: 'RELEVE_BANCAIRE',   label: 'Relevés bancaires',    icon: 'account_balance', hint: 'Mensuel' },
   { key: 'TVA_MENSUELLE',     label: 'TVA Mensuelle',        icon: 'receipt',         hint: 'Chaque mois' },
@@ -45,7 +47,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
   selector: 'app-fiche-identite-tab',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule, FormsModule,
     MatFormFieldModule, MatInputModule, MatButtonModule,
     MatIconModule, MatExpansionModule, MatSelectModule,
     MatChipsModule, MatTooltipModule, MatCheckboxModule, OnlyNumbersDirective,
@@ -397,6 +399,60 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             </div>
           </mat-expansion-panel>
 
+          <!-- Organigramme -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>account_tree</mat-icon>&nbsp;Organigramme</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="orgchart-section">
+              <p class="section-hint">Représentez la hiérarchie de l'entreprise. Cliquez sur un nœud pour le modifier.</p>
+              @if (orgRoot()) {
+                <div class="orgchart">
+                  <ng-container *ngTemplateOutlet="orgNodeTpl; context: { node: orgRoot(), depth: 0 }" />
+                </div>
+              } @else {
+                <div class="orgchart-empty">
+                  <button mat-stroked-button (click)="addRootNode()" type="button">
+                    <mat-icon>add</mat-icon> Créer le nœud racine
+                  </button>
+                </div>
+              }
+            </div>
+          </mat-expansion-panel>
+
+          <ng-template #orgNodeTpl let-node="node" let-depth="depth">
+            <div class="org-node-wrap">
+              <div class="org-node" [class.org-node--editing]="editingNodeId === node.id">
+                @if (editingNodeId === node.id) {
+                  <div class="org-node__edit">
+                    <input class="org-input" [(ngModel)]="editingNom" placeholder="Nom" name="editNom_{{node.id}}">
+                    <input class="org-input" [(ngModel)]="editingPoste" placeholder="Poste" name="editPoste_{{node.id}}">
+                    <div class="org-node__edit-btns">
+                      <button type="button" class="org-btn org-btn--save" (click)="saveNodeEdit(node)"><mat-icon>check</mat-icon></button>
+                      <button type="button" class="org-btn org-btn--cancel" (click)="editingNodeId = null"><mat-icon>close</mat-icon></button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="org-node__view" (click)="startEdit(node)">
+                    <span class="org-node__nom">{{ node.nom || 'Nom' }}</span>
+                    <span class="org-node__poste">{{ node.poste || 'Poste' }}</span>
+                  </div>
+                  <div class="org-node__actions">
+                    <button type="button" class="org-btn" title="Ajouter un subordonné" (click)="addChild(node, $event)"><mat-icon>add</mat-icon></button>
+                    <button type="button" class="org-btn org-btn--del" title="Supprimer" (click)="removeNode(node, $event)"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                }
+              </div>
+              @if (node.children?.length) {
+                <div class="org-children">
+                  @for (child of node.children; track child.id) {
+                    <ng-container *ngTemplateOutlet="orgNodeTpl; context: { node: child, depth: depth + 1 }" />
+                  }
+                </div>
+              }
+            </div>
+          </ng-template>
+
           <!-- Documents mensuels attendus -->
           <mat-expansion-panel expanded>
             <mat-expansion-panel-header>
@@ -563,6 +619,53 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
       img { border-radius: 4px; display: block; }
       &:hover { border-color: #c7d2fe; background: #f5f3ff; }
     }
+
+    /* ── Organigramme ── */
+    .orgchart-section { padding: 16px 0; }
+    .orgchart-empty { display: flex; justify-content: center; padding: 20px 0; }
+    .orgchart { overflow-x: auto; padding-bottom: 8px; }
+    .org-node-wrap { display: flex; flex-direction: column; align-items: center; }
+    .org-children {
+      display: flex; gap: 24px; padding-top: 16px;
+      position: relative;
+      &::before {
+        content: ''; position: absolute; top: 0; left: 50%;
+        transform: translateX(-50%); width: 1px; height: 16px; background: #c4b5fd;
+      }
+    }
+    .org-node {
+      position: relative; min-width: 140px; max-width: 180px;
+      background: white; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; padding: 10px 12px;
+      box-shadow: 0 2px 8px rgba(109,40,217,.06);
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      &:hover { border-color: #a78bfa; box-shadow: 0 4px 12px rgba(109,40,217,.12); }
+    }
+    .org-node--editing { border-color: #7c3aed; }
+    .org-node__view { display: flex; flex-direction: column; gap: 2px; }
+    .org-node__nom { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .org-node__poste { font-size: 11px; color: #64748b; }
+    .org-node__actions {
+      position: absolute; top: 4px; right: 4px;
+      display: flex; gap: 2px; opacity: 0; transition: opacity .15s;
+    }
+    .org-node:hover .org-node__actions { opacity: 1; }
+    .org-btn {
+      background: none; border: none; cursor: pointer; padding: 2px; border-radius: 4px;
+      color: #94a3b8; transition: color .12s, background .12s;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      &:hover { background: #f1f5f9; color: #5b21b6; }
+    }
+    .org-btn--del:hover { color: #ef4444; }
+    .org-btn--save:hover { color: #22c55e; }
+    .org-btn--cancel:hover { color: #94a3b8; }
+    .org-node__edit { display: flex; flex-direction: column; gap: 6px; }
+    .org-input {
+      border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px;
+      font-size: 12px; outline: none; width: 100%;
+      &:focus { border-color: #7c3aed; }
+    }
+    .org-node__edit-btns { display: flex; justify-content: flex-end; gap: 4px; }
   `],
 })
 export class FicheIdentiteTabComponent implements OnInit {
@@ -653,12 +756,62 @@ export class FicheIdentiteTabComponent implements OnInit {
     private clientsService: ClientsService,
   ) {}
 
+  // ── Organigramme ──────────────────────────────────────────
+  orgRoot = signal<OrgNode | null>(null);
+  editingNodeId: string | null = null;
+  editingNom = '';
+  editingPoste = '';
+
+  addRootNode() {
+    this.orgRoot.set({ id: this.uid(), nom: 'Dirigeant', poste: 'Gérant', children: [] });
+  }
+
+  addChild(node: OrgNode, e: Event) {
+    e.stopPropagation();
+    const child: OrgNode = { id: this.uid(), nom: 'Collaborateur', poste: 'Poste', children: [] };
+    node.children = [...(node.children ?? []), child];
+    this.orgRoot.update(r => r ? { ...r } : r);
+  }
+
+  removeNode(target: OrgNode, e: Event) {
+    e.stopPropagation();
+    const root = this.orgRoot();
+    if (!root) return;
+    if (root.id === target.id) { this.orgRoot.set(null); return; }
+    this.deleteFromTree(root, target.id);
+    this.orgRoot.update(r => r ? { ...r } : r);
+  }
+
+  startEdit(node: OrgNode) {
+    this.editingNodeId = node.id;
+    this.editingNom = node.nom;
+    this.editingPoste = node.poste;
+  }
+
+  saveNodeEdit(node: OrgNode) {
+    node.nom = this.editingNom;
+    node.poste = this.editingPoste;
+    this.editingNodeId = null;
+    this.orgRoot.update(r => r ? { ...r } : r);
+  }
+
+  private deleteFromTree(node: OrgNode, id: string) {
+    node.children = (node.children ?? []).filter(c => c.id !== id);
+    node.children.forEach(c => this.deleteFromTree(c, id));
+  }
+
+  private uid(): string {
+    return Math.random().toString(36).slice(2, 9);
+  }
+  // ─────────────────────────────────────────────────────────
+
   ngOnInit() {
     this.service.get(this.clientId).subscribe((fiche: any) => {
       this.form.patchValue({
         ...fiche,
         honoraires: fiche.honoraires ?? {},
       });
+      this.orgRoot.set(fiche.organigramme ?? null);
 
       this.actionnaires.clear();
       (fiche.actionnaires ?? []).forEach((a: any) => this.actionnaires.push(this.newActionnaire(a)));
@@ -781,6 +934,7 @@ export class FicheIdentiteTabComponent implements OnInit {
       actionnaires:             v.actionnaires,
       honoraires:               v.honoraires,
       reseauxSociauxStructures: v.reseauxSociaux,
+      organigramme:             this.orgRoot() ?? null,
     };
     delete payload['reseauxSociaux'];
     this.service.update(this.clientId, payload).subscribe({

@@ -65,6 +65,12 @@ export class ClientsService {
       .leftJoinAndSelect('client.directeur', 'directeur')
       .leftJoinAndSelect('client.responsable', 'responsable')
       .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
+      .leftJoinAndSelect('client.ficheIdentite', 'ficheIdentite')
+      .leftJoinAndSelect('client.missions', 'missions')
+      .leftJoinAndSelect('client.fluxMensuels', 'fluxMensuels')
+      .leftJoinAndSelect('client.questionnaireAdnGlobal', 'questionnaireAdnGlobal')
+      .leftJoinAndSelect('client.questionnaireAdnSectoriel', 'questionnaireAdnSectoriel')
+      .leftJoinAndSelect('client.objectifsItems', 'objectifsItems')
       .where('client.isActive = :active', { active: true });
 
     if (currentUser.tenantId) {
@@ -94,7 +100,11 @@ export class ClientsService {
   async findOne(id: number) {
     const client = await this.repo.findOne({
       where: { id },
-      relations: ['ficheIdentite', 'directeur', 'responsable', 'collaborateurMg'],
+      relations: [
+        'ficheIdentite', 'directeur', 'responsable', 'collaborateurMg',
+        'missions', 'fluxMensuels', 'questionnaireAdnGlobal',
+        'questionnaireAdnSectoriel', 'objectifsItems',
+      ],
     });
     if (!client) throw new NotFoundException('Dossier client introuvable');
     return client;
