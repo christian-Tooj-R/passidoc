@@ -85,6 +85,7 @@ interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolea
                       <div class="sct"
                         [class.sct--done]="t.statut==='TERMINEE'"
                         [class.sct--cours]="t.statut==='EN_COURS'"
+                        [class.sct--pause]="t.statut==='EN_PAUSE'"
                         [class.sct--late]="t.statut==='NON_FAIT'">
                         <span class="sct-dot"></span>
                         <span class="sct-titre" [title]="t.titre">{{ t.titre }}</span>
@@ -189,10 +190,12 @@ interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolea
     .sct { display: flex; align-items: flex-start; gap: 3px; background: white; border: 1px solid #e8ecf0; border-radius: 4px; padding: 2px 5px; }
     .sct--done  { background: #f0fdf4; border-color: #bbf7d0; }
     .sct--cours { background: #fffbeb; border-color: #fde68a; }
+    .sct--pause { background: #f8fafc; border-color: #e2e8f0; }
     .sct--late  { background: #fff1f2; border-color: #fecdd3; }
     .sct-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; background: #6366f1; }
     .sct--done  .sct-dot { background: #22c55e; }
     .sct--cours .sct-dot { background: #f59e0b; }
+    .sct--pause .sct-dot { background: #94a3b8; }
     .sct--late  .sct-dot { background: #dc2626; }
     .sct-titre { font-size: 9px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; line-height: 1.4; }
     .sct-empty { font-size: 10px; color: #cbd5e1; text-align: center; padding: 6px 0; }
@@ -343,7 +346,7 @@ export class SyntheseDialogComponent implements OnInit {
   }
 
   private statutLabelFr(s: string): string {
-    const m: Record<string, string> = { A_FAIRE: 'À faire', EN_COURS: 'En cours', TERMINEE: 'Terminé', NON_FAIT: 'Non fait', EN_ATTENTE: 'En attente' };
+    const m: Record<string, string> = { A_FAIRE: 'À faire', EN_COURS: 'En cours', EN_PAUSE: 'En pause', TERMINEE: 'Terminé', NON_FAIT: 'Non fait', EN_ATTENTE: 'En attente' };
     return m[s] ?? s;
   }
   formatTime(minutes: number): string {
@@ -739,6 +742,7 @@ export class CreateTaskDialogComponent {
                     (change)="onStatutChange($any($event.target).value)">
               <option value="A_FAIRE">À faire</option>
               <option value="EN_COURS">En cours</option>
+              <option value="EN_PAUSE">En pause</option>
               <option value="TERMINEE">Terminée</option>
               <option value="NON_FAIT">Non fait</option>
               <option value="EN_ATTENTE">En attente</option>
@@ -980,6 +984,7 @@ export class CreateTaskDialogComponent {
     .statut-select:disabled { opacity: .7; cursor: default; }
     .statut-a_faire   { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
     .statut-en_cours  { background-color: #fffbeb; color: #d97706; border-color: #fcd34d; }
+    .statut-en_pause  { background-color: #f8fafc; color: #64748b; border-color: #cbd5e1; }
     .statut-terminee  { background-color: #f0fdf4; color: #15803d; border-color: #86efac; }
     .statut-non_fait  { background-color: #fff1f2; color: #e11d48; border-color: #fda4af; }
     .statut-en_attente { background-color: #f5f3ff; color: #7c3aed; border-color: #c4b5fd; }
@@ -1936,6 +1941,8 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     .kanban-col__header--a_faire .kanban-col__dot { background: #3b82f6; }
     .kanban-col__header--en_cours  { background: #FFFBEB; color: #92400e; border-color: #fcd34d; }
     .kanban-col__header--en_cours .kanban-col__dot { background: #f59e0b; }
+    .kanban-col__header--en_pause  { background: #F8FAFC; color: #475569; border-color: #cbd5e1; }
+    .kanban-col__header--en_pause .kanban-col__dot { background: #94a3b8; }
     .kanban-col__header--terminee  { background: #F0FDF4; color: #14532d; border-color: #86efac; }
     .kanban-col__header--terminee .kanban-col__dot { background: #22c55e; }
     .kanban-col__header--non_fait  { background: #FFF1F2; color: #9f1239; border-color: #fca5a5; }
@@ -2356,6 +2363,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   columns = [
     { statut: 'A_FAIRE'    as TaskStatut, label: 'À faire' },
     { statut: 'EN_COURS'   as TaskStatut, label: 'En cours' },
+    { statut: 'EN_PAUSE'   as TaskStatut, label: 'En pause' },
     { statut: 'TERMINEE'   as TaskStatut, label: 'Terminées' },
     { statut: 'NON_FAIT'   as TaskStatut, label: 'Non fait' },
     { statut: 'EN_ATTENTE' as TaskStatut, label: 'En attente' },
@@ -2443,7 +2451,10 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   changeStatut(t: Task, statut: TaskStatut) {
     const prev = t.statut; t.statut = statut;
-    this.tasksService.update(t.clientId, t.id, { statut }).subscribe({ next: () => this.applyFilter(), error: () => { t.statut = prev; } });
+    this.tasksService.update(t.clientId, t.id, { statut }).subscribe({
+      next: () => statut === 'EN_COURS' ? this.load() : this.applyFilter(),
+      error: () => { t.statut = prev; },
+    });
   }
 
   prendreTache(t: Task) {

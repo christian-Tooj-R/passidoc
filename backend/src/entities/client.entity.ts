@@ -122,8 +122,8 @@ export class Client {
     if (((this as any).fluxMensuels ?? []).length >= 3) score += 10;
 
     // Objectifs définis — 10 pts
-    const obj = (this as any).objectifs;
-    if (obj?.objectifs?.length > 0 || obj?.ca || obj?.resultat) score += 10;
+    const obj = (this as any).objectifsItems;
+    if (obj?.objectifs12mois || obj?.objectifs3a5ans || obj?.objectifsLongTerme || obj?.attentesClient) score += 10;
 
     this.completude = Math.min(score, 100);
   }

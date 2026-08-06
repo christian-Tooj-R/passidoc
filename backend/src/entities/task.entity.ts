@@ -10,6 +10,7 @@ import { TaskComment } from './task-comment.entity';
 export enum TaskStatut {
   A_FAIRE = 'A_FAIRE',
   EN_COURS = 'EN_COURS',
+  EN_PAUSE = 'EN_PAUSE',
   TERMINEE = 'TERMINEE',
   NON_FAIT = 'NON_FAIT',
   EN_ATTENTE = 'EN_ATTENTE',

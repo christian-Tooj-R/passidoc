@@ -27,6 +27,7 @@ import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.com
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
 import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
+import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
@@ -65,6 +66,7 @@ interface TabGroup {
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
     AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
+    DossierChatComponent,
   ],
   template: `
     @if (loading()) {
@@ -405,11 +407,14 @@ interface TabGroup {
                 @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" /> }
-                @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
+                @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
           </div>
+
+          <!-- ── Fil de discussion ── -->
+          <app-dossier-chat [clientId]="client.id" />
 
         </div>
       </div>

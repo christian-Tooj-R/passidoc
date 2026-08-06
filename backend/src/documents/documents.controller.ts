@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Delete, Param, UseGuards,
+  Controller, Get, Post, Delete, Param, Body, UseGuards,
   ParseIntPipe, UseInterceptors, UploadedFile, Res, StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -10,6 +10,7 @@ import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../entities/user.entity';
+import type { TypeDoc } from '../entities/document.entity';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -31,8 +32,16 @@ export class DocumentsController {
     @Param('clientId', ParseIntPipe) clientId: number,
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: User,
+    @Body('typeDoc') typeDoc?: string,
+    @Body('periodeMois') periodeMoisStr?: string,
+    @Body('periodeAnnee') periodeAnneeStr?: string,
   ) {
-    return this.service.upload(clientId, file, user);
+    const meta = {
+      typeDoc:      typeDoc as TypeDoc | undefined,
+      periodeMois:  periodeMoisStr  ? +periodeMoisStr  : undefined,
+      periodeAnnee: periodeAnneeStr ? +periodeAnneeStr : undefined,
+    };
+    return this.service.upload(clientId, file, user, meta);
   }
 
   @Get()

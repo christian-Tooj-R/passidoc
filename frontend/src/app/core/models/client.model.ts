@@ -189,4 +189,7 @@ export interface ClientDocument {
   taille: number;
   createdAt: string;
   uploadePar?: { firstName: string; lastName: string };
+  typeDoc?: 'FACTURE_ACHAT' | 'FACTURE_VENTE' | 'AUTRE' | null;
+  periodeMois?: number | null;
+  periodeAnnee?: number | null;
 }

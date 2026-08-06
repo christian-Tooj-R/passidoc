@@ -69,4 +69,5 @@ export class UpdateFicheIdentiteDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() nbConcurrentsCommune?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() nbConcurrentsGeneral?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() evolutionSecteur?: string;
+  @ApiPropertyOptional() @IsOptional() organigramme?: object | object[] | null;
 }

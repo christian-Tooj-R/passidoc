@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FluxMensuelService } from '../../../../../core/services/flux-mensuel.service';
 import { FluxMensuel } from '../../../../../core/models/client.model';
+import { BalanceService, MoisBalance } from '../../../../../core/services/balance.service';
 
 type Periodicite = 'monthly' | 'quarterly' | 'annual';
 
@@ -208,6 +209,123 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
           <mat-icon>touch_app</mat-icon> Cliquer sur une cellule pour modifier
         </span>
       </div>
+
+    </div>
+
+    <!-- ── Balance comptable ─────────────────────────── -->
+    <div class="balance-section">
+
+      <div class="balance-header">
+        <div class="balance-title">
+          <mat-icon>account_balance_wallet</mat-icon>
+          <div>
+            <h3>Complétude factures (balance comptable)</h3>
+            <p>Comparez les pièces reçues avec les écritures de votre FEC</p>
+          </div>
+        </div>
+        <div class="balance-actions">
+          <label class="fec-upload-btn" [class.fec-upload-btn--loading]="fecImporting()">
+            <mat-icon>upload_file</mat-icon>
+            {{ fecImporting() ? 'Import…' : 'Importer FEC' }}
+            <input type="file" accept=".txt,.csv,.fec" (change)="onFecUpload($event)" [disabled]="fecImporting()" hidden>
+          </label>
+          @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0)) {
+            <button class="ia-btn" (click)="analyserBalance()" [disabled]="iaLoading()">
+              <mat-icon>auto_awesome</mat-icon>
+              {{ iaLoading() ? 'Analyse...' : 'Analyser avec l’IA' }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0)) {
+
+        <!-- Grille balance -->
+        <div class="balance-grid-wrap">
+          <table class="balance-grid">
+            <thead>
+              <tr>
+                <th class="bg-th bg-th--type">Type</th>
+                @for (m of MOIS_SHORT; track $index) {
+                  <th class="bg-th" [class.bg-th--current]="$index + 1 === currentMonth && annee() === currentYear">
+                    {{ m }}
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Factures fournisseurs (compte 401) -->
+              <tr class="bg-row">
+                <td class="bg-td-type">
+                  <div class="bg-type-cell">
+                    <mat-icon>local_shipping</mat-icon>
+                    <span>Factures achats</span>
+                    <span class="bg-compte">(cpte 401)</span>
+                  </div>
+                </td>
+                @for (m of balanceData(); track m.mois) {
+                  <td class="bg-td-cell">
+                    @if (m.nbFournisseursAttendu > 0) {
+                      <div class="bg-cell" [class.bg-cell--ok]="m.tauxFournisseurs >= 80"
+                           [class.bg-cell--warn]="m.tauxFournisseurs > 0 && m.tauxFournisseurs < 80"
+                           [class.bg-cell--missing]="m.tauxFournisseurs === 0">
+                        <span class="bg-pct">{{ m.tauxFournisseurs }}%</span>
+                        <span class="bg-input-val" matTooltip="Calculé depuis les documents importés">{{ m.nbFournisseursRecu }}</span>
+                        <span class="bg-over">/ {{ m.nbFournisseursAttendu }}</span>
+                      </div>
+                    } @else {
+                      <span class="bg-na">—</span>
+                    }
+                  </td>
+                }
+              </tr>
+              <!-- Factures clients (compte 411) -->
+              <tr class="bg-row">
+                <td class="bg-td-type">
+                  <div class="bg-type-cell">
+                    <mat-icon>receipt_long</mat-icon>
+                    <span>Factures ventes</span>
+                    <span class="bg-compte">(cpte 411)</span>
+                  </div>
+                </td>
+                @for (m of balanceData(); track m.mois) {
+                  <td class="bg-td-cell">
+                    @if (m.nbClientsAttendu > 0) {
+                      <div class="bg-cell" [class.bg-cell--ok]="m.tauxClients >= 80"
+                           [class.bg-cell--warn]="m.tauxClients > 0 && m.tauxClients < 80"
+                           [class.bg-cell--missing]="m.tauxClients === 0">
+                        <span class="bg-pct">{{ m.tauxClients }}%</span>
+                        <span class="bg-input-val" matTooltip="Calculé depuis les documents importés">{{ m.nbClientsRecu }}</span>
+                        <span class="bg-over">/ {{ m.nbClientsAttendu }}</span>
+                      </div>
+                    } @else {
+                      <span class="bg-na">—</span>
+                    }
+                  </td>
+                }
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Analyse IA -->
+        @if (analyseIA()) {
+          <div class="ia-analyse">
+            <div class="ia-analyse__header">
+              <mat-icon>auto_awesome</mat-icon>
+              <span>Analyse IA</span>
+            </div>
+            <p class="ia-analyse__text">{{ analyseIA() }}</p>
+          </div>
+        }
+
+      } @else {
+        <div class="balance-empty">
+          <mat-icon>upload_file</mat-icon>
+          <p>Importez un fichier FEC (.txt, .csv) pour afficher le taux de complétude des factures fournisseurs et clients par mois.</p>
+          <span>Le FEC est extrait depuis votre logiciel comptable (FEC = Fichier des Écritures Comptables)</span>
+        </div>
+      }
 
     </div>
 
@@ -480,11 +598,123 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
     @media (max-width: 768px) {
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ── Balance comptable ──────────────────────────── */
+    .balance-section {
+      background: white; border-radius: 16px;
+      border: 1px solid #e8ecf0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.04);
+      padding: 20px; margin-top: 20px;
+    }
+    .balance-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+    }
+    .balance-title { display: flex; align-items: center; gap: 12px; }
+    .balance-title mat-icon {
+      font-size: 26px; width: 26px; height: 26px; color: #0891b2;
+    }
+    .balance-title h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; }
+    .balance-title p  { font-size: 12px; color: #94a3b8; margin: 2px 0 0; }
+    .balance-actions { display: flex; align-items: center; gap: 8px; }
+
+    .fec-upload-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      background: #f0f9ff; border: 1.5px solid #bae6fd;
+      color: #0369a1; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { background: #e0f2fe; border-color: #7dd3fc; }
+    }
+    .fec-upload-btn--loading { opacity: .6; pointer-events: none; }
+
+    .ia-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      background: #f5f3ff; border: 1.5px solid #c4b5fd;
+      color: #7c3aed; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover:not(:disabled) { background: #ede9fe; border-color: #a78bfa; }
+      &:disabled { opacity: .5; cursor: default; }
+    }
+
+    .balance-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 28px 0; color: #94a3b8; text-align: center;
+      mat-icon { font-size: 36px; width: 36px; height: 36px; color: #cbd5e1; }
+      p { font-size: 14px; font-weight: 500; color: #64748b; margin: 0; max-width: 420px; }
+      span { font-size: 12px; color: #cbd5e1; }
+    }
+
+    /* Grille balance */
+    .balance-grid-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .balance-grid { width: 100%; border-collapse: collapse; min-width: 860px; }
+
+    .bg-th {
+      padding: 9px 8px; text-align: center;
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .6px;
+      background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .bg-th--type { text-align: left; padding-left: 14px; min-width: 180px; }
+    .bg-th--current { color: #0891b2; background: #f0f9ff; }
+
+    .bg-row { border-bottom: 1px solid #f1f5f9; }
+    .bg-row:last-child { border-bottom: none; }
+
+    .bg-td-type { padding: 10px 14px; vertical-align: middle; }
+    .bg-type-cell { display: flex; align-items: center; gap: 8px; }
+    .bg-type-cell mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
+    .bg-type-cell span { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .bg-compte { font-size: 11px; color: #94a3b8 !important; font-weight: 400 !important; }
+
+    .bg-td-cell { padding: 6px 4px; text-align: center; vertical-align: middle; }
+    .bg-na { font-size: 14px; color: #e2e8f0; }
+
+    .bg-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 5px 3px; border-radius: 8px; min-width: 52px;
+    }
+    .bg-cell--ok      { background: #dcfce7; }
+    .bg-cell--warn    { background: #fff7ed; }
+    .bg-cell--missing { background: #fee2e2; }
+
+    .bg-pct {
+      font-size: 12px; font-weight: 700; line-height: 1;
+    }
+    .bg-cell--ok .bg-pct      { color: #16a34a; }
+    .bg-cell--warn .bg-pct    { color: #d97706; }
+    .bg-cell--missing .bg-pct { color: #dc2626; }
+
+    .bg-input-val {
+      width: 34px; text-align: center; font-size: 11px; color: #475569;
+      font-weight: 600; cursor: default;
+    }
+    .bg-over { font-size: 10px; color: #94a3b8; line-height: 1; }
+
+    /* Analyse IA */
+    .ia-analyse {
+      margin-top: 16px; background: #faf5ff;
+      border: 1px solid #e9d5ff; border-radius: 12px; padding: 14px 16px;
+    }
+    .ia-analyse__header {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; color: #7c3aed; margin-bottom: 8px;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    }
+    .ia-analyse__text {
+      font-size: 13px; color: #374151; line-height: 1.6; margin: 0;
+      white-space: pre-wrap;
+    }
   `],
 })
 export class FluxMensuelTabComponent implements OnInit {
-  private service = inject(FluxMensuelService);
-  private toast   = inject(ToastService);
+  private service    = inject(FluxMensuelService);
+  private toast      = inject(ToastService);
+  private balanceSvc = inject(BalanceService);
 
   @Input() clientId!: number;
   @Input() set typesFluxActifs(val: string[] | undefined) {
@@ -494,13 +724,23 @@ export class FluxMensuelTabComponent implements OnInit {
   activeTypes = [...TYPES];
   annee        = signal(new Date().getFullYear());
   currentYear  = new Date().getFullYear();
-  currentMonth = new Date().getMonth() + 1; // 1-12
+  currentMonth = new Date().getMonth() + 1;
   fluxList: FluxMensuel[] = [];
 
-  readonly types  = TYPES;
+  readonly types      = TYPES;
   readonly moisLabels = MOIS;
+  readonly MOIS_SHORT = MOIS;
 
-  ngOnInit() { this.load(); }
+  // ── Balance comptable ────────────────────────────────
+  balanceData  = signal<MoisBalance[]>([]);
+  fecImporting = signal(false);
+  iaLoading    = signal(false);
+  analyseIA    = signal<string | null>(null);
+
+  ngOnInit() {
+    this.load();
+    this.loadBalance(true);
+  }
 
   load() {
     this.service.getAll(this.clientId, this.annee()).subscribe(d => this.fluxList = d);
@@ -509,6 +749,7 @@ export class FluxMensuelTabComponent implements OnInit {
   changeYear(delta: number) {
     this.annee.update(y => y + delta);
     this.load();
+    this.loadBalance();
   }
 
   get yearOptions(): number[] {
@@ -650,5 +891,80 @@ export class FluxMensuelTabComponent implements OnInit {
 
   moisFullLabel(m: number): string {
     return MOIS_FULL[m - 1] ?? '';
+  }
+
+  // ── Balance comptable ────────────────────────────────
+
+  loadBalance(initialLoad = false) {
+    this.balanceSvc.getBalance(this.clientId, this.annee()).subscribe({
+      next: data => {
+        this.balanceData.set(data);
+        const lastIA = [...data].reverse().find(m => m.analyseIA);
+        if (lastIA) this.analyseIA.set(lastIA.analyseIA);
+        // Premier chargement sans FEC → chercher la dernière année avec des données
+        const hasFec = data.some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0);
+        if (initialLoad && !hasFec && this.annee() >= this.currentYear) {
+          this.findRecentFecYear(this.currentYear - 1);
+        }
+      },
+    });
+  }
+
+  private findRecentFecYear(year: number) {
+    if (year < 2020) return;
+    this.balanceSvc.getBalance(this.clientId, year).subscribe({
+      next: data => {
+        const hasFec = data.some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0);
+        if (hasFec) {
+          this.annee.set(year);
+          this.load();
+          this.balanceData.set(data);
+          const lastIA = [...data].reverse().find(m => m.analyseIA);
+          if (lastIA) this.analyseIA.set(lastIA.analyseIA);
+        } else {
+          this.findRecentFecYear(year - 1);
+        }
+      },
+    });
+  }
+
+  onFecUpload(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.fecImporting.set(true);
+    this.balanceSvc.importFec(this.clientId, this.annee(), file).subscribe({
+      next: res => {
+        this.toast.success(`FEC importé — ${res.imported} mois mis à jour`);
+        // Naviguer vers l'année du FEC si différente de l'année affichée
+        if (res.annee && res.annee !== this.annee()) {
+          this.annee.set(res.annee);
+          this.load();
+        }
+        this.loadBalance();
+      },
+      error: () => this.toast.error('Erreur lors de l\'import FEC'),
+      complete: () => this.fecImporting.set(false),
+    });
+  }
+
+  updateRecu(mois: number, type: 'fournisseurs' | 'clients', value: string) {
+    const n = parseInt(value, 10);
+    if (isNaN(n) || n < 0) return;
+    const body = type === 'fournisseurs' ? { nbFournisseursRecu: n } : { nbClientsRecu: n };
+    this.balanceSvc.updateRecu(this.clientId, this.annee(), mois, body).subscribe({
+      next: () => this.loadBalance(),
+    });
+  }
+
+  analyserBalance() {
+    this.iaLoading.set(true);
+    this.balanceSvc.analyser(this.clientId, this.annee()).subscribe({
+      next: res => {
+        this.analyseIA.set(res.analyse);
+        this.toast.success('Analyse IA générée');
+      },
+      error: () => this.toast.error('Erreur lors de l\'analyse IA'),
+      complete: () => this.iaLoading.set(false),
+    });
   }
 }

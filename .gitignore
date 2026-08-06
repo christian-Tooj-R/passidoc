@@ -45,3 +45,16 @@ backend/src/migrations/*.js
 ETAT_AVANCEMENT.md
 frontend/PRESENTATION_PROJET.md
 RAPPORT_*.md
+
+# Fichiers uploadés (stockage local MinIO)
+backend/uploads/
+
+# Données comptables locales
+*.csv
+*.fec
+exemple_fec*.txt
+grand_livre*.csv
+
+# Résultats de tests Playwright
+frontend/test-results/
+frontend/playwright-report/

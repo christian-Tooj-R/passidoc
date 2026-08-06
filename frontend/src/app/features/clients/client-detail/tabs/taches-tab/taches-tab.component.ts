@@ -307,6 +307,7 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
                             (change)="changeStatut(t, $any($event.target).value)">
                       <option value="A_FAIRE">À faire</option>
                       <option value="EN_COURS">En cours</option>
+                      <option value="EN_PAUSE">En pause</option>
                       <option value="TERMINEE">Terminée</option>
                       <option value="NON_FAIT">Non fait</option>
                       <option value="EN_ATTENTE">En attente</option>
@@ -488,6 +489,7 @@ const TYPES_MENSUELS: { key: string; label: string; color: string }[] = [
     .tl-statut:hover { opacity: .85; }
     .statut-a_faire   { background-color: #eff6ff; color: #1d4ed8; }
     .statut-en_cours  { background-color: #fffbeb; color: #d97706; }
+    .statut-en_pause  { background-color: #f8fafc; color: #64748b; }
     .statut-terminee  { background-color: #f0fdf4; color: #15803d; }
     .statut-non_fait  { background-color: #fff1f2; color: #e11d48; }
     .statut-en_attente { background-color: #f5f3ff; color: #7c3aed; }
@@ -539,7 +541,8 @@ export class TachesTabComponent implements OnInit {
     const prev = t.statut;
     t.statut = statut;
     this.svc.update(this.clientId, t.id, { statut }).subscribe({
-      error: () => t.statut = prev,
+      next: () => { if (statut === 'EN_COURS') this.loadTaches(); },
+      error: () => { t.statut = prev; },
     });
   }
 
