@@ -407,7 +407,7 @@ interface TabGroup {
                 @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
                 @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" /> }
-                @case ('documents')    { <app-documents-tab           [clientId]="client.id" /> }
+                @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
                 @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>

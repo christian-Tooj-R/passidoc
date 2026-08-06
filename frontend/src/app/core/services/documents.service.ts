@@ -11,9 +11,16 @@ export class DocumentsService {
 
   getAll(clientId: number) { return this.http.get<ClientDocument[]>(this.api(clientId)); }
 
-  upload(clientId: number, file: File) {
+  upload(
+    clientId: number,
+    file: File,
+    meta?: { typeDoc?: string; periodeMois?: number; periodeAnnee?: number },
+  ) {
     const form = new FormData();
     form.append('file', file);
+    if (meta?.typeDoc)     form.append('typeDoc',     meta.typeDoc);
+    if (meta?.periodeMois) form.append('periodeMois', String(meta.periodeMois));
+    if (meta?.periodeAnnee) form.append('periodeAnnee', String(meta.periodeAnnee));
     return this.http.post<ClientDocument>(`${this.api(clientId)}/upload`, form);
   }
 

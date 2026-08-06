@@ -3,11 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentsService } from './documents.service';
 import { DocumentsController } from './documents.controller';
 import { Document } from '../entities/document.entity';
+import { FluxMensuel } from '../entities/flux-mensuel.entity';
 import { ClientsModule } from '../clients/clients.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Document]),
+    TypeOrmModule.forFeature([Document, FluxMensuel]),
     ClientsModule,
   ],
   controllers: [DocumentsController],

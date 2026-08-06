@@ -17,8 +17,9 @@ export class DossierMessagesService {
     });
   }
 
-  create(clientId: number, userId: number, contenu: string, tenantId?: number) {
-    return this.repo.save(this.repo.create({ clientId, userId, contenu, tenantId }));
+  async create(clientId: number, userId: number, contenu: string, tenantId?: number) {
+    const saved = await this.repo.save(this.repo.create({ clientId, userId, contenu, tenantId }));
+    return this.repo.findOne({ where: { id: saved.id } });
   }
 
   async remove(id: number, userId: number, tenantId?: number) {

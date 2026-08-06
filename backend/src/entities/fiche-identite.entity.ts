@@ -118,7 +118,7 @@ export class FicheIdentite {
   evolutionSecteur: string;
 
   @Column({ type: 'json', nullable: true })
-  organigramme: OrgNode | null;
+  organigramme: OrgNode | OrgNode[] | null;
 
   @OneToOne(() => Client, (client) => client.ficheIdentite)
   @JoinColumn()

@@ -541,7 +541,8 @@ export class TachesTabComponent implements OnInit {
     const prev = t.statut;
     t.statut = statut;
     this.svc.update(this.clientId, t.id, { statut }).subscribe({
-      error: () => t.statut = prev,
+      next: () => { if (statut === 'EN_COURS') this.loadTaches(); },
+      error: () => { t.statut = prev; },
     });
   }
 

@@ -17,7 +17,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 <div class="chat-wrap" [class.chat-wrap--open]="open()">
 
   <!-- ── Barre de titre (toujours visible) ── -->
-  <button class="chat-bar" (click)="open.set(!open())">
+  <button class="chat-bar" (click)="togglePanel()">
     <mat-icon class="chat-bar__icon">forum</mat-icon>
     <span class="chat-bar__label">Fil de discussion</span>
     @if (unread() > 0) {
@@ -39,13 +39,8 @@ import { AuthService } from '../../../../core/services/auth.service';
         }
         @for (msg of messages(); track msg.id) {
           <div class="msg" [class.msg--me]="msg.userId === currentUserId">
-            @if (msg.userId !== currentUserId) {
-              <div class="msg__avatar">{{ initials(msg) }}</div>
-            }
             <div class="msg__bubble-wrap">
-              @if (msg.userId !== currentUserId) {
-                <div class="msg__name">{{ msg.user?.firstName }} {{ msg.user?.lastName }}</div>
-              }
+              <div class="msg__name">{{ msg.user?.firstName }} {{ msg.user?.lastName }}</div>
               <div class="msg__bubble">{{ msg.contenu }}</div>
               <div class="msg__time">{{ msg.createdAt | date:'dd/MM HH:mm' }}</div>
             </div>
@@ -104,7 +99,7 @@ import { AuthService } from '../../../../core/services/auth.service';
     /* ── Panneau ── */
     .chat-panel {
       display: flex; flex-direction: column;
-      height: 300px;
+      height: 420px;
       border-top: 1px solid #EDE9F8;
     }
 
@@ -130,15 +125,9 @@ import { AuthService } from '../../../../core/services/auth.service';
       align-self: flex-end;
       flex-direction: row-reverse;
     }
-    .msg__avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(135deg, #7C3AED, #A78BFA);
-      color: white; font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
     .msg__bubble-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .msg__name { font-size: 10px; color: #94A3B8; padding-left: 2px; }
+    .msg__name { font-size: 11px; font-weight: 600; color: #64748B; padding-left: 4px; }
+    .msg--me .msg__name { text-align: right; padding-left: 0; padding-right: 4px; }
     .msg__bubble {
       background: #F1F0FB; color: #1E293B;
       padding: 7px 11px; border-radius: 14px 14px 14px 4px;
@@ -264,6 +253,15 @@ export class DossierChatComponent implements OnInit, OnDestroy, AfterViewChecked
     this.svc.delete(this.clientId, msg.id).subscribe(() => {
       this.messages.update(m => m.filter(x => x.id !== msg.id));
     });
+  }
+
+  togglePanel() {
+    const opening = !this.open();
+    this.open.set(opening);
+    if (opening) {
+      this.unread.set(0);
+      this.shouldScroll = true;
+    }
   }
 
   openPanel() {

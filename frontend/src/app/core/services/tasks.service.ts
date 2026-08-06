@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-export type TaskStatut = 'A_FAIRE' | 'EN_COURS' | 'TERMINEE' | 'NON_FAIT' | 'EN_ATTENTE';
+export type TaskStatut = 'A_FAIRE' | 'EN_COURS' | 'EN_PAUSE' | 'TERMINEE' | 'NON_FAIT' | 'EN_ATTENTE';
 export type TaskPriorite = 'BASSE' | 'NORMALE' | 'HAUTE';
 export type TaskType = 'TVA' | 'PAIE' | 'ACHATS' | 'VENTES' | 'RB' | 'GV' | 'DR' | 'AUTRE';
 

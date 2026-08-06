@@ -405,16 +405,24 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
               <mat-panel-title><mat-icon>account_tree</mat-icon>&nbsp;Organigramme</mat-panel-title>
             </mat-expansion-panel-header>
             <div class="orgchart-section">
-              <p class="section-hint">Représentez la hiérarchie de l'entreprise. Cliquez sur un nœud pour le modifier.</p>
-              @if (orgRoot()) {
+              <div class="orgchart-header">
+                <p class="section-hint">Représentez la hiérarchie. Cliquez sur un nœud pour le modifier.</p>
+                <button mat-stroked-button (click)="addRootNode()" type="button">
+                  <mat-icon>add</mat-icon> Ajouter une racine
+                </button>
+              </div>
+              @if (orgRoots().length) {
                 <div class="orgchart">
-                  <ng-container *ngTemplateOutlet="orgNodeTpl; context: { node: orgRoot(), depth: 0 }" />
+                  <div class="org-forest">
+                    @for (root of orgRoots(); track root.id) {
+                      <ng-container *ngTemplateOutlet="orgNodeTpl; context: { node: root, depth: 0 }" />
+                    }
+                  </div>
                 </div>
               } @else {
                 <div class="orgchart-empty">
-                  <button mat-stroked-button (click)="addRootNode()" type="button">
-                    <mat-icon>add</mat-icon> Créer le nœud racine
-                  </button>
+                  <mat-icon class="empty-icon">account_tree</mat-icon>
+                  <span>Aucun organigramme — cliquez sur « Ajouter une racine »</span>
                 </div>
               }
             </div>
@@ -422,18 +430,22 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
 
           <ng-template #orgNodeTpl let-node="node" let-depth="depth">
             <div class="org-node-wrap">
-              <div class="org-node" [class.org-node--editing]="editingNodeId === node.id">
-                @if (editingNodeId === node.id) {
+              <div class="org-node" [class.org-node--editing]="editingNodeId() === node.id">
+                @if (editingNodeId() === node.id) {
                   <div class="org-node__edit">
-                    <input class="org-input" [(ngModel)]="editingNom" placeholder="Nom" name="editNom_{{node.id}}">
-                    <input class="org-input" [(ngModel)]="editingPoste" placeholder="Poste" name="editPoste_{{node.id}}">
+                    <input class="org-input" [(ngModel)]="editingNom" [ngModelOptions]="{standalone: true}" placeholder="Nom">
+                    <input class="org-input" [(ngModel)]="editingPoste" [ngModelOptions]="{standalone: true}" placeholder="Poste">
                     <div class="org-node__edit-btns">
-                      <button type="button" class="org-btn org-btn--save" (click)="saveNodeEdit(node)"><mat-icon>check</mat-icon></button>
-                      <button type="button" class="org-btn org-btn--cancel" (click)="editingNodeId = null"><mat-icon>close</mat-icon></button>
+                      <button type="button" class="org-btn org-btn--save" (click)="saveNodeEdit(node)">
+                        <mat-icon>check</mat-icon>
+                      </button>
+                      <button type="button" class="org-btn org-btn--cancel" (click)="editingNodeId.set(null)">
+                        <mat-icon>close</mat-icon>
+                      </button>
                     </div>
                   </div>
                 } @else {
-                  <div class="org-node__view" (click)="startEdit(node)">
+                  <div class="org-node__view" (click)="startEditOrgNode(node)">
                     <span class="org-node__nom">{{ node.nom || 'Nom' }}</span>
                     <span class="org-node__poste">{{ node.poste || 'Poste' }}</span>
                   </div>
@@ -622,17 +634,49 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
 
     /* ── Organigramme ── */
     .orgchart-section { padding: 16px 0; }
-    .orgchart-empty { display: flex; justify-content: center; padding: 20px 0; }
-    .orgchart { overflow-x: auto; padding-bottom: 8px; }
-    .org-node-wrap { display: flex; flex-direction: column; align-items: center; }
+    .orgchart-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .orgchart-empty {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 32px 0; color: #94a3b8;
+      .empty-icon { font-size: 40px; width: 40px; height: 40px; opacity: .4; }
+      span { font-size: 13px; }
+    }
+    .orgchart { overflow-x: auto; padding-bottom: 12px; }
+    .org-forest {
+      display: flex; gap: 40px; align-items: flex-start;
+      justify-content: center; flex-wrap: wrap; padding: 8px 16px;
+    }
+
+    /* Nœud + ses enfants */
+    .org-node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
+
+    /* Connecteurs entre enfants frères */
     .org-children {
-      display: flex; gap: 24px; padding-top: 16px;
-      position: relative;
+      display: flex; gap: 0; padding-top: 16px; position: relative;
       &::before {
         content: ''; position: absolute; top: 0; left: 50%;
-        transform: translateX(-50%); width: 1px; height: 16px; background: #c4b5fd;
+        transform: translateX(-50%); width: 1.5px; height: 16px; background: #c4b5fd;
       }
     }
+    .org-children > .org-node-wrap { padding: 16px 10px 0; }
+    .org-children > .org-node-wrap::before,
+    .org-children > .org-node-wrap::after {
+      content: ''; position: absolute; top: 0;
+      border-top: 1.5px solid #c4b5fd; width: 50%; height: 16px;
+    }
+    .org-children > .org-node-wrap::before { right: 50%; }
+    .org-children > .org-node-wrap::after  { left: 50%; border-left: 1.5px solid #c4b5fd; }
+    .org-children > .org-node-wrap:first-child::before,
+    .org-children > .org-node-wrap:last-child::after  { border: none; }
+    .org-children > .org-node-wrap:only-child::before,
+    .org-children > .org-node-wrap:only-child::after  { display: none; }
+    .org-children > .org-node-wrap:only-child { padding-top: 0; }
+    .org-children > .org-node-wrap:last-child::before  { border-right: 1.5px solid #c4b5fd; border-radius: 0 4px 0 0; }
+    .org-children > .org-node-wrap:first-child::after  { border-radius: 4px 0 0 0; }
+
     .org-node {
       position: relative; min-width: 140px; max-width: 180px;
       background: white; border: 1.5px solid #e2e8f0;
@@ -651,14 +695,15 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     }
     .org-node:hover .org-node__actions { opacity: 1; }
     .org-btn {
-      background: none; border: none; cursor: pointer; padding: 2px; border-radius: 4px;
-      color: #94a3b8; transition: color .12s, background .12s;
-      mat-icon { font-size: 14px; width: 14px; height: 14px; }
-      &:hover { background: #f1f5f9; color: #5b21b6; }
+      background: none; border: none; cursor: pointer; padding: 3px; border-radius: 4px;
+      color: #64748b; transition: color .12s, background .12s;
+      display: inline-flex; align-items: center; justify-content: center;
     }
-    .org-btn--del:hover { color: #ef4444; }
-    .org-btn--save:hover { color: #22c55e; }
-    .org-btn--cancel:hover { color: #94a3b8; }
+    .org-btn mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
+    .org-btn:hover { background: #f1f5f9; color: #5b21b6; }
+    .org-btn--del:hover { color: #ef4444 !important; }
+    .org-btn--save:hover { color: #22c55e !important; }
+    .org-btn--cancel:hover { color: #94a3b8 !important; }
     .org-node__edit { display: flex; flex-direction: column; gap: 6px; }
     .org-input {
       border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px;
@@ -757,42 +802,47 @@ export class FicheIdentiteTabComponent implements OnInit {
   ) {}
 
   // ── Organigramme ──────────────────────────────────────────
-  orgRoot = signal<OrgNode | null>(null);
-  editingNodeId: string | null = null;
-  editingNom = '';
-  editingPoste = '';
+  orgRoots      = signal<OrgNode[]>([]);
+  editingNodeId = signal<string | null>(null);
+  editingNom    = '';
+  editingPoste  = '';
 
   addRootNode() {
-    this.orgRoot.set({ id: this.uid(), nom: 'Dirigeant', poste: 'Gérant', children: [] });
+    this.orgRoots.update(roots => [
+      ...roots,
+      { id: this.uid(), nom: 'Nouveau nœud', poste: 'Poste', children: [] },
+    ]);
   }
 
   addChild(node: OrgNode, e: Event) {
     e.stopPropagation();
-    const child: OrgNode = { id: this.uid(), nom: 'Collaborateur', poste: 'Poste', children: [] };
-    node.children = [...(node.children ?? []), child];
-    this.orgRoot.update(r => r ? { ...r } : r);
+    node.children = [...(node.children ?? []),
+      { id: this.uid(), nom: 'Collaborateur', poste: 'Poste', children: [] }];
+    this.orgRoots.update(r => [...r]);
   }
 
   removeNode(target: OrgNode, e: Event) {
     e.stopPropagation();
-    const root = this.orgRoot();
-    if (!root) return;
-    if (root.id === target.id) { this.orgRoot.set(null); return; }
-    this.deleteFromTree(root, target.id);
-    this.orgRoot.update(r => r ? { ...r } : r);
+    // Racine supprimée directement du tableau
+    if (this.orgRoots().some(r => r.id === target.id)) {
+      this.orgRoots.update(roots => roots.filter(r => r.id !== target.id));
+      return;
+    }
+    this.orgRoots().forEach(root => this.deleteFromTree(root, target.id));
+    this.orgRoots.update(r => [...r]);
   }
 
-  startEdit(node: OrgNode) {
-    this.editingNodeId = node.id;
-    this.editingNom = node.nom;
+  startEditOrgNode(node: OrgNode) {
+    this.editingNom   = node.nom;
     this.editingPoste = node.poste;
+    this.editingNodeId.set(node.id);
   }
 
   saveNodeEdit(node: OrgNode) {
-    node.nom = this.editingNom;
+    node.nom   = this.editingNom;
     node.poste = this.editingPoste;
-    this.editingNodeId = null;
-    this.orgRoot.update(r => r ? { ...r } : r);
+    this.editingNodeId.set(null);
+    this.orgRoots.update(r => [...r]);
   }
 
   private deleteFromTree(node: OrgNode, id: string) {
@@ -811,7 +861,15 @@ export class FicheIdentiteTabComponent implements OnInit {
         ...fiche,
         honoraires: fiche.honoraires ?? {},
       });
-      this.orgRoot.set(fiche.organigramme ?? null);
+      // Compatibilité : ancien format = objet unique, nouveau = tableau
+      const org = fiche.organigramme;
+      if (!org) {
+        this.orgRoots.set([]);
+      } else if (Array.isArray(org)) {
+        this.orgRoots.set(org);
+      } else {
+        this.orgRoots.set([org]);
+      }
 
       this.actionnaires.clear();
       (fiche.actionnaires ?? []).forEach((a: any) => this.actionnaires.push(this.newActionnaire(a)));
@@ -934,7 +992,7 @@ export class FicheIdentiteTabComponent implements OnInit {
       actionnaires:             v.actionnaires,
       honoraires:               v.honoraires,
       reseauxSociauxStructures: v.reseauxSociaux,
-      organigramme:             this.orgRoot() ?? null,
+      organigramme:             this.orgRoots().length ? this.orgRoots() : null,
     };
     delete payload['reseauxSociaux'];
     this.service.update(this.clientId, payload).subscribe({

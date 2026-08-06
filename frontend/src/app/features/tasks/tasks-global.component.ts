@@ -2451,7 +2451,10 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   changeStatut(t: Task, statut: TaskStatut) {
     const prev = t.statut; t.statut = statut;
-    this.tasksService.update(t.clientId, t.id, { statut }).subscribe({ next: () => this.applyFilter(), error: () => { t.statut = prev; } });
+    this.tasksService.update(t.clientId, t.id, { statut }).subscribe({
+      next: () => statut === 'EN_COURS' ? this.load() : this.applyFilter(),
+      error: () => { t.statut = prev; },
+    });
   }
 
   prendreTache(t: Task) {

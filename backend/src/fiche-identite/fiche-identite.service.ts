@@ -34,8 +34,10 @@ export class FicheIdentiteService {
   }
 
   async update(clientId: number, dto: UpdateFicheIdentiteDto): Promise<FicheIdentite> {
-    const fiche = await this.repo.findOne({ where: { client: { id: clientId } } });
-    if (!fiche) throw new NotFoundException('Fiche identité introuvable');
+    let fiche = await this.repo.findOne({ where: { client: { id: clientId } } });
+    if (!fiche) {
+      fiche = await this.repo.save(this.repo.create({ client: { id: clientId } as any }));
+    }
     // repo.update() génère un UPDATE direct sans dirty-checking (contourne le bug TypeORM 0.3.x sur les colonnes JSON)
     const data = JSON.parse(JSON.stringify(dto));
     await this.repo.update(fiche.id, data);

@@ -1591,8 +1591,9 @@ export class SetupWizardComponent {
     const p1 = COUNTRIES.find(c => c.code === this.step1.value.poleCode1);
     const p2 = COUNTRIES.find(c => c.code === this.step1.value.poleCode2);
 
+    const urlSlug = this.tenant.slug();
     const payload = {
-      slug:           generateSlug(this.step0.value.nomSociete),
+      slug:           urlSlug ?? generateSlug(this.step0.value.nomSociete),
       nomSociete:     this.step0.value.nomSociete,
       slogan:         this.step0.value.slogan   || undefined,
       ville:          this.step0.value.ville    || undefined,
