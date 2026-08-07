@@ -229,7 +229,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
             {{ fecImporting() ? 'Import…' : 'Importer FEC' }}
             <input type="file" accept=".txt,.csv,.fec" (change)="onFecUpload($event)" [disabled]="fecImporting()" hidden>
           </label>
-          @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0)) {
+          @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0 || m.nbAttentesAttendu > 0)) {
             <button class="ia-btn" (click)="analyserBalance()" [disabled]="iaLoading()">
               <mat-icon>auto_awesome</mat-icon>
               {{ iaLoading() ? 'Analyse...' : 'Analyser avec l’IA' }}
@@ -238,7 +238,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
         </div>
       </div>
 
-      @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0)) {
+      @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0 || m.nbAttentesAttendu > 0)) {
 
         <!-- Grille balance -->
         <div class="balance-grid-wrap">
@@ -297,6 +297,31 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
                         <span class="bg-pct">{{ m.tauxClients }}%</span>
                         <span class="bg-input-val" matTooltip="Calculé depuis les documents importés">{{ m.nbClientsRecu }}</span>
                         <span class="bg-over">/ {{ m.nbClientsAttendu }}</span>
+                      </div>
+                    } @else {
+                      <span class="bg-na">—</span>
+                    }
+                  </td>
+                }
+              </tr>
+              <!-- Comptes d'attentes (compte 471) -->
+              <tr class="bg-row">
+                <td class="bg-td-type">
+                  <div class="bg-type-cell">
+                    <mat-icon>hourglass_empty</mat-icon>
+                    <span>Comptes d'attentes</span>
+                    <span class="bg-compte">(cpte 471)</span>
+                  </div>
+                </td>
+                @for (m of balanceData(); track m.mois) {
+                  <td class="bg-td-cell">
+                    @if (m.nbAttentesAttendu > 0) {
+                      <div class="bg-cell" [class.bg-cell--ok]="m.tauxAttentes >= 80"
+                           [class.bg-cell--warn]="m.tauxAttentes > 0 && m.tauxAttentes < 80"
+                           [class.bg-cell--missing]="m.tauxAttentes === 0">
+                        <span class="bg-pct">{{ m.tauxAttentes }}%</span>
+                        <span class="bg-input-val" matTooltip="Calculé depuis les documents importés">{{ m.nbAttentesRecu }}</span>
+                        <span class="bg-over">/ {{ m.nbAttentesAttendu }}</span>
                       </div>
                     } @else {
                       <span class="bg-na">—</span>

@@ -6,10 +6,13 @@ export interface MoisBalance {
   mois: number;
   nbFournisseursAttendu: number;
   nbClientsAttendu:      number;
+  nbAttentesAttendu:     number;
   nbFournisseursRecu:    number;
   nbClientsRecu:         number;
+  nbAttentesRecu:        number;
   tauxFournisseurs:      number;
   tauxClients:           number;
+  tauxAttentes:          number;
   analyseIA:             string | null;
 }
 

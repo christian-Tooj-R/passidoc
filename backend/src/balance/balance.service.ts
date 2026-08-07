@@ -9,11 +9,14 @@ import { Document } from '../entities/document.entity';
 export interface MoisBalance {
   mois: number;
   nbFournisseursAttendu: number;
-  nbClientsAttendu: number;
-  nbFournisseursRecu: number;
-  nbClientsRecu: number;
+  nbClientsAttendu:      number;
+  nbAttentesAttendu:     number;
+  nbFournisseursRecu:    number;
+  nbClientsRecu:         number;
+  nbAttentesRecu:        number;
   tauxFournisseurs: number; // %
-  tauxClients: number; // %
+  tauxClients:      number; // %
+  tauxAttentes:     number; // %
   analyseIA: string | null;
 }
 
@@ -46,7 +49,7 @@ export class BalanceService {
       .addSelect('COUNT(d.id)', 'count')
       .where('d.clientId = :clientId', { clientId })
       .andWhere('d.periodeAnnee = :annee', { annee })
-      .andWhere('d.typeDoc IN (:...types)', { types: ['FACTURE_ACHAT', 'FACTURE_VENTE'] })
+      .andWhere('d.typeDoc IN (:...types)', { types: ['FACTURE_ACHAT', 'FACTURE_VENTE', 'COMPTE_ATTENTE'] })
       .andWhere('d.periodeMois IS NOT NULL')
       .groupBy('d.periodeMois')
       .addGroupBy('d.typeDoc')
@@ -60,21 +63,28 @@ export class BalanceService {
     return Array.from({ length: 12 }, (_, i) => {
       const mois = i + 1;
       const row = rows.find(r => r.mois === mois);
-      const nbFournisseursRecu = docMap.get(`${mois}-FACTURE_ACHAT`) ?? 0;
-      const nbClientsRecu      = docMap.get(`${mois}-FACTURE_VENTE`) ?? 0;
+      const nbFournisseursRecu = docMap.get(`${mois}-FACTURE_ACHAT`)   ?? 0;
+      const nbClientsRecu      = docMap.get(`${mois}-FACTURE_VENTE`)   ?? 0;
+      const nbAttentesRecu     = docMap.get(`${mois}-COMPTE_ATTENTE`)  ?? 0;
       const nbFournisseursAttendu = row?.nbFournisseursAttendu ?? 0;
-      const nbClientsAttendu      = row?.nbClientsAttendu ?? 0;
+      const nbClientsAttendu      = row?.nbClientsAttendu      ?? 0;
+      const nbAttentesAttendu     = row?.nbAttentesAttendu     ?? 0;
       return {
         mois,
         nbFournisseursAttendu,
         nbClientsAttendu,
+        nbAttentesAttendu,
         nbFournisseursRecu,
         nbClientsRecu,
+        nbAttentesRecu,
         tauxFournisseurs: nbFournisseursAttendu
           ? Math.round((nbFournisseursRecu / nbFournisseursAttendu) * 100)
           : 0,
         tauxClients: nbClientsAttendu
           ? Math.round((nbClientsRecu / nbClientsAttendu) * 100)
+          : 0,
+        tauxAttentes: nbAttentesAttendu
+          ? Math.round((nbAttentesRecu / nbAttentesAttendu) * 100)
           : 0,
         analyseIA: row?.analyseIA ?? null,
       };
@@ -105,6 +115,7 @@ export class BalanceService {
           mois: mo,
           nbFournisseursAttendu: data.fournisseurs,
           nbClientsAttendu:      data.clients,
+          nbAttentesAttendu:     data.attentes,
         },
         { conflictPaths: ['clientId', 'annee', 'mois'] },
       );
@@ -124,15 +135,18 @@ export class BalanceService {
     clientId: number,
     annee: number,
     mois: number,
-    dto: { nbFournisseursRecu?: number; nbClientsRecu?: number },
+    dto: { nbFournisseursRecu?: number; nbClientsRecu?: number; nbAttentesRecu?: number },
     tenantId?: number,
   ): Promise<void> {
     let row = await this.repo.findOne({ where: { clientId, annee, mois } });
     if (!row) {
-      row = this.repo.create({ clientId, tenantId, annee, mois, nbFournisseursAttendu: 0, nbClientsAttendu: 0, nbFournisseursRecu: 0, nbClientsRecu: 0 });
+      row = this.repo.create({ clientId, tenantId, annee, mois,
+        nbFournisseursAttendu: 0, nbClientsAttendu: 0, nbAttentesAttendu: 0,
+        nbFournisseursRecu: 0, nbClientsRecu: 0, nbAttentesRecu: 0 });
     }
     if (dto.nbFournisseursRecu !== undefined) row.nbFournisseursRecu = dto.nbFournisseursRecu;
-    if (dto.nbClientsRecu !== undefined) row.nbClientsRecu = dto.nbClientsRecu;
+    if (dto.nbClientsRecu      !== undefined) row.nbClientsRecu      = dto.nbClientsRecu;
+    if (dto.nbAttentesRecu     !== undefined) row.nbAttentesRecu     = dto.nbAttentesRecu;
     await this.repo.save(row);
   }
 
@@ -146,7 +160,7 @@ export class BalanceService {
 
     const tableauTexte = moisActifs.map(m => {
       const nomMois = new Date(annee, m.mois - 1).toLocaleString('fr-FR', { month: 'long' });
-      return `- ${nomMois} : Achats ${m.nbFournisseursRecu}/${m.nbFournisseursAttendu} (${m.tauxFournisseurs}%) | Ventes ${m.nbClientsRecu}/${m.nbClientsAttendu} (${m.tauxClients}%)`;
+      return `- ${nomMois} : Achats ${m.nbFournisseursRecu}/${m.nbFournisseursAttendu} (${m.tauxFournisseurs}%) | Ventes ${m.nbClientsRecu}/${m.nbClientsAttendu} (${m.tauxClients}%) | Attentes 471 ${m.nbAttentesRecu}/${m.nbAttentesAttendu} (${m.tauxAttentes}%)`;
     }).join('\n');
 
     const prompt = `Tu es un assistant expert-comptable analysant la complétude des pièces comptables pour un dossier client.
@@ -184,8 +198,8 @@ Réponds directement en français, sans titres ni puces, de façon professionnel
   }
 
   // ── Parseur FEC ────────────────────────────────────────────────────────────
-  private parseFec(content: string): Map<string, { fournisseurs: number; clients: number }> {
-    const result = new Map<string, { fournisseurs: number; clients: number }>();
+  private parseFec(content: string): Map<string, { fournisseurs: number; clients: number; attentes: number }> {
+    const result = new Map<string, { fournisseurs: number; clients: number; attentes: number }>();
 
     const lines = content.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return result;
@@ -206,11 +220,14 @@ Réponds directement en français, sans titres ni puces, de façon professionnel
     let idxEcrit  = normH.findIndex(h => h === 'ecriturenum');
     let isGrandLivre = false;
 
-    // Format grand livre (ex: export Sage) : Date + N° Compte Auxiliaire
+    // Format grand livre (ex: export Sage) : Date + N° Compte Auxiliaire + N° Compte (colonne 0)
+    let idxCompteNum = -1; // colonne "N° Compte" (compte général, ex: 40100000)
     if (idxDate < 0 || idxCompte < 0) {
-      idxDate   = normH.findIndex(h => h === 'date');
-      idxCompte = normH.findIndex(h => h.includes('auxiliaire'));
-      idxPiece  = normH.findIndex(h => h.includes('piece') || h.includes('pice'));
+      idxDate      = normH.findIndex(h => h === 'date');
+      idxCompte    = normH.findIndex(h => h.includes('auxiliaire'));
+      idxCompteNum = normH.findIndex(h => norm(rawHeaders[0]) === norm(h) && !h.includes('auxiliaire'));
+      if (idxCompteNum < 0) idxCompteNum = 0; // fallback : première colonne
+      idxPiece     = normH.findIndex(h => h.includes('piece') || h.includes('pice'));
       isGrandLivre = true;
     }
 
@@ -218,17 +235,25 @@ Réponds directement en français, sans titres ni puces, de façon professionnel
 
     const fournisseurs = new Map<string, Set<string>>();
     const clients      = new Map<string, Set<string>>();
+    const attentes     = new Map<string, Set<string>>();
 
     for (let i = 1; i < lines.length; i++) {
-      const fields  = lines[i].split(sep);
-      const compte  = fields[idxCompte]?.trim() ?? '';
-      const dateStr = fields[idxDate]?.trim() ?? '';
+      const fields      = lines[i].split(sep);
+      const compteAux   = fields[idxCompte]?.trim() ?? '';
+      // Pour les 471 : l'auxiliaire est vide → on utilise le compte général (colonne 0)
+      const compteNum   = isGrandLivre && idxCompteNum >= 0
+        ? fields[idxCompteNum]?.trim() ?? ''
+        : '';
+      const compte      = compteAux || compteNum; // auxiliaire en priorité, sinon compte général
+      const dateStr     = fields[idxDate]?.trim() ?? '';
 
       if (!compte || dateStr.length < 6) continue;
 
-      const isFourn  = compte.startsWith('401');
-      const isClient = compte.startsWith('411');
-      if (!isFourn && !isClient) continue;
+      const isFourn   = compte.startsWith('401');
+      const isClient  = compte.startsWith('411');
+      // 471 détecté via le compte général (47100000) car l'auxiliaire est vide
+      const isAttente = compteNum.startsWith('471') || compteAux.startsWith('471');
+      if (!isFourn && !isClient && !isAttente) continue;
 
       // Parse date : YYYYMMDD | YYYY-MM-DD | DD/MM/YYYY
       let annee = '', mois = '';
@@ -242,27 +267,29 @@ Réponds directement en français, sans titres ni puces, de façon professionnel
 
       const period = `${annee}-${mois}`;
 
-      // Grand livre → clé = compte auxiliaire (1 compte = 1 fournisseur distinct)
+      // Grand livre → 401/411 : clé = compte auxiliaire (1 auxiliaire = 1 tiers distinct)
+      //              → 471    : pas d'auxiliaire, clé = ligne (1 ligne = 1 mouvement)
       // FEC standard → clé = numéro de pièce (1 pièce = 1 facture)
       let key: string;
       if (isGrandLivre) {
-        key = compte;
+        key = compteAux || `line-${i}`; // 471 : pas d'auxiliaire → on compte chaque mouvement
       } else {
         key = (idxPiece >= 0 ? fields[idxPiece]?.trim() : '') ||
               (idxEcrit >= 0 ? fields[idxEcrit]?.trim() : '') ||
               `line-${i}`;
       }
 
-      const map = isFourn ? fournisseurs : clients;
+      const map = isFourn ? fournisseurs : isClient ? clients : attentes;
       if (!map.has(period)) map.set(period, new Set());
       map.get(period)!.add(key);
     }
 
-    const allPeriods = new Set([...fournisseurs.keys(), ...clients.keys()]);
+    const allPeriods = new Set([...fournisseurs.keys(), ...clients.keys(), ...attentes.keys()]);
     for (const period of allPeriods) {
       result.set(period, {
         fournisseurs: fournisseurs.get(period)?.size ?? 0,
         clients:      clients.get(period)?.size ?? 0,
+        attentes:     attentes.get(period)?.size ?? 0,
       });
     }
 
