@@ -28,8 +28,9 @@ interface TypeDocDef {
 
 const TYPE_DOC_OPTIONS: TypeDocDef[] = [
   { value: '',                  label: '— Non classé —',       periodicite: 'none'      },
-  { value: 'FACTURE_ACHAT',     label: 'Facture achat (401)',   periodicite: 'monthly'   },
-  { value: 'FACTURE_VENTE',     label: 'Facture vente (411)',   periodicite: 'monthly'   },
+  { value: 'FACTURE_ACHAT',     label: 'Facture achat (401)',       periodicite: 'monthly'   },
+  { value: 'FACTURE_VENTE',     label: 'Facture vente (411)',       periodicite: 'monthly'   },
+  { value: 'COMPTE_ATTENTE',    label: 'Compte d\'attente (471)',   periodicite: 'monthly'   },
   { value: 'RELEVE_BANCAIRE',   label: 'Relevé bancaire',       periodicite: 'monthly'   },
   { value: 'TVA_MENSUELLE',     label: 'TVA Mensuelle',         periodicite: 'monthly'   },
   { value: 'TVA_TRIMESTRIELLE', label: 'TVA Trimestrielle',     periodicite: 'quarterly' },
@@ -163,6 +164,8 @@ const TRIMESTRE_LABELS = [
             <span class="doc-badge doc-badge--achat">Achat</span>
           } @else if (d.typeDoc === 'FACTURE_VENTE') {
             <span class="doc-badge doc-badge--vente">Vente</span>
+          } @else if (d.typeDoc === 'COMPTE_ATTENTE') {
+            <span class="doc-badge doc-badge--attente">Attente 471</span>
           } @else if (d.typeDoc === 'AUTRE') {
             <span class="doc-badge doc-badge--autre">Autre</span>
           } @else {
@@ -248,9 +251,10 @@ const TRIMESTRE_LABELS = [
       display: inline-block; padding: 2px 8px; border-radius: 10px;
       font-size: 11px; font-weight: 600;
     }
-    .doc-badge--achat { background: #fef3c7; color: #92400e; }
-    .doc-badge--vente { background: #dcfce7; color: #166534; }
-    .doc-badge--autre { background: #f1f5f9; color: #475569; }
+    .doc-badge--achat   { background: #fef3c7; color: #92400e; }
+    .doc-badge--vente   { background: #dcfce7; color: #166534; }
+    .doc-badge--attente { background: #ede9fe; color: #5b21b6; }
+    .doc-badge--autre   { background: #f1f5f9; color: #475569; }
     .doc-badge--nc    { color: #94a3b8; }
     .doc-period { margin-left: 6px; font-size: 11px; color: #64748b; }
 
@@ -272,6 +276,7 @@ export class DocumentsTabComponent implements OnInit {
       ...TYPE_DOC_OPTIONS.filter(o =>
         o.value === 'FACTURE_ACHAT' ||
         o.value === 'FACTURE_VENTE' ||
+        o.value === 'COMPTE_ATTENTE' ||
         actifs.includes(o.value as TypeFlux)
       ).filter(o => o.value !== '' && o.value !== 'AUTRE'),
       { value: 'AUTRE', label: 'Autre', periodicite: 'none' },

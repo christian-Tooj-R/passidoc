@@ -8,6 +8,7 @@ import { User } from './user.entity';
 export type TypeDoc =
   | 'FACTURE_ACHAT'
   | 'FACTURE_VENTE'
+  | 'COMPTE_ATTENTE'
   | 'RELEVE_BANCAIRE'
   | 'TVA_MENSUELLE'
   | 'TVA_TRIMESTRIELLE'

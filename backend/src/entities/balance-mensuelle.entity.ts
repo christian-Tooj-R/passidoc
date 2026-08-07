@@ -21,12 +21,15 @@ export class BalanceMensuelle {
   @Column()
   mois: number; // 1-12
 
-  // Attendu depuis FEC (comptes 401 = fournisseurs, 411 = clients)
+  // Attendu depuis FEC (comptes 401 = fournisseurs, 411 = clients, 471 = attentes)
   @Column({ default: 0 })
   nbFournisseursAttendu: number;
 
   @Column({ default: 0 })
   nbClientsAttendu: number;
+
+  @Column({ default: 0 })
+  nbAttentesAttendu: number;
 
   // Reçu (saisi manuellement ou mis à jour par le collaborateur)
   @Column({ default: 0 })
@@ -34,6 +37,9 @@ export class BalanceMensuelle {
 
   @Column({ default: 0 })
   nbClientsRecu: number;
+
+  @Column({ default: 0 })
+  nbAttentesRecu: number;
 
   @Column({ type: 'text', nullable: true })
   analyseIA: string | null;
