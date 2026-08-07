@@ -1,0 +1,144 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Passidoc — Production
+# Usage :
+#   1. Copier .env.prod.example → .env.prod et renseigner les secrets
+#   2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Base de données PostgreSQL ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: passidoc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: passidoc_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - "5432"           # interne uniquement, pas exposé sur l'hôte
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}", "-d", "passidoc_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - passidoc-net
+
+  # ── Stockage objet MinIO ───────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: passidoc-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    expose:
+      - "9000"           # API S3 — interne uniquement
+    ports:
+      - "127.0.0.1:9001:9001"   # Console admin — localhost seulement (accès SSH tunnel)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - passidoc-net
+
+  # ── Backend NestJS ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runner
+    image: passidoc-backend:latest
+    container_name: passidoc-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/passidoc_db
+      DB_TYPE: postgres
+      DB_SYNC: "false"          # migrations manuelles en prod
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      TOTP_APP_NAME: Passidoc
+      RESET_SECRET: ${RESET_SECRET}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"    # SSL géré par le reverse proxy, communication interne en HTTP
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: passidoc-documents
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_SECURE: ${MAIL_SECURE:-false}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-passidoc@afym.re}
+      APP_URL: ${APP_URL}
+      API_URL: ${APP_URL}/api
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - passidoc-net
+
+  # ── Frontend Angular + Nginx ───────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    image: passidoc-frontend:latest
+    container_name: passidoc-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro             # certificats Let's Encrypt (voir ci-dessous)
+      - certbot_www:/var/www/certbot:ro     # challenge ACME
+    depends_on:
+      - backend
+    networks:
+      - passidoc-net
+
+  # ── Certbot — renouvellement SSL automatique ───────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: passidoc-certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --webroot --webroot-path /var/www/certbot --quiet;
+               sleep 12h & wait $${!};
+             done"
+    networks:
+      - passidoc-net
+
+volumes:
+  postgres_data:
+  minio_data:
+  certbot_www:
+
+networks:
+  passidoc-net:
+    driver: bridge
