@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Headers, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Req, Headers, ForbiddenException, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
@@ -24,6 +24,19 @@ export class SetupController {
   @ApiOperation({ summary: 'Configure un nouveau tenant (public)' })
   setup(@Body() dto: SetupDto) {
     return this.setupService.setup(dto);
+  }
+
+  @Patch(':slug/activate')
+  @ApiOperation({ summary: 'Marque un tenant comme configuré (requiert x-reset-token)' })
+  async activate(
+    @Param('slug') slug: string,
+    @Headers('x-reset-token') token: string,
+  ) {
+    const secret = this.config.get<string>('RESET_SECRET');
+    if (!secret || !token || token !== secret) {
+      throw new ForbiddenException('Token invalide');
+    }
+    return this.setupService.activate(slug);
   }
 
   @Post('reset')

@@ -66,6 +66,13 @@ export class SetupService {
     return { message: 'Configuration terminée avec succès' };
   }
 
+  async activate(slug: string): Promise<{ message: string }> {
+    const config = await this.configRepo.findOne({ where: { slug } });
+    if (!config) throw new ForbiddenException(`Tenant "${slug}" introuvable`);
+    await this.configRepo.update(config.id, { isConfigured: true });
+    return { message: `Tenant "${slug}" marqué comme configuré` };
+  }
+
   async resetDatabase(): Promise<{ message: string }> {
     const dbType = this.dataSource.options.type;
 
