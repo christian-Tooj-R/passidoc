@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { TenantService } from '../services/tenant.service';
 
@@ -17,8 +17,11 @@ export const setupGuard: CanActivateFn = () => {
   );
 };
 
-/** Redirige HORS de /setup si l'application est déjà configurée */
-export const alreadySetupGuard: CanActivateFn = () => {
+/** Redirige HORS de /setup si l'application est déjà configurée.
+ *  ?force=true bypass le guard (accès admin pour reconfiguration). */
+export const alreadySetupGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+  if (route.queryParamMap.get('force') === 'true') return true;
+
   const tenant = inject(TenantService);
   const router = inject(Router);
 

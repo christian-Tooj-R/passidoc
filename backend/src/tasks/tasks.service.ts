@@ -140,7 +140,7 @@ export class TasksService {
     };
   }
 
-  async create(clientId: number, dto: CreateTaskDto, currentUser: User) {
+  async create(clientId: number | null, dto: CreateTaskDto, currentUser: User) {
     if (dto.assigneeId) {
       const allowed = await this.canAssignTo(currentUser, dto.assigneeId);
       if (!allowed) throw new ForbiddenException('Vous ne pouvez pas assigner cette tâche à cet utilisateur');
@@ -151,7 +151,7 @@ export class TasksService {
 
     const task = this.repo.create({
       ...dto,
-      clientId,
+      ...(clientId != null ? { clientId } : {}),
       createdBy: currentUser,
       semaine,
       heureDebut: now,

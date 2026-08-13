@@ -9,12 +9,14 @@ import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import { User } from '../entities/user.entity';
+import { TenantConfig } from '../entities/tenant-config.entity';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(TenantConfig) private tenantRepo: Repository<TenantConfig>,
     private jwtService: JwtService,
     private config: ConfigService,
   ) {}
@@ -32,7 +34,12 @@ export class AuthService {
       return { requires2FA: true, userId: user.id };
     }
 
-    return { access_token: this.generateToken(user), user: this.sanitize(user) };
+    const tenant = await this.tenantRepo.findOne({ where: { id: user.tenantId } });
+    return {
+      access_token: this.generateToken(user),
+      tenantSlug: tenant?.slug ?? null,
+      user: this.sanitize(user),
+    };
   }
 
   async verify2FA(userId: number, token: string) {

@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Patch, UseGuards, Req, Query, ParseIntPipe, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Req, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
 import { TasksScheduler } from './tasks.scheduler';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -20,6 +22,12 @@ export class AllTasksController {
     return this.service.findAll(req.user);
   }
 
+  @Post()
+  @ApiOperation({ summary: 'Créer une tâche sans dossier client' })
+  createGlobal(@Body() dto: CreateTaskDto, @Req() req: any) {
+    return this.service.create(null, dto, req.user);
+  }
+
   @Get('dashboard')
   @ApiOperation({ summary: 'Dashboard hebdomadaire des tâches' })
   getDashboard(@Req() req: any, @Query('semaine') semaine?: string) {
@@ -30,6 +38,16 @@ export class AllTasksController {
   @ApiOperation({ summary: 'Tâches assignées à l\'utilisateur connecté' })
   mesTaches(@Req() req: any) {
     return this.service.findMesTaches(req.user.id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Mettre à jour une tâche (statut, priorité…)' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTaskDto,
+    @Req() req: any,
+  ) {
+    return this.service.update(id, dto, req.user);
   }
 
   // ── "Prendre" une tâche ouverte (N'importe qui) ────────────────────────────

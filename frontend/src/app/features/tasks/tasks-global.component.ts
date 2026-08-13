@@ -396,16 +396,29 @@ export class SyntheseDialogComponent implements OnInit {
         <div class="ct-section-label">Commentaire</div>
         <textarea class="ct-comment-input" [(ngModel)]="commentaire" rows="3" placeholder="Détails, contexte, instructions…"></textarea>
 
+        <!-- Sans dossier toggle -->
+        <label class="ct-anyone-toggle ct-sans-dossier">
+          <input type="checkbox" [(ngModel)]="sansDossier" (change)="onSansDossierChange()" />
+          <span>Tâche sans dossier client</span>
+        </label>
+
         <!-- Ligne client + assigné -->
         <div class="ct-row">
           <div class="ct-field">
-            <div class="ct-section-label">Dossier client <span class="required">*</span></div>
-            <select class="ct-select" [(ngModel)]="clientId">
-              <option [value]="null" disabled>— Sélectionner —</option>
-              @for (c of data.clients; track c.id) {
-                <option [value]="c.id">{{ c.nom }}</option>
-              }
-            </select>
+            @if (!sansDossier) {
+              <div class="ct-section-label">Dossier client <span class="required">*</span></div>
+              <select class="ct-select" [(ngModel)]="clientId">
+                <option [value]="null" disabled>— Sélectionner —</option>
+                @for (c of data.clients; track c.id) {
+                  <option [value]="c.id">{{ c.nom }}</option>
+                }
+              </select>
+            } @else {
+              <div class="ct-sans-dossier-badge">
+                <mat-icon>folder_off</mat-icon>
+                <span>Aucun dossier rattaché</span>
+              </div>
+            }
           </div>
           <div class="ct-field">
             <div class="ct-section-label">Assigner à</div>
@@ -473,7 +486,7 @@ export class SyntheseDialogComponent implements OnInit {
       <!-- Footer -->
       <div class="ct-footer">
         <button mat-stroked-button class="ct-btn-cancel" (click)="dialogRef.close()">Annuler</button>
-        <button class="ct-btn-create" [disabled]="!titre.trim() || !clientId" (click)="create()">
+        <button class="ct-btn-create" [disabled]="!titre.trim() || (!sansDossier && !clientId)" (click)="create()">
           <mat-icon>add</mat-icon> Créer la tâche
         </button>
       </div>
@@ -591,6 +604,9 @@ export class SyntheseDialogComponent implements OnInit {
     .ct-anyone-toggle input { cursor: pointer; accent-color: #6366f1; }
     .ct-anyone-badge { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: #ede9fe; color: #5b21b6; font-size: 13px; font-weight: 600; }
     .ct-anyone-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .ct-sans-dossier { margin-top: -8px; margin-bottom: -4px; }
+    .ct-sans-dossier-badge { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border: 1.5px dashed #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 13px; font-weight: 500; height: 42px; box-sizing: border-box; }
+    .ct-sans-dossier-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     /* Récurrence */
     .ct-recurrence { display: flex; flex-direction: column; gap: 8px; }
@@ -613,11 +629,16 @@ export class CreateTaskDialogComponent {
   priorite = 'NORMALE';
   dateEcheance = '';
   anyoneCanTake = false;
+  sansDossier = false;
   recurrenceActive = false;
   recurrenceJour = 20;
 
   onAnyoneChange() {
     if (this.anyoneCanTake) this.assigneeId = null;
+  }
+
+  onSansDossierChange() {
+    if (this.sansDossier) this.clientId = null;
   }
 
   taskTypes = [
@@ -632,8 +653,10 @@ export class CreateTaskDialogComponent {
   ];
 
   create() {
-    if (!this.titre.trim() || !this.clientId) return;
-    this.tasksService.create(this.clientId!, {
+    if (!this.titre.trim()) return;
+    if (!this.sansDossier && !this.clientId) return;
+
+    const payload = {
       titre:          this.titre,
       description:    this.commentaire || undefined,
       type:           this.selectedType as any,
@@ -643,7 +666,13 @@ export class CreateTaskDialogComponent {
       anyoneCanTake:  this.anyoneCanTake || undefined,
       recurrenceType: this.recurrenceActive ? 'MENSUELLE' : undefined,
       recurrenceJour: this.recurrenceActive ? this.recurrenceJour : undefined,
-    } as any).subscribe(() => {
+    };
+
+    const obs$ = this.sansDossier
+      ? this.tasksService.createGlobal(payload)
+      : this.tasksService.create(this.clientId!, payload);
+
+    obs$.subscribe(() => {
       this.toast.success('Tâche créée');
       this.dialogRef.close('created');
     });

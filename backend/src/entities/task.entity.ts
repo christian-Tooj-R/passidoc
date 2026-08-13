@@ -103,12 +103,12 @@ export class Task {
   @OneToMany(() => TaskComment, (c) => c.task, { cascade: false })
   comments: TaskComment[];
 
-  @ManyToOne(() => Client, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Client, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'clientId' })
   client: Client;
 
-  @Column()
-  clientId: number;
+  @Column({ nullable: true })
+  clientId: number | null;
 
   @Column({ nullable: true })
   tenantId: number;

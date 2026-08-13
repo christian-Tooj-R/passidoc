@@ -110,9 +110,18 @@ export class TasksService {
 
   create(clientId: number, data: {
     titre: string; description?: string; priorite?: TaskPriorite;
-    type?: TaskType; dateEcheance?: string; assigneeId?: number; semaine?: number;
+    type?: TaskType; dateEcheance?: string; assigneeId?: number; anyoneCanTake?: boolean;
+    recurrenceType?: string; recurrenceJour?: number; semaine?: number;
   }) {
     return this.http.post<Task>(this.api(clientId), data);
+  }
+
+  createGlobal(data: {
+    titre: string; description?: string; priorite?: TaskPriorite;
+    type?: TaskType; dateEcheance?: string; assigneeId?: number; anyoneCanTake?: boolean;
+    recurrenceType?: string; recurrenceJour?: number;
+  }) {
+    return this.http.post<Task>(`${environment.apiUrl}/tasks`, data);
   }
 
   update(clientId: number, id: number, data: Partial<{
