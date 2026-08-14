@@ -68,6 +68,14 @@ export class TenantService {
     // Ne pas réinitialiser _configured : le tenant vient d'être créé, il est forcément configuré
   }
 
+  /** Appelé depuis la landing page pour changer de cabinet — force une re-vérification */
+  switchTenant(slug: string) {
+    localStorage.setItem('tenant_slug', slug.toLowerCase());
+    this._slug.set(slug.toLowerCase());
+    this._configured.set(null);
+    this._checkObs = null;
+  }
+
   /** Appelé après le setup wizard pour mettre à jour le cache local */
   markConfigured(config?: TenantConfig) {
     this._configured.set(true);

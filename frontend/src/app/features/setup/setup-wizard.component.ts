@@ -282,6 +282,12 @@ function generateSlug(name: string): string {
     <!-- Contenu centré -->
     <div class="wb-content">
 
+      <!-- Badge -->
+      <div class="wb-badge">
+        <span class="wb-badge__dot"></span>
+        <span>Solution de pilotage pour cabinets d'expertise comptable</span>
+      </div>
+
       <!-- Logo animé avec orbites -->
       <div class="wb-logo">
         <div class="wb-ring wb-ring--1"></div>
@@ -302,14 +308,47 @@ function generateSlug(name: string): string {
         </p>
       </div>
 
-      <!-- Chips de fonctionnalités -->
-      <div class="wb-feats">
-        @for (f of features; track f.label; let i = $index) {
-          <div class="wb-feat" [style.animation-delay.s]="1.8 + i * 0.15">
-            <mat-icon>{{ f.icon }}</mat-icon>
-            <span>{{ f.label }}</span>
+      <!-- Grille de fonctionnalités -->
+      <div class="wb-feats-grid">
+        <div class="wb-feat-card wb-fc-anim" style="--d:1.4s">
+          <div class="wb-feat-card__icon wb-fci--blue"><mat-icon>psychology</mat-icon></div>
+          <div class="wb-feat-card__body">
+            <span class="wb-feat-card__title">IA intégrée</span>
+            <span class="wb-feat-card__desc">Analyses et recommandations automatiques</span>
           </div>
-        }
+        </div>
+        <div class="wb-feat-card wb-fc-anim" style="--d:1.55s">
+          <div class="wb-feat-card__icon wb-fci--purple"><mat-icon>public</mat-icon></div>
+          <div class="wb-feat-card__body">
+            <span class="wb-feat-card__title">Multi-pôles</span>
+            <span class="wb-feat-card__desc">Deux sites, une seule interface unifiée</span>
+          </div>
+        </div>
+        <div class="wb-feat-card wb-fc-anim" style="--d:1.7s">
+          <div class="wb-feat-card__icon wb-fci--teal"><mat-icon>analytics</mat-icon></div>
+          <div class="wb-feat-card__body">
+            <span class="wb-feat-card__title">Pilotage 360°</span>
+            <span class="wb-feat-card__desc">Tableaux de bord et KPIs en temps réel</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistiques -->
+      <div class="wb-stats">
+        <div class="wb-stat">
+          <span class="wb-stat__num">100%</span>
+          <span class="wb-stat__lbl">Sécurisé &amp; confidentiel</span>
+        </div>
+        <span class="wb-stat-sep"></span>
+        <div class="wb-stat">
+          <span class="wb-stat__num">2</span>
+          <span class="wb-stat__lbl">Pôles géographiques</span>
+        </div>
+        <span class="wb-stat-sep"></span>
+        <div class="wb-stat">
+          <span class="wb-stat__num">∞</span>
+          <span class="wb-stat__lbl">Dossiers &amp; collaborateurs</span>
+        </div>
       </div>
 
       <!-- CTA -->
@@ -321,6 +360,37 @@ function generateSlug(name: string): string {
       </button>
 
       <p class="wb-footer-hint">Configuration initiale · Quelques minutes suffisent</p>
+
+      <!-- Séparateur login -->
+      <div class="wb-sep">
+        <span class="wb-sep__line"></span>
+        <span class="wb-sep__text">Cabinet déjà configuré ?</span>
+        <span class="wb-sep__line"></span>
+      </div>
+
+      <!-- Accès login -->
+      <div class="wb-login-panel">
+        <div class="wb-login__row">
+          <input class="wb-login__input" [formControl]="loginSlugControl"
+                 placeholder="identifiant de votre cabinet"
+                 [attr.disabled]="loginLoading() ? true : null"
+                 (keyup.enter)="goToTenantLogin()" />
+          <button class="wb-login__btn" matRipple (click)="goToTenantLogin()" [disabled]="loginLoading()">
+            @if (loginLoading()) {
+              <mat-progress-spinner diameter="16" mode="indeterminate" style="--mdc-circular-progress-active-indicator-color:#fff"></mat-progress-spinner>
+            } @else {
+              <mat-icon>login</mat-icon>
+            }
+            <span>{{ loginLoading() ? 'Vérification…' : 'Accéder' }}</span>
+          </button>
+        </div>
+        @if (loginError()) {
+          <p class="wb-login__error">
+            <mat-icon>error_outline</mat-icon> {{ loginError() }}
+          </p>
+        }
+      </div>
+
     </div>
 
   </div>
@@ -799,7 +869,7 @@ function generateSlug(name: string): string {
     .wb-content {
       position: relative; z-index: 1;
       display: flex; flex-direction: column; align-items: center; gap: 0;
-      padding: 24px 16px; text-align: center; max-width: 640px; width: 100%;
+      padding: 32px 20px; text-align: center; max-width: 680px; width: 100%;
     }
 
     /* Logo avec anneaux orbitaux */
@@ -952,6 +1022,136 @@ function generateSlug(name: string): string {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    /* Badge */
+    .wb-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 18px; border-radius: 100px;
+      background: rgba(96,165,250,.10);
+      border: 1px solid rgba(96,165,250,.22);
+      font-size: 12px; font-weight: 500; color: rgba(255,255,255,.60);
+      letter-spacing: .3px;
+      margin-bottom: 28px;
+      animation: wb-fade-up .6s ease forwards; animation-delay: .25s; opacity: 0;
+    }
+    .wb-badge__dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      background: #60a5fa;
+      box-shadow: 0 0 7px #60a5fa;
+      animation: wb-blink 2s ease-in-out infinite;
+    }
+    @keyframes wb-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .35; }
+    }
+
+    /* Feature cards grid */
+    .wb-feats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    .wb-feat-card {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 14px 14px; border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+      transition: background .2s, border-color .2s, transform .2s;
+      text-align: left;
+    }
+    .wb-feat-card:hover {
+      background: rgba(255,255,255,.09);
+      border-color: rgba(96,165,250,.25);
+      transform: translateY(-2px);
+    }
+    .wb-fc-anim {
+      opacity: 0;
+      animation: wb-fade-up .6s ease forwards var(--d, 1.4s);
+    }
+    .wb-feat-card__icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wb-feat-card__icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .wb-fci--blue   { background: rgba(96,165,250,.15); }
+    .wb-fci--blue mat-icon   { color: #60a5fa; }
+    .wb-fci--purple { background: rgba(167,139,250,.15); }
+    .wb-fci--purple mat-icon { color: #a78bfa; }
+    .wb-fci--teal   { background: rgba(52,211,153,.15); }
+    .wb-fci--teal mat-icon   { color: #34d399; }
+    .wb-feat-card__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .wb-feat-card__title { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.88); }
+    .wb-feat-card__desc  { font-size: 11px; color: rgba(255,255,255,.42); line-height: 1.45; }
+
+    /* Stats */
+    .wb-stats {
+      display: flex; align-items: center; justify-content: center;
+      padding: 18px 24px; border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      width: 100%; margin-bottom: 32px;
+      animation: wb-fade-up .6s ease forwards; animation-delay: 1.9s; opacity: 0;
+    }
+    .wb-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .wb-stat__num {
+      font-size: 24px; font-weight: 800; color: #60a5fa;
+      letter-spacing: -1px; line-height: 1;
+    }
+    .wb-stat__lbl { font-size: 10.5px; color: rgba(255,255,255,.38); font-weight: 500; text-align: center; }
+    .wb-stat-sep { width: 1px; height: 36px; background: rgba(255,255,255,.10); flex-shrink: 0; }
+
+    /* Séparateur login */
+    .wb-sep {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%; margin: 6px 0 18px;
+      animation: wb-fade-up .6s ease forwards; animation-delay: 3.1s; opacity: 0;
+    }
+    .wb-sep__line { flex: 1; height: 1px; background: rgba(255,255,255,.10); }
+    .wb-sep__text { font-size: 12px; color: rgba(255,255,255,.30); white-space: nowrap; letter-spacing: .3px; }
+
+    /* Panel login */
+    .wb-login-panel {
+      width: 100%; margin-bottom: 8px;
+      animation: wb-fade-up .6s ease forwards; animation-delay: 3.25s; opacity: 0;
+    }
+    .wb-login__row { display: flex; gap: 8px; align-items: center; }
+    .wb-login__input {
+      flex: 1; height: 44px; padding: 0 16px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 100px;
+      color: #fff; font-size: 13.5px; font-family: inherit;
+      outline: none; transition: border-color .2s, background .2s;
+    }
+    .wb-login__input::placeholder { color: rgba(255,255,255,.28); }
+    .wb-login__input:focus {
+      border-color: rgba(96,165,250,.48);
+      background: rgba(255,255,255,.10);
+    }
+    .wb-login__btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 20px; height: 44px; border-radius: 100px; border: none; cursor: pointer;
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.16);
+      color: rgba(255,255,255,.75);
+      font-size: 13.5px; font-weight: 600; font-family: inherit;
+      white-space: nowrap; flex-shrink: 0;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .wb-login__btn mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    .wb-login__btn:hover {
+      background: rgba(96,165,250,.18);
+      border-color: rgba(96,165,250,.38);
+      color: #fff;
+    }
+    .wb-login__error {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; color: #f87171; margin-top: 8px; padding-left: 4px;
+    }
+    .wb-login__error mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
     /* ════════════════════════════════════════════════════
        WIZARD DE CONFIGURATION
@@ -1480,6 +1680,11 @@ export class SetupWizardComponent {
   isDragOver   = signal(false);
   logoError    = signal('');
 
+  // Login accès cabinet existant
+  loginSlugControl = new FormControl('');
+  loginError       = signal('');
+  loginLoading     = signal(false);
+
   // Welcome screen data
   particles = Array.from({ length: 28 }, () => ({
     x:   Math.random() * 100,
@@ -1574,6 +1779,32 @@ export class SetupWizardComponent {
   startSetup() {
     this.welcomeExit.set(true);
     setTimeout(() => this.screen.set('wizard'), 700);
+  }
+
+  goToTenantLogin() {
+    const slug = (this.loginSlugControl.value || '').trim();
+    if (!slug) {
+      this.loginError.set('Entrez l\'identifiant de votre cabinet');
+      return;
+    }
+    this.loginError.set('');
+    this.loginLoading.set(true);
+    this.tenant.switchTenant(slug);
+    this.http.get<{ configured: boolean }>(`${environment.apiUrl}/setup/status`).subscribe({
+      next: ({ configured }) => {
+        this.loginLoading.set(false);
+        if (configured) {
+          this.tenant.markConfigured();
+          this.router.navigate(['/auth/login']);
+        } else {
+          this.loginError.set(`Le cabinet "${slug}" n'est pas encore inscrit sur Passidoc.`);
+        }
+      },
+      error: () => {
+        this.loginLoading.set(false);
+        this.loginError.set('Impossible de joindre le serveur. Vérifiez votre connexion.');
+      },
+    });
   }
 
   next() {
