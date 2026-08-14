@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Req, Headers, ForbiddenException, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Req, Headers, ForbiddenException, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
@@ -37,6 +37,26 @@ export class SetupController {
       throw new ForbiddenException('Token invalide');
     }
     return this.setupService.activate(slug);
+  }
+
+  @Get('recover')
+  @ApiOperation({ summary: 'Récupère l\'email admin d\'un tenant (requiert secret)' })
+  async recoverAdmin(@Query('secret') secret: string) {
+    const expected = this.config.get<string>('RECOVER_SECRET');
+    if (!expected || secret !== expected) throw new ForbiddenException('Secret invalide');
+    return this.setupService.recoverAdmin('afym-audit-expertise');
+  }
+
+  @Post('recover')
+  @ApiOperation({ summary: 'Reset le mot de passe admin d\'un tenant (requiert secret)' })
+  async resetAdminPassword(
+    @Query('secret') secret: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    const expected = this.config.get<string>('RECOVER_SECRET');
+    if (!expected || secret !== expected) throw new ForbiddenException('Secret invalide');
+    if (!newPassword || newPassword.length < 8) throw new ForbiddenException('Mot de passe trop court (min 8 chars)');
+    return this.setupService.resetAdminPassword('afym-audit-expertise', newPassword);
   }
 
   @Post('reset')

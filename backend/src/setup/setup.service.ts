@@ -66,6 +66,28 @@ export class SetupService {
     return { message: 'Configuration terminée avec succès' };
   }
 
+  async recoverAdmin(slug: string): Promise<{ email: string; firstName: string; lastName: string }> {
+    const config = await this.configRepo.findOne({ where: { slug } });
+    if (!config) throw new ForbiddenException(`Tenant "${slug}" introuvable`);
+    const admin = await this.userRepo.findOne({
+      where: { tenantId: config.id, role: UserRole.ADMIN },
+    });
+    if (!admin) throw new ForbiddenException('Aucun admin trouvé pour ce tenant');
+    return { email: admin.email, firstName: admin.firstName, lastName: admin.lastName };
+  }
+
+  async resetAdminPassword(slug: string, newPassword: string): Promise<{ message: string; email: string }> {
+    const config = await this.configRepo.findOne({ where: { slug } });
+    if (!config) throw new ForbiddenException(`Tenant "${slug}" introuvable`);
+    const admin = await this.userRepo.findOne({
+      where: { tenantId: config.id, role: UserRole.ADMIN },
+    });
+    if (!admin) throw new ForbiddenException('Aucun admin trouvé pour ce tenant');
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.userRepo.update(admin.id, { password: hashed });
+    return { message: 'Mot de passe réinitialisé', email: admin.email };
+  }
+
   async activate(slug: string): Promise<{ message: string }> {
     const config = await this.configRepo.findOne({ where: { slug } });
     if (!config) throw new ForbiddenException(`Tenant "${slug}" introuvable`);
