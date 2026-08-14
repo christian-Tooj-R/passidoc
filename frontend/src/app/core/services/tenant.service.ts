@@ -71,6 +71,15 @@ export class TenantService {
     this._slug.set(slug.toLowerCase());
   }
 
+  /** Appelé à l'arrivée sur /setup — repart de zéro, efface tout résidu localStorage */
+  resetForSetupPage() {
+    localStorage.removeItem('tenant_slug');
+    this._slug.set(null);
+    this._configured.set(null);
+    this._config.set(null);
+    this._checkObs = null;
+  }
+
   /** Appelé après le setup wizard pour mettre à jour le cache local */
   markConfigured(config?: TenantConfig) {
     this._configured.set(true);

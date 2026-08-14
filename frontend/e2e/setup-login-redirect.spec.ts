@@ -10,6 +10,16 @@ test.describe('Setup — accès login depuis la landing page', () => {
     await page.waitForLoadState('networkidle');
   });
 
+  test('arriver sur /setup efface le tenant_slug du localStorage', async ({ page }) => {
+    // Simuler un ancien browser avec tenant_slug déjà en localStorage
+    await page.evaluate(() => localStorage.setItem('tenant_slug', 'ancien-cabinet'));
+    await page.goto('http://localhost:4200/setup');
+    await page.waitForLoadState('networkidle');
+
+    const slug = await page.evaluate(() => localStorage.getItem('tenant_slug'));
+    expect(slug).toBeNull();
+  });
+
   test('la landing page s\'affiche même si le tenant est déjà configuré', async ({ page }) => {
     // Simuler tenant configuré
     await page.route('**/api/setup/status', async route => {

@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -1655,7 +1655,7 @@ function generateSlug(name: string): string {
     .sc-login-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
   `],
 })
-export class SetupWizardComponent {
+export class SetupWizardComponent implements OnInit {
   @ViewChild('logoInput') logoInputRef!: ElementRef<HTMLInputElement>;
 
   private fb      = inject(FormBuilder);
@@ -1773,6 +1773,12 @@ export class SetupWizardComponent {
     password:        ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', Validators.required],
   }, { validators: passwordMatchValidator });
+
+  // ── Lifecycle ──────────────────────────────────────────
+
+  ngOnInit() {
+    this.tenant.resetForSetupPage();
+  }
 
   // ── Actions ────────────────────────────────────────────
 
