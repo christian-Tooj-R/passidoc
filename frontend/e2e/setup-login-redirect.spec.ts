@@ -98,7 +98,7 @@ test.describe('Setup — accès login depuis la landing page', () => {
     await expect(error).toContainText('Impossible de joindre');
   });
 
-  test('le localStorage est bien mis à jour avec le slug entré', async ({ page }) => {
+  test('le localStorage n\'est PAS écrit depuis la landing page (seulement après login)', async ({ page }) => {
     await page.route('**/api/setup/status', async route => {
       await route.fulfill({
         status: 200,
@@ -107,10 +107,12 @@ test.describe('Setup — accès login depuis la landing page', () => {
       });
     });
 
+    await page.evaluate(() => localStorage.removeItem('tenant_slug'));
     await page.locator('.wb-login__input').fill('afym');
     await page.locator('.wb-login__btn').click();
 
+    // localStorage ne doit pas être écrit avant le login
     const storedSlug = await page.evaluate(() => localStorage.getItem('tenant_slug'));
-    expect(storedSlug).toBe('afym');
+    expect(storedSlug).toBeNull();
   });
 });

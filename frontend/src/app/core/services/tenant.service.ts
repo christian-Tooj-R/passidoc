@@ -37,43 +37,38 @@ export class TenantService {
     const qSlug  = params.get('tenant');
 
     if (parts.length >= 3) {
-      // Sur Render (*.onrender.com) ou domaine custom multi-niveaux
-      if (qSlug) {
-        // Persist pour que les navigations internes sans ?tenant= restent sur le bon tenant
-        localStorage.setItem('tenant_slug', qSlug.toLowerCase());
-        return qSlug.toLowerCase();
-      }
-      // Navigation interne (pas de ?tenant=) : lire depuis localStorage
+      // URL param prioritaire — mémoire seulement, pas de localStorage
+      if (qSlug) return qSlug.toLowerCase();
+      // Navigation interne : lire depuis localStorage (écrit uniquement après login)
       const stored = localStorage.getItem('tenant_slug');
       if (stored) return stored;
-      // Aucun slug connu → hostname = "passidoc-app" → pas de tenant → setup wizard
       return parts[0].toLowerCase();
     }
 
     // localhost / dev : ?tenant= ou localStorage
-    if (qSlug) {
-      localStorage.setItem('tenant_slug', qSlug.toLowerCase());
-      return qSlug.toLowerCase();
-    }
+    if (qSlug) return qSlug.toLowerCase();
     const stored = localStorage.getItem('tenant_slug');
     if (stored) return stored.toLowerCase();
 
     return null;
   }
 
-  /** Appelé après le setup wizard pour mettre à jour le slug courant */
+  /** Appelé après le setup wizard — mémoire seulement, localStorage écrit après login */
   setSlug(slug: string) {
-    localStorage.setItem('tenant_slug', slug.toLowerCase());
     this._slug.set(slug.toLowerCase());
-    // Ne pas réinitialiser _configured : le tenant vient d'être créé, il est forcément configuré
   }
 
-  /** Appelé depuis la landing page pour changer de cabinet — force une re-vérification */
+  /** Appelé depuis la landing page — force une re-vérification, pas de localStorage */
   switchTenant(slug: string) {
-    localStorage.setItem('tenant_slug', slug.toLowerCase());
     this._slug.set(slug.toLowerCase());
     this._configured.set(null);
     this._checkObs = null;
+  }
+
+  /** Seul endroit qui persiste le slug — appelé après login réussi */
+  persistSlug(slug: string) {
+    localStorage.setItem('tenant_slug', slug.toLowerCase());
+    this._slug.set(slug.toLowerCase());
   }
 
   /** Appelé après le setup wizard pour mettre à jour le cache local */

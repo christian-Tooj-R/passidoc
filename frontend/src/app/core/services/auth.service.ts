@@ -5,6 +5,7 @@ import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
 import { RolePermissionsService } from './role-permissions.service';
+import { TenantService } from './tenant.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -13,6 +14,7 @@ export class AuthService {
   private _token = signal<string | null>(localStorage.getItem('token'));
 
   private rolePerms = inject(RolePermissionsService);
+  private tenantSvc = inject(TenantService);
 
   constructor(private http: HttpClient, private router: Router) {
     const stored = localStorage.getItem('user');
@@ -51,6 +53,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('tenant_slug');
     this._token.set(null);
     this._user.set(null);
     this.router.navigate(['/auth/login']);
@@ -90,5 +93,8 @@ export class AuthService {
     this._token.set(res.access_token);
     this._user.set(res.user);
     this.rolePerms.load();
+    // Persistance du tenant uniquement après login réussi
+    const slug = res.tenantSlug ?? this.tenantSvc.slug();
+    if (slug) this.tenantSvc.persistSlug(slug);
   }
 }
