@@ -56,7 +56,7 @@ export class AuthService {
     localStorage.removeItem('tenant_slug');
     this._token.set(null);
     this._user.set(null);
-    this.router.navigate(['/auth/login']);
+    this.router.navigate(['/setup']);
   }
 
   getToken(): string | null { return this._token(); }
