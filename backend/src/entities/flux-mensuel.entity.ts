@@ -26,8 +26,8 @@ export class FluxMensuel {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'enum', enum: TypeFlux })
-  type: TypeFlux;
+  @Column({ length: 100 })
+  type: string;
 
   @Column()
   mois: number; // 1-12

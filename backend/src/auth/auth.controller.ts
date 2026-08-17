@@ -75,6 +75,25 @@ export class AuthController {
     return this.authService.enable2FA(user.id, dto.token);
   }
 
+  @Post('forgot-password')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @ApiOperation({ summary: 'Demande de réinitialisation de mot de passe — envoie un code par email' })
+  forgotPassword(@Body() body: { email: string }, @Req() req: any) {
+    return this.authService.forgotPassword(body.email, req.tenant?.id);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ApiOperation({ summary: 'Réinitialise le mot de passe avec le code reçu par email' })
+  resetPassword(
+    @Body() body: { email: string; code: string; newPassword: string },
+    @Req() req: any,
+  ) {
+    return this.authService.resetPassword(body.email, body.code, body.newPassword, req.tenant?.id);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -263,10 +263,18 @@ type ViewMode = 'grid' | 'list';
                     }
                   </div>
                   <div class="folder-prog-row">
+                    <span class="fp-tag">ADN</span>
                     <div class="fp-track">
                       <div class="fp-fill" [style.width.%]="score(c)" [style.background]="ringColor(score(c))"></div>
                     </div>
                     <span class="fp-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
+                  </div>
+                  <div class="folder-prog-row">
+                    <span class="fp-tag fp-tag--pilot">Pilotage</span>
+                    <div class="fp-track">
+                      <div class="fp-fill" [style.width.%]="scorePilotage(c)" [style.background]="ringColor(scorePilotage(c))"></div>
+                    </div>
+                    <span class="fp-pct" [style.color]="ringColor(scorePilotage(c))">{{ scorePilotage(c) }}%</span>
                   </div>
                   <!-- Intervenants -->
                   <div class="folder-interv">
@@ -305,7 +313,7 @@ type ViewMode = 'grid' | 'list';
             <span class="lh-name">Nom</span>
             <span class="lh-site">Site</span>
             <span class="lh-resp">Intervenants</span>
-            <span class="lh-score">Complétude</span>
+            <span class="lh-score">Complétude</span><!-- ADN + Pilotage -->
             <span class="lh-status">Statut</span>
             <span class="lh-action"></span>
           </div>
@@ -361,10 +369,20 @@ type ViewMode = 'grid' | 'list';
 
               <!-- Score -->
               <div class="lr-score">
-                <div class="score-track">
-                  <div class="score-fill" [class]="scoreBarClass(score(c))" [style.width.%]="score(c)"></div>
+                <div class="lr-score-row">
+                  <span class="lsr-tag">ADN</span>
+                  <div class="score-track">
+                    <div class="score-fill" [style.width.%]="score(c)" [style.background]="ringColor(score(c))"></div>
+                  </div>
+                  <span class="score-pct" [style.color]="ringColor(score(c))">{{ score(c) }}%</span>
                 </div>
-                <span class="score-pct" [class]="scoreTxtClass(score(c))">{{ score(c) }}%</span>
+                <div class="lr-score-row">
+                  <span class="lsr-tag lsr-tag--pilot">Pilotage</span>
+                  <div class="score-track">
+                    <div class="score-fill" [style.width.%]="scorePilotage(c)" [style.background]="ringColor(scorePilotage(c))"></div>
+                  </div>
+                  <span class="score-pct" [style.color]="ringColor(scorePilotage(c))">{{ scorePilotage(c) }}%</span>
+                </div>
               </div>
 
               <!-- Status -->
@@ -713,8 +731,14 @@ type ViewMode = 'grid' | 'list';
     .sub--mg { color: #1E3A5F; }
     .folder-sec-sep { font-size: 10px; color: #C4C9D4; flex-shrink: 0; }
     .folder-sec-label { font-size: 11px; font-weight: 500; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* Progress bar */
-    .folder-prog-row { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+    /* Progress bars */
+    .folder-prog-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .fp-tag {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+      color: #6366f1; background: #EEF2FF; border-radius: 3px;
+      padding: 1px 4px; flex-shrink: 0; min-width: 26px; text-align: center;
+    }
+    .fp-tag--pilot { color: #059669; background: #D1FAE5; }
     .fp-track { flex: 1; height: 4px; background: #EEF0F4; border-radius: 3px; overflow: hidden; }
     .fp-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
     .fp-pct { font-size: 11px; font-weight: 700; min-width: 28px; text-align: right; color: #64748B; }
@@ -777,13 +801,20 @@ type ViewMode = 'grid' | 'list';
     .lr-resp span { font-size: 12.5px; color: #44474F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .resp-none { color: #C8C6CA !important; }
 
-    .lr-score { display: flex; align-items: center; gap: 8px; }
-    .score-track { flex: 1; height: 5px; background: #E0E2EC; border-radius: 4px; overflow: hidden; min-width: 60px; }
+    .lr-score { display: flex; flex-direction: column; gap: 5px; }
+    .lr-score-row { display: flex; align-items: center; gap: 6px; }
+    .lsr-tag {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+      color: #6366f1; background: #EEF2FF; border-radius: 3px;
+      padding: 1px 4px; flex-shrink: 0; min-width: 30px; text-align: center;
+    }
+    .lsr-tag--pilot { color: #059669; background: #D1FAE5; }
+    .score-track { flex: 1; height: 4px; background: #E0E2EC; border-radius: 4px; overflow: hidden; min-width: 50px; }
     .score-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
     .sf--high { background: #386A20; }
     .sf--mid  { background: #7B4F00; }
     .sf--low  { background: #BA1A1A; }
-    .score-pct { font-size: 12px; font-weight: 700; min-width: 32px; }
+    .score-pct { font-size: 11px; font-weight: 700; min-width: 28px; }
     .sp--high { color: #386A20; }
     .sp--mid  { color: #7B4F00; }
     .sp--low  { color: #BA1A1A; }
@@ -1005,7 +1036,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
     });
   }
 
-  score(c: Client) { return c.completude || c.santePassation; }
+  score(c: Client)          { return c.completude || c.santePassation; }
+  scorePilotage(c: Client)  { return c.completudePilotage ?? 0; }
 
   getSectorConfig(secteur?: string): { bg: string; accent: string; icon: string; label: string; imgSrc: string; emoji: string; shortLabel: string } {
     const m: Record<string, { bg: string; accent: string; icon: string; label: string; imgSrc: string; emoji: string; shortLabel: string }> = {
@@ -1020,7 +1052,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   }
 
   getScoreLevel(s: number): string { return s >= 80 ? 'high' : s >= 50 ? 'mid' : 'low'; }
-  ringColor(s: number): string  { return s >= 80 ? '#4CAF50' : s >= 50 ? '#FF9800' : '#F44336'; }
+  ringColor(s: number): string  { return `hsl(${Math.round(s * 1.2)}, 70%, 42%)`; }
   ringOffset(s: number): number { return 125.7 * (1 - s / 100); }
 
   countByHealth(h: string) {

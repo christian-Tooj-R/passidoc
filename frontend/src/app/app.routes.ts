@@ -27,6 +27,10 @@ export const routes: Routes = [
         canActivate: [authGuard],
         loadComponent: () => import('./features/auth/setup-2fa/setup-2fa.component').then((m) => m.Setup2faComponent),
       },
+      {
+        path: 'forgot-password',
+        loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+      },
     ],
   },
   // ── Pages plein écran (sans sidebar principale) ──────────────────────────

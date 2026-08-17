@@ -288,6 +288,29 @@ interface TabGroup {
                 </div>
               </div>
 
+              <!-- Card 2b : Pilotage complétude -->
+              <div class="hero-card hc-adn">
+                <div class="hc-adn__ring-wrap">
+                  <svg viewBox="0 0 80 80" width="76" height="76">
+                    <circle cx="40" cy="40" r="30" fill="none" stroke="#E8EAED" stroke-width="7"/>
+                    <circle cx="40" cy="40" r="30" fill="none"
+                            [attr.stroke]="ringColor(client.completudePilotage ?? 0)"
+                            stroke-width="7" stroke-linecap="round"
+                            stroke-dasharray="188.5"
+                            [attr.stroke-dashoffset]="188.5 * (1 - (client.completudePilotage ?? 0) / 100)"
+                            transform="rotate(-90 40 40)"/>
+                  </svg>
+                  <div class="hc-adn__pct" [style.color]="ringColor(client.completudePilotage ?? 0)">{{ client.completudePilotage ?? 0 }}%</div>
+                </div>
+                <div class="hc-adn__info">
+                  <span class="hc-adn__title">Pilotage Complétude</span>
+                  <span class="hc-adn__status" [style.color]="ringColor(client.completudePilotage ?? 0)">{{ getScoreStatus(client.completudePilotage ?? 0) }}</span>
+                  <button class="hc-adn__btn" (click)="activeTab.set('pilotage')">
+                    <mat-icon>bar_chart</mat-icon> Voir flux
+                  </button>
+                </div>
+              </div>
+
               <!-- Card 3 : infos clés -->
               <div class="hero-card hc-info">
                 <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
@@ -396,9 +419,9 @@ interface TabGroup {
             <!-- Animated content body -->
             <div class="content__body" [@tabFade]="activeTab()">
               @switch (activeTab()) {
-                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" (typesChanged)="onTypesChanged($event)" /> }
+                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
                 @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
+                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
                 @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
                 @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
@@ -1108,6 +1131,10 @@ export class ClientDetailComponent implements OnInit {
 
   onTypesChanged(types: any[]) {
     if (this.client) this.client = { ...this.client, typesFluxActifs: types };
+  }
+
+  onCustomFluxTypesChanged(types: { key: string; label: string }[]) {
+    if (this.client) this.client = { ...this.client, customFluxTypes: types };
   }
 
   onExerciceChange(idStr: string) {

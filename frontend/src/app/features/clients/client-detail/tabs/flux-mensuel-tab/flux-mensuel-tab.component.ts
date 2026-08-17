@@ -10,6 +10,7 @@ import { ToastService } from '../../../../../core/services/toast.service';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FluxMensuelService } from '../../../../../core/services/flux-mensuel.service';
+import { ClientsService } from '../../../../../core/services/clients.service';
 import { FluxMensuel } from '../../../../../core/models/client.model';
 import { BalanceService, MoisBalance } from '../../../../../core/services/balance.service';
 
@@ -187,6 +188,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
                 </td>
               </tr>
             }
+
           </tbody>
         </table>
       </div>
@@ -619,6 +621,25 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
     .icon-orange { color: #d97706 !important; }
     .icon-red    { color: #dc2626 !important; }
 
+    .add-type-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 13px; color: #1e293b; font-family: inherit;
+      &::placeholder { color: #94a3b8; }
+    }
+    .add-type-confirm {
+      padding: 5px 14px; border-radius: 7px; border: none; cursor: pointer;
+      background: #6366f1; color: white; font-size: 12.5px; font-weight: 600;
+      font-family: inherit; transition: background .12s;
+      &:hover:not(:disabled) { background: #4f46e5; }
+      &:disabled { opacity: .45; cursor: not-allowed; }
+    }
+    .add-type-cancel {
+      padding: 5px 12px; border-radius: 7px; border: none; cursor: pointer;
+      background: transparent; color: #94a3b8; font-size: 12.5px; font-weight: 600;
+      font-family: inherit; transition: background .12s;
+      &:hover { background: #f1f5f9; color: #64748b; }
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -737,16 +758,38 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
   `],
 })
 export class FluxMensuelTabComponent implements OnInit {
-  private service    = inject(FluxMensuelService);
-  private toast      = inject(ToastService);
-  private balanceSvc = inject(BalanceService);
+  private service     = inject(FluxMensuelService);
+  private toast       = inject(ToastService);
+  private balanceSvc  = inject(BalanceService);
+  private clientsSvc  = inject(ClientsService);
 
   @Input() clientId!: number;
+
+  private _typesFluxActifsRaw?: string[];
+  private _customFluxTypesRaw: { key: string; label: string }[] = [];
+
   @Input() set typesFluxActifs(val: string[] | undefined) {
-    this.activeTypes = val?.length ? TYPES.filter(t => val.includes(t.key)) : [...TYPES];
+    this._typesFluxActifsRaw = val;
+    this.rebuildActiveTypes();
   }
 
-  activeTypes = [...TYPES];
+  @Input() set customFluxTypes(val: { key: string; label: string }[] | null | undefined) {
+    this._customFluxTypesRaw = val ?? [];
+    this.rebuildActiveTypes();
+  }
+
+  private rebuildActiveTypes() {
+    const val = this._typesFluxActifsRaw;
+    const standard = val?.length ? TYPES.filter(t => val.includes(t.key)) : [...TYPES];
+    const custom = this._customFluxTypesRaw.map(ct => ({
+      key: ct.key, label: ct.label, icon: 'description', periodicite: 'monthly' as Periodicite,
+    }));
+    this.activeTypes = [...standard, ...custom];
+  }
+
+  activeTypes: { key: string; label: string; icon: string; periodicite: Periodicite }[] = [...TYPES];
+
+
   annee        = signal(new Date().getFullYear());
   currentYear  = new Date().getFullYear();
   currentMonth = new Date().getMonth() + 1;
@@ -911,7 +954,9 @@ export class FluxMensuelTabComponent implements OnInit {
   // ── Labels ─────────────────────────────────────────
 
   typeName(key: string): string {
-    return TYPES.find(t => t.key === key)?.label ?? key;
+    return TYPES.find(t => t.key === key)?.label
+      ?? this._customFluxTypesRaw.find(t => t.key === key)?.label
+      ?? key;
   }
 
   moisFullLabel(m: number): string {

@@ -84,6 +84,11 @@ import { TenantService } from '../../../core/services/tenant.service';
                   <mat-icon>error_outline</mat-icon><span>{{ loginError }}</span>
                 </div>
               }
+              <div class="forgot-link">
+                <button mat-button type="button" (click)="goToForgotPassword()">
+                  Mot de passe oublié ?
+                </button>
+              </div>
               <button mat-flat-button color="primary" type="submit" class="submit-btn"
                       [disabled]="loginLoading || loginForm.invalid">
                 @if (loginLoading) {
@@ -278,6 +283,20 @@ import { TenantService } from '../../../core/services/tenant.service';
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
 
+    /* ── Lien mot de passe oublié ── */
+    .forgot-link {
+      text-align: right;
+      margin-top: -4px;
+      margin-bottom: 4px;
+
+      button {
+        font-size: 13px;
+        color: #3b82f6;
+        padding: 4px 0;
+        min-width: unset;
+      }
+    }
+
     /* ── Note inscription ── */
     .register-note {
       margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;
@@ -320,6 +339,10 @@ export class LoginComponent {
   hideRegisterPassword = true;
   registerLoading = false;
   registerError   = '';
+
+  goToForgotPassword() {
+    this.router.navigate(['/auth/forgot-password']);
+  }
 
   switchMode(m: 'login' | 'register') {
     this.mode.set(m);

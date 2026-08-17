@@ -10,6 +10,8 @@ import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import { User } from '../entities/user.entity';
 import { TenantConfig } from '../entities/tenant-config.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
+import { MailService } from '../mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -17,8 +19,10 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(TenantConfig) private tenantRepo: Repository<TenantConfig>,
+    @InjectRepository(PasswordResetToken) private resetTokenRepo: Repository<PasswordResetToken>,
     private jwtService: JwtService,
     private config: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async login(dto: LoginDto, tenantId?: number) {
@@ -88,6 +92,51 @@ export class AuthService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
     return this.sanitize(user);
+  }
+
+  async forgotPassword(email: string, tenantId?: number): Promise<{ message: string }> {
+    const where: any = { email: email.toLowerCase() };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.userRepo.findOne({ where });
+
+    // Réponse identique que l'user existe ou non (sécurité)
+    if (user) {
+      await this.resetTokenRepo.delete({ email: user.email, tenantId: user.tenantId });
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await this.resetTokenRepo.save(
+        this.resetTokenRepo.create({ email: user.email, code, tenantId: user.tenantId, expiresAt }),
+      );
+
+      await this.mailService.sendPasswordResetCode({
+        to: user.email,
+        firstName: user.firstName,
+        code,
+      });
+    }
+
+    return { message: 'Si cet email existe, un code vous a été envoyé.' };
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string, tenantId?: number): Promise<{ message: string }> {
+    const token = await this.resetTokenRepo.findOne({
+      where: { email: email.toLowerCase(), code, used: false },
+    });
+
+    if (!token || token.expiresAt < new Date()) {
+      throw new BadRequestException('Code invalide ou expiré');
+    }
+    if (tenantId && token.tenantId !== tenantId) {
+      throw new BadRequestException('Code invalide ou expiré');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.userRepo.update({ email: token.email, tenantId: token.tenantId }, { password: hashed });
+    await this.resetTokenRepo.update(token.id, { used: true });
+
+    return { message: 'Mot de passe réinitialisé avec succès.' };
   }
 
   private generateToken(user: User) {

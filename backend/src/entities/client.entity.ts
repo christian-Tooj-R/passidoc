@@ -62,6 +62,7 @@ export class Client {
 
   santePassation: number = 0;
   completude: number = 0;
+  completudePilotage: number = 0;
 
   @AfterLoad()
   computeSantePassation() {
@@ -128,11 +129,31 @@ export class Client {
     this.completude = Math.min(score, 100);
   }
 
+  @AfterLoad()
+  computeCompletudePilotage() {
+    const flux: any[] = (this as any).fluxMensuels ?? [];
+    if (flux.length === 0) { this.completudePilotage = 0; return; }
+
+    // Considère les flux des 3 derniers mois
+    const now = new Date();
+    const recent = flux.filter(f => {
+      const diff = (now.getFullYear() - f.annee) * 12 + (now.getMonth() + 1 - f.mois);
+      return diff >= 0 && diff <= 2;
+    });
+
+    const base = recent.length > 0 ? recent : flux;
+    const deposited = base.filter(f => f.statut === 'DEPOSE').length;
+    this.completudePilotage = Math.round((deposited / base.length) * 100);
+  }
+
   @Column({ default: true })
   isActive: boolean;
 
   @Column({ type: 'simple-json', nullable: true })
   typesFluxActifs: TypeFlux[];
+
+  @Column({ type: 'simple-json', nullable: true })
+  customFluxTypes: { key: string; label: string }[];
 
   // Directeur / associé responsable du dossier
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })

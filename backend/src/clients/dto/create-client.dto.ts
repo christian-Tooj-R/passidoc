@@ -9,6 +9,7 @@ export class CreateClientDto {
   @ApiPropertyOptional() @IsOptional() @IsString() dateClotureExercice?: string; // "MM-DD"
   @ApiPropertyOptional() @IsOptional() @IsString() secteurActivite?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() typesFluxActifs?: TypeFlux[];
+  @ApiPropertyOptional() @IsOptional() @IsArray() customFluxTypes?: { key: string; label: string }[];
   @ApiPropertyOptional() @IsOptional() @IsObject() ficheData?: {
     raisonSociale?: string;
     siren?: string;

@@ -8,10 +8,11 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '../entities/user.entity';
 import { TenantConfig } from '../entities/tenant-config.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, TenantConfig]),
+    TypeOrmModule.forFeature([User, TenantConfig, PasswordResetToken]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -473,6 +473,8 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             <div class="flux-types-section">
               <p class="flux-hint">Cochez les documents que ce client doit fournir chaque mois.</p>
               <div class="flux-types-grid">
+
+                <!-- Types standards -->
                 @for (t of allTypes; track t.key) {
                   <div class="flux-type-item" [class.flux-type-active]="isTypeActif(t.key)"
                        (click)="toggleType(t.key)">
@@ -486,6 +488,49 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                                   (change)="toggleType(t.key)" color="primary" />
                   </div>
                 }
+
+                <!-- Types personnalisés -->
+                @for (ct of customFluxTypesArray; track ct.key) {
+                  <div class="flux-type-item flux-type-active"
+                       (click)="removeCustomFluxType(ct.key)">
+                    <mat-icon class="flux-type-icon">description</mat-icon>
+                    <div class="flux-type-body">
+                      <span class="flux-type-label">{{ ct.label }}</span>
+                      <span class="flux-type-hint">Mensuel — personnalisé</span>
+                    </div>
+                    <mat-checkbox [checked]="true"
+                                  color="primary"
+                                  (click)="$event.stopPropagation()"
+                                  (change)="removeCustomFluxType(ct.key)" />
+                  </div>
+                }
+
+                <!-- Bouton "+" ou formulaire inline -->
+                @if (addingCustomFlux()) {
+                  <div class="flux-type-item flux-add-form">
+                    <mat-icon class="flux-type-icon">add_circle_outline</mat-icon>
+                    <input #addFluxInput
+                           type="text"
+                           class="flux-add-input"
+                           [value]="newFluxName()"
+                           (input)="newFluxName.set($any($event.target).value)"
+                           placeholder="Nom du document…"
+                           (keydown.enter)="$event.preventDefault(); confirmAddCustomFlux()"
+                           (keydown.escape)="cancelAddCustomFlux()" />
+                    <button type="button" class="flux-add-confirm" (click)="confirmAddCustomFlux()" [disabled]="!newFluxName().trim()">
+                      OK
+                    </button>
+                    <button type="button" class="flux-add-cancel" (click)="cancelAddCustomFlux()">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <button type="button" class="flux-add-btn" (click)="startAddingCustomFlux()">
+                    <mat-icon>add</mat-icon>
+                    Ajouter
+                  </button>
+                }
+
               </div>
             </div>
           </mat-expansion-panel>
@@ -533,9 +578,44 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .flux-type-item:hover { border-color: #c7d2fe; background: #f5f3ff; }
     .flux-type-active { border-color: #6366f1 !important; background: #eef2ff !important; }
     .flux-type-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; flex-shrink: 0; }
-    .flux-type-body { display: flex; flex-direction: column; gap: 1px; flex: 1; }
+    .flux-type-body { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
     .flux-type-label { font-size: 13px; font-weight: 500; color: #1e293b; }
     .flux-type-hint  { font-size: 11px; color: #94a3b8; }
+
+
+    /* Bouton "+" et formulaire inline */
+    .flux-add-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      border: 1.5px dashed #c7d2fe; border-radius: 12px; background: transparent;
+      color: #6366f1; font-size: 13px; font-weight: 600; cursor: pointer;
+      padding: 12px 14px; transition: all .15s; font-family: inherit; width: 100%;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      &:hover { background: #f5f3ff; border-color: #818cf8; }
+    }
+    .flux-add-form {
+      flex-direction: row; align-items: center; gap: 8px;
+      border-color: #818cf8 !important; background: #f8f9ff !important; cursor: default !important;
+    }
+    .flux-add-form:hover { border-color: #818cf8 !important; background: #f8f9ff !important; }
+    .flux-add-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 13px; color: #1e293b; font-family: inherit; min-width: 0;
+      &::placeholder { color: #94a3b8; }
+    }
+    .flux-add-confirm {
+      padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer;
+      background: #6366f1; color: white; font-size: 12px; font-weight: 700;
+      font-family: inherit; flex-shrink: 0; transition: background .12s;
+      &:hover:not(:disabled) { background: #4f46e5; }
+      &:disabled { opacity: .45; cursor: not-allowed; }
+    }
+    .flux-add-cancel {
+      border: none; background: transparent; cursor: pointer; flex-shrink: 0;
+      color: #94a3b8; display: flex; align-items: center; padding: 2px;
+      border-radius: 4px; transition: color .12s;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { color: #64748b; }
+    }
 
     mat-chip-set { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip-success { --mdc-chip-label-text-color: #166534; background: #dcfce7 !important; font-size: 12px; }
@@ -723,6 +803,50 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   @Input() set typesFluxActifs(val: TypeFlux[] | undefined) {
     this.selectedTypes = val?.length ? [...val] : ALL_TYPES.map(t => t.key);
+  }
+
+  @Input() set customFluxTypes(val: { key: string; label: string }[] | null | undefined) {
+    this.customFluxTypesArray = val ?? [];
+  }
+  @Output() customFluxTypesChanged = new EventEmitter<{ key: string; label: string }[]>();
+
+  // ── État ajout type custom ──────────────────────────
+  @ViewChild('addFluxInput') addFluxInputRef?: ElementRef<HTMLInputElement>;
+  addingCustomFlux = signal(false);
+  newFluxName = signal('');
+  customFluxTypesArray: { key: string; label: string }[] = [];
+
+  startAddingCustomFlux() {
+    this.addingCustomFlux.set(true);
+    setTimeout(() => this.addFluxInputRef?.nativeElement?.focus(), 0);
+  }
+
+  cancelAddCustomFlux() {
+    this.addingCustomFlux.set(false);
+    this.newFluxName.set('');
+  }
+
+  confirmAddCustomFlux() {
+    const label = this.newFluxName().trim();
+    if (!label) return;
+    const key = 'CUSTOM_' + label.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 30) + '_' + Date.now();
+    const updated = [...this.customFluxTypesArray, { key, label }];
+    this.customFluxTypesArray = updated;
+    this.clientsService.update(this.clientId, { customFluxTypes: updated } as any).subscribe({
+      next: () => {
+        this.customFluxTypesChanged.emit(updated);
+        this.cancelAddCustomFlux();
+      },
+      error: () => this.cancelAddCustomFlux(),
+    });
+  }
+
+  removeCustomFluxType(key: string) {
+    const updated = this.customFluxTypesArray.filter(t => t.key !== key);
+    this.customFluxTypesArray = updated;
+    this.clientsService.update(this.clientId, { customFluxTypes: updated } as any).subscribe({
+      next: () => this.customFluxTypesChanged.emit(updated),
+    });
   }
 
   fiscalRef: FiscalRef | null = null;

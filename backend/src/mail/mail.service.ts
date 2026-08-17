@@ -197,6 +197,61 @@ export class MailService {
     await this._send({ from, to: opts.employeeEmail, subject, html });
   }
 
+  async sendPasswordResetCode(opts: {
+    to: string;
+    firstName: string;
+    code: string;
+  }): Promise<void> {
+    const from = this.config.get<string>('MAIL_FROM') ?? 'passidoc@afym.re';
+    const subject = `Votre code de réinitialisation — Passidoc`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:#1565C0;padding:28px 32px;">
+            <p style="margin:0;color:#fff;font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.8;">AFYM Audit Expertise — Passidoc</p>
+            <h1 style="margin:8px 0 0;color:#fff;font-size:22px;font-weight:700;">Réinitialisation du mot de passe</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 32px;">
+            <p style="margin:0 0 20px;color:#374151;font-size:15px;">Bonjour <strong>${opts.firstName}</strong>,</p>
+            <p style="margin:0 0 28px;color:#374151;font-size:15px;">
+              Vous avez demandé la réinitialisation de votre mot de passe. Voici votre code de vérification :
+            </p>
+            <div style="text-align:center;margin:0 0 28px;">
+              <div style="display:inline-block;background:#f0f4ff;border:2px dashed #1565C0;border-radius:12px;padding:20px 40px;">
+                <span style="font-family:'Courier New',Courier,monospace;font-size:40px;font-weight:900;letter-spacing:12px;color:#1565C0;">${opts.code}</span>
+              </div>
+            </div>
+            <p style="margin:0 0 12px;color:#6b7280;font-size:13px;text-align:center;">
+              Ce code est valable <strong>15 minutes</strong> et ne peut être utilisé qu'une seule fois.
+            </p>
+            <p style="margin:24px 0 0;padding:16px;background:#fef9c3;border-radius:8px;color:#854d0e;font-size:13px;border-left:4px solid #eab308;">
+              Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe reste inchangé.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;">Passidoc — AFYM Audit Expertise</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    await this._send({ from, to: opts.to, subject, html });
+  }
+
   private async _send(opts: { from: string; to: string; subject: string; html: string }) {
     if (!this.transporter) {
       this.logger.log(`[MAIL non envoyé — SMTP non configuré] À: ${opts.to} | Sujet: ${opts.subject}`);

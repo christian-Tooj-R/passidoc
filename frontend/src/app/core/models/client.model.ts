@@ -67,8 +67,10 @@ export interface Client {
   secteurActivite?: SecteurActivite;
   santePassation: number;
   completude: number;
+  completudePilotage: number;
   isActive: boolean;
   typesFluxActifs?: TypeFlux[];
+  customFluxTypes?: { key: string; label: string }[];
   directeur?: Responsable;
   responsable?: Responsable;
   collaborateurMg?: Responsable;
