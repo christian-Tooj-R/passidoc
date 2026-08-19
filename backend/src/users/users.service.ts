@@ -162,6 +162,15 @@ export class UsersService {
     return this.findOne(userId);
   }
 
+  /** Organigramme : tous les users actifs du tenant (tous rôles) */
+  async getOrgChart(tenantId: number) {
+    const users = await this.repo.find({
+      where: { tenantId, isActive: true },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+    return users.map(this.sanitize);
+  }
+
   /** Vue salariés : tous les users actifs + anciens, triés par nom */
   async findSalaries(site?: string, tenantId?: number) {
     const where: any = {};

@@ -11,31 +11,29 @@ export class MailService {
   constructor(private config: ConfigService) {
     const host = config.get<string>('MAIL_HOST');
     if (host) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port:   config.get<number>('MAIL_PORT') ?? 587,
-        secure: config.get<boolean>('MAIL_SECURE') ?? false,
-        auth: {
-          user: config.get<string>('MAIL_USER'),
-          pass: config.get<string>('MAIL_PASS'),
-        },
-      });
+      const port   = parseInt(config.get('MAIL_PORT') ?? '587', 10);
+      const secure = config.get('MAIL_SECURE') === 'true';
+      const user   = config.get<string>('MAIL_USER');
+      const pass   = config.get<string>('MAIL_PASS');
+      this.logger.log(`SMTP configuré → ${host}:${port} secure=${secure} user=${user}`);
+      this.transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
     } else {
       this.logger.warn('MAIL_HOST non configuré — les emails seront ignorés');
     }
   }
 
   async sendCongeNotificationManager(opts: {
-    managerEmail: string;
-    managerName:  string;
-    employeeName: string;
-    typeConge:    string;
-    dateDebut:    string;
-    dateFin:      string;
-    nombreJours:  number;
-    motif?:       string | null;
-    approuverUrl: string;
-    refuserUrl:   string;
+    managerEmail:  string;
+    managerName:   string;
+    employeeName:  string;
+    employeeEmail: string;
+    typeConge:     string;
+    dateDebut:     string;
+    dateFin:       string;
+    nombreJours:   number;
+    motif?:        string | null;
+    approuverUrl:  string;
+    refuserUrl:    string;
   }): Promise<void> {
     const from = this.config.get<string>('MAIL_FROM') ?? 'passidoc@afym.re';
     const subject = `Demande de congé — ${opts.employeeName}`;
@@ -132,7 +130,7 @@ export class MailService {
 </body>
 </html>`;
 
-    await this._send({ from, to: opts.managerEmail, subject, html });
+    await this._send({ from, to: opts.managerEmail, replyTo: opts.employeeEmail, subject, html });
   }
 
   async sendCongeStatutEmployee(opts: {
@@ -252,7 +250,7 @@ export class MailService {
     await this._send({ from, to: opts.to, subject, html });
   }
 
-  private async _send(opts: { from: string; to: string; subject: string; html: string }) {
+  private async _send(opts: { from: string; to: string; replyTo?: string; subject: string; html: string }) {
     if (!this.transporter) {
       this.logger.log(`[MAIL non envoyé — SMTP non configuré] À: ${opts.to} | Sujet: ${opts.subject}`);
       return;

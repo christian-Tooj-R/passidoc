@@ -162,7 +162,7 @@ interface SiteGroup {
                        [class.cal-cell--end]="isEnd(row, d.date)"
                        [matTooltip]="getTooltip(row, d.date)"
                        matTooltipClass="agenda-tooltip">
-                    @if (isStart(row, d.date)) {
+                    @if (isStart(row, d.date) && getTypeLabel(row, d.date)) {
                       <span class="abs-label">{{ getTypeLabel(row, d.date) }}</span>
                     }
                   </div>
@@ -899,9 +899,9 @@ export class CongesCalendrierComponent implements OnInit {
 
   getTypeLabel(row: CollabRow, date: Date): string {
     const a = this._absence(row, date);
-    if (!a) return 'Absent';
-    if (!this.auth.isAdmin()) return 'Absent';
-    return TYPE_CONGE_LABELS[a.typeConge] ?? 'Absent';
+    if (!a) return '';
+    if (!this.auth.isAdmin()) return '';
+    return TYPE_CONGE_LABELS[a.typeConge] ?? '';
   }
 
   getTooltip(row: CollabRow, date: Date): string {

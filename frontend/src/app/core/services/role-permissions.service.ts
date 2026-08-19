@@ -16,14 +16,15 @@ export const MENU_ITEMS: MenuItemDef[] = [
   { id: 'documents',     label: 'Documents',         icon: 'insert_drive_file'  },
   { id: 'notes',         label: 'Notes',             icon: 'sticky_note_2'      },
   { id: 'equipes',       label: 'Équipe',            icon: 'groups'             },
+  { id: 'rh',           label: 'Ressources Humaines', icon: 'manage_accounts'  },
 ];
 
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
   EXPERT_COMPTABLE:  MENU_ITEMS.map(m => m.id),
-  CHEF_ANTENNE:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
-  CHEF_MISSION:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
-  GERANT_MADAGASCAR: ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
-  COLLABORATEUR:     ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes'],
+  CHEF_ANTENNE:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes', 'rh'],
+  CHEF_MISSION:      ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes', 'rh'],
+  GERANT_MADAGASCAR: ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes', 'rh'],
+  COLLABORATEUR:     ['dashboard', 'clients', 'tasks', 'documents', 'notes', 'equipes', 'rh'],
 };
 
 @Injectable({ providedIn: 'root' })

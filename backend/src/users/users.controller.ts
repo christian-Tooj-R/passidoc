@@ -86,6 +86,12 @@ export class UsersController {
     return this.usersService.getMyTeam(req.user);
   }
 
+  @Get('org-chart')
+  @ApiOperation({ summary: 'Organigramme complet en lecture seule (tous rôles authentifiés)' })
+  getOrgChart(@Req() req: any) {
+    return this.usersService.getOrgChart(req.user.tenantId);
+  }
+
   @Patch(':id/referent')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Définir le collaborateur Réunion d\'un utilisateur Madagascar' })

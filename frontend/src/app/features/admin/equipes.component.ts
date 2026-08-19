@@ -520,45 +520,158 @@ interface CreateForm {
     <div class="page-header">
       <div>
         <h1 class="page-title">Mon équipe</h1>
-        <p class="page-sub">
-          @if (auth.currentUser()?.site === 'REUNION') { Vos collaborateurs {{ tenantSvc.poleLabel2() }} rattachés }
-          @else { Votre superviseur direct }
-        </p>
+        <p class="page-sub">{{ users().filter(u => u.isActive).length }} membres · Organigramme en lecture seule</p>
       </div>
     </div>
-    @if (auth.currentUser()?.site === 'REUNION') {
-      @if ((myTeam?.team?.length ?? 0) > 0) {
-        <div class="my-team-grid">
-          @for (m of myTeam?.team ?? []; track m.id) {
+
+    <!-- Fiche "Mon superviseur / Mon équipe directe" -->
+    <div class="collab-team-section">
+      @if (auth.currentUser()?.site === 'REUNION') {
+        @if ((myTeam?.team?.length ?? 0) > 0) {
+          <div class="collab-section-label"><mat-icon>groups</mat-icon> Mes collaborateurs {{ tenantSvc.poleLabel2() }}</div>
+          <div class="my-team-grid">
+            @for (m of myTeam?.team ?? []; track m.id) {
+              <div class="member-card">
+                <div class="avatar collab lg">{{ initials(m) }}</div>
+                <div>
+                  <div class="cell-name">{{ m.firstName }} {{ m.lastName }}</div>
+                  <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">{{ tenantSvc.poleFlag2() }} Collaborateur {{ tenantSvc.poleLabel2() }}</div>
+                  <div class="cell-email">{{ m.email }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      } @else {
+        @if (myTeam?.referent) {
+          <div class="collab-section-label"><mat-icon>manage_accounts</mat-icon> Mon superviseur direct</div>
+          <div class="my-team-grid">
             <div class="member-card">
-              <div class="avatar collab lg">{{ initials(m) }}</div>
+              <div class="avatar chef-mission lg">{{ initials(myTeam!.referent!) }}</div>
               <div>
-                <div class="cell-name">{{ m.firstName }} {{ m.lastName }}</div>
-                <div style="font-size:12px;color:#6366F1;font-weight:600;margin-top:2px">{{ tenantSvc.poleFlag2() }} Collaborateur {{ tenantSvc.poleLabel2() }}</div>
-                <div class="cell-email">{{ m.email }}</div>
+                <div class="cell-name">{{ myTeam!.referent!.firstName }} {{ myTeam!.referent!.lastName }}</div>
+                <div style="font-size:12px;color:#0F766E;font-weight:600;margin-top:2px">{{ roleLabel(myTeam!.referent!.role) }}</div>
+                <div class="cell-email">{{ myTeam!.referent!.email }}</div>
               </div>
             </div>
-          }
-        </div>
-      } @else {
-        <div class="empty-team"><mat-icon>people_outline</mat-icon><p>Aucun collaborateur {{ tenantSvc.poleLabel2() }} ne vous est rattaché.</p></div>
-      }
-    } @else {
-      @if (myTeam?.referent) {
-        <div class="my-team-grid">
-          <div class="member-card">
-            <div class="avatar chef-mission lg">{{ initials(myTeam!.referent!) }}</div>
-            <div>
-              <div class="cell-name">{{ myTeam!.referent!.firstName }} {{ myTeam!.referent!.lastName }}</div>
-              <div style="font-size:12px;color:#0F766E;font-weight:600;margin-top:2px">{{ roleLabel(myTeam!.referent!.role) }}</div>
-              <div class="cell-email">{{ myTeam!.referent!.email }}</div>
-            </div>
           </div>
-        </div>
-      } @else {
-        <div class="empty-team"><mat-icon>person_off</mat-icon><p>Vous n'avez pas encore de superviseur assigné.</p></div>
+        }
       }
-    }
+    </div>
+
+    <!-- Organigramme lecture seule -->
+    <div class="collab-section-label collab-section-label--org"><mat-icon>account_tree</mat-icon> Organigramme de la structure</div>
+    <div class="chart-wrap chart-wrap--readonly">
+      <div class="org-scroll">
+        <ul class="org-tree">
+          <li>
+            <div class="org-node org-node--root">
+              <mat-icon>business</mat-icon>
+              <span class="org-root-name">AFYM Audit Expertise</span>
+              <span class="org-count">{{ users().filter(u => u.isActive).length }} membres</span>
+            </div>
+            <ul>
+              @if (reunionUsers().length > 0) {
+                <li>
+                  <div class="org-node org-node--bureau">
+                    <mat-icon>location_city</mat-icon>
+                    <span class="org-antenne-name">Bureau Réunion</span>
+                    <span class="org-count">{{ reunionUsers().length }}</span>
+                  </div>
+                  <ul>
+                    @for (ru of reunionUsers(); track ru.id) {
+                      <li>
+                        <div class="org-node org-node--reunion-user org-node--readonly"
+                             [class.org-node--me]="ru.id === auth.currentUser()?.id">
+                          <div class="org-avatar" [class]="ru.role === 'ADMIN' ? 'adm' : 'exp'">{{ initials(ru) }}</div>
+                          <div>
+                            <div class="org-name">{{ ru.firstName }} {{ ru.lastName }}</div>
+                            <div class="org-role">{{ roleLabel(ru.role) }}</div>
+                          </div>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+              @for (antenne of ['EST', 'OUEST']; track antenne) {
+                <li>
+                  <div class="org-node org-node--antenne">
+                    <mat-icon>location_on</mat-icon>
+                    <span class="org-antenne-name">Antenne {{ antenne }}</span>
+                    <span class="org-count">{{ usersInAntenne(antenne).length }}</span>
+                  </div>
+                  @let ca = chefAntenne(antenne);
+                  @let gm = gerantMadagascar(antenne);
+                  @let cms = chefsMission(antenne);
+                  <ul>
+                    @if (ca) {
+                      <li>
+                        <div class="org-node org-node--chef-antenne org-node--readonly"
+                             [class.org-node--me]="ca.id === auth.currentUser()?.id">
+                          <div class="org-avatar ca">{{ initials(ca) }}</div>
+                          <div>
+                            <div class="org-name">{{ ca.firstName }} {{ ca.lastName }}</div>
+                            <div class="org-role">Chef d'antenne</div>
+                          </div>
+                        </div>
+                        @if (cms.length > 0) {
+                          <ul>
+                            @for (cm of cms; track cm.id) {
+                              <li>
+                                <div class="org-node org-node--chef-mission org-node--readonly"
+                                     [class.org-node--me]="cm.id === auth.currentUser()?.id">
+                                  <div class="org-avatar cm">{{ initials(cm) }}</div>
+                                  <div>
+                                    <div class="org-name">{{ cm.firstName }} {{ cm.lastName }}</div>
+                                    <div class="org-role">Chef de mission</div>
+                                  </div>
+                                </div>
+                                @let collabs = collaborateursOf(cm.id);
+                                @if (collabs.length > 0) {
+                                  <ul>
+                                    @for (c of collabs; track c.id) {
+                                      <li>
+                                        <div class="org-node org-node--collab org-node--readonly"
+                                             [class.org-node--me]="c.id === auth.currentUser()?.id">
+                                          <div class="org-avatar co">{{ initials(c) }}</div>
+                                          <div>
+                                            <div class="org-name">{{ c.firstName }} {{ c.lastName }}</div>
+                                            <div class="org-role">Collaborateur</div>
+                                          </div>
+                                        </div>
+                                      </li>
+                                    }
+                                  </ul>
+                                }
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </li>
+                    } @else {
+                      <li><div class="org-node org-node--empty"><mat-icon>person_off</mat-icon> Non désigné</div></li>
+                    }
+                    @if (gm) {
+                      <li>
+                        <div class="org-node org-node--gerant org-node--readonly"
+                             [class.org-node--me]="gm.id === auth.currentUser()?.id">
+                          <div class="org-avatar ge">{{ initials(gm) }}</div>
+                          <div>
+                            <div class="org-name">{{ gm.firstName }} {{ gm.lastName }}</div>
+                            <div class="org-role">Gérant {{ tenantSvc.poleLabel2() }}</div>
+                          </div>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
   }
 </div>
 
@@ -1109,6 +1222,29 @@ interface CreateForm {
       padding: 64px 32px; text-align: center; color: #94A3B8;
       mat-icon { font-size: 44px; width: 44px; height: 44px; margin-bottom: 14px; opacity: .4; }
       p { font-size: 14px; color: #64748B; font-weight: 500; margin: 0; }
+    }
+
+    /* ── Vue collab ── */
+    .collab-team-section { padding: 0 28px 8px; }
+    .collab-section-label {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: #6D28D9;
+      padding: 20px 28px 10px;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+    .collab-section-label--org { border-top: 1px solid #EDE9F8; margin-top: 8px; }
+    .chart-wrap--readonly { cursor: default; }
+    .org-node--readonly { cursor: default !important; pointer-events: none; }
+    .org-node--readonly:hover { box-shadow: none !important; transform: none !important; }
+    .org-node--me {
+      outline: 2px solid #7C3AED !important;
+      outline-offset: 2px;
+      background: #F5F3FF !important;
+    }
+    .org-node--me .org-name::after {
+      content: ' (moi)';
+      font-size: 10px; font-weight: 600; color: #7C3AED;
     }
 
     /* ── Tableau tous utilisateurs ──────────────────────────────── */
@@ -1783,6 +1919,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
       });
     } else {
       this.usersService.getMyTeam().subscribe(t => this.myTeam = t);
+      this.usersService.getOrgChart().subscribe(u => this.users.set(u));
     }
   }
 

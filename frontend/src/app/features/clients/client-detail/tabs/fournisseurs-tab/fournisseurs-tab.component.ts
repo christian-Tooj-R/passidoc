@@ -46,10 +46,12 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
           <h3>Annuaire fournisseurs</h3>
           <span class="count-badge">{{ fournisseurs.length }}</span>
         </div>
-        <button mat-flat-button class="btn-add" (click)="showForm.set(!showForm())">
-          <mat-icon>{{ showForm() ? 'close' : 'add' }}</mat-icon>
-          {{ showForm() ? 'Annuler' : 'Ajouter' }}
-        </button>
+        @if (!readonly) {
+          <button mat-flat-button class="btn-add" (click)="showForm.set(!showForm())">
+            <mat-icon>{{ showForm() ? 'close' : 'add' }}</mat-icon>
+            {{ showForm() ? 'Annuler' : 'Ajouter' }}
+          </button>
+        }
       </div>
 
       <!-- Formulaire d'ajout -->
@@ -103,9 +105,11 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
           </div>
           <p class="empty-title">Aucun fournisseur</p>
           <p class="empty-sub">Ajoutez vos prestataires et partenaires</p>
-          <button mat-flat-button class="btn-add" (click)="showForm.set(true)">
-            <mat-icon>add</mat-icon> Ajouter un fournisseur
-          </button>
+          @if (!readonly) {
+            <button mat-flat-button class="btn-add" (click)="showForm.set(true)">
+              <mat-icon>add</mat-icon> Ajouter un fournisseur
+            </button>
+          }
         </div>
       }
 
@@ -293,6 +297,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
   `],
 })
 export class FournisseursTabComponent implements OnInit {
+  @Input() readonly = false;
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
   private confirm = inject(ConfirmService);

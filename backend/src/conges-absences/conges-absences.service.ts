@@ -91,7 +91,7 @@ export class CongesAbsencesService {
     );
 
     // Notification email au manager
-    this._notifyManager(saved, user).catch(() => {});
+    this._notifyManager(saved, user).catch(e => this.logger.error('Erreur envoi email manager:', e.message));
 
     return this.findOne(saved.id);
   }
@@ -324,16 +324,17 @@ export class CongesAbsencesService {
     const token    = this.generateEmailActionToken(conge.id);
 
     await this.mailSvc.sendCongeNotificationManager({
-      managerEmail: manager.email,
-      managerName:  `${manager.firstName} ${manager.lastName}`,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
-      typeConge:    this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge,
-      dateDebut:    conge.dateDebut,
-      dateFin:      conge.dateFin,
-      nombreJours:  Number(conge.nombreJours),
-      motif:        conge.motif,
-      approuverUrl: `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=approuver&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
-      refuserUrl:   `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=refuser&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
+      managerEmail:  manager.email,
+      managerName:   `${manager.firstName} ${manager.lastName}`,
+      employeeName:  `${employee.firstName} ${employee.lastName}`,
+      employeeEmail: employee.email,
+      typeConge:     this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge,
+      dateDebut:     conge.dateDebut,
+      dateFin:       conge.dateFin,
+      nombreJours:   Number(conge.nombreJours),
+      motif:         conge.motif,
+      approuverUrl:  `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=approuver&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
+      refuserUrl:    `${apiUrl}/conges/${conge.id}/email-action?token=${token}&action=refuser&redirect=${encodeURIComponent(appUrl + '/rh/conges')}`,
     });
   }
 

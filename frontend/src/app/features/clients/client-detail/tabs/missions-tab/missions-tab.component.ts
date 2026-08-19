@@ -23,10 +23,12 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
     <div class="tab">
       <div class="tab-header">
         <h2>Missions</h2>
-        <button mat-flat-button color="primary" (click)="showForm = !showForm">
-          <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
-          {{ showForm ? 'Annuler' : 'Ajouter une mission' }}
-        </button>
+        @if (!readonly) {
+          <button mat-flat-button color="primary" (click)="showForm = !showForm">
+            <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
+            {{ showForm ? 'Annuler' : 'Ajouter une mission' }}
+          </button>
+        }
       </div>
 
       @if (showForm) {
@@ -241,6 +243,7 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
 })
 export class MissionsTabComponent implements OnInit {
   @Input() clientId!: number;
+  @Input() readonly = false;
   private fb = inject(FormBuilder);
   private service = inject(MissionsService);
   private toast = inject(ToastService);

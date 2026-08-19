@@ -59,10 +59,12 @@ const TRIMESTRE_LABELS = [
     <div class="tab-content">
       <div class="tab-header">
         <h3>Documents</h3>
-        <label class="upload-btn">
-          <mat-icon>upload</mat-icon> Importer un fichier
-          <input type="file" hidden (change)="onFileSelected($event)" />
-        </label>
+        @if (!readonly) {
+          <label class="upload-btn">
+            <mat-icon>upload</mat-icon> Importer un fichier
+            <input type="file" hidden (change)="onFileSelected($event)" />
+          </label>
+        }
       </div>
 
       @if (pendingFile()) {
@@ -219,6 +221,7 @@ const TRIMESTRE_LABELS = [
       transition: background .15s;
     }
     .upload-btn:hover { background: #0D47A1; }
+    .upload-btn--disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 
     /* --- Panneau de qualification --- */
     .meta-panel {
@@ -267,6 +270,7 @@ const TRIMESTRE_LABELS = [
 })
 export class DocumentsTabComponent implements OnInit {
   @Input() clientId!: number;
+  @Input() readonly = false;
 
   @Input() set typesFluxActifs(val: TypeFlux[] | undefined) {
     // Toujours Non classé + types actifs de la fiche identité + Factures (balance) + Autre

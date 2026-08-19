@@ -12,6 +12,7 @@ import { Router, RouterModule } from '@angular/router';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
+import { AuthService } from '../../core/services/auth.service';
 const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', 'Freelance', 'Autre'];
 
 @Component({
@@ -87,14 +88,16 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
         <button mat-menu-item (click)="router.navigate(['/rh/salaries',c.id])">
           <mat-icon>visibility</mat-icon><span>Voir la fiche</span>
         </button>
-        <button mat-menu-item (click)="openForm(c)">
-          <mat-icon>edit</mat-icon><span>Modifier</span>
-        </button>
-        @if (!c.dateSortie) {
+        @if (canEdit(c)) {
+          <button mat-menu-item (click)="openForm(c)">
+            <mat-icon>edit</mat-icon><span>Modifier</span>
+          </button>
+        }
+        @if (canEdit(c) && !c.dateSortie) {
           <button mat-menu-item (click)="archiver(c)">
             <mat-icon>person_off</mat-icon><span>Marquer comme ancien</span>
           </button>
-        } @else {
+        } @else if (canEdit(c) && c.dateSortie) {
           <button mat-menu-item (click)="reactiver(c)">
             <mat-icon>person</mat-icon><span>Réactiver</span>
           </button>
@@ -258,6 +261,7 @@ export class SalariesComponent implements OnInit {
   private svc   = inject(SalariesService);
   private snack = inject(MatSnackBar);
   private fb    = inject(FormBuilder);
+  private auth  = inject(AuthService);
   router        = inject(Router);
 
   tenantSvc   = inject(TenantService);
@@ -319,6 +323,11 @@ export class SalariesComponent implements OnInit {
       next:  data => { this.liste.set(data); this.loading.set(false); },
       error: ()   => this.loading.set(false),
     });
+  }
+
+  canEdit(c: Collaborateur): boolean {
+    if (this.auth.isAdmin() || this.auth.isExpert() || this.auth.isChefAntenne() || this.auth.isChefMission()) return true;
+    return this.auth.currentUser()?.id === c.id;
   }
 
   roleLabel(role: string): string {

@@ -46,9 +46,11 @@ interface CanvasBox {
       </div>
     </div>
     <div class="cv-header__actions">
-      <button mat-stroked-button (click)="save()" [disabled]="saving" class="cv-save-btn">
-        <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
-      </button>
+      @if (!readonly) {
+        <button mat-stroked-button (click)="save()" [disabled]="saving" class="cv-save-btn">
+          <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      }
       <button mat-icon-button (click)="copyAll()" matTooltip="Copier tout le canvas">
         <mat-icon>content_copy</mat-icon>
       </button>
@@ -137,6 +139,7 @@ interface CanvasBox {
 })
 export class CanvasTabComponent implements OnInit {
   @Input() clientId!: number;
+  @Input() readonly = false;
 
   private http  = inject(HttpClient);
   private toast = inject(ToastService);

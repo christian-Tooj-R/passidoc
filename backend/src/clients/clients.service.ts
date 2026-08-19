@@ -77,16 +77,9 @@ export class ClientsService {
       query.andWhere('client.tenantId = :tenantId', { tenantId: currentUser.tenantId });
     }
 
-    if (currentUser.role !== UserRole.ADMIN) {
-      if (currentUser.site === UserSite.REUNION) {
-        query.andWhere('client.responsableId = :userId', { userId: currentUser.id });
-      } else {
-        query.andWhere('client.collaborateurMgId = :userId', { userId: currentUser.id });
-      }
-    } else if (collaborateurId) {
-      // ADMIN filtre par collaborateur spécifique
+    if (collaborateurId) {
       query.andWhere(
-        '(client.responsableId = :cid OR client.collaborateurMgId = :cid)',
+        '(client.responsableId = :cid OR client.collaborateurMgId = :cid OR client.directeurId = :cid)',
         { cid: collaborateurId },
       );
     }
@@ -110,14 +103,22 @@ export class ClientsService {
     return client;
   }
 
-  // Controller: checks access rights
+  // Controller: lecture autorisée pour tous les membres du tenant
   async findOneForUser(id: number, currentUser: User) {
     const client = await this.findOne(id);
-    if (currentUser.role === UserRole.ADMIN) return client;
-    if (client.directeurId === currentUser.id) return client;
-    if (currentUser.site === UserSite.REUNION && client.responsableId === currentUser.id) return client;
-    if (currentUser.site === UserSite.MADAGASCAR && client.collaborateurMgId === currentUser.id) return client;
-    throw new ForbiddenException('Vous n\'avez pas accès à ce dossier');
+    if (client.tenantId !== currentUser.tenantId) {
+      throw new ForbiddenException('Accès interdit');
+    }
+    return client;
+  }
+
+  // Vérifie que l'utilisateur est assigné au dossier (pour les opérations de modification)
+  private checkEditAccess(client: Client, currentUser: User) {
+    if (currentUser.role === UserRole.ADMIN) return;
+    if (client.directeurId === currentUser.id) return;
+    if (currentUser.site === UserSite.REUNION && client.responsableId === currentUser.id) return;
+    if (currentUser.site === UserSite.MADAGASCAR && client.collaborateurMgId === currentUser.id) return;
+    throw new ForbiddenException('Vous n\'êtes pas assigné à ce dossier');
   }
 
   async assignDirecteur(clientId: number, directeurId: number | null, currentUser: User) {
@@ -138,7 +139,8 @@ export class ClientsService {
   }
 
   async update(id: number, dto: UpdateClientDto, currentUser: User) {
-    await this.findOneForUser(id, currentUser);
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
     await this.repo.update(id, dto);
     return this.findOne(id);
   }

@@ -23,4 +23,8 @@ export class PappersService {
   search(q: string) {
     return this.http.get<PappersResult[]>(`${this.api}/search`, { params: { q } });
   }
+
+  getBySiren(siren: string) {
+    return this.http.get<PappersResult | null>(`${this.api}/siren/${siren}`);
+  }
 }

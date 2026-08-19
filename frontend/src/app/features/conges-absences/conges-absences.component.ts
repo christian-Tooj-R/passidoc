@@ -15,6 +15,7 @@ import {
 } from '../../core/services/conges-absences.service';
 import { SalariesService, Collaborateur } from '../salaries/salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
+import { AuthService } from '../../core/services/auth.service';
 
 const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_LABELS).map(([v, l]) => ({ value: v as TypeConge, label: l }));
 type ViewMode = 'demandes' | 'soldes' | 'stats';
@@ -144,12 +145,17 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
               <span class="statut-badge statut-badge--{{ d.statut.toLowerCase() }}">{{ statutLabel(d.statut) }}</span>
             </span>
             <span class="col-actions">
-              @if (d.statut === 'EN_ATTENTE') {
+              @if (!isCollab && d.statut === 'EN_ATTENTE') {
                 <button mat-icon-button class="btn-approve" matTooltip="Approuver" (click)="approuver(d)">
                   <mat-icon>check</mat-icon>
                 </button>
                 <button mat-icon-button class="btn-refuse" matTooltip="Refuser" (click)="openRefus(d)">
                   <mat-icon>close</mat-icon>
+                </button>
+              }
+              @if (d.userId === meId && d.statut === 'EN_ATTENTE') {
+                <button mat-icon-button class="btn-cancel" matTooltip="Annuler ma demande" (click)="annulerDemande(d)">
+                  <mat-icon>cancel</mat-icon>
                 </button>
               }
             </span>
@@ -212,14 +218,22 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
     </div>
     <form [formGroup]="newForm" (ngSubmit)="submitNew()" class="drawer__body">
       <span class="drawer__section">Collaborateur</span>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Collaborateur</mat-label>
-        <mat-select formControlName="userId">
-          @for (c of collaborateurs(); track c.id) {
-            <mat-option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      @if (isCollab) {
+        <div class="collab-self">
+          <span class="avatar-mini">{{ meName[0] }}</span>
+          <span class="collab-self__name">{{ meName }}</span>
+          <span class="collab-self__tag">Ma demande</span>
+        </div>
+      } @else {
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Collaborateur</mat-label>
+          <mat-select formControlName="userId">
+            @for (c of collaborateurs(); track c.id) {
+              <mat-option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
 
       <span class="drawer__section">Type &amp; période</span>
       <mat-form-field appearance="outline" class="full">
@@ -233,8 +247,9 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
         <mat-form-field appearance="outline"><mat-label>Date de fin</mat-label><input matInput type="date" formControlName="dateFin" /></mat-form-field>
       </div>
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Nombre de jours</mat-label>
+        <mat-label>Nombre de jours ouvrés</mat-label>
         <input matInput type="number" min="0.5" step="0.5" formControlName="nombreJours" />
+        <mat-hint>Calculé automatiquement — modifiable si besoin</mat-hint>
       </mat-form-field>
 
       <span class="drawer__section">Informations complémentaires</span>
@@ -340,6 +355,7 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
     .statut-badge--annulee     { background: #f1f5f9; color: #64748b; }
     .btn-approve { color: #16a34a !important; &:hover { background: #f0fdf4 !important; } }
     .btn-refuse  { color: #dc2626 !important; &:hover { background: #fef2f2 !important; } }
+    .btn-cancel  { color: #9333ea !important; &:hover { background: #faf5ff !important; } }
 
     /* Soldes table */
     .soldes-table { background: #fff; border: 1px solid #e4e8f4; border-radius: 10px; overflow-x: auto; }
@@ -419,6 +435,22 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
 
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .full { width: 100%; }
+    .collab-self {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: #f5f3ff;
+      border: 1px solid #ede9f8; border-radius: 8px; margin-bottom: 4px;
+    }
+    .collab-self .avatar-mini {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #6d28d9, #4c1d95);
+      color: #fff; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .collab-self__name { font-size: 13px; font-weight: 600; color: #1e1b4b; flex: 1; }
+    .collab-self__tag {
+      font-size: 10px; font-weight: 700; color: #6d28d9;
+      background: #ede9f8; border-radius: 10px; padding: 2px 8px;
+    }
   `],
 })
 export class CongesAbsencesComponent implements OnInit {
@@ -426,6 +458,7 @@ export class CongesAbsencesComponent implements OnInit {
   private sSvc   = inject(SalariesService);
   private snack  = inject(MatSnackBar);
   private fb     = inject(FormBuilder);
+  private auth   = inject(AuthService);
   tenantSvc      = inject(TenantService);
 
   annee          = signal(new Date().getFullYear());
@@ -488,19 +521,67 @@ export class CongesAbsencesComponent implements OnInit {
     return this.allSoldes().filter(r => !q || r.name.toLowerCase().includes(q));
   });
 
-  ngOnInit() { this.load(); }
+  get isCollab(): boolean { return this.auth.isCollaborateur(); }
+  get meId(): number | null { return this.auth.currentUser()?.id ?? null; }
+  get meName(): string {
+    const u = this.auth.currentUser();
+    return u ? `${u.firstName} ${u.lastName}` : '';
+  }
+
+  ngOnInit() {
+    this.load();
+    this.newForm.get('dateDebut')!.valueChanges.subscribe(() => this.autoCalcJours());
+    this.newForm.get('dateFin')!.valueChanges.subscribe(() => this.autoCalcJours());
+  }
+
+  private autoCalcJours() {
+    const debut = this.newForm.get('dateDebut')!.value;
+    const fin   = this.newForm.get('dateFin')!.value;
+    if (!debut || !fin) return;
+    const d = new Date(debut);
+    const f = new Date(fin);
+    if (isNaN(d.getTime()) || isNaN(f.getTime()) || f < d) return;
+    let jours = 0;
+    const cur = new Date(d);
+    while (cur <= f) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) jours++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    this.newForm.patchValue({ nombreJours: jours || 1 }, { emitEvent: false });
+  }
 
   load() {
     this.loading.set(true);
-    this.cSvc.findAll({ annee: this.annee() }).subscribe({
+    const demandes$ = this.isCollab
+      ? this.cSvc.mesDemandes(this.annee())
+      : this.cSvc.findAll({ annee: this.annee() });
+    demandes$.subscribe({
       next: d => { this.demandes.set(d); this.loading.set(false); },
       error: () => this.loading.set(false),
     });
     this.cSvc.getStats(this.annee()).subscribe(s => this.stats.set(s));
-    this.sSvc.list().subscribe(c => {
-      this.collaborateurs.set(c);
-      this.loadAllSoldes(c);
-    });
+    if (this.isCollab) {
+      // Un collab ne voit que ses propres soldes
+      const meId = this.meId!;
+      const me = this.auth.currentUser()!;
+      this.collaborateurs.set([{ id: meId, firstName: me.firstName, lastName: me.lastName } as any]);
+      this.cSvc.mesSoldes(this.annee()).subscribe({
+        next: soldes => {
+          const map: Record<string, number> = {};
+          soldes.filter(s => s.joursAcquis > 0).forEach(s => { map[s.typeConge] = s.solde; });
+          this.allSoldes.set([{ userId: meId, name: `${me.firstName} ${me.lastName}`, initials: (me.firstName[0]??'')+(me.lastName[0]??''), soldes: map }]);
+          this.loadingSoldes.set(false);
+        },
+        error: () => this.loadingSoldes.set(false),
+      });
+      this.newForm.patchValue({ userId: meId });
+    } else {
+      this.sSvc.list().subscribe(c => {
+        this.collaborateurs.set(c);
+        this.loadAllSoldes(c);
+      });
+    }
   }
 
   private loadAllSoldes(collabs: Collaborateur[]) {
@@ -531,6 +612,13 @@ export class CongesAbsencesComponent implements OnInit {
   }
 
   openRefus(d: CongeAbsence) { this.refusDemande.set(d); this.refusCommentaire = ''; this.refusVisible.set(true); }
+
+  annulerDemande(d: CongeAbsence) {
+    this.cSvc.annuler(d.id).subscribe({
+      next: () => { this.snack.open('Demande annulée', undefined, { duration: 2000 }); this.load(); },
+      error: (e) => this.snack.open(e?.error?.message ?? 'Erreur', undefined, { duration: 3000 }),
+    });
+  }
 
   confirmerRefus() {
     const d = this.refusDemande(); if (!d) return;

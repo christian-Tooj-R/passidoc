@@ -80,7 +80,8 @@ export class TasksService {
         userId: currentUser.id,
       });
     } else {
-      qb.andWhere('(client.responsableId = :userId OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', { userId: currentUser.id });
+      // COLLABORATEUR voit toutes les tâches du tenant (filtre "Mes tâches" géré côté frontend)
+      if (currentUser.tenantId) qb.andWhere('task.tenantId = :tenantId', { tenantId: currentUser.tenantId });
     }
 
     return qb.getMany();

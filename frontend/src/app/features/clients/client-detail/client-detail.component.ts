@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -416,21 +416,29 @@ interface TabGroup {
               </div>
             </div>
 
+            <!-- Bannière lecture seule -->
+            @if (!canEdit()) {
+              <div class="readonly-banner">
+                <mat-icon>lock_outline</mat-icon>
+                <span>Dossier en lecture seule — vous n'êtes pas assigné à ce dossier</span>
+              </div>
+            }
+
             <!-- Animated content body -->
             <div class="content__body" [@tabFade]="activeTab()">
               @switch (activeTab()) {
-                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
-                @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" /> }
-                @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" /> }
-                @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" /> }
-                @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('missions')     { <app-missions-tab            [clientId]="client.id" /> }
-                @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" /> }
-                @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" /> }
+                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
+                @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" [readonly]="!canEdit()" /> }
+                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" /> }
+                @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit()" /> }
+                @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit()" /> }
+                @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit()" /> }
+                @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit()" /> }
+                @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit()" /> }
                 @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
               }
             </div>
@@ -1009,6 +1017,13 @@ interface TabGroup {
       &:hover { background: #FFEBEE; border-color: #F44336; }
       &:disabled { opacity: .5; cursor: not-allowed; }
     }
+    .readonly-banner {
+      display: flex; align-items: center; gap: 8px;
+      background: #FEF3C7; color: #92400E;
+      border-left: 4px solid #F59E0B;
+      padding: 10px 20px; font-size: 13px; font-weight: 500;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
   `],
 })
 export class ClientDetailComponent implements OnInit {
@@ -1066,6 +1081,14 @@ export class ClientDetailComponent implements OnInit {
   auth             = inject(AuthService);
   tenantSvc        = inject(TenantService);
   private users    = inject(UsersService);
+
+  canEdit = computed(() => {
+    if (this.auth.isAdmin() || this.auth.isExpert()) return true;
+    const meId = this.auth.currentUser()?.id;
+    const c = this.client;
+    if (!meId || !c) return false;
+    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
+  });
 
   allUsers           = signal<User[]>([]);
   editIntervenants   = signal(false);

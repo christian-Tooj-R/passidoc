@@ -14,6 +14,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FicheIdentiteService } from '../../../../../core/services/fiche-identite.service';
 import { FiscalReferenceService, FiscalRef } from '../../../../../core/services/fiscal-reference.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
+import { PappersService } from '../../../../../core/services/pappers.service';
 import { ClientSite, TypeFlux } from '../../../../../core/models/client.model';
 import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { TenantService } from '../../../../../core/services/tenant.service';
@@ -67,11 +68,18 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Forme juridique</mat-label>
-                <input matInput formControlName="formeJuridique" />
+                <input matInput formControlName="formeJuridique" [readonly]="true" />
+                @if (sirenLoading()) {
+                  <mat-icon matSuffix class="siren-loading-icon">sync</mat-icon>
+                }
+                <mat-hint>Récupéré automatiquement via le SIREN</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>SIREN</mat-label>
-                <input matInput formControlName="siren" />
+                <input matInput formControlName="siren" (blur)="onSirenBlur()" />
+                @if (sirenLoading()) {
+                  <mat-icon matSuffix class="siren-loading-icon">sync</mat-icon>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>SIRET</mat-label>
@@ -230,7 +238,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                 <p style="color:#94a3b8;font-size:13px;padding:8px 0 0">Aucun actionnaire enregistré.</p>
               }
 
-              @if (actionnaires.length < 5) {
+              @if (actionnaires.length < 5 && !readonly) {
                 <button type="button" class="act-add-btn" (click)="addActionnaire()">
                   <mat-icon>add</mat-icon> Ajouter un actionnaire
                 </button>
@@ -407,9 +415,11 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             <div class="orgchart-section">
               <div class="orgchart-header">
                 <p class="section-hint">Représentez la hiérarchie. Cliquez sur un nœud pour le modifier.</p>
-                <button mat-stroked-button (click)="addRootNode()" type="button">
-                  <mat-icon>add</mat-icon> Ajouter une racine
-                </button>
+                @if (!readonly) {
+                  <button mat-stroked-button (click)="addRootNode()" type="button">
+                    <mat-icon>add</mat-icon> Ajouter une racine
+                  </button>
+                }
               </div>
               @if (orgRoots().length) {
                 <div class="orgchart">
@@ -449,10 +459,12 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                     <span class="org-node__nom">{{ node.nom || 'Nom' }}</span>
                     <span class="org-node__poste">{{ node.poste || 'Poste' }}</span>
                   </div>
-                  <div class="org-node__actions">
-                    <button type="button" class="org-btn" title="Ajouter un subordonné" (click)="addChild(node, $event)"><mat-icon>add</mat-icon></button>
-                    <button type="button" class="org-btn org-btn--del" title="Supprimer" (click)="removeNode(node, $event)"><mat-icon>delete_outline</mat-icon></button>
-                  </div>
+                  @if (!readonly) {
+                    <div class="org-node__actions">
+                      <button type="button" class="org-btn" title="Ajouter un subordonné" (click)="addChild(node, $event)"><mat-icon>add</mat-icon></button>
+                      <button type="button" class="org-btn org-btn--del" title="Supprimer" (click)="removeNode(node, $event)"><mat-icon>delete_outline</mat-icon></button>
+                    </div>
+                  }
                 }
               </div>
               @if (node.children?.length) {
@@ -537,11 +549,13 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
 
         </mat-accordion>
 
-        <div class="tab-content__actions">
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving">
-            <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
-          </button>
-        </div>
+        @if (!readonly) {
+          <div class="tab-content__actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="saving">
+              <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        }
       </form>
     </div>
   `,
@@ -563,6 +577,9 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .icon-success { color: #16a34a; font-size: 18px; width: 18px; height: 18px; }
     .icon-warn    { color: #d97706; font-size: 18px; width: 18px; height: 18px; }
     .icon-info    { color: #2563eb; font-size: 18px; width: 18px; height: 18px; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .siren-loading-icon { animation: spin 1s linear infinite; color: #6366f1; font-size: 18px; }
 
     .flux-hint { font-size: 12px; color: #94a3b8; margin: 0 0 14px; padding: 16px 0 0; }
     .flux-types-grid {
@@ -799,6 +816,7 @@ export class FicheIdentiteTabComponent implements OnInit {
 
   @Input() clientId!: number;
   @Input() site: ClientSite = 'REUNION';
+  @Input() readonly = false;
   @Output() typesChanged = new EventEmitter<TypeFlux[]>();
 
   @Input() set typesFluxActifs(val: TypeFlux[] | undefined) {
@@ -920,10 +938,38 @@ export class FicheIdentiteTabComponent implements OnInit {
     return this.reseauxSociaux.at(index).get(field) as FormControl;
   }
 
+  sirenLoading = signal(false);
+
   constructor(
     private service: FicheIdentiteService,
     private clientsService: ClientsService,
+    private pappersService: PappersService,
   ) {}
+
+  onSirenBlur() {
+    const siren = (this.form.get('siren')?.value ?? '').trim().replace(/\s/g, '');
+    if (siren.length !== 9) return;
+    this.sirenLoading.set(true);
+    this.pappersService.getBySiren(siren).subscribe({
+      next: (result) => {
+        this.sirenLoading.set(false);
+        if (!result) return;
+        if (result.formeJuridique) {
+          this.form.get('formeJuridique')?.setValue(result.formeJuridique);
+        }
+        if (!this.form.get('raisonSociale')?.value && result.nomEntreprise) {
+          this.form.get('raisonSociale')?.setValue(result.nomEntreprise);
+        }
+        if (!this.form.get('adresse')?.value && result.adresse) {
+          this.form.get('adresse')?.setValue(result.adresse);
+        }
+        if (!this.form.get('siret')?.value && result.siret) {
+          this.form.get('siret')?.setValue(result.siret);
+        }
+      },
+      error: () => this.sirenLoading.set(false),
+    });
+  }
 
   // ── Organigramme ──────────────────────────────────────────
   orgRoots      = signal<OrgNode[]>([]);

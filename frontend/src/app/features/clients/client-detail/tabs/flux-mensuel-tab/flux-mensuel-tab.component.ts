@@ -158,9 +158,10 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
                       @let flux = getCell(type.key, mois);
                       <button class="cell-btn"
                               [class]="cellClass(flux, mois)"
-                              [matMenuTriggerFor]="cellMenu"
+                              [matMenuTriggerFor]="readonly ? null : cellMenu"
                               [matMenuTriggerData]="{ flux: flux, type: type.key, mois: mois }"
                               [matTooltip]="cellTooltip(flux, mois)"
+                              [disabled]="readonly"
                               matTooltipPosition="above">
                         <mat-icon class="cell-icon">{{ cellIcon(flux) }}</mat-icon>
                         @if (flux?.dateDepot) {
@@ -226,11 +227,13 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
           </div>
         </div>
         <div class="balance-actions">
-          <label class="fec-upload-btn" [class.fec-upload-btn--loading]="fecImporting()">
-            <mat-icon>upload_file</mat-icon>
-            {{ fecImporting() ? 'Import…' : 'Importer FEC' }}
-            <input type="file" accept=".txt,.csv,.fec" (change)="onFecUpload($event)" [disabled]="fecImporting()" hidden>
-          </label>
+          @if (!readonly) {
+            <label class="fec-upload-btn" [class.fec-upload-btn--loading]="fecImporting()">
+              <mat-icon>upload_file</mat-icon>
+              {{ fecImporting() ? 'Import…' : 'Importer FEC' }}
+              <input type="file" accept=".txt,.csv,.fec" (change)="onFecUpload($event)" [disabled]="fecImporting()" hidden>
+            </label>
+          }
           @if (balanceData().some(m => m.nbFournisseursAttendu > 0 || m.nbClientsAttendu > 0 || m.nbAttentesAttendu > 0)) {
             <button class="ia-btn" (click)="analyserBalance()" [disabled]="iaLoading()">
               <mat-icon>auto_awesome</mat-icon>
@@ -764,6 +767,7 @@ export class FluxMensuelTabComponent implements OnInit {
   private clientsSvc  = inject(ClientsService);
 
   @Input() clientId!: number;
+  @Input() readonly = false;
 
   private _typesFluxActifsRaw?: string[];
   private _customFluxTypesRaw: { key: string; label: string }[] = [];

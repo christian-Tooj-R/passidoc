@@ -57,16 +57,18 @@ import {
             }
           </div>
           <div class="mode-bar__right">
-            @if (!editMode()) {
-              <button mat-stroked-button class="btn-edit" (click)="editMode.set(true)">
-                <mat-icon>edit</mat-icon> Modifier
-              </button>
-            } @else {
-              <button mat-stroked-button class="btn-cancel" (click)="cancelEdit()">Annuler</button>
-              <button mat-flat-button class="btn-save" [disabled]="saving()" (click)="save()">
-                @if (saving()) { <mat-spinner diameter="14"></mat-spinner> } @else { <mat-icon>save</mat-icon> }
-                Enregistrer
-              </button>
+            @if (!readonly) {
+              @if (!editMode()) {
+                <button mat-stroked-button class="btn-edit" (click)="editMode.set(true)">
+                  <mat-icon>edit</mat-icon> Modifier
+                </button>
+              } @else {
+                <button mat-stroked-button class="btn-cancel" (click)="cancelEdit()">Annuler</button>
+                <button mat-flat-button class="btn-save" [disabled]="saving()" (click)="save()">
+                  @if (saving()) { <mat-spinner diameter="14"></mat-spinner> } @else { <mat-icon>save</mat-icon> }
+                  Enregistrer
+                </button>
+              }
             }
           </div>
         </div>
@@ -442,6 +444,7 @@ import {
 export class AdnTabComponent implements OnInit {
   @Input({ required: true }) clientId!: number;
   @Input() secteurInitial?: SecteurActivite;
+  @Input() readonly = false;
 
   loading = signal(true);
   saving  = signal(false);

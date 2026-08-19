@@ -1265,6 +1265,10 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadComments();
     if (this.task.statut === 'EN_COURS') {
+      // Si debutEnCours absent (données migrées ou seed direct), ancrer à maintenant
+      if (!this.task.debutEnCours) {
+        this.task.debutEnCours = new Date().toISOString();
+      }
       this.refreshTimer();
       this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
     }
@@ -1285,12 +1289,17 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   onStatutChange(statut: TaskStatut) {
     this.currentStatut = statut;
     if (statut === 'EN_COURS' && !this.timerInterval) {
+      // Ancrer le départ local si le backend n'a pas encore mis à jour debutEnCours
+      if (!this.task.debutEnCours) {
+        this.task.debutEnCours = new Date().toISOString();
+      }
       this.refreshTimer();
       this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
     } else if (statut !== 'EN_COURS' && this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = undefined;
       this.liveTimerDisplay = '';
+      this.task.debutEnCours = undefined;
     }
   }
 

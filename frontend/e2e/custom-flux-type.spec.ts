@@ -154,7 +154,7 @@ test.describe('Documents mensuels — type personnalisé', () => {
     await expect(page.getByText('Doc via Entrée')).toBeVisible({ timeout: 5000 });
   });
 
-  test('un document existant peut être supprimé avec ×', async ({ page }) => {
+  test('un document personnalisé existant peut être supprimé via son checkbox', async ({ page }) => {
     const clientWithCustom = {
       ...FAKE_CLIENT,
       customFluxTypes: [{ key: 'CUSTOM_TEST_1', label: 'Doc à supprimer' }],
@@ -162,7 +162,10 @@ test.describe('Documents mensuels — type personnalisé', () => {
     await gotoClient(page, clientWithCustom);
 
     await expect(page.getByText('Doc à supprimer')).toBeVisible({ timeout: 5000 });
-    await page.locator('button.custom-del-btn').first().click();
+    // Le checkbox est toujours coché → cliquer dessus déclenche removeCustomFluxType
+    const customItem = page.locator('.flux-type-item', { hasText: 'Doc à supprimer' });
+    const checkbox = customItem.locator('mat-checkbox');
+    await checkbox.click();
     await expect(page.getByText('Doc à supprimer')).not.toBeVisible({ timeout: 3000 });
   });
 });

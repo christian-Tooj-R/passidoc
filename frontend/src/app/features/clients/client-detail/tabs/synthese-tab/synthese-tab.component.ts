@@ -28,9 +28,11 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
     <div class="tab-content">
       <div class="tab-header">
         <h3>Analyse Financière & Clôture</h3>
-        <button mat-stroked-button color="primary" (click)="showForm = !showForm">
-          <mat-icon>add</mat-icon> Nouvel exercice
-        </button>
+        @if (!readonly) {
+          <button mat-stroked-button color="primary" (click)="showForm = !showForm">
+            <mat-icon>add</mat-icon> Nouvel exercice
+          </button>
+        }
       </div>
 
       @if (showForm) {
@@ -180,7 +182,9 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
           </mat-accordion>
 
           <div class="form-actions">
-            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Enregistrer</button>
+            @if (!readonly) {
+              <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Enregistrer</button>
+            }
             <button mat-button type="button" (click)="resetForm()">Annuler</button>
           </div>
         </form>
@@ -225,9 +229,11 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
                 </div>
               }
             </div>
-            <mat-action-row>
-              <button mat-icon-button color="warn" (click)="delete(s)"><mat-icon>delete</mat-icon></button>
-            </mat-action-row>
+            @if (!readonly) {
+              <mat-action-row>
+                <button mat-icon-button color="warn" (click)="delete(s)"><mat-icon>delete</mat-icon></button>
+              </mat-action-row>
+            }
           </mat-expansion-panel>
         }
       </div>
@@ -266,6 +272,7 @@ export class SyntheseTabComponent implements OnInit {
 
   @Input() clientId!: number;
   @Input() site: ClientSite = 'REUNION';
+  @Input() readonly = false;
 
   syntheses: SyntheseCloture[] = [];
   showForm = false;

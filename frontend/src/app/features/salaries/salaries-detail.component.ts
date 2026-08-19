@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
+import { AuthService } from '../../core/services/auth.service';
 import { CongesAbsencesService, SoldeConge, TYPE_CONGE_LABELS, TYPE_CONGE_COLORS } from '../../core/services/conges-absences.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { SalariesCongesComponent } from './salaries-conges.component';
@@ -81,16 +82,18 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
 
     <!-- Actions -->
     <div class="emp-header__actions">
-      <button mat-stroked-button class="btn-edit" (click)="openEdit()">
-        <mat-icon>edit</mat-icon> Modifier
-      </button>
+      @if (canEditCollab()) {
+        <button mat-stroked-button class="btn-edit" (click)="openEdit()">
+          <mat-icon>edit</mat-icon> Modifier
+        </button>
+      }
       <button mat-icon-button [matMenuTriggerFor]="moreMenu" matTooltip="Plus d'actions">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">
-        @if (!collab()!.dateSortie) {
+        @if (canEditCollab() && !collab()!.dateSortie) {
           <button mat-menu-item (click)="archiver()"><mat-icon>person_off</mat-icon><span>Marquer comme ancien</span></button>
-        } @else {
+        } @else if (canEditCollab() && collab()!.dateSortie) {
           <button mat-menu-item (click)="reactiver()"><mat-icon>person</mat-icon><span>Réactiver</span></button>
         }
         <button mat-menu-item (click)="router.navigate(['/rh/salaries'])"><mat-icon>arrow_back</mat-icon><span>Retour liste</span></button>
@@ -711,6 +714,7 @@ export class SalariesDetailComponent implements OnInit {
   private cSvc   = inject(CongesAbsencesService);
   private snack  = inject(MatSnackBar);
   private fb     = inject(FormBuilder);
+  private auth   = inject(AuthService);
   router         = inject(Router);
 
   tenantSvc    = inject(TenantService);
@@ -772,6 +776,11 @@ export class SalariesDetailComponent implements OnInit {
 
   sectionLabel() {
     return { profil: 'Fiche salarié', conges: 'Congés & Absences', documents: 'Documents' }[this.section()];
+  }
+
+  canEditCollab(): boolean {
+    if (this.auth.isAdmin() || this.auth.isExpert() || this.auth.isChefAntenne() || this.auth.isChefMission()) return true;
+    return this.auth.currentUser()?.id === this.collab()?.id;
   }
 
   ngOnInit() {

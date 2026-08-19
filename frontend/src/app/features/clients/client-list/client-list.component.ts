@@ -40,7 +40,7 @@ type ViewMode = 'grid' | 'list';
         <div class="breadcrumb">
           <mat-icon class="bc-home">folder_shared</mat-icon>
           <mat-icon class="bc-sep">chevron_right</mat-icon>
-          <span class="bc-current">{{ auth.isAdmin() ? 'Tous les dossiers' : 'Mes dossiers' }}</span>
+          <span class="bc-current">Tous les dossiers</span>
           @if (siteFilter()) {
             <mat-icon class="bc-sep">chevron_right</mat-icon>
             <span class="bc-current">{{ siteFilter() === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
@@ -224,6 +224,11 @@ type ViewMode = 'grid' | 'list';
                   <div class="folder-cover__bar" [style.background]="getSectorConfig(c.secteurActivite).accent"></div>
                   <span class="folder-cover__emoji">{{ getSectorConfig(c.secteurActivite).emoji }}</span>
                   <span [class]="statusDotClass(score(c))" [matTooltip]="getStatusLabel(score(c))"></span>
+                  @if (!canEdit(c)) {
+                    <span class="folder-readonly-badge" matTooltip="Lecture seule — vous n'êtes pas assigné à ce dossier">
+                      <mat-icon>lock_outline</mat-icon>
+                    </span>
+                  }
                   @if (auth.isAdmin() && confirmDeleteId() !== c.id) {
                     <button class="folder-del-btn" matTooltip="Supprimer le dossier"
                             (click)="initDelete(c.id, $event)">
@@ -338,6 +343,9 @@ type ViewMode = 'grid' | 'list';
                   </mat-icon>
                 </div>
                 <span class="lr-label">{{ c.nom }}</span>
+                @if (!canEdit(c)) {
+                  <mat-icon class="lr-lock" matTooltip="Lecture seule — vous n'êtes pas assigné à ce dossier">lock_outline</mat-icon>
+                }
               </div>
 
               <!-- Site -->
@@ -704,6 +712,14 @@ type ViewMode = 'grid' | 'list';
     .fd--high { background: #4CAF50; }
     .fd--mid  { background: #F59E0B; }
     .fd--low  { background: #EF4444; }
+    /* Badge lecture seule (cadenas) */
+    .folder-readonly-badge {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px; border-radius: 6px;
+      background: rgba(255,255,255,.75); color: #9CA3AF;
+      display: flex; align-items: center; justify-content: center;
+      mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    }
     /* Bouton supprimer sur la cover */
     .folder-del-btn {
       position: absolute; top: 8px; left: 8px;
@@ -786,6 +802,7 @@ type ViewMode = 'grid' | 'list';
     .lr-icon::before { display: none; }
 
     .lr-label { font-size: 14px; font-weight: 600; color: #1A1C1E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lr-lock { font-size: 14px; width: 14px; height: 14px; color: #9CA3AF; flex-shrink: 0; }
 
     .lr-site { font-size: 12.5px; font-weight: 500; }
     .site--re { color: #006B57; }
@@ -988,6 +1005,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
       next: data => { this.clients.set(data); this.loading.set(false); },
       error: ()   => this.loading.set(false),
     });
+  }
+
+  canEdit(c: Client): boolean {
+    if (this.auth.isAdmin() || this.auth.isExpert()) return true;
+    const meId = this.auth.currentUser()?.id;
+    if (!meId) return false;
+    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
   }
 
   initDelete(id: number, e: Event) {

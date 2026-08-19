@@ -492,7 +492,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
-    else if (url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
+    else if (url.startsWith('/rh') || url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
     // /personnalisation : page utilitaire — on conserve le module actif courant (panel reste visible)
     else if (url.startsWith('/personnalisation'))                                   this.activeModule.set(null);
     else                                                                           this.activeModule.set(null);
@@ -563,7 +563,7 @@ export class SidebarComponent implements OnInit {
       },
       {
         id: 'rh' as ModuleId, icon: 'manage_accounts', label: 'RH', color: '#7C3AED', activeBg: '#EDE9FE', groups: [{ label: '', items: [
-            ...(this.canSeeMenu('salaries') || this.canSeeMenu('conges') ? [{
+            ...(this.canSeeMenu('rh') ? [{
               label: 'Ressources Humaines',
               route: '/rh',
               icon: 'manage_accounts',
