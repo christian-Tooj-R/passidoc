@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -768,6 +768,7 @@ export class FluxMensuelTabComponent implements OnInit {
 
   @Input() clientId!: number;
   @Input() readonly = false;
+  @Output() fluxChanged = new EventEmitter<number>();
 
   private _typesFluxActifsRaw?: string[];
   private _customFluxTypesRaw: { key: string; label: string }[] = [];
@@ -778,7 +779,9 @@ export class FluxMensuelTabComponent implements OnInit {
   }
 
   @Input() set customFluxTypes(val: { key: string; label: string }[] | null | undefined) {
-    this._customFluxTypesRaw = val ?? [];
+    this._customFluxTypesRaw = (val ?? []).filter(
+      (t): t is { key: string; label: string } => !!t && typeof t === 'object' && 'key' in t && 'label' in t,
+    );
     this.rebuildActiveTypes();
   }
 
@@ -810,12 +813,15 @@ export class FluxMensuelTabComponent implements OnInit {
   analyseIA    = signal<string | null>(null);
 
   ngOnInit() {
-    this.load();
+    this.load(true);
     this.loadBalance(true);
   }
 
-  load() {
-    this.service.getAll(this.clientId, this.annee()).subscribe(d => this.fluxList = d);
+  load(emitCompletude = false) {
+    this.service.getAll(this.clientId, this.annee()).subscribe(d => {
+      this.fluxList = d;
+      if (emitCompletude) this.fluxChanged.emit(this.completionRate());
+    });
   }
 
   changeYear(delta: number) {
@@ -886,12 +892,12 @@ export class FluxMensuelTabComponent implements OnInit {
     if (flux) {
       if (flux.statut === statut) return;
       this.service.update(this.clientId, flux.id, { statut }).subscribe(() => {
-        this.load();
+        this.load(true);
         this.toast.success('Statut mis à jour');
       });
     } else {
       this.service.create(this.clientId, { type, mois, annee: this.annee(), statut }).subscribe(() => {
-        this.load();
+        this.load(true);
         this.toast.success('Flux enregistré');
       });
     }
@@ -925,19 +931,9 @@ export class FluxMensuelTabComponent implements OnInit {
   }
 
   completionRate(): number {
-    let total = 0;
-    let deposited = 0;
-    const maxMois = this.annee() < this.currentYear ? 12 : this.currentMonth;
-    for (const t of this.activeTypes) {
-      for (let m = 1; m <= maxMois; m++) {
-        if (!this.isCellApplicable(t.periodicite, m)) continue;
-        total++;
-        const flux = this.getCell(t.key, m);
-        if (flux?.statut === 'DEPOSE') deposited++;
-      }
-    }
-    if (total === 0) return 0;
-    return Math.round((deposited / total) * 100);
+    if (this.activeTypes.length === 0) return 0;
+    const sum = this.activeTypes.reduce((acc, t) => acc + this.rowProgress(t.key), 0);
+    return Math.round(sum / this.activeTypes.length);
   }
 
   rowProgress(typeKey: string): number {

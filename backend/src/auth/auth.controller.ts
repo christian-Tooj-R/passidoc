@@ -22,12 +22,11 @@ export class AuthController {
   @Post('register')
   @HttpCode(201)
   @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @ApiOperation({ summary: 'Créer un compte (auto-inscription, tenant requis)' })
+  @ApiOperation({ summary: 'Créer un compte (auto-inscription, tenant requis) — envoie un code de vérification par email' })
   async register(
     @Req() req: any,
-    @Body() dto: { firstName: string; lastName: string; email: string; password: string; site: string },
+    @Body() dto: { firstName: string; lastName: string; email: string; password: string; site: string; telephone?: string; poste?: string },
   ) {
-    // L'inscription est liée à un tenant — refusée sans contexte tenant valide
     if (!req.tenant?.id) throw new ForbiddenException('Inscription impossible sans contexte tenant');
     const exists = await this.userRepo.findOne({ where: { email: dto.email } });
     if (exists) throw new ConflictException('Cet email est déjà utilisé');
@@ -36,11 +35,24 @@ export class AuthController {
       firstName: dto.firstName, lastName: dto.lastName,
       email: dto.email, password: hashed,
       site: dto.site as any, role: 'COLLABORATEUR' as any,
-      isActive: true, tenantId: req.tenant.id,
+      isActive: false, tenantId: req.tenant.id,
+      ...(dto.telephone ? { telephone: dto.telephone } : {}),
+      ...(dto.poste     ? { poste:     dto.poste     } : {}),
     });
-    const saved = await this.userRepo.save(user);
-    const { password, twoFactorSecret, ...safe } = saved as any;
-    return safe;
+    await this.userRepo.save(user);
+    await this.authService.sendEmailVerification(dto.email, req.tenant.id, dto.firstName);
+    return { message: 'Code de vérification envoyé', email: dto.email };
+  }
+
+  @Post('verify-email')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ApiOperation({ summary: 'Active le compte avec le code reçu par email' })
+  verifyEmail(
+    @Body() body: { email: string; code: string },
+    @Req() req: any,
+  ) {
+    return this.authService.verifyEmail(body.email, body.code, req.tenant?.id);
   }
 
   @Post('login')
@@ -73,6 +85,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Activer le 2FA après scan du QR code' })
   enable2fa(@CurrentUser() user: User, @Body() dto: Verify2faDto) {
     return this.authService.enable2FA(user.id, dto.token);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @ApiOperation({ summary: 'Renvoie le code de vérification email pour un compte en attente' })
+  resendVerification(@Body() body: { email: string }, @Req() req: any) {
+    return this.authService.resendEmailVerification(body.email, req.tenant?.id);
   }
 
   @Post('forgot-password')

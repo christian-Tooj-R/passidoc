@@ -24,8 +24,16 @@ export class AuthService {
     }
   }
 
-  register(dto: { firstName: string; lastName: string; email: string; password: string; site: string }) {
-    return this.http.post<any>(`${this.api}/register`, dto);
+  register(dto: { firstName: string; lastName: string; email: string; password: string; site: string; telephone?: string; poste?: string }) {
+    return this.http.post<{ message: string; email: string }>(`${this.api}/register`, dto);
+  }
+
+  verifyEmail(email: string, code: string) {
+    return this.http.post<{ message: string }>(`${this.api}/verify-email`, { email, code });
+  }
+
+  resendVerification(email: string) {
+    return this.http.post<{ message: string }>(`${this.api}/resend-verification`, { email });
   }
 
   login(email: string, password: string) {

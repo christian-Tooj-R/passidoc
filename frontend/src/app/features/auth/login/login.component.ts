@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,11 +11,17 @@ import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
 
+function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
+  const pw  = control.get('password')?.value;
+  const cpw = control.get('confirmPassword')?.value;
+  return pw && cpw && pw !== cpw ? { passwordMismatch: true } : null;
+}
+
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule, FormsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatProgressSpinnerModule,
   ],
@@ -41,16 +47,18 @@ import { TenantService } from '../../../core/services/tenant.service';
         <div class="login-form-wrap">
 
           <!-- Onglets -->
-          <div class="mode-tabs">
-            <button class="mode-tab" [class.mode-tab--active]="mode() === 'login'"
-                    (click)="switchMode('login')">
-              <mat-icon>login</mat-icon> Connexion
-            </button>
-            <button class="mode-tab" [class.mode-tab--active]="mode() === 'register'"
-                    (click)="switchMode('register')">
-              <mat-icon>person_add</mat-icon> Créer un compte
-            </button>
-          </div>
+          @if (mode() !== 'verify-email') {
+            <div class="mode-tabs">
+              <button class="mode-tab" [class.mode-tab--active]="mode() === 'login'"
+                      (click)="switchMode('login')">
+                <mat-icon>login</mat-icon> Connexion
+              </button>
+              <button class="mode-tab" [class.mode-tab--active]="mode() === 'register'"
+                      (click)="switchMode('register')">
+                <mat-icon>person_add</mat-icon> Créer un compte
+              </button>
+            </div>
+          }
 
           <!-- ── Connexion ── -->
           @if (mode() === 'login') {
@@ -106,48 +114,35 @@ import { TenantService } from '../../../core/services/tenant.service';
               <h2>Créer un compte</h2>
               <p>Renseignez vos informations pour créer votre accès collaborateur</p>
             </div>
-
-            @if (registerSuccess()) {
-              <div class="alert alert--success">
-                <mat-icon>check_circle</mat-icon>
-                <div>
-                  <strong>Compte créé avec succès !</strong>
-                  <span>Vous pouvez maintenant vous connecter.</span>
-                </div>
-              </div>
-              <button mat-flat-button color="primary" class="submit-btn"
-                      (click)="switchMode('login')">
-                <mat-icon>login</mat-icon><span>Se connecter</span>
-              </button>
-            } @else {
-              <form [formGroup]="registerForm" (ngSubmit)="submitRegister()">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Prénom</label>
-                    <mat-form-field appearance="outline" class="full-width">
-                      <input matInput formControlName="firstName" placeholder="Jean" />
-                    </mat-form-field>
-                  </div>
-                  <div class="form-group">
-                    <label>Nom</label>
-                    <mat-form-field appearance="outline" class="full-width">
-                      <input matInput formControlName="lastName" placeholder="Dupont" />
-                    </mat-form-field>
-                  </div>
-                </div>
+            <form [formGroup]="registerForm" (ngSubmit)="submitRegister()">
+              <div class="form-row">
                 <div class="form-group">
-                  <label>Adresse email</label>
+                  <label>Prénom <span class="req">*</span></label>
                   <mat-form-field appearance="outline" class="full-width">
-                    <input matInput type="email" formControlName="email"
-                           autocomplete="email" placeholder="vous@afym.re" />
-                    <mat-icon matPrefix class="field-icon">alternate_email</mat-icon>
-                    @if (registerForm.get('email')?.touched && registerForm.get('email')?.hasError('email')) {
-                      <mat-error>Email invalide</mat-error>
-                    }
+                    <input matInput formControlName="firstName" placeholder="Jean" />
                   </mat-form-field>
                 </div>
                 <div class="form-group">
-                  <label>Mot de passe</label>
+                  <label>Nom <span class="req">*</span></label>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input matInput formControlName="lastName" placeholder="Dupont" />
+                  </mat-form-field>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Adresse email <span class="req">*</span></label>
+                <mat-form-field appearance="outline" class="full-width">
+                  <input matInput type="email" formControlName="email"
+                         autocomplete="email" placeholder="vous@afym.re" />
+                  <mat-icon matPrefix class="field-icon">alternate_email</mat-icon>
+                  @if (registerForm.get('email')?.touched && registerForm.get('email')?.hasError('email')) {
+                    <mat-error>Email invalide</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Mot de passe <span class="req">*</span></label>
                   <mat-form-field appearance="outline" class="full-width">
                     <input matInput [type]="hideRegisterPassword ? 'password' : 'text'"
                            formControlName="password" placeholder="••••••••" />
@@ -156,37 +151,103 @@ import { TenantService } from '../../../core/services/tenant.service';
                             (click)="hideRegisterPassword = !hideRegisterPassword" tabindex="-1">
                       <mat-icon>{{ hideRegisterPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
                     </button>
-                    <mat-hint>Minimum 8 caractères</mat-hint>
+                    <mat-hint>Min. 8 caractères</mat-hint>
                   </mat-form-field>
                 </div>
                 <div class="form-group">
-                  <label>Site de rattachement</label>
+                  <label>Confirmer le mot de passe <span class="req">*</span></label>
                   <mat-form-field appearance="outline" class="full-width">
-                    <mat-select formControlName="site">
-                      <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
-                      <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
-                    </mat-select>
+                    <input matInput [type]="hideRegisterPassword ? 'password' : 'text'"
+                           formControlName="confirmPassword" placeholder="••••••••" />
+                    <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+                    @if (registerForm.get('confirmPassword')?.touched && registerForm.hasError('passwordMismatch')) {
+                      <mat-error>Les mots de passe ne correspondent pas</mat-error>
+                    }
                   </mat-form-field>
                 </div>
-                @if (registerError) {
-                  <div class="alert alert--error">
-                    <mat-icon>error_outline</mat-icon><span>{{ registerError }}</span>
-                  </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Téléphone</label>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input matInput formControlName="telephone" placeholder="+262 693 00 00 00" />
+                    <mat-icon matPrefix class="field-icon">phone</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="form-group">
+                  <label>Poste / Fonction</label>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input matInput formControlName="poste" placeholder="Ex : Auditeur junior" />
+                    <mat-icon matPrefix class="field-icon">work_outline</mat-icon>
+                  </mat-form-field>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Site de rattachement <span class="req">*</span></label>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-select formControlName="site">
+                    <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+                    <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              @if (registerError) {
+                <div class="alert alert--error">
+                  <mat-icon>error_outline</mat-icon><span>{{ registerError }}</span>
+                </div>
+              }
+              <button mat-flat-button color="primary" type="submit" class="submit-btn"
+                      [disabled]="registerLoading || registerForm.invalid">
+                @if (registerLoading) {
+                  <mat-spinner diameter="20" /><span>Envoi du code...</span>
+                } @else {
+                  <mat-icon>person_add</mat-icon><span>Créer mon compte</span>
                 }
-                <button mat-flat-button color="primary" type="submit" class="submit-btn"
-                        [disabled]="registerLoading || registerForm.invalid">
-                  @if (registerLoading) {
-                    <mat-spinner diameter="20" /><span>Création...</span>
-                  } @else {
-                    <mat-icon>person_add</mat-icon><span>Créer mon compte</span>
-                  }
-                </button>
-                <p class="register-note">
-                  Votre compte sera créé avec le rôle <strong>Collaborateur</strong>.
-                  Un administrateur pourra ajuster vos accès par la suite.
-                </p>
-              </form>
+              </button>
+              <p class="register-note">
+                Votre compte sera créé avec le rôle <strong>Collaborateur</strong>.
+                Un code de vérification sera envoyé à votre adresse email.
+              </p>
+            </form>
+          }
+
+          <!-- ── Vérification email ── -->
+          @if (mode() === 'verify-email') {
+            <div class="verify-header">
+              <div class="verify-icon"><mat-icon>mark_email_read</mat-icon></div>
+              <h2>Vérifiez votre email</h2>
+              <p>Un code à 6 chiffres a été envoyé à<br><strong>{{ pendingEmail() }}</strong></p>
+            </div>
+            <div class="form-group">
+              <label>Code de vérification</label>
+              <mat-form-field appearance="outline" class="full-width">
+                <input matInput type="text" inputmode="numeric" maxlength="6"
+                       [(ngModel)]="verifyCode"
+                       placeholder="123456"
+                       class="code-input" />
+                <mat-icon matPrefix class="field-icon">pin</mat-icon>
+              </mat-form-field>
+            </div>
+            @if (verifyError) {
+              <div class="alert alert--error">
+                <mat-icon>error_outline</mat-icon><span>{{ verifyError }}</span>
+              </div>
             }
+            <button mat-flat-button color="primary" class="submit-btn"
+                    [disabled]="verifyLoading || verifyCode.length < 6"
+                    (click)="submitVerifyEmail()">
+              @if (verifyLoading) {
+                <mat-spinner diameter="20" /><span>Vérification...</span>
+              } @else {
+                <mat-icon>verified</mat-icon><span>Activer mon compte</span>
+              }
+            </button>
+            <div class="verify-footer">
+              <span>Vous n'avez pas reçu le code ?</span>
+              <button mat-button color="primary" (click)="resendVerificationCode()" [disabled]="resendLoading">
+                {{ resendLoading ? 'Envoi...' : 'Renvoyer' }}
+              </button>
+            </div>
           }
 
         </div>
@@ -303,6 +364,27 @@ import { TenantService } from '../../../core/services/tenant.service';
       strong { color: #64748b; }
     }
 
+    /* ── Champ obligatoire ── */
+    .req { color: #ef4444; margin-left: 2px; }
+
+    /* ── Vérification email ── */
+    .verify-header {
+      text-align: center; margin-bottom: 28px;
+      h2 { font-size: 22px; font-weight: 700; color: #0f172a; margin: 12px 0 6px; }
+      p  { font-size: 14px; color: #64748b; line-height: 1.6; margin: 0; strong { color: #162351; } }
+    }
+    .verify-icon {
+      width: 64px; height: 64px; background: #eff6ff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 4px;
+      mat-icon { font-size: 32px; width: 32px; height: 32px; color: #2563eb; }
+    }
+    .code-input { font-size: 24px !important; font-family: 'Courier New', monospace !important; letter-spacing: 8px; text-align: center; }
+    .verify-footer {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      margin-top: 16px; font-size: 13px; color: #94a3b8;
+      button { font-size: 13px; min-width: unset; padding: 0 4px; }
+    }
+
     @media (max-width: 768px) {
       .login-brand { display: none; }
       .login-form-panel { padding: 24px; }
@@ -315,30 +397,39 @@ export class LoginComponent {
   private router = inject(Router);
   tenantSvc = inject(TenantService);
 
-  mode = signal<'login' | 'register'>('login');
-  registerSuccess = signal(false);
-  year = new Date().getFullYear();
+  mode         = signal<'login' | 'register' | 'verify-email'>('login');
+  pendingEmail = signal('');
+  year         = new Date().getFullYear();
 
   // Connexion
   loginForm = this.fb.group({
     email:    ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
-  hidePassword  = true;
-  loginLoading  = false;
-  loginError    = '';
+  hidePassword = true;
+  loginLoading = false;
+  loginError   = '';
 
   // Inscription
   registerForm = this.fb.group({
-    firstName: ['', Validators.required],
-    lastName:  ['', Validators.required],
-    email:     ['', [Validators.required, Validators.email]],
-    password:  ['', [Validators.required, Validators.minLength(8)]],
-    site:      ['REUNION', Validators.required],
-  });
+    firstName:       ['', Validators.required],
+    lastName:        ['', Validators.required],
+    email:           ['', [Validators.required, Validators.email]],
+    password:        ['', [Validators.required, Validators.minLength(8)]],
+    confirmPassword: ['', Validators.required],
+    telephone:       [''],
+    poste:           [''],
+    site:            ['REUNION', Validators.required],
+  }, { validators: passwordMatchValidator });
   hideRegisterPassword = true;
-  registerLoading = false;
-  registerError   = '';
+  registerLoading      = false;
+  registerError        = '';
+
+  // Vérification email
+  verifyCode    = '';
+  verifyLoading = false;
+  verifyError   = '';
+  resendLoading = false;
 
   goToForgotPassword() {
     this.router.navigate(['/auth/forgot-password']);
@@ -348,7 +439,6 @@ export class LoginComponent {
     this.mode.set(m);
     this.loginError    = '';
     this.registerError = '';
-    this.registerSuccess.set(false);
   }
 
   submitLogin() {
@@ -380,17 +470,45 @@ export class LoginComponent {
     this.auth.register({
       firstName: v.firstName!, lastName: v.lastName!,
       email: v.email!, password: v.password!, site: v.site!,
+      telephone: v.telephone || undefined,
+      poste:     v.poste     || undefined,
     }).subscribe({
-      next: () => {
+      next: (res) => {
         this.registerLoading = false;
-        this.registerSuccess.set(true);
-        // Pré-remplir l'email dans le formulaire de connexion
-        this.loginForm.patchValue({ email: v.email! });
+        this.pendingEmail.set(res.email);
+        this.verifyCode  = '';
+        this.verifyError = '';
+        this.mode.set('verify-email');
+        this.loginForm.patchValue({ email: res.email });
       },
       error: (err) => {
         this.registerLoading = false;
         this.registerError = err?.error?.message ?? 'Erreur lors de la création du compte';
       },
+    });
+  }
+
+  submitVerifyEmail() {
+    if (this.verifyCode.length < 6) return;
+    this.verifyLoading = true;
+    this.verifyError   = '';
+    this.auth.verifyEmail(this.pendingEmail(), this.verifyCode).subscribe({
+      next: () => {
+        this.verifyLoading = false;
+        this.mode.set('login');
+      },
+      error: (err) => {
+        this.verifyLoading = false;
+        this.verifyError = err?.error?.message ?? 'Code invalide ou expiré';
+      },
+    });
+  }
+
+  resendVerificationCode() {
+    this.resendLoading = true;
+    this.auth.resendVerification(this.pendingEmail()).subscribe({
+      next:  () => { this.resendLoading = false; this.verifyError = ''; },
+      error: () => { this.resendLoading = false; },
     });
   }
 }

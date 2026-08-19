@@ -36,6 +36,28 @@ export enum SecteurActivite {
   SCI = 'SCI',
 }
 
+const FLUX_PERIODICITE: Record<string, 'monthly' | 'quarterly' | 'annual'> = {
+  RELEVE_BANCAIRE:   'monthly',
+  TVA_MENSUELLE:     'monthly',
+  TVA_TRIMESTRIELLE: 'quarterly',
+  TVA_ANNUELLE:      'annual',
+  PAIE:              'monthly',
+  RAPPORT_VENTE:     'monthly',
+  RECETTE_AMENITIZ:  'monthly',
+  PIECES_COMPTABLES: 'monthly',
+};
+
+function applicableMonthsCount(key: string, currentMonth: number): number {
+  const p = FLUX_PERIODICITE[key] ?? 'monthly';
+  let count = 0;
+  for (let m = 1; m <= currentMonth; m++) {
+    if (p === 'quarterly' && ![3, 6, 9, 12].includes(m)) continue;
+    if (p === 'annual'    && m !== 12) continue;
+    count++;
+  }
+  return count;
+}
+
 @Entity('clients')
 export class Client {
   @PrimaryGeneratedColumn()
@@ -132,18 +154,31 @@ export class Client {
   @AfterLoad()
   computeCompletudePilotage() {
     const flux: any[] = (this as any).fluxMensuels ?? [];
-    if (flux.length === 0) { this.completudePilotage = 0; return; }
 
-    // Considère les flux des 3 derniers mois
-    const now = new Date();
-    const recent = flux.filter(f => {
-      const diff = (now.getFullYear() - f.annee) * 12 + (now.getMonth() + 1 - f.mois);
-      return diff >= 0 && diff <= 2;
-    });
+    const standardKeys: string[] = this.typesFluxActifs?.length
+      ? this.typesFluxActifs
+      : Object.values(TypeFlux);
+    const customKeys: string[] = (this.customFluxTypes ?? [])
+      .filter((t): t is { key: string; label: string } => !!t && typeof t === 'object' && 'key' in t)
+      .map(t => t.key);
+    const allKeys = [...standardKeys, ...customKeys];
+    if (allKeys.length === 0) { this.completudePilotage = 0; return; }
 
-    const base = recent.length > 0 ? recent : flux;
-    const deposited = base.filter(f => f.statut === 'DEPOSE').length;
-    this.completudePilotage = Math.round((deposited / base.length) * 100);
+    const now          = new Date();
+    const currentYear  = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // Moyenne des avancements par document — respecte la périodicité (= même logique que rowProgress() frontend)
+    let progressSum = 0;
+    for (const key of allKeys) {
+      const total     = applicableMonthsCount(key, currentMonth);
+      if (total === 0) continue;
+      const deposited = flux.filter(
+        f => f.type === key && f.annee === currentYear && f.mois <= currentMonth && f.statut === 'DEPOSE',
+      ).length;
+      progressSum += (deposited / total) * 100;
+    }
+    this.completudePilotage = Math.round(progressSum / allKeys.length);
   }
 
   @Column({ default: true })

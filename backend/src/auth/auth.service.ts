@@ -94,6 +94,41 @@ export class AuthService {
     return this.sanitize(user);
   }
 
+  async sendEmailVerification(email: string, tenantId: number, firstName: string): Promise<void> {
+    await this.resetTokenRepo.delete({ email: email.toLowerCase(), tenantId });
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await this.resetTokenRepo.save(
+      this.resetTokenRepo.create({ email: email.toLowerCase(), code, tenantId, expiresAt }),
+    );
+    await this.mailService.sendEmailVerificationCode({ to: email, firstName, code });
+  }
+
+  async resendEmailVerification(email: string, tenantId?: number): Promise<{ message: string }> {
+    const where: any = { email: email.toLowerCase(), isActive: false };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.userRepo.findOne({ where });
+    if (user) {
+      await this.sendEmailVerification(user.email, user.tenantId!, user.firstName);
+    }
+    return { message: 'Si ce compte existe et n\'est pas encore activé, un nouveau code a été envoyé.' };
+  }
+
+  async verifyEmail(email: string, code: string, tenantId?: number): Promise<{ message: string }> {
+    const token = await this.resetTokenRepo.findOne({
+      where: { email: email.toLowerCase(), code, used: false },
+    });
+    if (!token || token.expiresAt < new Date()) {
+      throw new BadRequestException('Code invalide ou expiré');
+    }
+    if (tenantId && token.tenantId !== tenantId) {
+      throw new BadRequestException('Code invalide ou expiré');
+    }
+    await this.userRepo.update({ email: token.email, tenantId: token.tenantId }, { isActive: true });
+    await this.resetTokenRepo.update(token.id, { used: true });
+    return { message: 'Compte activé. Vous pouvez maintenant vous connecter.' };
+  }
+
   async forgotPassword(email: string, tenantId?: number): Promise<{ message: string }> {
     const where: any = { email: email.toLowerCase() };
     if (tenantId) where.tenantId = tenantId;

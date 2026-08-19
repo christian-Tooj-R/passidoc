@@ -429,7 +429,7 @@ interface TabGroup {
               @switch (activeTab()) {
                 @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
                 @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" [readonly]="!canEdit()" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" /> }
+                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" (fluxChanged)="onFluxChanged($event)" /> }
                 @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit()" /> }
                 @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit()" /> }
                 @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
@@ -1158,6 +1158,10 @@ export class ClientDetailComponent implements OnInit {
 
   onCustomFluxTypesChanged(types: { key: string; label: string }[]) {
     if (this.client) this.client = { ...this.client, customFluxTypes: types };
+  }
+
+  onFluxChanged(completude: number) {
+    if (this.client) this.client = { ...this.client, completudePilotage: completude };
   }
 
   onExerciceChange(idStr: string) {

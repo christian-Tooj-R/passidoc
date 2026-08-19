@@ -38,7 +38,7 @@ export class ClientsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_MADAGASCAR)
   @ApiOperation({ summary: 'Modifier un dossier client' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateClientDto, @Req() req: any) {
     return this.clientsService.update(id, dto, req.user);
@@ -73,7 +73,7 @@ export class ClientsController {
   }
 
   @Post(':id/logo')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_MADAGASCAR)
   @UseInterceptors(FileInterceptor('logo', {
     limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
     fileFilter: (_req, file, cb) => {
@@ -88,7 +88,7 @@ export class ClientsController {
     @Req() req: any,
   ) {
     if (!file) throw new BadRequestException('Fichier image requis (jpeg/png/webp, max 2 Mo)');
-    return this.clientsService.uploadLogo(id, file, req.user?.tenantId);
+    return this.clientsService.uploadLogo(id, file, req.user);
   }
 
   @Delete(':id')

@@ -279,121 +279,188 @@ function generateSlug(name: string): string {
       <div class="wb-orb wb-orb--c"></div>
     </div>
 
-    <!-- Contenu centré -->
-    <div class="wb-content">
-
-      <!-- Badge -->
-      <div class="wb-badge">
-        <span class="wb-badge__dot"></span>
-        <span>Solution de pilotage pour cabinets d'expertise comptable</span>
+    <!-- ── Navbar ── -->
+    <nav class="lp-nav">
+      <div class="lp-nav__brand">
+        <div class="lp-nav__icon"><mat-icon>description</mat-icon></div>
+        <span class="lp-nav__name">Passidoc</span>
       </div>
-
-      <!-- Logo animé avec orbites -->
-      <div class="wb-logo">
-        <div class="wb-ring wb-ring--1"></div>
-        <div class="wb-ring wb-ring--2"></div>
-        <div class="wb-ring wb-ring--3"></div>
-        <div class="wb-logo__core">
-          <mat-icon>description</mat-icon>
-        </div>
-      </div>
-
-      <!-- Texte principal -->
-      <div class="wb-hero">
-        <p class="wb-hero__pre">Bienvenue dans</p>
-        <h1 class="wb-hero__name">Passidoc</h1>
-        <p class="wb-hero__sub">
-          La plateforme intelligente de gestion de cabinet comptable,<br>
-          conçue pour les équipes multi-sites.
-        </p>
-      </div>
-
-      <!-- Grille de fonctionnalités -->
-      <div class="wb-feats-grid">
-        <div class="wb-feat-card wb-fc-anim" style="--d:1.4s">
-          <div class="wb-feat-card__icon wb-fci--blue"><mat-icon>psychology</mat-icon></div>
-          <div class="wb-feat-card__body">
-            <span class="wb-feat-card__title">IA intégrée</span>
-            <span class="wb-feat-card__desc">Analyses et recommandations automatiques</span>
-          </div>
-        </div>
-        <div class="wb-feat-card wb-fc-anim" style="--d:1.55s">
-          <div class="wb-feat-card__icon wb-fci--purple"><mat-icon>public</mat-icon></div>
-          <div class="wb-feat-card__body">
-            <span class="wb-feat-card__title">Multi-pôles</span>
-            <span class="wb-feat-card__desc">Deux sites, une seule interface unifiée</span>
-          </div>
-        </div>
-        <div class="wb-feat-card wb-fc-anim" style="--d:1.7s">
-          <div class="wb-feat-card__icon wb-fci--teal"><mat-icon>analytics</mat-icon></div>
-          <div class="wb-feat-card__body">
-            <span class="wb-feat-card__title">Pilotage 360°</span>
-            <span class="wb-feat-card__desc">Tableaux de bord et KPIs en temps réel</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Statistiques -->
-      <div class="wb-stats">
-        <div class="wb-stat">
-          <span class="wb-stat__num">100%</span>
-          <span class="wb-stat__lbl">Sécurisé &amp; confidentiel</span>
-        </div>
-        <span class="wb-stat-sep"></span>
-        <div class="wb-stat">
-          <span class="wb-stat__num">2</span>
-          <span class="wb-stat__lbl">Pôles géographiques</span>
-        </div>
-        <span class="wb-stat-sep"></span>
-        <div class="wb-stat">
-          <span class="wb-stat__num">∞</span>
-          <span class="wb-stat__lbl">Dossiers &amp; collaborateurs</span>
-        </div>
-      </div>
-
-      <!-- CTA -->
-      <button class="wb-cta" matRipple (click)="startSetup()">
-        <span>Commencer la configuration</span>
-        <span class="wb-cta__arrow">
-          <mat-icon>arrow_forward</mat-icon>
-        </span>
+      <button class="lp-btn lp-btn--outline" matRipple (click)="openLoginModal()">
+        <mat-icon>login</mat-icon>
+        Se connecter
       </button>
+    </nav>
 
-      <p class="wb-footer-hint">Configuration initiale · Quelques minutes suffisent</p>
-
-      <!-- Séparateur login -->
-      <div class="wb-sep">
-        <span class="wb-sep__line"></span>
-        <span class="wb-sep__text">Cabinet déjà configuré ?</span>
-        <span class="wb-sep__line"></span>
+    <!-- ── Hero ── -->
+    <section class="lp-hero">
+      <h1 class="lp-hero__title">
+        Pilotez votre cabinet<br>
+        <span class="lp-hero__title-grad">avec l'intelligence artificielle</span>
+      </h1>
+      <p class="lp-hero__sub">
+        Clients, missions, équipes, documents et KPIs réunis dans une seule plateforme
+        pensée pour les cabinets d'expertise comptable multi-sites.
+      </p>
+      <div class="lp-hero__ctas">
+        <button class="lp-btn lp-btn--primary lp-btn--lg" matRipple (click)="startSetup()">
+          Créer mon espace
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+        <button class="lp-btn lp-btn--ghost lp-btn--lg" matRipple (click)="scrollToFeatures()">
+          Voir les fonctionnalités
+          <mat-icon>expand_more</mat-icon>
+        </button>
       </div>
+      <!-- Badges de confiance -->
+      <div class="lp-hero__trust">
+        <span class="lp-trust-pill"><mat-icon>lock</mat-icon> Données isolées par cabinet</span>
+        <span class="lp-trust-pill"><mat-icon>public</mat-icon> La Réunion &amp; Madagascar</span>
+        <span class="lp-trust-pill"><mat-icon>bolt</mat-icon> Environ 3 min pour démarrer</span>
+      </div>
+    </section>
 
-      <!-- Accès login -->
-      <div class="wb-login-panel">
-        <div class="wb-login__row">
-          <input class="wb-login__input" [formControl]="loginSlugControl"
-                 placeholder="identifiant de votre cabinet"
-                 [attr.disabled]="loginLoading() ? true : null"
-                 (keyup.enter)="goToTenantLogin()" />
-          <button class="wb-login__btn" matRipple (click)="goToTenantLogin()" [disabled]="loginLoading()">
+    <!-- ── Bento features ── -->
+    <section class="lp-features" id="lp-features">
+      <div class="lp-bento">
+        <!-- Grande carte IA -->
+        <div class="lp-bento-card lp-bento-card--ai lp-bento-card--wide">
+          <div class="lp-bento-card__glow"></div>
+          <div class="lp-bento-card__icon lp-bci--blue"><mat-icon>psychology</mat-icon></div>
+          <h3 class="lp-bento-card__title">IA intégrée</h3>
+          <p class="lp-bento-card__desc">Synthèses automatiques, analyses de dossiers et recommandations intelligentes.</p>
+          <div class="lp-bento-card__tag">Claude AI</div>
+        </div>
+        <!-- Multi-pôles -->
+        <div class="lp-bento-card lp-bento-card--multi">
+          <div class="lp-bento-card__icon lp-bci--purple"><mat-icon>public</mat-icon></div>
+          <h3 class="lp-bento-card__title">Multi-pôles</h3>
+          <p class="lp-bento-card__desc">🇷🇪 La Réunion &amp; 🇲🇬 Madagascar — une interface unifiée pour tous vos collaborateurs.</p>
+        </div>
+        <!-- Pilotage -->
+        <div class="lp-bento-card lp-bento-card--pilot">
+          <div class="lp-bento-card__icon lp-bci--teal"><mat-icon>analytics</mat-icon></div>
+          <h3 class="lp-bento-card__title">Pilotage 360°</h3>
+          <p class="lp-bento-card__desc">Tableaux de bord, KPIs en temps réel et suivi de missions pour une visibilité totale.</p>
+        </div>
+        <!-- Sécurité -->
+        <div class="lp-bento-card lp-bento-card--secure">
+          <div class="lp-bento-card__icon lp-bci--amber"><mat-icon>verified_user</mat-icon></div>
+          <h3 class="lp-bento-card__title">Sécurisé &amp; conforme</h3>
+          <p class="lp-bento-card__desc">Isolation des données par tenant, authentification 2FA et gestion fine des rôles.</p>
+        </div>
+
+        <!-- QR Code mobile -->
+        <div class="lp-bento-card lp-bento-card--qr">
+          <div class="lp-qr-block">
+            <!-- QR code réel généré pour /passidoc.apk -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="110" height="110" viewBox="0 0 23 23" shape-rendering="crispEdges">
+              <path fill="#ffffff" d="M0 0h23v23H0z"/>
+              <path stroke="#0F1229" d="M1 1.5h7m1 0h1m1 0h2m2 0h7M1 2.5h1m5 0h1m1 0h2m1 0h1m2 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h4m2 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h1m2 0h2m1 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m2 0h1m4 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h7M10 8.5h2M1 9.5h1m2 0h6m1 0h2m1 0h1m2 0h1m1 0h3M1 10.5h1m1 0h2m1 0h1m1 0h3m2 0h2m4 0h2M2 11.5h1m1 0h1m1 0h3m3 0h3m3 0h4M1 12.5h2m2 0h1m2 0h2m1 0h1m2 0h1m2 0h1m1 0h3M2 13.5h3m2 0h2m1 0h3m1 0h1m2 0h2M9 14.5h2m3 0h2m1 0h1m1 0h2M1 15.5h7m1 0h1m1 0h3m1 0h1m1 0h4M1 16.5h1m5 0h1m1 0h2m2 0h1m1 0h7M1 17.5h1m1 0h3m1 0h1m1 0h1m2 0h2m2 0h2m2 0h1M1 18.5h1m1 0h3m1 0h1m1 0h2m3 0h2m2 0h2M1 19.5h1m1 0h3m1 0h1m3 0h1m1 0h2m2 0h1m2 0h2M1 20.5h1m5 0h1m2 0h4m1 0h7M1 21.5h7m1 0h2m2 0h6"/>
+            </svg>
+          </div>
+          <div class="lp-qr-text">
+            <div class="lp-bento-card__icon lp-bci--pink" style="width:40px;height:40px;margin-bottom:12px">
+              <mat-icon>android</mat-icon>
+            </div>
+            <h3>Application Android</h3>
+            <p>Gérez votre cabinet depuis votre téléphone — tâches, congés, pointage et KPIs disponibles hors bureau. Scannez pour télécharger directement.</p>
+            <div class="lp-qr-platforms">
+              <span class="lp-platform-badge lp-platform-badge--android">
+                <mat-icon>android</mat-icon> Android — disponible
+              </span>
+              <span class="lp-platform-badge lp-platform-badge--ios">
+                <mat-icon>phone_iphone</mat-icon> iOS — bientôt
+              </span>
+            </div>
+            <a class="lp-apk-dl" href="/passidoc.apk" download="passidoc.apk">
+              <mat-icon>download</mat-icon>
+              Télécharger l'APK directement
+              <span class="lp-apk-dl__size">75 MB</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Stats ── -->
+    <section class="lp-stats-bar">
+      <div class="lp-stats-bar__inner">
+        <div class="lp-sstat">
+          <span class="lp-sstat__num">100%</span>
+          <span class="lp-sstat__lbl">Sécurisé &amp; confidentiel</span>
+        </div>
+        <div class="lp-sstat-sep"></div>
+        <div class="lp-sstat">
+          <span class="lp-sstat__num">2</span>
+          <span class="lp-sstat__lbl">Pôles géographiques</span>
+        </div>
+        <div class="lp-sstat-sep"></div>
+        <div class="lp-sstat">
+          <span class="lp-sstat__num">∞</span>
+          <span class="lp-sstat__lbl">Dossiers &amp; collaborateurs</span>
+        </div>
+        <div class="lp-sstat-sep"></div>
+        <div class="lp-sstat">
+          <span class="lp-sstat__num">7</span>
+          <span class="lp-sstat__lbl">Rôles &amp; permissions</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Footer ── -->
+    <footer class="lp-footer">
+      <span>© 2026 Passidoc — AFYM Audit Expertise</span>
+      <span class="lp-footer__sep">·</span>
+      <span>Solution sur mesure</span>
+    </footer>
+
+    <!-- ── Modal Se connecter ── -->
+    @if (loginModalOpen()) {
+      <div class="lp-overlay" (click)="closeLoginModal()">
+        <div class="lp-modal" (click)="$event.stopPropagation()">
+          <button class="lp-modal__close" (click)="closeLoginModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+          <div class="lp-modal__logo">
+            <mat-icon>description</mat-icon>
+          </div>
+          <h2 class="lp-modal__title">Accéder à votre espace</h2>
+          <p class="lp-modal__sub">Entrez l'identifiant unique de votre cabinet</p>
+          <div class="lp-modal__field" [class.lp-modal__field--focus]="slugFocused" [class.lp-modal__field--error]="!!loginError()">
+            <mat-icon class="lp-modal__field-icon">tag</mat-icon>
+            <input class="lp-modal__input"
+                   [formControl]="loginSlugControl"
+                   placeholder="Identifiant de votre cabinet"
+                   [attr.disabled]="loginLoading() ? true : null"
+                   (focus)="slugFocused=true" (blur)="slugFocused=false"
+                   (keyup.enter)="goToTenantLogin()" />
+          </div>
+          @if (loginError()) {
+            <p class="lp-modal__error"><mat-icon>error_outline</mat-icon> {{ loginError() }}</p>
+          }
+          <button class="lp-btn lp-btn--primary lp-btn--full" matRipple (click)="goToTenantLogin()" [disabled]="loginLoading()">
             @if (loginLoading()) {
-              <mat-progress-spinner diameter="16" mode="indeterminate" style="--mdc-circular-progress-active-indicator-color:#fff"></mat-progress-spinner>
+              <mat-progress-spinner diameter="16" mode="indeterminate"
+                style="--mdc-circular-progress-active-indicator-color:rgba(255,255,255,.9)">
+              </mat-progress-spinner>
+              <span>Vérification…</span>
             } @else {
               <mat-icon>login</mat-icon>
+              <span>Continuer</span>
             }
-            <span>{{ loginLoading() ? 'Vérification…' : 'Accéder' }}</span>
           </button>
-        </div>
-        @if (loginError()) {
-          <p class="wb-login__error">
-            <mat-icon>error_outline</mat-icon> {{ loginError() }}
+          <p class="lp-modal__hint">
+            Nouveau cabinet ?
+            <button class="lp-modal__hint-link" (click)="closeLoginModal(); startSetup()">
+              Créer mon espace →
+            </button>
           </p>
-        }
+        </div>
       </div>
+    }
 
-    </div>
-
-  </div>
+  </div><!-- /wb -->
 }
 
 <!-- ══════════════════════════════════════════════════════
@@ -826,7 +893,7 @@ function generateSlug(name: string): string {
     ════════════════════════════════════════════════════ */
     .wb {
       position: fixed; inset: 0;
-      background: radial-gradient(ellipse at 20% 30%, #0f1f4a 0%, #06101f 50%, #030810 100%);
+      background: radial-gradient(ellipse at 25% 25%, #162050 0%, #0d1a3a 45%, #0a1530 100%);
       display: flex; align-items: center; justify-content: center;
       overflow: hidden; z-index: 200;
       transition: opacity .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1);
@@ -848,9 +915,9 @@ function generateSlug(name: string): string {
       position: absolute; border-radius: 50%;
       filter: blur(90px); pointer-events: none;
     }
-    .wb-orb--a { width: 600px; height: 600px; background: rgba(26,115,232,.18); top: -180px; left: -150px; }
-    .wb-orb--b { width: 500px; height: 500px; background: rgba(124,58,237,.14); bottom: -100px; right: -80px; }
-    .wb-orb--c { width: 350px; height: 350px; background: rgba(13,148,136,.12); top: 40%; left: 55%; }
+    .wb-orb--a { width: 700px; height: 700px; background: rgba(26,115,232,.22); top: -200px; left: -180px; }
+    .wb-orb--b { width: 550px; height: 550px; background: rgba(124,58,237,.18); bottom: -120px; right: -100px; }
+    .wb-orb--c { width: 400px; height: 400px; background: rgba(13,148,136,.15); top: 35%; left: 50%; }
 
     .wb-dot {
       position: absolute; border-radius: 50%;
@@ -865,293 +932,383 @@ function generateSlug(name: string): string {
       100% { opacity: 0; transform: translateY(-280px) scale(.4); }
     }
 
-    /* ── Contenu ──────────────────────────────────────── */
-    .wb-content {
-      position: relative; z-index: 1;
-      display: flex; flex-direction: column; align-items: center; gap: 0;
-      padding: 32px 20px; text-align: center; max-width: 680px; width: 100%;
-    }
-
-    /* Logo avec anneaux orbitaux */
-    .wb-logo {
-      position: relative;
-      width: 160px; height: 160px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 36px;
-      animation: wb-logo-appear .8s cubic-bezier(.34,1.56,.64,1) forwards;
-      opacity: 0;
-    }
-    @keyframes wb-logo-appear {
-      from { opacity: 0; transform: scale(.3); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    .wb-ring {
-      position: absolute; border-radius: 50%;
-      animation: wb-spin linear infinite;
-    }
-    .wb-ring--1 {
-      width: 90px; height: 90px;
-      border: 1.5px solid rgba(96,165,250,.35);
-      animation-duration: 7s;
-    }
-    .wb-ring--1::after {
-      content: ''; position: absolute; top: -5px; left: calc(50% - 5px);
-      width: 10px; height: 10px; border-radius: 50%;
-      background: #60a5fa; box-shadow: 0 0 10px #60a5fa, 0 0 20px rgba(96,165,250,.6);
-    }
-    .wb-ring--2 {
-      width: 122px; height: 122px;
-      border: 1px solid rgba(167,139,250,.25);
-      animation-duration: 11s; animation-direction: reverse;
-    }
-    .wb-ring--2::after {
-      content: ''; position: absolute; top: -4px; left: calc(50% - 4px);
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #a78bfa; box-shadow: 0 0 8px #a78bfa, 0 0 16px rgba(167,139,250,.5);
-    }
-    .wb-ring--3 {
-      width: 156px; height: 156px;
-      border: 1px solid rgba(26,115,232,.15);
-      animation-duration: 17s;
-    }
-    .wb-ring--3::after {
-      content: ''; position: absolute; top: -3px; left: calc(50% - 3px);
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #93c5fd; box-shadow: 0 0 6px #93c5fd;
-    }
-    @keyframes wb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-    .wb-logo__core {
-      width: 52px; height: 52px; border-radius: 16px; z-index: 1;
-      background: linear-gradient(135deg, #1565C0 0%, #7C3AED 100%);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 30px rgba(26,115,232,.5), 0 0 60px rgba(124,58,237,.3);
-      animation: wb-core-pulse 3s ease-in-out infinite;
-    }
-    .wb-logo__core mat-icon { color: #fff; font-size: 26px; width: 26px; height: 26px; }
-    @keyframes wb-core-pulse {
-      0%, 100% { box-shadow: 0 0 30px rgba(26,115,232,.5), 0 0 60px rgba(124,58,237,.3); }
-      50%       { box-shadow: 0 0 45px rgba(26,115,232,.7), 0 0 90px rgba(124,58,237,.5); }
-    }
-
-    /* Texte hero */
-    .wb-hero { margin-bottom: 32px; }
-    .wb-hero__pre {
-      font-size: 16px; font-weight: 400; color: rgba(255,255,255,.55);
-      letter-spacing: .5px; margin: 0 0 6px;
-      animation: wb-fade-up .7s ease forwards; animation-delay: .6s; opacity: 0;
-    }
-    .wb-hero__name {
-      font-size: clamp(42px, 8vw, 68px); font-weight: 800; margin: 0 0 16px;
-      letter-spacing: -2px; line-height: 1;
-      background: linear-gradient(90deg, #60a5fa 0%, #c4b5fd 40%, #93c5fd 70%, #60a5fa 100%);
-      background-size: 300% auto;
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: wb-fade-up .7s ease forwards, wb-shimmer 4s linear infinite;
-      animation-delay: .9s, 0s;
-      opacity: 0;
-    }
-    @keyframes wb-shimmer { to { background-position: 300% center; } }
-    .wb-hero__sub {
-      font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.45);
-      margin: 0;
-      animation: wb-fade-up .7s ease forwards; animation-delay: 1.3s; opacity: 0;
-    }
-
-    /* Feature chips */
-    .wb-feats {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
-      margin-bottom: 40px;
-    }
-    .wb-feat {
-      display: flex; align-items: center; gap: 7px;
-      padding: 8px 16px; border-radius: 100px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.10);
-      font-size: 13px; font-weight: 500; color: rgba(255,255,255,.75);
-      backdrop-filter: blur(8px);
-      animation: wb-fade-up .6s ease forwards; opacity: 0;
-      transition: background .2s, border-color .2s;
-    }
-    .wb-feat:hover {
-      background: rgba(255,255,255,.10); border-color: rgba(96,165,250,.35);
-      color: #fff;
-    }
-    .wb-feat mat-icon { font-size: 16px; width: 16px; height: 16px; color: #60a5fa; }
-
-    /* CTA */
-    .wb-cta {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px 36px; border-radius: 100px; border: none; cursor: pointer;
-      background: linear-gradient(90deg, #1A73E8 0%, #7C3AED 100%);
-      color: #fff; font-size: 16px; font-weight: 700; letter-spacing: .2px;
-      box-shadow: 0 8px 32px rgba(26,115,232,.4), 0 0 0 1px rgba(255,255,255,.08);
-      position: relative; overflow: hidden;
-      animation: wb-fade-up .7s ease forwards; animation-delay: 2.5s; opacity: 0;
-      transition: transform .2s, box-shadow .2s;
-    }
-    .wb-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,115,232,.55), 0 0 0 1px rgba(255,255,255,.12); }
-    .wb-cta:active { transform: translateY(0); }
-    .wb-cta::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
-      transform: translateX(-100%);
-      animation: wb-cta-shine 3s ease infinite; animation-delay: 3.5s;
-    }
-    @keyframes wb-cta-shine {
-      0%   { transform: translateX(-100%); }
-      40%, 100% { transform: translateX(100%); }
-    }
-    .wb-cta__arrow {
-      display: flex; align-items: center;
-      transition: transform .25s;
-    }
-    .wb-cta:hover .wb-cta__arrow { transform: translateX(5px); }
-    .wb-cta mat-icon { font-size: 20px; width: 20px; height: 20px; }
-
-    /* Hint bas de page */
-    .wb-footer-hint {
-      font-size: 12px; color: rgba(255,255,255,.25); margin: 20px 0 0;
-      letter-spacing: .5px;
-      animation: wb-fade-up .6s ease forwards; animation-delay: 2.9s; opacity: 0;
-    }
-
     @keyframes wb-fade-up {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
-    /* Badge */
-    .wb-badge {
-      display: flex; align-items: center; gap: 8px;
-      padding: 7px 18px; border-radius: 100px;
-      background: rgba(96,165,250,.10);
-      border: 1px solid rgba(96,165,250,.22);
-      font-size: 12px; font-weight: 500; color: rgba(255,255,255,.60);
-      letter-spacing: .3px;
-      margin-bottom: 28px;
-      animation: wb-fade-up .6s ease forwards; animation-delay: .25s; opacity: 0;
-    }
-    .wb-badge__dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-      background: #60a5fa;
-      box-shadow: 0 0 7px #60a5fa;
-      animation: wb-blink 2s ease-in-out infinite;
-    }
+    @keyframes wb-shimmer { to { background-position: 300% center; } }
     @keyframes wb-blink {
       0%, 100% { opacity: 1; }
       50%       { opacity: .35; }
     }
 
-    /* Feature cards grid */
-    .wb-feats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-      width: 100%;
-    }
-    .wb-feat-card {
-      display: flex; align-items: flex-start; gap: 11px;
-      padding: 14px 14px; border-radius: 14px;
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.08);
-      backdrop-filter: blur(8px);
-      transition: background .2s, border-color .2s, transform .2s;
-      text-align: left;
-    }
-    .wb-feat-card:hover {
-      background: rgba(255,255,255,.09);
-      border-color: rgba(96,165,250,.25);
-      transform: translateY(-2px);
-    }
-    .wb-fc-anim {
-      opacity: 0;
-      animation: wb-fade-up .6s ease forwards var(--d, 1.4s);
-    }
-    .wb-feat-card__icon {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .wb-feat-card__icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .wb-fci--blue   { background: rgba(96,165,250,.15); }
-    .wb-fci--blue mat-icon   { color: #60a5fa; }
-    .wb-fci--purple { background: rgba(167,139,250,.15); }
-    .wb-fci--purple mat-icon { color: #a78bfa; }
-    .wb-fci--teal   { background: rgba(52,211,153,.15); }
-    .wb-fci--teal mat-icon   { color: #34d399; }
-    .wb-feat-card__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .wb-feat-card__title { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.88); }
-    .wb-feat-card__desc  { font-size: 11px; color: rgba(255,255,255,.42); line-height: 1.45; }
+    /* ══════════════════════════════════════════════════════
+       LANDING PAGE
+    ══════════════════════════════════════════════════════ */
 
-    /* Stats */
-    .wb-stats {
+    /* Conteneur de page */
+    .wb {
+      min-height: 100vh; width: 100%; position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      overflow-x: hidden;
+    }
+
+    /* ── Navbar ── */
+    .lp-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(8,15,40,.75);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .lp-nav__brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .lp-nav__icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, #1565C0, #7C3AED);
       display: flex; align-items: center; justify-content: center;
-      padding: 18px 24px; border-radius: 16px;
+      box-shadow: 0 0 14px rgba(26,115,232,.4);
+    }
+    .lp-nav__icon mat-icon { color: #fff; font-size: 18px; width: 18px; height: 18px; }
+    .lp-nav__name {
+      font-size: 18px; font-weight: 800; color: #fff;
+      letter-spacing: -.4px;
+    }
+
+    /* ── Boutons communs ── */
+    .lp-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 0 20px; height: 40px; border-radius: 10px;
+      font-size: 13.5px; font-weight: 600; font-family: inherit;
+      border: none; cursor: pointer;
+      transition: transform .18s, box-shadow .18s, background .18s, opacity .18s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .lp-btn--lg { height: 48px; padding: 0 26px; font-size: 15px; border-radius: 12px; }
+    .lp-btn--full { width: 100%; justify-content: center; }
+    .lp-btn--primary {
+      background: linear-gradient(90deg, #1A73E8, #3B82F6);
+      color: #fff; box-shadow: 0 6px 20px rgba(26,115,232,.35);
+    }
+    .lp-btn--primary:hover:not([disabled]) {
+      transform: translateY(-2px); box-shadow: 0 10px 30px rgba(26,115,232,.5);
+    }
+    .lp-btn--primary[disabled] { opacity: .55; cursor: not-allowed; }
+    .lp-btn--ghost {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.82);
+    }
+    .lp-btn--ghost:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); }
+    .lp-btn--outline {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.85);
+    }
+    .lp-btn--outline:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.35); }
+
+    /* ── Hero ── */
+    .lp-hero {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; padding: 160px 24px 80px;
+      max-width: 820px; width: 100%;
+    }
+    .lp-hero__badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 18px; border-radius: 100px;
+      background: rgba(96,165,250,.10); border: 1px solid rgba(96,165,250,.22);
+      font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,.65);
+      margin-bottom: 32px;
+      animation: wb-fade-up .6s ease forwards; opacity: 0;
+    }
+    .lp-hero__badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #60a5fa; box-shadow: 0 0 7px #60a5fa;
+      animation: wb-blink 2s ease-in-out infinite;
+    }
+    .lp-hero__title {
+      font-size: clamp(40px, 7vw, 72px); font-weight: 800;
+      line-height: 1.1; letter-spacing: -2.5px;
+      color: rgba(255,255,255,.95); margin: 0 0 24px;
+      animation: wb-fade-up .7s ease forwards; animation-delay: .15s; opacity: 0;
+    }
+    .lp-hero__title-grad {
+      background: linear-gradient(90deg, #60a5fa 0%, #c4b5fd 40%, #93c5fd 70%, #60a5fa 100%);
+      background-size: 300% auto;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: wb-shimmer 4s linear infinite;
+    }
+    .lp-hero__sub {
+      font-size: 17px; line-height: 1.7; color: rgba(255,255,255,.48);
+      margin: 0 0 40px; max-width: 600px;
+      animation: wb-fade-up .7s ease forwards; animation-delay: .3s; opacity: 0;
+    }
+    .lp-hero__ctas {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+      justify-content: center; margin-bottom: 48px;
+      animation: wb-fade-up .7s ease forwards; animation-delay: .45s; opacity: 0;
+    }
+    .lp-hero__trust {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+      animation: wb-fade-up .7s ease forwards; animation-delay: .6s; opacity: 0;
+    }
+    .lp-trust-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 100px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+      font-size: 12px; color: rgba(255,255,255,.45);
+      mat-icon { font-size: 14px; width: 14px; height: 14px; color: rgba(255,255,255,.35); }
+    }
+
+
+    /* ── Bento features ── */
+    .lp-features {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px; padding: 0 24px 80px;
+      animation: wb-fade-up .7s ease forwards; animation-delay: .8s; opacity: 0;
+    }
+    .lp-bento {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 14px;
+    }
+    .lp-bento-card {
+      position: relative; overflow: hidden;
+      padding: 28px; border-radius: 20px;
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.08);
-      width: 100%; margin-bottom: 32px;
-      animation: wb-fade-up .6s ease forwards; animation-delay: 1.9s; opacity: 0;
+      backdrop-filter: blur(12px);
+      transition: border-color .25s, transform .25s, box-shadow .25s;
     }
-    .wb-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
-    .wb-stat__num {
-      font-size: 24px; font-weight: 800; color: #60a5fa;
-      letter-spacing: -1px; line-height: 1;
+    .lp-bento-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,.15);
+      box-shadow: 0 20px 50px rgba(0,0,0,.3);
     }
-    .wb-stat__lbl { font-size: 10.5px; color: rgba(255,255,255,.38); font-weight: 500; text-align: center; }
-    .wb-stat-sep { width: 1px; height: 36px; background: rgba(255,255,255,.10); flex-shrink: 0; }
+    .lp-bento-card--wide { grid-column: 1; grid-row: 1 / 3; }
+    .lp-bento-card--multi  { grid-column: 2; }
+    .lp-bento-card--pilot  { grid-column: 3; }
+    .lp-bento-card--secure { grid-column: 2 / 4; }
+    .lp-bento-card--qr { grid-column: 2 / 4; }
 
-    /* Séparateur login */
-    .wb-sep {
-      display: flex; align-items: center; gap: 14px;
-      width: 100%; margin: 6px 0 18px;
-      animation: wb-fade-up .6s ease forwards; animation-delay: 3.1s; opacity: 0;
+    .lp-bento-card__glow {
+      position: absolute; top: -60px; right: -60px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(96,165,250,.12) 0%, transparent 70%);
+      pointer-events: none;
     }
-    .wb-sep__line { flex: 1; height: 1px; background: rgba(255,255,255,.10); }
-    .wb-sep__text { font-size: 12px; color: rgba(255,255,255,.30); white-space: nowrap; letter-spacing: .3px; }
+    .lp-bento-card__icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+      mat-icon { font-size: 24px; width: 24px; height: 24px; }
+    }
+    .lp-bci--blue   { background: rgba(96,165,250,.15); mat-icon { color: #60a5fa; } }
+    .lp-bci--purple { background: rgba(167,139,250,.15); mat-icon { color: #a78bfa; } }
+    .lp-bci--teal   { background: rgba(52,211,153,.15);  mat-icon { color: #34d399; } }
+    .lp-bci--amber  { background: rgba(251,191,36,.12);  mat-icon { color: #fbbf24; } }
+    .lp-bci--pink   { background: rgba(236,72,153,.12);  mat-icon { color: #ec4899; } }
+    .lp-bento-card__title {
+      font-size: 18px; font-weight: 700; color: rgba(255,255,255,.92);
+      margin: 0 0 10px; letter-spacing: -.3px;
+    }
+    .lp-bento-card__desc {
+      font-size: 13.5px; color: rgba(255,255,255,.42); line-height: 1.65; margin: 0;
+    }
+    .lp-bento-card--ai .lp-bento-card__title { font-size: 22px; }
+    .lp-bento-card--ai .lp-bento-card__desc  { font-size: 15px; max-width: 340px; }
+    .lp-bento-card__tag {
+      display: inline-block; margin-top: 20px;
+      padding: 4px 12px; border-radius: 100px;
+      background: rgba(96,165,250,.12); border: 1px solid rgba(96,165,250,.22);
+      font-size: 11px; font-weight: 600; color: #60a5fa; letter-spacing: .3px;
+    }
 
-    /* Panel login */
-    .wb-login-panel {
-      width: 100%; margin-bottom: 8px;
-      animation: wb-fade-up .6s ease forwards; animation-delay: 3.25s; opacity: 0;
+    /* ── Carte QR Code ── */
+    .lp-bento-card--qr {
+      display: flex; align-items: center; gap: 32px;
     }
-    .wb-login__row { display: flex; gap: 8px; align-items: center; }
-    .wb-login__input {
-      flex: 1; height: 44px; padding: 0 16px;
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.13);
-      border-radius: 100px;
-      color: #fff; font-size: 13.5px; font-family: inherit;
-      outline: none; transition: border-color .2s, background .2s;
+    .lp-qr-block {
+      flex-shrink: 0; padding: 12px; border-radius: 14px;
+      background: #fff;
     }
-    .wb-login__input::placeholder { color: rgba(255,255,255,.28); }
-    .wb-login__input:focus {
-      border-color: rgba(96,165,250,.48);
-      background: rgba(255,255,255,.10);
+    .lp-qr-block svg { display: block; }
+    .lp-qr-text { flex: 1; }
+    .lp-qr-text h3 {
+      font-size: 17px; font-weight: 700; color: rgba(255,255,255,.90);
+      margin: 0 0 8px; letter-spacing: -.2px;
     }
-    .wb-login__btn {
-      display: flex; align-items: center; gap: 7px;
-      padding: 0 20px; height: 44px; border-radius: 100px; border: none; cursor: pointer;
-      background: rgba(255,255,255,.09);
-      border: 1px solid rgba(255,255,255,.16);
-      color: rgba(255,255,255,.75);
-      font-size: 13.5px; font-weight: 600; font-family: inherit;
-      white-space: nowrap; flex-shrink: 0;
-      transition: background .2s, border-color .2s, color .2s;
+    .lp-qr-text p {
+      font-size: 13px; color: rgba(255,255,255,.42); line-height: 1.6; margin: 0 0 14px;
     }
-    .wb-login__btn mat-icon { font-size: 17px; width: 17px; height: 17px; }
-    .wb-login__btn:hover {
-      background: rgba(96,165,250,.18);
-      border-color: rgba(96,165,250,.38);
-      color: #fff;
+    .lp-qr-platforms { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+    .lp-platform-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 13px; border-radius: 10px;
+      font-size: 12px; font-weight: 600;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
     }
-    .wb-login__error {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 12px; color: #f87171; margin-top: 8px; padding-left: 4px;
+    .lp-platform-badge--android {
+      background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.25);
+      color: #34d399;
     }
-    .wb-login__error mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .lp-platform-badge--ios {
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.35);
+    }
+    .lp-apk-dl {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 14px; padding: 9px 16px; border-radius: 10px;
+      background: rgba(26,115,232,.12); border: 1px solid rgba(96,165,250,.25);
+      color: #60a5fa; font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: background .2s, border-color .2s, transform .15s;
+      mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    }
+    .lp-apk-dl:hover {
+      background: rgba(26,115,232,.22); border-color: rgba(96,165,250,.5);
+      transform: translateY(-1px);
+    }
+    .lp-apk-dl__size {
+      font-size: 11px; font-weight: 400; color: rgba(96,165,250,.55);
+      padding-left: 4px;
+    }
+
+    /* ── Stats bar ── */
+    .lp-stats-bar {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px; padding: 0 24px 80px;
+      animation: wb-fade-up .7s ease forwards; animation-delay: 1s; opacity: 0;
+    }
+    .lp-stats-bar__inner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 28px 40px; border-radius: 20px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .lp-sstat { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .lp-sstat__num {
+      font-size: 28px; font-weight: 800; color: #60a5fa;
+      letter-spacing: -1.5px; line-height: 1;
+    }
+    .lp-sstat__lbl { font-size: 11px; color: rgba(255,255,255,.38); font-weight: 500; text-align: center; }
+    .lp-sstat-sep { width: 1px; height: 40px; background: rgba(255,255,255,.08); flex-shrink: 0; margin: 0 20px; }
+
+    /* ── Footer ── */
+    .lp-footer {
+      position: relative; z-index: 1;
+      padding: 24px; display: flex; gap: 10px; align-items: center;
+      font-size: 12px; color: rgba(255,255,255,.25);
+    }
+    .lp-footer__sep { color: rgba(255,255,255,.12); }
+
+    /* ── Modal Se connecter ── */
+    .lp-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      animation: lp-overlay-in .2s ease;
+    }
+    @keyframes lp-overlay-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .lp-modal {
+      position: relative; width: 100%; max-width: 420px;
+      padding: 40px 36px 32px;
+      background: linear-gradient(145deg, rgba(15,25,65,.97) 0%, rgba(10,18,50,.97) 100%);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 24px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+      animation: lp-modal-in .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes lp-modal-in {
+      from { opacity: 0; transform: scale(.92) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .lp-modal__close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: rgba(255,255,255,.06); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.4); transition: background .15s, color .15s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .lp-modal__close:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+    .lp-modal__logo {
+      width: 52px; height: 52px; border-radius: 16px;
+      background: linear-gradient(135deg, #1565C0, #7C3AED);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 24px rgba(26,115,232,.4);
+      margin-bottom: 20px;
+      mat-icon { color: #fff; font-size: 26px; width: 26px; height: 26px; }
+    }
+    .lp-modal__title {
+      font-size: 20px; font-weight: 800; color: rgba(255,255,255,.92);
+      margin: 0 0 6px; letter-spacing: -.4px; text-align: center;
+    }
+    .lp-modal__sub {
+      font-size: 13px; color: rgba(255,255,255,.40); margin: 0 0 24px; text-align: center;
+    }
+    .lp-modal__field {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; height: 48px; padding: 0 16px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.11);
+      border-radius: 12px; margin-bottom: 8px;
+      transition: border-color .2s, background .2s;
+    }
+    .lp-modal__field--focus   { border-color: rgba(96,165,250,.5); background: rgba(96,165,250,.06); }
+    .lp-modal__field--error   { border-color: rgba(248,113,113,.5); }
+    .lp-modal__field-icon { font-size: 17px !important; width: 17px !important; height: 17px !important; color: rgba(255,255,255,.28) !important; flex-shrink: 0; }
+    .lp-modal__input {
+      flex: 1; background: none; border: none; outline: none;
+      color: rgba(255,255,255,.88); font-size: 14px; font-family: inherit;
+    }
+    .lp-modal__input::placeholder { color: rgba(255,255,255,.25); }
+    .lp-modal__error {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #f87171; margin-bottom: 12px; width: 100%;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+    .lp-modal__hint {
+      font-size: 12.5px; color: rgba(255,255,255,.30); margin: 16px 0 0; text-align: center;
+    }
+    .lp-modal__hint-link {
+      background: none; border: none; cursor: pointer;
+      color: #60a5fa; font-size: inherit; font-family: inherit;
+      padding: 0;
+    }
+    .lp-modal__hint-link:hover { color: #93c5fd; }
+
+    /* Responsive landing page */
+    @media (max-width: 900px) {
+      .lp-nav { padding: 0 20px; }
+      .lp-hero { padding: 120px 20px 60px; }
+      .lp-features { padding: 0 16px 60px; }
+      .lp-bento {
+        grid-template-columns: 1fr 1fr;
+      }
+      .lp-bento-card--wide  { grid-column: 1 / 3; grid-row: auto; }
+      .lp-bento-card--secure, .lp-bento-card--qr { grid-column: 1 / 3; }
+      .lp-bento-card--qr { flex-direction: column; align-items: flex-start; }
+      .lp-stats-bar__inner { flex-wrap: wrap; gap: 24px; }
+      .lp-sstat-sep { display: none; }
+    }
+    @media (max-width: 600px) {
+      .lp-hero__title { font-size: 36px; letter-spacing: -1.5px; }
+      .lp-hero__ctas { flex-direction: column; align-items: stretch; }
+      .lp-btn--lg { justify-content: center; }
+      .lp-bento { grid-template-columns: 1fr; }
+      .lp-bento-card--wide, .lp-bento-card--multi,
+      .lp-bento-card--pilot, .lp-bento-card--secure,
+      .lp-bento-card--qr { grid-column: 1; grid-row: auto; }
+    }
 
     /* ════════════════════════════════════════════════════
        WIZARD DE CONFIGURATION
@@ -1681,9 +1838,17 @@ export class SetupWizardComponent implements OnInit {
   logoError    = signal('');
 
   // Login accès cabinet existant
+  loginModalOpen   = signal(false);
   loginSlugControl = new FormControl('');
   loginError       = signal('');
   loginLoading     = signal(false);
+  slugFocused      = false;
+
+  openLoginModal()  { this.loginModalOpen.set(true);  this.loginError.set(''); }
+  closeLoginModal() { this.loginModalOpen.set(false); }
+  scrollToFeatures() {
+    document.getElementById('lp-features')?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   // Welcome screen data
   particles = Array.from({ length: 28 }, () => ({
@@ -1784,7 +1949,10 @@ export class SetupWizardComponent implements OnInit {
 
   startSetup() {
     this.welcomeExit.set(true);
-    setTimeout(() => this.screen.set('wizard'), 700);
+    setTimeout(() => {
+      this.screen.set('wizard');
+      this.welcomeExit.set(false);
+    }, 700);
   }
 
   goToTenantLogin() {

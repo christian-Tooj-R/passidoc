@@ -154,6 +154,31 @@ test.describe('Documents mensuels — type personnalisé', () => {
     await expect(page.getByText('Doc via Entrée')).toBeVisible({ timeout: 5000 });
   });
 
+  test('ajouter un document et naviguer vers Pilotage puis revenir : le document est toujours là', async ({ page }) => {
+    await gotoClient(page);
+
+    // Ajouter un type custom
+    await page.locator('button.flux-add-btn').click();
+    const input = page.locator('input.flux-add-input');
+    await input.click();
+    await input.pressSequentially('Doc persistant', { delay: 30 });
+    await page.locator('button.flux-add-confirm').click();
+    await expect(page.getByText('Doc persistant')).toBeVisible({ timeout: 5000 });
+
+    // Naviguer vers Pilotage
+    const pilotageTab = page.locator('[data-tab="pilotage"], button', { hasText: /pilotage/i }).first();
+    await pilotageTab.click();
+    await page.waitForTimeout(500);
+
+    // Revenir sur Fiche Identité
+    const ficheTab = page.locator('[data-tab="fiche"], button', { hasText: /fiche/i }).first();
+    await ficheTab.click();
+    await page.waitForTimeout(500);
+
+    // Le document doit toujours être visible
+    await expect(page.getByText('Doc persistant')).toBeVisible({ timeout: 5000 });
+  });
+
   test('un document personnalisé existant peut être supprimé via son checkbox', async ({ page }) => {
     const clientWithCustom = {
       ...FAKE_CLIENT,

@@ -824,7 +824,9 @@ export class FicheIdentiteTabComponent implements OnInit {
   }
 
   @Input() set customFluxTypes(val: { key: string; label: string }[] | null | undefined) {
-    this.customFluxTypesArray = val ?? [];
+    this.customFluxTypesArray = (val ?? []).filter(
+      (t): t is { key: string; label: string } => !!t && typeof t === 'object' && 'key' in t && 'label' in t,
+    );
   }
   @Output() customFluxTypesChanged = new EventEmitter<{ key: string; label: string }[]>();
 
@@ -849,21 +851,28 @@ export class FicheIdentiteTabComponent implements OnInit {
     if (!label) return;
     const key = 'CUSTOM_' + label.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 30) + '_' + Date.now();
     const updated = [...this.customFluxTypesArray, { key, label }];
+    const previous = [...this.customFluxTypesArray];
     this.customFluxTypesArray = updated;
+    this.customFluxTypesChanged.emit(updated);
+    this.cancelAddCustomFlux();
     this.clientsService.update(this.clientId, { customFluxTypes: updated } as any).subscribe({
-      next: () => {
-        this.customFluxTypesChanged.emit(updated);
-        this.cancelAddCustomFlux();
+      error: () => {
+        this.customFluxTypesArray = previous;
+        this.customFluxTypesChanged.emit(previous);
       },
-      error: () => this.cancelAddCustomFlux(),
     });
   }
 
   removeCustomFluxType(key: string) {
+    const previous = [...this.customFluxTypesArray];
     const updated = this.customFluxTypesArray.filter(t => t.key !== key);
     this.customFluxTypesArray = updated;
+    this.customFluxTypesChanged.emit(updated);
     this.clientsService.update(this.clientId, { customFluxTypes: updated } as any).subscribe({
-      next: () => this.customFluxTypesChanged.emit(updated),
+      error: () => {
+        this.customFluxTypesArray = previous;
+        this.customFluxTypesChanged.emit(previous);
+      },
     });
   }
 

@@ -114,10 +114,10 @@ export class ClientsService {
 
   // Vérifie que l'utilisateur est assigné au dossier (pour les opérations de modification)
   private checkEditAccess(client: Client, currentUser: User) {
-    if (currentUser.role === UserRole.ADMIN) return;
+    if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.EXPERT_COMPTABLE) return;
     if (client.directeurId === currentUser.id) return;
-    if (currentUser.site === UserSite.REUNION && client.responsableId === currentUser.id) return;
-    if (currentUser.site === UserSite.MADAGASCAR && client.collaborateurMgId === currentUser.id) return;
+    if (client.responsableId === currentUser.id) return;
+    if (client.collaborateurMgId === currentUser.id) return;
     throw new ForbiddenException('Vous n\'êtes pas assigné à ce dossier');
   }
 
@@ -228,11 +228,9 @@ export class ClientsService {
     return this.findOne(clientId);
   }
 
-  async uploadLogo(id: number, file: Express.Multer.File, tenantId?: number): Promise<Client> {
-    const where: any = { id };
-    if (tenantId) where.tenantId = tenantId;
-    const client = await this.repo.findOne({ where });
-    if (!client) throw new NotFoundException('Client introuvable');
+  async uploadLogo(id: number, file: Express.Multer.File, currentUser: User): Promise<Client> {
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
     const ext = file.originalname.split('.').pop();
     const objectName = `logos/${id}/${Date.now()}.${ext}`;
     const url = await this.minio.uploadFile('passidoc-logos', objectName, file.buffer, file.mimetype);
