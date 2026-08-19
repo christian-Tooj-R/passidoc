@@ -26,7 +26,7 @@ export class FluxMensuel {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   type: string;
 
   @Column()
