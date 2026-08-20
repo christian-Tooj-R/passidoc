@@ -67,6 +67,11 @@ import { TenantConfig } from './entities/tenant-config.entity';
             ...common,
             url: config.get<string>('DATABASE_URL'),
             ssl: useSSL ? { rejectUnauthorized: false } : false,
+            connectTimeoutMS: 10000,
+            extra: {
+              connectionTimeoutMillis: 10000,
+              idleTimeoutMillis: 30000,
+            },
           };
         }
         return {
