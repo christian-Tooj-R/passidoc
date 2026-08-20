@@ -25,7 +25,7 @@ export class AuthService {
   }
 
   register(dto: { firstName: string; lastName: string; email: string; password: string; site: string; telephone?: string; poste?: string }) {
-    return this.http.post<{ message: string; email: string }>(`${this.api}/register`, dto);
+    return this.http.post<{ message: string; email: string; emailSent?: boolean }>(`${this.api}/register`, dto);
   }
 
   verifyEmail(email: string, code: string) {
