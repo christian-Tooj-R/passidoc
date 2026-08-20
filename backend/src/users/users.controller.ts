@@ -18,8 +18,8 @@ export class UsersController {
   @Post()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Créer un utilisateur (admin)' })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(@Req() req: any, @Body() dto: CreateUserDto) {
+    return this.usersService.create(dto, req.tenant?.id);
   }
 
   @Get()

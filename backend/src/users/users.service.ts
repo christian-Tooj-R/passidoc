@@ -16,12 +16,14 @@ export class UsersService {
     private notifications: NotificationsService,
   ) {}
 
-  async create(dto: CreateUserDto) {
-    const exists = await this.repo.findOne({ where: { email: dto.email } });
-    if (exists) throw new ConflictException('Email déjà utilisé');
+  async create(dto: CreateUserDto, tenantId?: number) {
+    const where: any = { email: dto.email };
+    if (tenantId) where.tenantId = tenantId;
+    const exists = await this.repo.findOne({ where });
+    if (exists) throw new ConflictException('Email déjà utilisé dans ce cabinet');
 
     const hashed = await bcrypt.hash(dto.password, 10);
-    const user = this.repo.create({ ...dto, password: hashed });
+    const user = this.repo.create({ ...dto, password: hashed, ...(tenantId ? { tenantId, isActive: true } : {}) });
     const saved = await this.repo.save(user);
     return this.sanitize(saved);
   }
