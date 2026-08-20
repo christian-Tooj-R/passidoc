@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import { google } from 'googleapis';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: Transporter | null = null;
+  private gmailUser: string | null = null;
+  private oauth2Client: any = null;
 
   constructor(private config: ConfigService) {
     const user         = config.get<string>('MAIL_USER');
@@ -15,20 +15,30 @@ export class MailService {
     const refreshToken = config.get<string>('GMAIL_REFRESH_TOKEN');
 
     if (user && clientId && clientSecret && refreshToken) {
-      this.logger.log(`Gmail OAuth2 configuré → user=${user}`);
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { type: 'OAuth2', user, clientId, clientSecret, refreshToken },
-      } as any);
-    } else if (config.get<string>('MAIL_HOST')) {
-      const host   = config.get<string>('MAIL_HOST');
-      const port   = parseInt(config.get('MAIL_PORT') ?? '587', 10);
-      const secure = config.get('MAIL_SECURE') === 'true';
-      const pass   = config.get<string>('MAIL_PASS');
-      this.logger.log(`SMTP configuré → ${host}:${port} secure=${secure} user=${user}`);
-      this.transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass }, family: 4 } as any);
+      this.gmailUser   = user;
+      this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, 'https://developers.google.com/oauthplayground');
+      this.oauth2Client.setCredentials({ refresh_token: refreshToken });
+      this.logger.log(`Gmail API HTTP configuré → user=${user}`);
     } else {
       this.logger.warn('Mail non configuré — les emails seront ignorés');
+    }
+  }
+
+  private async sendViaGmailApi(opts: { to: string; subject: string; html: string }): Promise<void> {
+    if (!this.oauth2Client || !this.gmailUser) {
+      this.logger.log(`[MAIL non envoyé — non configuré] À: ${opts.to} | Sujet: ${opts.subject}`);
+      return;
+    }
+    try {
+      const gmail  = google.gmail({ version: 'v1', auth: this.oauth2Client });
+      const raw    = Buffer.from(
+        `From: ${this.gmailUser}\r\nTo: ${opts.to}\r\nSubject: ${opts.subject}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${opts.html}`,
+      ).toString('base64url');
+      await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
+      this.logger.log(`Email envoyé à ${opts.to} : ${opts.subject}`);
+    } catch (err: any) {
+      this.logger.error(`Échec envoi email à ${opts.to} : ${err.message}`);
+      throw err;
     }
   }
 
@@ -316,15 +326,6 @@ export class MailService {
   }
 
   private async _send(opts: { from: string; to: string; replyTo?: string; subject: string; html: string }) {
-    if (!this.transporter) {
-      this.logger.log(`[MAIL non envoyé — SMTP non configuré] À: ${opts.to} | Sujet: ${opts.subject}`);
-      return;
-    }
-    try {
-      await this.transporter.sendMail(opts);
-      this.logger.log(`Email envoyé à ${opts.to} : ${opts.subject}`);
-    } catch (err: any) {
-      this.logger.error(`Échec envoi email à ${opts.to} : ${err.message}`);
-    }
+    await this.sendViaGmailApi({ to: opts.to, subject: opts.subject, html: opts.html });
   }
 }
