@@ -31,8 +31,9 @@ export class MailService {
     }
     try {
       const gmail  = google.gmail({ version: 'v1', auth: this.oauth2Client });
+      const encodedSubject = `=?UTF-8?B?${Buffer.from(opts.subject, 'utf-8').toString('base64')}?=`;
       const raw    = Buffer.from(
-        `From: ${this.gmailUser}\r\nTo: ${opts.to}\r\nSubject: ${opts.subject}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${opts.html}`,
+        `From: ${this.gmailUser}\r\nTo: ${opts.to}\r\nSubject: ${encodedSubject}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${opts.html}`,
       ).toString('base64url');
       await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
       this.logger.log(`Email envoyé à ${opts.to} : ${opts.subject}`);
