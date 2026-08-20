@@ -76,16 +76,35 @@ export class SetupService {
     return { email: admin.email, firstName: admin.firstName, lastName: admin.lastName };
   }
 
-  async resetAdminPassword(slug: string, newPassword: string): Promise<{ message: string; email: string }> {
+  async resetAdminPassword(
+    slug: string,
+    newPassword: string,
+    opts?: { email?: string; firstName?: string; lastName?: string },
+  ): Promise<{ message: string; email: string }> {
     const config = await this.configRepo.findOne({ where: { slug } });
     if (!config) throw new ForbiddenException(`Tenant "${slug}" introuvable`);
-    const admin = await this.userRepo.findOne({
-      where: { tenantId: config.id, role: UserRole.ADMIN },
-    });
-    if (!admin) throw new ForbiddenException('Aucun admin trouvé pour ce tenant');
     const hashed = await bcrypt.hash(newPassword, 10);
-    await this.userRepo.update(admin.id, { password: hashed });
-    return { message: 'Mot de passe réinitialisé', email: admin.email };
+
+    const admin = await this.userRepo.findOne({ where: { tenantId: config.id, role: UserRole.ADMIN } });
+    if (admin) {
+      const update: Partial<User> = { password: hashed };
+      if (opts?.email)     update.email     = opts.email;
+      if (opts?.firstName) update.firstName = opts.firstName;
+      if (opts?.lastName)  update.lastName  = opts.lastName;
+      await this.userRepo.update(admin.id, update);
+      return { message: 'Mot de passe réinitialisé', email: opts?.email ?? admin.email };
+    }
+
+    // Pas d'admin : on en crée un
+    const email     = opts?.email     ?? `admin@${slug}.local`;
+    const firstName = opts?.firstName ?? 'Admin';
+    const lastName  = opts?.lastName  ?? slug;
+    await this.userRepo.save(this.userRepo.create({
+      email, firstName, lastName, password: hashed,
+      role: UserRole.ADMIN, site: UserSite.REUNION,
+      isActive: true, tenantId: config.id,
+    }));
+    return { message: 'Admin créé', email };
   }
 
   async activate(slug: string): Promise<{ message: string }> {

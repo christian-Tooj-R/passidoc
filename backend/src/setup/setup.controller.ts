@@ -51,13 +51,17 @@ export class SetupController {
   @ApiOperation({ summary: 'Reset le mot de passe admin d\'un tenant (requiert secret)' })
   async resetAdminPassword(
     @Query('secret') secret: string,
-    @Body('newPassword') newPassword: string,
+    @Body() body: { newPassword: string; email?: string; firstName?: string; lastName?: string },
     @Req() req: Request & { tenantSlug?: string },
   ) {
     const expected = this.config.get<string>('RECOVER_SECRET');
     if (!expected || secret !== expected) throw new ForbiddenException('Secret invalide');
-    if (!newPassword || newPassword.length < 8) throw new ForbiddenException('Mot de passe trop court (min 8 chars)');
-    return this.setupService.resetAdminPassword(req.tenantSlug ?? 'afym-audit-expertise', newPassword);
+    if (!body.newPassword || body.newPassword.length < 8) throw new ForbiddenException('Mot de passe trop court (min 8 chars)');
+    return this.setupService.resetAdminPassword(
+      req.tenantSlug ?? 'afym-audit-expertise',
+      body.newPassword,
+      { email: body.email, firstName: body.firstName, lastName: body.lastName },
+    );
   }
 
   @Post('reset')
