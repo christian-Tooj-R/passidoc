@@ -16,7 +16,7 @@ export class MailService {
       const user   = config.get<string>('MAIL_USER');
       const pass   = config.get<string>('MAIL_PASS');
       this.logger.log(`SMTP configuré → ${host}:${port} secure=${secure} user=${user}`);
-      this.transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+      this.transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass }, family: 4 } as any);
     } else {
       this.logger.warn('MAIL_HOST non configuré — les emails seront ignorés');
     }
