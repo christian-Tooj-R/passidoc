@@ -7,10 +7,12 @@ import { CongesAbsencesController } from './conges-absences.controller';
 import { CongeAbsence } from '../entities/conge-absence.entity';
 import { SoldeConge } from '../entities/solde-conge.entity';
 import { User } from '../entities/user.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CongeAbsence, SoldeConge, User]),
+    NotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject:  [ConfigService],

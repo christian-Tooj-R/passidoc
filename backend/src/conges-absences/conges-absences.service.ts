@@ -8,6 +8,7 @@ import { CongeAbsence, TypeConge, StatutConge } from '../entities/conge-absence.
 import { SoldeConge } from '../entities/solde-conge.entity';
 import { User, UserRole } from '../entities/user.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CongesAbsencesService {
@@ -28,9 +29,10 @@ export class CongesAbsencesService {
     @InjectRepository(CongeAbsence) private congeRepo: Repository<CongeAbsence>,
     @InjectRepository(SoldeConge)   private soldeRepo: Repository<SoldeConge>,
     @InjectRepository(User)         private userRepo: Repository<User>,
-    private readonly mailSvc: MailService,
-    private readonly jwtSvc:  JwtService,
-    private readonly config:  ConfigService,
+    private readonly mailSvc:   MailService,
+    private readonly jwtSvc:    JwtService,
+    private readonly config:    ConfigService,
+    private readonly notifSvc:  NotificationsService,
   ) {}
 
   /* ── Demandes ──────────────────────────────────────────────── */
@@ -90,8 +92,15 @@ export class CongesAbsencesService {
       { joursEnAttente: () => `"joursEnAttente" + ${dto.nombreJours}` },
     );
 
-    // Notification email au manager
+    // Notification email + in-app au manager
     this._notifyManager(saved, user).catch(e => this.logger.error('Erreur envoi email manager:', e.message));
+    if (user.referentId) {
+      this.notifSvc.emit(user.referentId, {
+        type: 'CONGE_DEMANDE',
+        message: `${user.firstName} ${user.lastName} a soumis une demande de congé (${this.TYPE_LABELS[saved.typeConge] ?? saved.typeConge}, ${saved.nombreJours} j)`,
+        titre: 'Demande de congé',
+      }).catch(() => {});
+    }
 
     return this.findOne(saved.id);
   }
@@ -117,10 +126,16 @@ export class CongesAbsencesService {
       },
     );
 
-    // Notifier l'employé
-    this._notifyEmployee(await this.findOne(id), 'APPROUVEE').catch(() => {});
+    // Notifier l'employé email + in-app
+    const congeApprouve = await this.findOne(id);
+    this._notifyEmployee(congeApprouve, 'APPROUVEE').catch(() => {});
+    this.notifSvc.emit(conge.userId, {
+      type: 'CONGE_APPROUVE',
+      message: `Votre demande de congé (${this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge}, ${conge.nombreJours} j) a été approuvée`,
+      titre: 'Congé approuvé',
+    }).catch(() => {});
 
-    return this.findOne(id);
+    return congeApprouve;
   }
 
   async refuser(id: number, approbateurId: number, commentaire?: string) {
@@ -141,10 +156,16 @@ export class CongesAbsencesService {
       { joursEnAttente: () => `"joursEnAttente" - ${conge.nombreJours}` },
     );
 
-    // Notifier l'employé
-    this._notifyEmployee(await this.findOne(id), 'REFUSEE').catch(() => {});
+    // Notifier l'employé email + in-app
+    const congeRefuse = await this.findOne(id);
+    this._notifyEmployee(congeRefuse, 'REFUSEE').catch(() => {});
+    this.notifSvc.emit(conge.userId, {
+      type: 'CONGE_REFUSE',
+      message: `Votre demande de congé (${this.TYPE_LABELS[conge.typeConge] ?? conge.typeConge}, ${conge.nombreJours} j) a été refusée`,
+      titre: 'Congé refusé',
+    }).catch(() => {});
 
-    return this.findOne(id);
+    return congeRefuse;
   }
 
   async annuler(id: number, userId: number) {
