@@ -9,16 +9,26 @@ export class MailService {
   private transporter: Transporter | null = null;
 
   constructor(private config: ConfigService) {
-    const host = config.get<string>('MAIL_HOST');
-    if (host) {
+    const user         = config.get<string>('MAIL_USER');
+    const clientId     = config.get<string>('GMAIL_CLIENT_ID');
+    const clientSecret = config.get<string>('GMAIL_CLIENT_SECRET');
+    const refreshToken = config.get<string>('GMAIL_REFRESH_TOKEN');
+
+    if (user && clientId && clientSecret && refreshToken) {
+      this.logger.log(`Gmail OAuth2 configuré → user=${user}`);
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { type: 'OAuth2', user, clientId, clientSecret, refreshToken },
+      } as any);
+    } else if (config.get<string>('MAIL_HOST')) {
+      const host   = config.get<string>('MAIL_HOST');
       const port   = parseInt(config.get('MAIL_PORT') ?? '587', 10);
       const secure = config.get('MAIL_SECURE') === 'true';
-      const user   = config.get<string>('MAIL_USER');
       const pass   = config.get<string>('MAIL_PASS');
       this.logger.log(`SMTP configuré → ${host}:${port} secure=${secure} user=${user}`);
       this.transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass }, family: 4 } as any);
     } else {
-      this.logger.warn('MAIL_HOST non configuré — les emails seront ignorés');
+      this.logger.warn('Mail non configuré — les emails seront ignorés');
     }
   }
 
