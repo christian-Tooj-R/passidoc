@@ -28,8 +28,8 @@ export class AuthController {
     @Body() dto: { firstName: string; lastName: string; email: string; password: string; site: string; telephone?: string; poste?: string },
   ) {
     if (!req.tenant?.id) throw new ForbiddenException('Inscription impossible sans contexte tenant');
-    const exists = await this.userRepo.findOne({ where: { email: dto.email } });
-    if (exists) throw new ConflictException('Cet email est déjà utilisé');
+    const exists = await this.userRepo.findOne({ where: { email: dto.email, tenantId: req.tenant.id } });
+    if (exists) throw new ConflictException('Cet email est déjà utilisé dans ce cabinet');
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = this.userRepo.create({
       firstName: dto.firstName, lastName: dto.lastName,

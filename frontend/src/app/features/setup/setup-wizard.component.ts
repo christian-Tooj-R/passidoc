@@ -1993,9 +1993,11 @@ export class SetupWizardComponent implements OnInit {
     const p1 = COUNTRIES.find(c => c.code === this.step1.value.poleCode1);
     const p2 = COUNTRIES.find(c => c.code === this.step1.value.poleCode2);
 
-    const urlSlug = this.tenant.slug();
+    // N'utilise le slug existant que s'il vient du paramètre URL (?tenant=) → reconfiguration admin.
+    // Dans tous les autres cas (defaultTenantSlug, localStorage), on génère depuis le nom du cabinet.
+    const fromUrl = new URLSearchParams(window.location.search).get('tenant');
     const payload = {
-      slug:           urlSlug ?? generateSlug(this.step0.value.nomSociete),
+      slug:           fromUrl?.toLowerCase() ?? generateSlug(this.step0.value.nomSociete),
       nomSociete:     this.step0.value.nomSociete,
       slogan:         this.step0.value.slogan   || undefined,
       ville:          this.step0.value.ville    || undefined,
