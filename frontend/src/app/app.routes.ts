@@ -5,7 +5,7 @@ import { pointageGuard } from './core/guards/pointage.guard';
 import { setupGuard } from './core/guards/setup.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+  { path: '', redirectTo: 'setup', pathMatch: 'full' },
   {
     path: 'setup',
     loadComponent: () => import('./features/setup/setup-wizard.component').then(m => m.SetupWizardComponent),
