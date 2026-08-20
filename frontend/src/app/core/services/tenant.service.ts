@@ -31,26 +31,14 @@ export class TenantService {
   }
 
   private _detectSlug(): string | null {
-    const hostname = window.location.hostname;
-    const parts = hostname.split('.');
     const params = new URLSearchParams(window.location.search);
     const qSlug  = params.get('tenant');
-
-    if (parts.length >= 3) {
-      // URL param prioritaire — mémoire seulement, pas de localStorage
-      if (qSlug) return qSlug.toLowerCase();
-      // Navigation interne : lire depuis localStorage (écrit uniquement après login)
-      const stored = localStorage.getItem('tenant_slug');
-      if (stored) return stored;
-      return parts[0].toLowerCase();
-    }
-
-    // localhost / dev : ?tenant= ou localStorage
     if (qSlug) return qSlug.toLowerCase();
+
     const stored = localStorage.getItem('tenant_slug');
     if (stored) return stored.toLowerCase();
 
-    return null;
+    return environment.defaultTenantSlug ?? null;
   }
 
   /** Appelé après le setup wizard — mémoire seulement, localStorage écrit après login */

@@ -563,11 +563,8 @@ export class SidebarComponent implements OnInit {
       },
       {
         id: 'rh' as ModuleId, icon: 'manage_accounts', label: 'RH', color: '#7C3AED', activeBg: '#EDE9FE', groups: [{ label: '', items: [
-            ...(this.canSeeMenu('rh') ? [{
-              label: 'Ressources Humaines',
-              route: '/rh',
-              icon: 'manage_accounts',
-            }] : []),
+            { label: 'Salariés',          route: '/rh/salaries', icon: 'badge'         },
+            { label: 'Congés & absences', route: '/rh/conges',   icon: 'event_available' },
           ],
         }],
       },

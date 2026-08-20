@@ -24,18 +24,19 @@ export class TenantMiddleware implements NestMiddleware {
   }
 
   private extractSlug(req: Request): string | null {
-    // 1. Header explicite (dev local / tests)
+    // 1. Header explicite (dev local / frontend Angular)
     const header = req.headers['x-tenant-slug'] as string | undefined;
     if (header) return header.toLowerCase().trim();
 
-    // 2. Sous-domaine — utiliser req.hostname (Express le résout via trust proxy)
+    // 2. Sous-domaine réel uniquement (ex: afym.passidoc.re)
+    // Ignorer les domaines hébergeurs (onrender.com, etc.) qui ne sont pas des sous-domaines tenant
     const host = req.hostname || '';
-    const bare = host.split(':')[0]; // retire le port
+    const bare = host.split(':')[0];
     const parts = bare.split('.');
+    const hebergeurs = ['onrender.com', 'vercel.app', 'netlify.app', 'pages.dev'];
+    const isHebergeur = hebergeurs.some(h => bare.endsWith(h));
 
-    // "afym.passidoc.re" → 3 parts → slug = "afym"
-    // "passidoc.re" ou "localhost" → ≤ 2 parts → pas de sous-domaine
-    if (parts.length >= 3) return parts[0].toLowerCase();
+    if (parts.length >= 3 && !isHebergeur) return parts[0].toLowerCase();
 
     return null;
   }
