@@ -475,6 +475,10 @@ export class LoginComponent {
     }).subscribe({
       next: (res) => {
         this.registerLoading = false;
+        if (res.emailSent === false) {
+          this.registerError = 'Compte créé mais l\'envoi du code a échoué. Contactez votre administrateur pour activer votre compte.';
+          return;
+        }
         this.pendingEmail.set(res.email);
         this.verifyCode  = '';
         this.verifyError = '';

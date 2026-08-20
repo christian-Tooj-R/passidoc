@@ -40,8 +40,13 @@ export class AuthController {
       ...(dto.poste     ? { poste:     dto.poste     } : {}),
     });
     await this.userRepo.save(user);
-    await this.authService.sendEmailVerification(dto.email, req.tenant.id, dto.firstName);
-    return { message: 'Code de vérification envoyé', email: dto.email };
+    try {
+      await this.authService.sendEmailVerification(dto.email, req.tenant.id, dto.firstName);
+    } catch (e) {
+      // Le compte est créé mais l'email a échoué — l'admin pourra activer manuellement
+      return { message: 'Compte créé. L\'envoi du code de vérification a échoué, contactez votre administrateur.', email: dto.email, emailSent: false };
+    }
+    return { message: 'Code de vérification envoyé', email: dto.email, emailSent: true };
   }
 
   @Post('verify-email')
