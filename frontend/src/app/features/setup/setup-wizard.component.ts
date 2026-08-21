@@ -314,7 +314,7 @@ function generateSlug(name: string): string {
       <!-- Badges de confiance -->
       <div class="lp-hero__trust">
         <span class="lp-trust-pill"><mat-icon>lock</mat-icon> Données isolées par cabinet</span>
-        <span class="lp-trust-pill"><mat-icon>public</mat-icon> La Réunion &amp; Madagascar</span>
+        <span class="lp-trust-pill"><mat-icon>public</mat-icon> Gestion multi-pôles</span>
         <span class="lp-trust-pill"><mat-icon>bolt</mat-icon> Environ 3 min pour démarrer</span>
       </div>
     </section>
@@ -334,7 +334,7 @@ function generateSlug(name: string): string {
         <div class="lp-bento-card lp-bento-card--multi">
           <div class="lp-bento-card__icon lp-bci--purple"><mat-icon>public</mat-icon></div>
           <h3 class="lp-bento-card__title">Multi-pôles</h3>
-          <p class="lp-bento-card__desc">🇷🇪 La Réunion &amp; 🇲🇬 Madagascar — une interface unifiée pour tous vos collaborateurs.</p>
+          <p class="lp-bento-card__desc">Gérez plusieurs pôles géographiques depuis une interface unifiée pour tous vos collaborateurs.</p>
         </div>
         <!-- Pilotage -->
         <div class="lp-bento-card lp-bento-card--pilot">
@@ -2003,10 +2003,10 @@ export class SetupWizardComponent implements OnInit {
       ville:          this.step0.value.ville    || undefined,
       pays:           this.step0.value.pays     || undefined,
       logoUrl:        this.logoPreview()         || undefined,
-      poleLabel1:     p1?.name  ?? 'La Réunion',
-      poleLabel2:     p2?.name  ?? 'Madagascar',
-      poleFlag1:      p1?.flag  ?? '🇷🇪',
-      poleFlag2:      p2?.flag  ?? '🇲🇬',
+      poleLabel1:     p1?.name  ?? 'Pôle 1',
+      poleLabel2:     p2?.name  ?? 'Pôle 2',
+      poleFlag1:      p1?.flag  ?? '',
+      poleFlag2:      p2?.flag  ?? '',
       adminFirstName: this.step2.value.adminFirstName,
       adminLastName:  this.step2.value.adminLastName,
       adminEmail:     this.step2.value.adminEmail,

@@ -1018,7 +1018,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
   canDelete(c: Client): boolean {
     if (this.auth.isAdmin()) return true;
     const meId = this.auth.currentUser()?.id;
-    return !!meId && c.createdById === meId;
+    if (!meId) return false;
+    return c.createdById === meId || c.responsable?.id === meId;
   }
 
   initDelete(id: number, e: Event) {

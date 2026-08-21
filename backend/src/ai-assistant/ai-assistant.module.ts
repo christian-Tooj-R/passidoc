@@ -4,12 +4,13 @@ import { Client } from '../entities/client.entity';
 import { ConversationIA } from '../entities/conversation-ia.entity';
 import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel } from '../entities/flux-mensuel.entity';
+import { TenantConfig } from '../entities/tenant-config.entity';
 import { AiAssistantService } from './ai-assistant.service';
 import { AiAssistantController } from './ai-assistant.controller';
 import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel]), ClientsModule],
+  imports: [TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel, TenantConfig]), ClientsModule],
   controllers: [AiAssistantController],
   providers: [AiAssistantService],
 })

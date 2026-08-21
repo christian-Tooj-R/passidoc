@@ -23,8 +23,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE)
-  @ApiOperation({ summary: 'Liste les utilisateurs (filtrée selon le rôle)' })
+  @ApiOperation({ summary: 'Liste les utilisateurs du tenant (tous rôles)' })
   findAll(@Req() req: any) {
     return this.usersService.findAll(req.user);
   }

@@ -8,6 +8,7 @@ import { Client } from '../entities/client.entity';
 import { ConversationIA, MessageRole } from '../entities/conversation-ia.entity';
 import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel, TypeFlux, StatutDepot } from '../entities/flux-mensuel.entity';
+import { TenantConfig } from '../entities/tenant-config.entity';
 
 @Injectable()
 export class AiAssistantService {
@@ -19,10 +20,17 @@ export class AiAssistantService {
     @InjectRepository(ConversationIA) private convRepo: Repository<ConversationIA>,
     @InjectRepository(DossierTravail) private dossierRepo: Repository<DossierTravail>,
     @InjectRepository(FluxMensuel)  private fluxRepo: Repository<FluxMensuel>,
+    @InjectRepository(TenantConfig) private tenantRepo: Repository<TenantConfig>,
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
     this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+  }
+
+  private async getTenantLabels(tenantId: number | null): Promise<{ pole1: string; pole2: string }> {
+    if (!tenantId) return { pole1: 'Pôle 1', pole2: 'Pôle 2' };
+    const tc = await this.tenantRepo.findOne({ where: { id: tenantId } as any });
+    return { pole1: tc?.poleLabel1 ?? 'Pôle 1', pole2: tc?.poleLabel2 ?? 'Pôle 2' };
   }
 
   async getContextSummary(clientId: number) {
@@ -122,7 +130,7 @@ export class AiAssistantService {
     }
 
     const groqMessages = [
-      { role: 'system' as const, content: this.buildSystemPrompt(client, dossiers, flux) },
+      { role: 'system' as const, content: await this.buildSystemPrompt(client, dossiers, flux) },
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
 
@@ -173,7 +181,7 @@ export class AiAssistantService {
     PIECES_COMPTABLES: 'Pièces comptables',
   };
 
-  private buildSystemPrompt(client: Client, dossiers: DossierTravail[] = [], flux: FluxMensuel[] = []): string {
+  private async buildSystemPrompt(client: Client, dossiers: DossierTravail[] = [], flux: FluxMensuel[] = []): Promise<string> {
     const fi        = client.ficheIdentite;
     const analyses  = (client.analysesStrategiques || []).sort((a: any, b: any) => b.id - a.id);
     const objectifs = client.objectifsItems?.[0];
@@ -207,10 +215,12 @@ export class AiAssistantService {
     const lines: string[] = [];
 
     // ── En-tête et règles ──────────────────────────────────────────────────────
-    lines.push(`Tu es l'assistant dossier du cabinet AFYM Audit Expertise, dédié UNIQUEMENT au dossier "${client.nom}".`);
-    lines.push(`Site : ${client.site === 'REUNION' ? 'La Réunion' : 'Madagascar'}. Score de santé de passation : ${client.santePassation}%.`);
-    if (client.responsable)    lines.push(`Responsable cabinet : ${client.responsable.firstName} ${client.responsable.lastName}`);
-    if (client.collaborateurMg) lines.push(`Collaborateur MG : ${client.collaborateurMg.firstName} ${client.collaborateurMg.lastName}`);
+    const { pole1, pole2 } = await this.getTenantLabels(client.tenantId);
+    const siteLabel = client.site === 'REUNION' ? pole1 : pole2;
+    lines.push(`Tu es l'assistant dossier du cabinet, dédié UNIQUEMENT au dossier "${client.nom}".`);
+    lines.push(`Site : ${siteLabel}. Score de santé de passation : ${client.santePassation}%.`);
+    if (client.responsable)    lines.push(`Responsable ${pole1} : ${client.responsable.firstName} ${client.responsable.lastName}`);
+    if (client.collaborateurMg) lines.push(`Collaborateur ${pole2} : ${client.collaborateurMg.firstName} ${client.collaborateurMg.lastName}`);
     lines.push(``);
     lines.push(`DONNÉES DISPONIBLES DANS CE DOSSIER :`);
     if (sections.length) {

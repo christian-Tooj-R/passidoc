@@ -31,7 +31,7 @@ export class ClientsService {
     return this.http.delete(`${this.api}/${id}`);
   }
 
-  assign(clientId: number, responsableId: number) {
+  assign(clientId: number, responsableId: number | null) {
     return this.http.patch<Client>(`${this.api}/${clientId}/assign`, { responsableId });
   }
 

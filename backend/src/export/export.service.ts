@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as PdfPrinter from 'pdfmake';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfmake = require('pdfmake');
 import { Client } from '../entities/client.entity';
 import { StatutDepot } from '../entities/flux-mensuel.entity';
 
@@ -22,16 +23,14 @@ export class ExportService {
       (f) => f.statut === StatutDepot.MANQUANT || f.statut === StatutDepot.EN_RETARD,
     );
 
-    const fonts = {
+    pdfmake.addFonts({
       Helvetica: {
         normal: 'Helvetica',
         bold: 'Helvetica-Bold',
         italics: 'Helvetica-Oblique',
         bolditalics: 'Helvetica-BoldOblique',
       },
-    };
-
-    const printer = new PdfPrinter(fonts);
+    });
 
     const docDefinition: any = {
       defaultStyle: { font: 'Helvetica', fontSize: 10 },
@@ -118,13 +117,6 @@ export class ExportService {
       },
     };
 
-    const doc = printer.createPdfKitDocument(docDefinition);
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-      doc.end();
-    });
+    return pdfmake.createPdf(docDefinition).getBuffer();
   }
 }

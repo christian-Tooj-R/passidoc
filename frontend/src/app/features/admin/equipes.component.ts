@@ -205,12 +205,12 @@ interface CreateForm {
               <span class="org-count">{{ users().filter(u => u.isActive).length }} membres</span>
             </div>
             <ul>
-              <!-- Bureau Réunion -->
+              <!-- Bureau {{ tenantSvc.poleLabel1() }} -->
               @if (reunionUsers().length > 0) {
                 <li>
                   <div class="org-node org-node--bureau">
                     <mat-icon>location_city</mat-icon>
-                    <span class="org-antenne-name">Bureau Réunion</span>
+                    <span class="org-antenne-name">Bureau {{ tenantSvc.poleLabel1() }}</span>
                     <span class="org-count">{{ reunionUsers().length }}</span>
                   </div>
                   <ul>
@@ -575,7 +575,7 @@ interface CreateForm {
                 <li>
                   <div class="org-node org-node--bureau">
                     <mat-icon>location_city</mat-icon>
-                    <span class="org-antenne-name">Bureau Réunion</span>
+                    <span class="org-antenne-name">Bureau {{ tenantSvc.poleLabel1() }}</span>
                     <span class="org-count">{{ reunionUsers().length }}</span>
                   </div>
                   <ul>
@@ -699,7 +699,7 @@ interface CreateForm {
         <label>Antenne</label>
         <div class="select-wrap">
           <select [(ngModel)]="editForm()!.antenne" (ngModelChange)="onAntenneChange()">
-            <option value="">— Aucune (utilisateur Réunion) —</option>
+            <option value="">— Aucune (utilisateur {{ tenantSvc.poleLabel1() }}) —</option>
             <option value="EST">🌅 Antenne EST</option>
             <option value="OUEST">🌇 Antenne OUEST</option>
           </select>

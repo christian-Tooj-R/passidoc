@@ -326,63 +326,81 @@ interface TabGroup {
                 <div class="hc-interv">
                   <div class="hc-interv__header">
                     <span class="hc-interv__title">Intervenants</span>
-                    <button class="hc-interv__edit-btn"
-                            (click)="editIntervenants.set(!editIntervenants())"
-                            [matTooltip]="editIntervenants() ? 'Fermer' : 'Ajouter / modifier'">
-                      <mat-icon>{{ editIntervenants() ? 'close' : 'person_add' }}</mat-icon>
-                    </button>
-                  </div>
-
-                  <!-- Lignes affichage -->
-                  @if (client.directeur) {
-                    <div class="hc-interv__row">
-                      <span class="hc-interv__fonc">Directeur</span>
-                      <span class="hc-interv__val">{{ client.directeur.firstName }} {{ client.directeur.lastName }}</span>
-                      @if (auth.isAdmin()) {
-                        <button class="hc-interv__del" (click)="removeIntervenant('DIRECTEUR')" matTooltip="Retirer">
+                    @if (editIntervenants()) {
+                      <div class="hc-interv__actions">
+                        <button class="hc-interv__edit-btn hc-interv__edit-btn--save"
+                                (click)="editIntervenants.set(false)"
+                                title="Fermer">
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button class="hc-interv__edit-btn"
+                                (click)="editIntervenants.set(false)"
+                                title="Annuler">
                           <mat-icon>close</mat-icon>
                         </button>
-                      }
-                    </div>
-                  }
-                  @if (client.responsable) {
-                    <div class="hc-interv__row">
-                      <span class="hc-interv__fonc">Collab. RUN</span>
-                      <span class="hc-interv__val">{{ client.responsable.firstName }} {{ client.responsable.lastName }}</span>
-                      <button class="hc-interv__del" (click)="removeIntervenant('COLLAB_RUN')" matTooltip="Retirer">
-                        <mat-icon>close</mat-icon>
+                      </div>
+                    } @else {
+                      <button class="hc-interv__edit-btn"
+                              (click)="editIntervenants.set(true)"
+                              title="Modifier">
+                        <mat-icon>edit</mat-icon>
                       </button>
-                    </div>
-                  }
-                  @if (client.collaborateurMg) {
-                    <div class="hc-interv__row">
-                      <span class="hc-interv__fonc">Collab. MADA</span>
-                      <span class="hc-interv__val">{{ client.collaborateurMg.firstName }} {{ client.collaborateurMg.lastName }}</span>
-                      <button class="hc-interv__del" (click)="removeIntervenant('COLLAB_MADA')" matTooltip="Retirer">
-                        <mat-icon>close</mat-icon>
-                      </button>
-                    </div>
-                  }
-                  @if (!client.directeur && !client.responsable && !client.collaborateurMg) {
-                    <span class="hc-interv__empty">Aucun intervenant assigné</span>
-                  }
+                    }
+                  </div>
 
-                  <!-- Formulaire d'ajout -->
-                  @if (editIntervenants()) {
-                    <div class="hc-interv__form">
-                      <select class="hc-edit-select hc-edit-select--full" [(ngModel)]="newIntervUserId">
-                        <option [ngValue]="null">— Sélectionner un intervenant —</option>
+                  @if (!editIntervenants()) {
+                    <!-- Mode lecture -->
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">Directeur</span>
+                      <span class="hc-interv__val">
+                        {{ client.directeur ? client.directeur.firstName + ' ' + client.directeur.lastName : '— Non assigné —' }}
+                      </span>
+                    </div>
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel1() }}</span>
+                      <span class="hc-interv__val">
+                        {{ client.responsable ? client.responsable.firstName + ' ' + client.responsable.lastName : '— Non assigné —' }}
+                      </span>
+                    </div>
+                    <div class="hc-interv__row">
+                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
+                      <span class="hc-interv__val">
+                        {{ client.collaborateurMg ? client.collaborateurMg.firstName + ' ' + client.collaborateurMg.lastName : '— Non assigné —' }}
+                      </span>
+                    </div>
+                  } @else {
+                    <!-- Mode édition -->
+                    <div class="hc-interv__row hc-interv__row--inline">
+                      <span class="hc-interv__fonc">Directeur</span>
+                      <select class="hc-interv__select"
+                              (change)="onAssignDirecteur($any($event.target).value || null)">
+                        <option value="" [selected]="!client.directeur">— Non assigné —</option>
                         @for (u of allUsers(); track u.id) {
-                          <option [ngValue]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                          <option [value]="u.id" [selected]="client.directeur?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
                         }
                       </select>
-                      <button class="hc-edit-btn hc-edit-btn--save"
-                              [disabled]="!newIntervUserId || savingIntervenants()"
-                              (click)="assignIntervenant()">
-                        @if (savingIntervenants()) { <mat-icon class="spin">sync</mat-icon> }
-                        @else { <mat-icon>check</mat-icon> }
-                        Assigner
-                      </button>
+                    </div>
+
+                    <div class="hc-interv__row hc-interv__row--inline">
+                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel1() }}</span>
+                      <select class="hc-interv__select"
+                              (change)="onAssignRun($any($event.target).value || null)">
+                        <option value="" [selected]="!client.responsable">— Non assigné —</option>
+                        @for (u of allUsers(); track u.id) {
+                          <option [value]="u.id" [selected]="client.responsable?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                        }
+                      </select>
+                    </div>
+
+                    <div class="hc-interv__row hc-interv__row--inline">
+                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
+                      <select class="hc-interv__select"
+                              (change)="onAssignMg($any($event.target).value || null)">
+                        <option value="" [selected]="!client.collaborateurMg">— Non assigné —</option>
+                        @for (u of allUsers(); track u.id) {
+                          <option [value]="u.id" [selected]="client.collaborateurMg?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                        }
+                      </select>
                     </div>
                   }
                 </div>
@@ -848,52 +866,37 @@ interface TabGroup {
     .hc-info__val { font-size: 13px; font-weight: 600; color: #1A1C1E; }
 
     /* ── Intervenants section ──────────────────────────── */
-    .hc-interv { display: flex; flex-direction: column; gap: 5px; }
+    .hc-interv { display: flex; flex-direction: column; gap: 4px; }
     .hc-interv__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
     .hc-interv__title { font-size: 10px; font-weight: 700; color: #89909A; text-transform: uppercase; letter-spacing: .7px; }
+    .hc-interv__actions { display: flex; align-items: center; gap: 3px; }
     .hc-interv__edit-btn {
-      width: 22px; height: 22px; border: none; background: transparent; cursor: pointer;
-      border-radius: 6px; display: flex; align-items: center; justify-content: center;
-      color: #94A3B8; transition: background .15s, color .15s;
-      mat-icon { font-size: 14px; width: 14px; height: 14px; }
-      &:hover { background: #EDE9FE; color: #5B21B6; }
+      display: flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border: none; border-radius: 6px;
+      background: transparent; cursor: pointer; color: #89909A; padding: 0;
+      transition: background .15s, color .15s;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; line-height: 15px; }
+      &:hover { background: #F0F1F5; color: #6366f1; }
+      &--save { color: #16a34a; &:hover { background: #dcfce7; color: #15803d; } }
     }
-    .hc-interv__row {
-      display: flex; align-items: center; gap: 6px;
-      padding: 3px 0;
-    }
+    .hc-interv__row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .hc-interv__row--inline { gap: 8px; }
     .hc-interv__fonc {
       font-size: 10.5px; font-weight: 700; color: #6366f1;
-      min-width: 76px; flex-shrink: 0;
+      min-width: 96px; flex-shrink: 0;
     }
-    .hc-interv__val { font-size: 12.5px; font-weight: 600; color: #1A1C1E; flex: 1; }
-    .hc-interv__del {
-      width: 18px; height: 18px; border: none; background: transparent; cursor: pointer;
-      border-radius: 4px; display: flex; align-items: center; justify-content: center;
-      color: #CBD5E1; transition: background .12s, color .12s; flex-shrink: 0;
-      mat-icon { font-size: 12px; width: 12px; height: 12px; }
-      &:hover { background: #FEE2E2; color: #DC2626; }
+    .hc-interv__val {
+      font-size: 11.5px; color: #1A1C1E; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .hc-interv__empty { font-size: 11.5px; color: #C4C7CF; font-style: italic; padding: 4px 0; }
-    .hc-interv__form {
-      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-      margin-top: 6px; padding-top: 8px;
-      border-top: 1px dashed #C7CAFF;
+    .hc-interv__select {
+      flex: 1; min-width: 0;
+      border: 1px solid #E2E4EA; border-radius: 7px; padding: 4px 6px;
+      font-size: 11.5px; background: #F8F9FC; outline: none; cursor: pointer;
+      font-family: inherit; color: #1A1C1E;
+      &:focus { border-color: #6366f1; background: #fff; }
+      &:hover { border-color: #B0B4C0; }
     }
-    .hc-edit-select {
-      border: 1px solid #C4C7CF; border-radius: 7px; padding: 5px 8px;
-      font-size: 12px; background: #fff; outline: none; cursor: pointer; font-family: inherit;
-      &:focus { border-color: #6366f1; }
-    }
-    .hc-edit-select--full { flex: 1; min-width: 0; }
-    .hc-edit-btn {
-      padding: 5px 12px; border: none; border-radius: 7px; font-size: 12px;
-      font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px;
-      white-space: nowrap; transition: background .15s;
-      mat-icon { font-size: 14px; width: 14px; height: 14px; }
-      &:disabled { opacity: .5; cursor: not-allowed; }
-    }
-    .hc-edit-btn--save { background: #6366f1; color: #fff; &:hover:not(:disabled) { background: #4F46E5; } }
     @keyframes spin-icon { to { transform: rotate(360deg); } }
     .spin { animation: spin-icon .8s linear infinite; }
 
@@ -1137,10 +1140,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
   });
 
-  allUsers           = signal<User[]>([]);
-  editIntervenants   = signal(false);
-  savingIntervenants = signal(false);
-  newIntervUserId: number | null = null;
+  allUsers         = signal<User[]>([]);
+  editIntervenants = signal(false);
 
   private renderer = inject(Renderer2);
 
@@ -1179,38 +1180,34 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     this.users.getAll().subscribe(list => this.allUsers.set(list));
   }
 
-  assignIntervenant() {
-    if (!this.client || !this.newIntervUserId) return;
-    const id     = this.client.id;
-    const user   = this.allUsers().find(u => u.id === this.newIntervUserId);
-    if (!user) return;
-
-    this.savingIntervenants.set(true);
-    const done = () => {
-      this.savingIntervenants.set(false);
-      this.newIntervUserId = null;
-      this.editIntervenants.set(false);
-      this.clientsService.getOne(id).subscribe(c => this.client = c);
-    };
-
-    const isAdmin = ['ADMIN', 'EXPERT_COMPTABLE', 'CHEF_ANTENNE'].includes(user.role);
-    if (isAdmin && this.auth.isAdmin()) {
-      this.clientsService.assignDirecteur(id, user.id).subscribe({ next: done, error: done });
-    } else if (user.site === 'REUNION') {
-      this.clientsService.assign(id, user.id).subscribe({ next: done, error: done });
-    } else {
-      this.clientsService.assignMg(id, user.id).subscribe({ next: done, error: done });
-    }
-  }
-
-  removeIntervenant(fonc: 'DIRECTEUR' | 'COLLAB_RUN' | 'COLLAB_MADA') {
+  onAssignDirecteur(val: string | null) {
     if (!this.client) return;
     const id = this.client.id;
-    const done = () => this.clientsService.getOne(id).subscribe(c => this.client = c);
+    const userId = val ? Number(val) : null;
+    this.clientsService.assignDirecteur(id, userId).subscribe({
+      next: c => { this.client = c; },
+      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+    });
+  }
 
-    if (fonc === 'DIRECTEUR')   this.clientsService.assignDirecteur(id, null).subscribe({ next: done, error: done });
-    if (fonc === 'COLLAB_RUN')  this.clientsService.assign(id, null as any).subscribe({ next: done, error: done });
-    if (fonc === 'COLLAB_MADA') this.clientsService.assignMg(id, null).subscribe({ next: done, error: done });
+  onAssignRun(val: string | null) {
+    if (!this.client) return;
+    const id = this.client.id;
+    const userId = val ? Number(val) : null;
+    this.clientsService.assign(id, userId).subscribe({
+      next: c => { this.client = c; },
+      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+    });
+  }
+
+  onAssignMg(val: string | null) {
+    if (!this.client) return;
+    const id = this.client.id;
+    const userId = val ? Number(val) : null;
+    this.clientsService.assignMg(id, userId).subscribe({
+      next: c => { this.client = c; },
+      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+    });
   }
 
   onTypesChanged(types: any[]) {

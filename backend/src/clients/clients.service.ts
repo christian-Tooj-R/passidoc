@@ -123,9 +123,6 @@ export class ClientsService {
   }
 
   async assignDirecteur(clientId: number, directeurId: number | null, currentUser: User) {
-    if (currentUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Seul un administrateur peut assigner un directeur');
-    }
     const client = await this.findOne(clientId);
     await this.repo.update(clientId, { directeurId: directeurId as any });
     if (directeurId && directeurId !== currentUser.id) {
@@ -149,8 +146,10 @@ export class ClientsService {
 
   async remove(id: number, currentUser: User) {
     const client = await this.findOneForUser(id, currentUser);
-    if (currentUser.role !== UserRole.ADMIN && client.createdById !== currentUser.id) {
-      throw new ForbiddenException('Seul le créateur du dossier ou un administrateur peut le supprimer');
+    const isCreator = client.createdById === currentUser.id;
+    const isResponsable = client.responsableId === currentUser.id;
+    if (currentUser.role !== UserRole.ADMIN && !isCreator && !isResponsable) {
+      throw new ForbiddenException('Seul le créateur du dossier ou son responsable peut le supprimer');
     }
     await this.repo.update(id, { isActive: false });
     return { message: 'Dossier archivé' };
@@ -180,8 +179,8 @@ export class ClientsService {
       }
       if (collaborateurMgId) {
         const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
-        if (!mgUser || mgUser.site !== UserSite.MADAGASCAR) {
-          throw new ForbiddenException('Ce collaborateur ne fait pas partie de l\'équipe Madagascar');
+        if (!mgUser) {
+          throw new ForbiddenException('Collaborateur introuvable');
         }
       }
     }

@@ -52,8 +52,7 @@ export class ClientsController {
   }
 
   @Patch(':id/assign-directeur')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Assigner un directeur à un dossier (ADMIN uniquement)' })
+  @ApiOperation({ summary: 'Assigner un directeur à un dossier' })
   assignDirecteur(
     @Param('id', ParseIntPipe) id: number,
     @Body('directeurId') directeurId: number | null,

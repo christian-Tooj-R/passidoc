@@ -37,7 +37,7 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
           <div class="login-brand__features">
             <div class="feature-item"><mat-icon>verified</mat-icon><span>Dossiers clients centralisés</span></div>
             <div class="feature-item"><mat-icon>trending_up</mat-icon><span>Score santé en temps réel</span></div>
-            <div class="feature-item"><mat-icon>public</mat-icon><span>Multi-sites Réunion &amp; Madagascar</span></div>
+            <div class="feature-item"><mat-icon>public</mat-icon><span>Gestion multi-sites</span></div>
           </div>
         </div>
         <div class="login-brand__footer">AFYM Audit Expertise &copy; {{ year }}</div>
