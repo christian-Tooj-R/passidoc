@@ -1065,6 +1065,12 @@ interface TabGroup {
       pointer-events: auto !important;
       cursor: pointer;
     }
+    /* Navigation entre cycles toujours cliquable, même en lecture seule */
+    ::ng-deep .content__body--cloture .dt-cycles-nav,
+    ::ng-deep .content__body--cloture .dt-cycles-nav * {
+      pointer-events: auto !important;
+      user-select: auto;
+    }
   `],
 })
 export class ClientDetailComponent implements OnInit, OnDestroy {
