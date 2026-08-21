@@ -2,12 +2,13 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { pointageGuard } from './core/guards/pointage.guard';
-import { setupGuard } from './core/guards/setup.guard';
+import { setupGuard, alreadySetupGuard } from './core/guards/setup.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'setup', pathMatch: 'full' },
   {
     path: 'setup',
+    canActivate: [alreadySetupGuard],
     loadComponent: () => import('./features/setup/setup-wizard.component').then(m => m.SetupWizardComponent),
   },
   {

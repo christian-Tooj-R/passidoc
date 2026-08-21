@@ -7,7 +7,11 @@ import { AuthService } from '../services/auth.service';
 /** Bloque l'accès si l'application n'est pas encore configurée → redirige vers /setup */
 export const setupGuard: CanActivateFn = () => {
   const tenant = inject(TenantService);
+  const auth   = inject(AuthService);
   const router = inject(Router);
+
+  // Utilisateur déjà authentifié → le tenant était forcément configuré au login
+  if (auth.isLoggedIn()) return true;
 
   const cached = tenant.isConfigured();
   if (cached === true)  return true;
