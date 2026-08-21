@@ -92,9 +92,8 @@ export class ClientsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Archiver un dossier client' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.clientsService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.clientsService.remove(id, req.user);
   }
 }

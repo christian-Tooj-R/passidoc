@@ -7,7 +7,24 @@ import { DossierTravail } from '../entities/dossier-travail.entity';
 import { CycleRevision, TypeCycle } from '../entities/cycle-revision.entity';
 import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 
-const CYCLES_ALL: TypeCycle[] = [TypeCycle.VENTE, TypeCycle.ACHAT, TypeCycle.SOCIAL];
+const CYCLES_ALL: TypeCycle[] = [
+  TypeCycle.A, TypeCycle.B, TypeCycle.C, TypeCycle.D, TypeCycle.E,
+  TypeCycle.F, TypeCycle.G, TypeCycle.H, TypeCycle.I, TypeCycle.J, TypeCycle.K,
+];
+
+const CYCLE_LABELS: Record<TypeCycle, string> = {
+  A: 'Cycle A - Régularités formelles et synthèse',
+  B: 'Cycle B - Trésorerie et financement',
+  C: 'Cycle C - Achats et fournisseurs',
+  D: 'Cycle D - Charges externes',
+  E: 'Cycle E - Ventes et clients',
+  F: 'Cycle F - Stock et en cours',
+  G: 'Cycle G - Immobilisations',
+  H: 'Cycle H - Social',
+  I: 'Cycle I - Impôts',
+  J: 'Cycle J - Capitaux propres et provisions',
+  K: 'Cycle K - Autres comptes',
+};
 
 @Injectable()
 export class DossierTravailService {
@@ -57,7 +74,7 @@ export class DossierTravailService {
     clientId: number,
     exerciceId: number,
     typeCycle: TypeCycle,
-    data: { pourcentageCouverture?: number; diligences?: string; conclusion?: string },
+    data: { pourcentageCouverture?: number; commentaireLogiciel?: string; diligences?: string; conclusion?: string },
   ): Promise<CycleRevision> {
     await this._checkExerciceOuvert(exerciceId);
     const dossier = await this.findOrCreate(clientId, exerciceId);
@@ -102,7 +119,7 @@ export class DossierTravailService {
     const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
 
     const cycle = dossier?.cycles.find((c) => c.typeCycle === typeCycle);
-    const cycleLabel = { VENTE: 'Ventes', ACHAT: 'Achats', SOCIAL: 'Social' }[typeCycle];
+    const cycleLabel = CYCLE_LABELS[typeCycle] ?? typeCycle;
 
     const context = `
 Vous êtes un assistant expert-comptable. Répondez uniquement à partir des données ci-dessous.

@@ -23,6 +23,7 @@ export class ClientsService {
 
   async create(dto: CreateClientDto, currentUser: User) {
     const client = this.repo.create(dto);
+    client.createdById = currentUser.id;
     // Auto-assign to creator if not ADMIN
     if (currentUser.role !== UserRole.ADMIN) {
       client.responsable = currentUser;
@@ -86,7 +87,7 @@ export class ClientsService {
 
     if (site) query.andWhere('client.site = :site', { site });
 
-    return query.orderBy('client.nom', 'ASC').getMany();
+    return query.orderBy('client.createdAt', 'ASC').getMany();
   }
 
   // Internal: no auth check (used by other services)
@@ -141,12 +142,16 @@ export class ClientsService {
   async update(id: number, dto: UpdateClientDto, currentUser: User) {
     const client = await this.findOneForUser(id, currentUser);
     this.checkEditAccess(client, currentUser);
-    await this.repo.update(id, dto);
+    Object.assign(client, dto);
+    await this.repo.save(client);
     return this.findOne(id);
   }
 
-  async remove(id: number) {
-    await this.findOne(id);
+  async remove(id: number, currentUser: User) {
+    const client = await this.findOneForUser(id, currentUser);
+    if (currentUser.role !== UserRole.ADMIN && client.createdById !== currentUser.id) {
+      throw new ForbiddenException('Seul le créateur du dossier ou un administrateur peut le supprimer');
+    }
     await this.repo.update(id, { isActive: false });
     return { message: 'Dossier archivé' };
   }

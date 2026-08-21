@@ -2,12 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-export type TypeCycle = 'VENTE' | 'ACHAT' | 'SOCIAL';
+export type TypeCycle = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K';
 
 export interface CycleRevision {
   id: number;
   typeCycle: TypeCycle;
   pourcentageCouverture: number;
+  commentaireLogiciel: string;
   diligences: string;
   conclusion: string;
   updatedAt: string;

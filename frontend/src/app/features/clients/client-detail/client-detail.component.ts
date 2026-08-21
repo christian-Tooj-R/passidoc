@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, Renderer2, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -146,7 +146,7 @@ interface TabGroup {
             <div class="eb-left">
               <mat-icon class="eb-icon">event_note</mat-icon>
               <div class="eb-info">
-                <span class="eb-label">Exercice en cours</span>
+                <span class="eb-label">{{ exerciceCourant()!.statut === 'CLOTURE' ? 'Exercice clôturé' : 'Exercice en cours' }}</span>
                 <span class="eb-period">
                   {{ exerciceCourant()!.annee }}
                   <span class="eb-dates">
@@ -169,6 +169,11 @@ interface TabGroup {
                     </option>
                   }
                 </select>
+              }
+              @if (exerciceCourant()!.statut === 'CLOTURE') {
+                <span class="eb-readonly-badge">
+                  <mat-icon>visibility</mat-icon> Lecture seule
+                </span>
               }
               @if (exerciceCourant()!.statut === 'OUVERT') {
                 <button class="eb-btn-cloture" (click)="cloturerExercice()" [disabled]="cloturant()">
@@ -426,21 +431,24 @@ interface TabGroup {
 
             <!-- Animated content body -->
             <div class="content__body" [@tabFade]="activeTab()">
-              @switch (activeTab()) {
-                @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
-                @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" [readonly]="!canEdit()" /> }
-                @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit()" (fluxChanged)="onFluxChanged($event)" /> }
-                @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit()" /> }
-                @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit()" /> }
-                @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit()" /> }
-                @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit()" /> }
-                @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit()" /> }
-                @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
-              }
+              <div [class.content__body--readonly]="!canEdit()"
+                   [class.content__body--cloture]="exerciceCourant()?.statut === 'CLOTURE'">
+                @switch (activeTab()) {
+                  @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
+                  @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (fluxChanged)="onFluxChanged($event)" /> }
+                  @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+                }
+              </div>
             </div>
           </div>
 
@@ -682,6 +690,19 @@ interface TabGroup {
     .content__body > * {
       display: block;
       width: 100%;
+    }
+    .content__body--readonly {
+      opacity: 0.85;
+    }
+    ::ng-deep .content__body--readonly * {
+      pointer-events: none !important;
+      user-select: none;
+    }
+    /* Autoriser le déroulement des accordéons en lecture seule */
+    ::ng-deep .content__body--readonly mat-expansion-panel-header,
+    ::ng-deep .content__body--readonly .mat-expansion-panel-header {
+      pointer-events: auto !important;
+      cursor: pointer;
     }
 
     /* ══ HERO SECTION ═══════════════════════════════════ */
@@ -1024,9 +1045,29 @@ interface TabGroup {
       padding: 10px 20px; font-size: 13px; font-weight: 500;
       mat-icon { font-size: 18px; width: 18px; height: 18px; }
     }
+
+    /* Badge lecture seule dans la bannière exercice clôturé */
+    .eb-readonly-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #E8EAED; color: #44474F;
+      border-radius: 20px; padding: 4px 12px 4px 8px;
+      font-size: 11.5px; font-weight: 600;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+
+    /* Blocage interactions pour exercice clôturé */
+    ::ng-deep .content__body--cloture * {
+      pointer-events: none !important;
+      user-select: none;
+    }
+    ::ng-deep .content__body--cloture mat-expansion-panel-header,
+    ::ng-deep .content__body--cloture .mat-expansion-panel-header {
+      pointer-events: auto !important;
+      cursor: pointer;
+    }
   `],
 })
-export class ClientDetailComponent implements OnInit {
+export class ClientDetailComponent implements OnInit, OnDestroy {
   @ViewChild('logoInput') logoInput!: ElementRef<HTMLInputElement>;
 
   client: Client | null = null;
@@ -1095,11 +1136,25 @@ export class ClientDetailComponent implements OnInit {
   savingIntervenants = signal(false);
   newIntervUserId: number | null = null;
 
+  private renderer = inject(Renderer2);
+
   constructor(
     private route: ActivatedRoute,
     private clientsService: ClientsService,
     private exerciceService: ExerciceService,
-  ) {}
+  ) {
+    effect(() => {
+      if (this.exerciceCourant()?.statut === 'CLOTURE') {
+        this.renderer.addClass(document.body, 'exercice-cloture');
+      } else {
+        this.renderer.removeClass(document.body, 'exercice-cloture');
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.renderer.removeClass(document.body, 'exercice-cloture');
+  }
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));

@@ -81,6 +81,7 @@ export interface Client {
   documents?: ClientDocument[];
   dateClotureExercice?: string; // "MM-DD"
   createdAt: string;
+  createdById?: number;
 }
 
 export interface FicheIdentite {

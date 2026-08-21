@@ -748,6 +748,14 @@ body.theme-dark .cdk-overlay-container {
 .section-title mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
 /* ─────────────────────────────────────────────
+   Exercice clôturé — toute l'interface en N&B
+───────────────────────────────────────────── */
+body.exercice-cloture {
+  filter: grayscale(0.6) contrast(0.93) saturate(0.7);
+  transition: filter .3s ease;
+}
+
+/* ─────────────────────────────────────────────
    Accessibilité — réduire les animations
 ───────────────────────────────────────────── */
 body.reduced-motion *,

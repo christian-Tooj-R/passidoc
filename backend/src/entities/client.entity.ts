@@ -214,6 +214,14 @@ export class Client {
   @Column({ nullable: true })
   collaborateurMgId: number;
 
+  // Utilisateur qui a créé le dossier
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'createdById' })
+  createdBy: User;
+
+  @Column({ nullable: true })
+  createdById: number;
+
   @OneToOne(() => FicheIdentite, (f) => f.client, { cascade: true })
   ficheIdentite: FicheIdentite;
 

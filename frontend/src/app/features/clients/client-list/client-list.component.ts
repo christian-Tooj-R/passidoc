@@ -18,7 +18,7 @@ import { TenantService } from '../../../core/services/tenant.service';
 import { Client } from '../../../core/models/client.model';
 import { CreateClientWizardComponent } from './create-client-wizard.component';
 
-type SortKey = 'nom' | 'score' | 'site';
+type SortKey = 'nom' | 'score' | 'site' | 'date';
 interface CollabOption { id: number; label: string; }
 type ViewMode = 'grid' | 'list';
 
@@ -229,7 +229,7 @@ type ViewMode = 'grid' | 'list';
                       <mat-icon>lock_outline</mat-icon>
                     </span>
                   }
-                  @if (auth.isAdmin() && confirmDeleteId() !== c.id) {
+                  @if (canDelete(c) && confirmDeleteId() !== c.id) {
                     <button class="folder-del-btn" matTooltip="Supprimer le dossier"
                             (click)="initDelete(c.id, $event)">
                       <mat-icon>delete_outline</mat-icon>
@@ -396,8 +396,8 @@ type ViewMode = 'grid' | 'list';
               <!-- Status -->
               <span class="lr-status" [class]="statusPillClass(score(c))">{{ getStatusLabel(score(c)) }}</span>
 
-              <!-- Supprimer (admin uniquement) -->
-              @if (auth.isAdmin()) {
+              <!-- Supprimer (créateur ou admin) -->
+              @if (canDelete(c)) {
                 @if (confirmDeleteId() === c.id) {
                   <div class="lr-confirm" (click)="$event.stopPropagation()">
                     <button class="lrc-btn lrc-btn--cancel" (click)="cancelDelete($event)">Annuler</button>
@@ -906,7 +906,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   mesDossiers     = signal(false);
   collabFilter    = signal<number | null>(null);
   fonctionFilter  = signal<string>('');
-  sortKey         = signal<SortKey>('nom');
+  sortKey         = signal<SortKey>('date');
   sortDir         = signal<'asc'|'desc'>('asc');
   viewMode        = signal<ViewMode>('grid');
   confirmDeleteId = signal<number | null>(null);
@@ -980,6 +980,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
       if (k === 'nom')   return d * a.nom.localeCompare(b.nom);
       if (k === 'score') return d * (sa - sb);
       if (k === 'site')  return d * a.site.localeCompare(b.site);
+      if (k === 'date')  return d * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       return 0;
     });
   });
@@ -1012,6 +1013,12 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const meId = this.auth.currentUser()?.id;
     if (!meId) return false;
     return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
+  }
+
+  canDelete(c: Client): boolean {
+    if (this.auth.isAdmin()) return true;
+    const meId = this.auth.currentUser()?.id;
+    return !!meId && c.createdById === meId;
   }
 
   initDelete(id: number, e: Event) {

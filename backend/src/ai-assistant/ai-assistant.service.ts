@@ -313,7 +313,13 @@ export class AiAssistantService {
         }
         if (d.cycles?.length) {
           for (const c of d.cycles) {
-            const cycleLabel = { VENTE: 'Ventes', ACHAT: 'Achats', SOCIAL: 'Social' }[c.typeCycle] ?? c.typeCycle;
+            const CYCLE_LABELS: Record<string, string> = {
+              A: 'Régularités formelles et synthèse', B: 'Trésorerie et financement',
+              C: 'Achats et fournisseurs', D: 'Charges externes', E: 'Ventes et clients',
+              F: 'Stock et en cours', G: 'Immobilisations', H: 'Social',
+              I: 'Impôts', J: 'Capitaux propres et provisions', K: 'Autres comptes',
+            };
+            const cycleLabel = CYCLE_LABELS[c.typeCycle] ?? c.typeCycle;
             const hasContent = (c.diligences?.trim() || c.conclusion?.trim() || c.pourcentageCouverture > 0);
             if (hasContent) {
               lines.push(`  Cycle ${cycleLabel} :`);
