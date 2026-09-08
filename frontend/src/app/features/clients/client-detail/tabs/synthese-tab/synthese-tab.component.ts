@@ -27,7 +27,6 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
   template: `
     <div class="tab-content">
       <div class="tab-header">
-        <h3>Analyse Financière & Clôture</h3>
         @if (!readonly) {
           <button mat-stroked-button color="primary" (click)="showForm = !showForm">
             <mat-icon>add</mat-icon> Nouvel exercice
@@ -241,7 +240,6 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
   `,
   styles: [`
     .tab-content { padding: 24px; }
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .synthese-form { margin-bottom: 24px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 0; }
     .full-col { grid-column: 1 / -1; }

@@ -53,4 +53,14 @@ export class ClientsService {
     formData.append('logo', file);
     return this.http.post<any>(`${environment.apiUrl}/clients/${clientId}/logo`, formData);
   }
+
+  uploadFichePhoto(clientId: number, file: File) {
+    const formData = new FormData();
+    formData.append('photo', file);
+    return this.http.post<any>(`${environment.apiUrl}/clients/${clientId}/fiche/photos`, formData);
+  }
+
+  deleteFichePhoto(clientId: number, photoUrl: string) {
+    return this.http.delete<any>(`${environment.apiUrl}/clients/${clientId}/fiche/photos`, { body: { photoUrl } });
+  }
 }

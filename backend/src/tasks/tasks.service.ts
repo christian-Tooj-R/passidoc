@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatut } from '../entities/task.entity';
-import { User, UserRole, UserSite } from '../entities/user.entity'; // UserSite kept for legacy path
+import { User, UserRole, UserSite, PoleService } from '../entities/user.entity'; // UserSite kept for legacy path
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -14,6 +14,21 @@ export class TasksService {
     @InjectRepository(User) private userRepo: Repository<User>,
     private notifications: NotificationsService,
   ) {}
+
+  private async notifyPole(
+    poleService: string,
+    tenantId: number | undefined,
+    excludeUserId: number,
+    payload: Record<string, any>,
+  ) {
+    const where: any = { poleService: poleService as PoleService, isActive: true };
+    if (tenantId) where.tenantId = tenantId;
+    const members = await this.userRepo.find({ where });
+    for (const u of members) {
+      if (u.id === excludeUserId) continue;
+      await this.notifications.emit(u.id, payload);
+    }
+  }
 
   private async canAssignTo(assigner: User, assigneeId: number): Promise<boolean> {
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(assigner.role)) return true;
@@ -175,6 +190,16 @@ export class TasksService {
       });
     }
 
+    if (dto.serviceDestinataire) {
+      await this.notifyPole(dto.serviceDestinataire, currentUser.tenantId, currentUser.id, {
+        type: 'TASK_INTER_SERVICE',
+        message: `Nouvelle tâche inter-service pour le pôle ${dto.serviceDestinataire}`,
+        titre: dto.titre,
+        clientId,
+        taskId: saved.id,
+      });
+    }
+
     return this.repo.findOne({ where: { id: saved.id }, relations: ['assignee', 'createdBy', 'client'] });
   }
 
@@ -229,6 +254,16 @@ export class TasksService {
       await this.notifications.emit(dto.assigneeId, {
         type: 'TASK_ASSIGNED',
         message: `Une tâche vous a été assignée`,
+        titre: task.titre,
+        clientId: task.clientId,
+        taskId: id,
+      });
+    }
+
+    if (dto.serviceDestinataire && dto.serviceDestinataire !== task.serviceDestinataire && currentUser) {
+      await this.notifyPole(dto.serviceDestinataire, currentUser.tenantId, currentUser.id, {
+        type: 'TASK_INTER_SERVICE',
+        message: `Nouvelle tâche inter-service pour le pôle ${dto.serviceDestinataire}`,
         titre: task.titre,
         clientId: task.clientId,
         taskId: id,

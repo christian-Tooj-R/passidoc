@@ -33,6 +33,11 @@ export interface Task {
   anyoneCanTake?: boolean;
   recurrenceType?: string;
   recurrenceJour?: number;
+  serviceDestinataire?: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
+  serviceAttendu?: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
+  enAttenteService?: boolean;
+  estRecurrente?: boolean;
+  estFacturable?: boolean;
 }
 
 export interface TaskComment {
@@ -120,6 +125,10 @@ export class TasksService {
     titre: string; description?: string; priorite?: TaskPriorite;
     type?: TaskType; dateEcheance?: string; assigneeId?: number; anyoneCanTake?: boolean;
     recurrenceType?: string; recurrenceJour?: number;
+    serviceDestinataire?: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
+    enAttenteService?: boolean;
+    serviceAttendu?: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
+    estFacturable?: boolean;
   }) {
     return this.http.post<Task>(`${environment.apiUrl}/tasks`, data);
   }
@@ -127,6 +136,7 @@ export class TasksService {
   update(clientId: number, id: number, data: Partial<{
     titre: string; description: string; statut: TaskStatut; priorite: TaskPriorite;
     type: TaskType; dateEcheance: string; assigneeId: number; tempsExecution: number; heuresSup: number;
+    serviceDestinataire: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
   }>) {
     return this.http.patch<Task>(`${this.api(clientId)}/${id}`, data);
   }

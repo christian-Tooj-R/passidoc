@@ -17,4 +17,7 @@ export class CreateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() mois?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() annee?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() commentaire?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() serviceDestinataire?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() estRecurrente?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() estFacturable?: boolean;
 }

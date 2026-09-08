@@ -14,4 +14,9 @@ export class UpdateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() tempsExecution?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() heuresSup?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() anyoneCanTake?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() serviceDestinataire?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() serviceAttendu?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() enAttenteService?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() estRecurrente?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() estFacturable?: boolean;
 }

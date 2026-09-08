@@ -490,8 +490,9 @@ export class TopNavComponent implements OnInit, OnDestroy {
   }
 
   notifIcon(type: string): string {
-    if (type === 'TEAM_ASSIGNED')   return 'people';
-    if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
+    if (type === 'TEAM_ASSIGNED')     return 'people';
+    if (type === 'CLIENT_ASSIGNED')   return 'folder_shared';
+    if (type === 'TASK_INTER_SERVICE') return 'swap_horiz';
     return 'task_alt';
   }
 

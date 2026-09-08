@@ -24,6 +24,13 @@ export enum UserAntenne {
   OUEST = 'OUEST',
 }
 
+export enum PoleService {
+  COMPTA   = 'COMPTA',
+  SOCIAL   = 'SOCIAL',
+  JURIDIQUE = 'JURIDIQUE',
+  ADMIN    = 'ADMIN',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -69,6 +76,10 @@ export class User {
   /** Antenne rattachée — EST ou OUEST (null pour les utilisateurs Réunion) */
   @Column({ type: 'enum', enum: UserAntenne, nullable: true })
   antenne: UserAntenne | null;
+
+  /** Pôle métier du collaborateur — détermine les notifications inter-service */
+  @Column({ type: 'enum', enum: PoleService, nullable: true })
+  poleService: PoleService | null;
 
   /** Superviseur direct : Chef de mission pour un Collaborateur, Chef d'antenne pour un Chef de mission */
   @Column({ nullable: true })

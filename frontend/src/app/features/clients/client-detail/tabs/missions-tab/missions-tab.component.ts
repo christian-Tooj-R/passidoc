@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,7 +22,6 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
   template: `
     <div class="tab">
       <div class="tab-header">
-        <h2>Missions</h2>
         @if (!readonly) {
           <button mat-flat-button color="primary" (click)="showForm = !showForm">
             <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
@@ -141,9 +140,6 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
   styles: [`
     :host { display: block; padding: 24px; }
 
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
-    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
-
     /* ── Formulaire d'ajout ─────────────────────────── */
     .add-panel {
       background: #F8F9FE; border: 1px solid #E0E2EC;
@@ -241,9 +237,12 @@ import { MissionsService, Mission } from '../../../../../core/services/missions.
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
   `],
 })
-export class MissionsTabComponent implements OnInit {
+export class MissionsTabComponent implements OnInit, OnChanges {
   @Input() clientId!: number;
   @Input() readonly = false;
+  @Input() exerciceAnnee: number = new Date().getFullYear();
+  @Input() prefill: { titre: string; type: string; description: string; arguments: string } | null = null;
+  @Output() prefillUsed = new EventEmitter<void>();
   private fb = inject(FormBuilder);
   private service = inject(MissionsService);
   private toast = inject(ToastService);
@@ -259,7 +258,7 @@ export class MissionsTabComponent implements OnInit {
     honoraires: [null as number | null],
     arguments: [''],
     raisonRefus: [''],
-    annee: [new Date().getFullYear()],
+    annee: [this.exerciceAnnee],
   });
 
   missionGroups = [
@@ -269,8 +268,18 @@ export class MissionsTabComponent implements OnInit {
     { type: 'IA', label: 'Missions détectées par l\'IA', icon: '🤖' },
   ];
 
-  ngOnInit() {
-    this.load();
+  ngOnInit() { this.load(); }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['prefill'] && this.prefill) {
+      this.form.patchValue({
+        titre: this.prefill.titre,
+        type: this.prefill.type,
+        description: this.prefill.description,
+        arguments: this.prefill.arguments,
+      });
+      this.showForm = true;
+    }
   }
 
   load() {
@@ -285,8 +294,9 @@ export class MissionsTabComponent implements OnInit {
     if (this.form.invalid) return;
     this.service.create(this.clientId, this.form.value as any).subscribe(() => {
       this.toast.success('Mission ajoutée');
-      this.form.reset({ type: 'DETECTEE', annee: new Date().getFullYear() });
+      this.form.reset({ type: 'DETECTEE', annee: this.exerciceAnnee });
       this.showForm = false;
+      this.prefillUsed.emit();
       this.load();
     });
   }

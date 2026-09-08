@@ -1,10 +1,11 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpClient } from '@angular/common/http';
+import { TabSaveService } from '../../../../../core/services/tab-save.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { environment } from '../../../../../../environments/environment';
 
@@ -38,27 +39,25 @@ interface CanvasBox {
   template: `
 <div class="cv-wrap">
   <div class="cv-header">
-    <div class="cv-header__left">
-      <mat-icon class="cv-header__icon">grid_view</mat-icon>
-      <div>
-        <h2 class="cv-header__title">Modèle Canvas</h2>
-        <p class="cv-header__sub">Business Model Canvas — client {{ clientId }}</p>
-      </div>
-    </div>
-    <div class="cv-header__actions">
-      @if (!readonly) {
-        <button mat-stroked-button (click)="save()" [disabled]="saving" class="cv-save-btn">
-          <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
-        </button>
-      }
-      <button mat-icon-button (click)="copyAll()" matTooltip="Copier tout le canvas">
-        <mat-icon>content_copy</mat-icon>
-      </button>
-    </div>
+    <button mat-icon-button (click)="copyAll()" matTooltip="Copier tout le canvas">
+      <mat-icon>content_copy</mat-icon>
+    </button>
   </div>
 
   @if (loading) {
     <div class="cv-loading">Chargement...</div>
+  } @else if (!editMode()) {
+    <div class="cv-grid">
+      @for (box of boxes; track box.key) {
+        <div class="cv-box" [style.--box-color]="box.color" [style.grid-area]="box.gridArea">
+          <div class="cv-box__head">
+            <mat-icon [style.color]="box.color">{{ box.icon }}</mat-icon>
+            <span class="cv-box__label">{{ box.label }}</span>
+          </div>
+          <p class="cv-box__read">{{ data[box.key] || '—' }}</p>
+        </div>
+      }
+    </div>
   } @else {
     <div class="cv-grid">
       @for (box of boxes; track box.key) {
@@ -82,8 +81,9 @@ interface CanvasBox {
   `,
   styles: [`
     .cv-wrap { padding: 24px; }
+    .cv-box__read { font-size: 0.82rem; color: #374151; line-height: 1.6; white-space: pre-line; padding: 4px 0; min-height: 60px; margin: 0; }
 
-    .cv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .cv-header { display: flex; align-items: center; justify-content: space-between; }
     .cv-header__left { display: flex; align-items: center; gap: 14px; }
     .cv-header__icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
     .cv-header__title { margin: 0; font-size: 1.3rem; font-weight: 600; }
@@ -137,12 +137,16 @@ interface CanvasBox {
     }
   `],
 })
-export class CanvasTabComponent implements OnInit {
+export class CanvasTabComponent implements OnInit, OnDestroy {
   @Input() clientId!: number;
   @Input() readonly = false;
 
   private http  = inject(HttpClient);
   private toast = inject(ToastService);
+  private tabSave = inject(TabSaveService);
+
+  editMode = signal(false);
+  private _snapshot: CanvasData | null = null;
 
   loading = false;
   saving  = false;
@@ -165,7 +169,16 @@ export class CanvasTabComponent implements OnInit {
     { key: 'sourcesRevenus',   label: 'Sources de revenus',    icon: 'attach_money',    color: '#22c55e', gridArea: 'revenus',     description: 'Comment générez-vous des revenus ?' },
   ];
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.tabSave.registerEditMode(
+      () => this.enterEdit(),
+      () => this.save(),
+      () => this.cancelEdit()
+    );
+    this.load();
+  }
+
+  ngOnDestroy() { this.tabSave.clear(); }
 
   load() {
     this.loading = true;
@@ -175,10 +188,27 @@ export class CanvasTabComponent implements OnInit {
     });
   }
 
+  enterEdit() {
+    this._snapshot = { ...this.data };
+    this.editMode.set(true);
+    this.tabSave.setEditing(true);
+  }
+
+  cancelEdit() {
+    if (this._snapshot) this.data = { ...this._snapshot };
+    this.editMode.set(false);
+    this.tabSave.setEditing(false);
+  }
+
   save() {
     this.saving = true;
     this.http.patch(`${environment.apiUrl}/clients/${this.clientId}/canvas`, this.data).subscribe({
-      next: () => { this.toast.success('Canvas enregistré'); this.saving = false; },
+      next: () => {
+        this.toast.success('Canvas enregistré');
+        this.saving = false;
+        this.editMode.set(false);
+        this.tabSave.setEditing(false);
+      },
       error: () => { this.saving = false; },
     });
   }

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject, signal, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, signal, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { TabSaveService } from '../../../../../core/services/tab-save.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatChipsModule } from '@angular/material/chips';
@@ -54,7 +55,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     MatChipsModule, MatTooltipModule, MatCheckboxModule, OnlyNumbersDirective,
   ],
   template: `
-    <div class="tab-content">
+    <div class="tab-content" [class.reading]="!editMode()">
       <form [formGroup]="form" (ngSubmit)="save()">
         <mat-accordion multi>
           <mat-expansion-panel expanded>
@@ -110,57 +111,149 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             </div>
           </mat-expansion-panel>
 
-          @if (fiscalRef) {
-            <mat-expansion-panel expanded>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  <mat-icon>account_balance</mat-icon>&nbsp;Spécificités fiscales
-                  <span class="site-badge" [class]="site === 'REUNION' ? 'badge-re' : 'badge-mg'">
-                    {{ tenantSvc.poleLabel(site) }}
-                  </span>
-                </mat-panel-title>
-              </mat-expansion-panel-header>
+          <!-- ═══════════════════════ TACHE-03 ═══════════════════════ -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>store_mall_directory</mat-icon>&nbsp;Activité &amp; fonctionnement</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-grid">
+              <mat-form-field class="full-col">
+                <mat-label>Activité principale</mat-label>
+                <textarea matInput rows="3" [formControl]="activitePrincipaleCtrl"
+                          placeholder="Description de l'activité principale..." [readonly]="readonly"></textarea>
+              </mat-form-field>
+              <mat-form-field class="full-col">
+                <mat-label>Type de clientèle</mat-label>
+                <textarea matInput rows="2" [formControl]="typeClienteleCtrl"
+                          placeholder="Professionnels, particuliers, mixte..." [readonly]="readonly"></textarea>
+              </mat-form-field>
+              <mat-form-field class="full-col">
+                <mat-label>Saisonnalité</mat-label>
+                <textarea matInput rows="2" [formControl]="saisonnaliteCtrl"
+                          placeholder="Pics d'activité, périodes creuses..." [readonly]="readonly"></textarea>
+              </mat-form-field>
+              <mat-form-field class="full-col">
+                <mat-label>Points de vente / localisation</mat-label>
+                <textarea matInput rows="2" [formControl]="pointsDeVenteCtrl"
+                          placeholder="Adresses, surfaces, particularités..." [readonly]="readonly"></textarea>
+              </mat-form-field>
+            </div>
 
-              <div class="fiscal-section">
-                <div class="fiscal-group">
-                  <div class="fiscal-group-title">
-                    <mat-icon class="icon-success">check_circle</mat-icon>
-                    Zones d'exonération applicables
-                  </div>
-                  <mat-chip-set>
-                    @for (z of fiscalRef.zonesExoneration; track z) {
-                      <mat-chip [matTooltip]="z" class="chip-success">{{ z }}</mat-chip>
-                    }
-                  </mat-chip-set>
-                </div>
+          </mat-expansion-panel>
 
-                <div class="fiscal-group">
-                  <div class="fiscal-group-title">
-                    <mat-icon class="icon-warn">warning</mat-icon>
-                    Points de vigilance fiscale
-                  </div>
-                  <mat-chip-set>
-                    @for (z of fiscalRef.zonesRisque; track z) {
-                      <mat-chip [matTooltip]="z" class="chip-warn">{{ z }}</mat-chip>
-                    }
-                  </mat-chip-set>
-                </div>
+<!-- ═══════════════════════ TACHE-04 ═══════════════════════ -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>sync_alt</mat-icon>&nbsp;Comptabilité par cycle</mat-panel-title>
+            </mat-expansion-panel-header>
 
-                <div class="fiscal-group">
-                  <div class="fiscal-group-title">
-                    <mat-icon class="icon-info">gavel</mat-icon>
-                    Réglementations applicables
-                  </div>
-                  <mat-chip-set>
-                    @for (r of fiscalRef.reglementations; track r) {
-                      <mat-chip [matTooltip]="r" class="chip-info">{{ r }}</mat-chip>
-                    }
-                  </mat-chip-set>
+            <div formGroupName="cycleTresorerie" class="cycle-section">
+              <div class="cycle-title"><mat-icon class="icon-info">account_balance</mat-icon> Cycle Trésorerie</div>
+              <div class="form-grid">
+                <mat-form-field>
+                  <mat-label>Nombre de comptes bancaires</mat-label>
+                  <input matInput type="number" formControlName="nbComptesBancaires" [readonly]="readonly" />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Mode de transmission des relevés</mat-label>
+                  <mat-select formControlName="modeTransmissionReleves" [disabled]="readonly">
+                    <mat-option value="">—</mat-option>
+                    <mat-option value="Tiime">Tiime</mat-option>
+                    <mat-option value="Mail">Mail</mat-option>
+                    <mat-option value="Remise physique">Remise physique</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <div class="full-col" style="display:flex;align-items:center;gap:12px;">
+                  <mat-checkbox formControlName="aEmprunts" [disabled]="readonly">Emprunts en cours</mat-checkbox>
                 </div>
+                @if (form.get('cycleTresorerie.aEmprunts')?.value) {
+                  <mat-form-field class="full-col">
+                    <mat-label>Détail des emprunts</mat-label>
+                    <textarea matInput rows="2" formControlName="empruntsDetail"
+                              placeholder="Montant, périodicité, date de fin..." [readonly]="readonly"></textarea>
+                  </mat-form-field>
+                }
               </div>
-            </mat-expansion-panel>
-          }
-          <!-- Actionnariat -->
+            </div>
+
+            <div formGroupName="cycleAchats" class="cycle-section">
+              <div class="cycle-title"><mat-icon class="icon-info">shopping_cart</mat-icon> Cycle Achats</div>
+              <div class="form-grid">
+                <mat-form-field>
+                  <mat-label>Mode de dépôt des factures d'achat</mat-label>
+                  <mat-select formControlName="modeDepotFacturesAchat" [disabled]="readonly">
+                    <mat-option value="">—</mat-option>
+                    <mat-option value="Tiime">Tiime</mat-option>
+                    <mat-option value="Mail">Mail</mat-option>
+                    <mat-option value="Remise physique">Remise physique</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Fréquence / volume</mat-label>
+                  <input matInput formControlName="frequenceVolume" [readonly]="readonly" />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div formGroupName="cycleVentes" class="cycle-section">
+              <div class="cycle-title"><mat-icon class="icon-info">point_of_sale</mat-icon> Cycle Ventes</div>
+              <div class="form-grid">
+                <mat-form-field>
+                  <mat-label>Type de facturation</mat-label>
+                  <mat-select formControlName="typeFacturation" [disabled]="readonly">
+                    <mat-option value="">—</mat-option>
+                    <mat-option value="Logiciel caisse">Logiciel caisse</mat-option>
+                    <mat-option value="Manuelle">Manuelle</mat-option>
+                    <mat-option value="Marketplace">Marketplace</mat-option>
+                    <mat-option value="Autre">Autre</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Périodicité déclaration TVA</mat-label>
+                  <mat-select formControlName="periodiciteDeclarationTva" [disabled]="readonly">
+                    <mat-option value="">—</mat-option>
+                    <mat-option value="Mensuelle">Mensuelle</mat-option>
+                    <mat-option value="Trimestrielle">Trimestrielle</mat-option>
+                    <mat-option value="Annuelle">Annuelle</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field class="full-col">
+                  <mat-label>Mode de transmission des ventes</mat-label>
+                  <input matInput formControlName="modeTransmissionVentes" [readonly]="readonly" />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div formGroupName="cycleChargesPaie" class="cycle-section">
+              <div class="cycle-title"><mat-icon class="icon-info">groups</mat-icon> Cycle Charges & Paie</div>
+              <div class="form-grid">
+                <mat-form-field>
+                  <mat-label>Nombre de salariés</mat-label>
+                  <input matInput type="number" formControlName="nbSalaries" [readonly]="readonly" />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Gestion de la paie</mat-label>
+                  <mat-select formControlName="gestionPaie" [disabled]="readonly">
+                    <mat-option value="">—</mat-option>
+                    <mat-option value="Internalisée cabinet">Internalisée cabinet</mat-option>
+                    <mat-option value="Externalisée">Externalisée</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="cycle-section">
+              <div class="cycle-title"><mat-icon class="icon-warn">warning</mat-icon> Points de vigilance</div>
+              <mat-form-field style="width:100%">
+                <mat-label>Points de vigilance transversaux</mat-label>
+                <textarea matInput rows="3" [formControl]="pointsVigilanceCtrl"
+                          placeholder="Risques spécifiques, alertes particulières..." [readonly]="readonly"></textarea>
+              </mat-form-field>
+            </div>
+
+          </mat-expansion-panel>
+
+<!-- Actionnariat -->
           <mat-expansion-panel>
             <mat-expansion-panel-header>
               <mat-panel-title>
@@ -477,6 +570,56 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             </div>
           </ng-template>
 
+                    @if (fiscalRef) {
+            <mat-expansion-panel expanded>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>account_balance</mat-icon>&nbsp;Spécificités fiscales
+                  <span class="site-badge" [class]="site === 'REUNION' ? 'badge-re' : 'badge-mg'">
+                    {{ tenantSvc.poleLabel(site) }}
+                  </span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="fiscal-section">
+                <div class="fiscal-group">
+                  <div class="fiscal-group-title">
+                    <mat-icon class="icon-success">check_circle</mat-icon>
+                    Zones d'exonération applicables
+                  </div>
+                  <mat-chip-set>
+                    @for (z of fiscalRef.zonesExoneration; track z) {
+                      <mat-chip [matTooltip]="z" class="chip-success">{{ z }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
+
+                <div class="fiscal-group">
+                  <div class="fiscal-group-title">
+                    <mat-icon class="icon-warn">warning</mat-icon>
+                    Points de vigilance fiscale
+                  </div>
+                  <mat-chip-set>
+                    @for (z of fiscalRef.zonesRisque; track z) {
+                      <mat-chip [matTooltip]="z" class="chip-warn">{{ z }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
+
+                <div class="fiscal-group">
+                  <div class="fiscal-group-title">
+                    <mat-icon class="icon-info">gavel</mat-icon>
+                    Réglementations applicables
+                  </div>
+                  <mat-chip-set>
+                    @for (r of fiscalRef.reglementations; track r) {
+                      <mat-chip [matTooltip]="r" class="chip-info">{{ r }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
+              </div>
+            </mat-expansion-panel>
+          }
           <!-- Documents mensuels attendus -->
           <mat-expansion-panel expanded>
             <mat-expansion-panel-header>
@@ -547,7 +690,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
             </div>
           </mat-expansion-panel>
 
-        </mat-accordion>
+                  </mat-accordion>
 
         @if (!readonly) {
           <div class="tab-content__actions">
@@ -561,6 +704,11 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
   `,
   styles: [`
     .tab-content { padding: 24px; }
+
+    /* Read mode — inputs non-interactifs, accordion reste ouvert/fermable */
+    .reading input, .reading textarea { pointer-events: none; cursor: default; }
+    .reading select { pointer-events: none; }
+    .reading .add-btn, .reading .remove-btn, .reading .pappers-btn { display: none; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 0; }
     .full-col { grid-column: 1 / -1; }
     .tab-content__actions { margin-top: 24px; display: flex; justify-content: flex-end; }
@@ -577,6 +725,14 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .icon-success { color: #16a34a; font-size: 18px; width: 18px; height: 18px; }
     .icon-warn    { color: #d97706; font-size: 18px; width: 18px; height: 18px; }
     .icon-info    { color: #2563eb; font-size: 18px; width: 18px; height: 18px; }
+
+    .cycle-section { padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+    .cycle-section:last-child { border-bottom: none; }
+    .cycle-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; color: #374151;
+      margin-bottom: 12px;
+    }
 
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .siren-loading-icon { animation: spin 1s linear infinite; color: #6366f1; font-size: 18px; }
@@ -808,9 +964,10 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
       &:focus { border-color: #7c3aed; }
     }
     .org-node__edit-btns { display: flex; justify-content: flex-end; gap: 4px; }
+
   `],
 })
-export class FicheIdentiteTabComponent implements OnInit {
+export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private fiscalRefService = inject(FiscalReferenceService);
 
@@ -906,6 +1063,13 @@ export class FicheIdentiteTabComponent implements OnInit {
   readonly honorairesJuridiquesCtrl           = new FormControl<number | null>(null);
   readonly honorairesSociauxCtrl              = new FormControl<number | null>(null);
   readonly honorairesCommissariatCtrl         = new FormControl<number | null>(null);
+  // TACHE-03
+  readonly activitePrincipaleCtrl = new FormControl('');
+  readonly typeClienteleCtrl      = new FormControl('');
+  readonly saisonnaliteCtrl       = new FormControl('');
+  readonly pointsDeVenteCtrl      = new FormControl('');
+  // TACHE-04
+  readonly pointsVigilanceCtrl    = new FormControl('');
 
   form = this.fb.group({
     raisonSociale: [''], siren: [''], siret: [''],
@@ -924,12 +1088,41 @@ export class FicheIdentiteTabComponent implements OnInit {
     }),
     actionnaires: this.fb.array([]),
     reseauxSociaux: this.fb.array([]),
+    // TACHE-03
+    activitePrincipale: this.activitePrincipaleCtrl,
+    typeClientele:      this.typeClienteleCtrl,
+    saisonnalite:       this.saisonnaliteCtrl,
+    pointsDeVente:      this.pointsDeVenteCtrl,
+    // TACHE-04
+    cycleTresorerie: this.fb.group({
+      nbComptesBancaires:      [null as number | null],
+      aEmprunts:               [false],
+      empruntsDetail:          [''],
+      modeTransmissionReleves: [''],
+    }),
+    cycleAchats: this.fb.group({
+      modeDepotFacturesAchat: [''],
+      frequenceVolume:        [''],
+    }),
+    cycleVentes: this.fb.group({
+      typeFacturation:          [''],
+      modeTransmissionVentes:   [''],
+      periodiciteDeclarationTva:[''],
+    }),
+    cycleChargesPaie: this.fb.group({
+      nbSalaries:  [null as number | null],
+      gestionPaie: [''],
+    }),
+    pointsVigilance: this.pointsVigilanceCtrl,
   });
 
   saving = false;
+  editMode = signal(false);
+  private _snapshot: any = null;
 
   tenantSvc = inject(TenantService);
   private toast = inject(ToastService);
+  private tabSave = inject(TabSaveService);
 
   get actionnaires(): FormArray { return this.form.get('actionnaires') as FormArray; }
   get reseauxSociaux(): FormArray { return this.form.get('reseauxSociaux') as FormArray; }
@@ -1035,10 +1228,15 @@ export class FicheIdentiteTabComponent implements OnInit {
   // ─────────────────────────────────────────────────────────
 
   ngOnInit() {
+    this.tabSave.registerEditMode(
+      () => this.enterEdit(),
+      () => this.save(),
+      () => this.cancelEdit()
+    );
     this.service.get(this.clientId).subscribe((fiche: any) => {
       this.form.patchValue({
         ...fiche,
-        honoraires: fiche.honoraires ?? {},
+        honoraires: fiche.honoraires ?? {}
       });
       // Compatibilité : ancien format = objet unique, nouveau = tableau
       const org = fiche.organigramme;
@@ -1065,6 +1263,20 @@ export class FicheIdentiteTabComponent implements OnInit {
     });
     this.fiscalRefService.get().then(data => { this.fiscalRef = data[this.site]; });
   }
+
+  enterEdit() {
+    this._snapshot = this.form.getRawValue();
+    this.editMode.set(true);
+    this.tabSave.setEditing(true);
+  }
+
+  cancelEdit() {
+    if (this._snapshot) this.form.patchValue(this._snapshot);
+    this.editMode.set(false);
+    this.tabSave.setEditing(false);
+  }
+
+  ngOnDestroy() { this.tabSave.clear(); }
 
   private newActionnaire(a?: any): FormGroup {
     return this.fb.group({
@@ -1180,6 +1392,8 @@ export class FicheIdentiteTabComponent implements OnInit {
         this.editingIndices.clear();
         this.actionnaireEditingIndices.clear();
         this.toast.success('Fiche enregistrée');
+        this.editMode.set(false);
+        this.tabSave.setEditing(false);
       },
       error: () => { this.saving = false; this.toast.error('Erreur lors de la sauvegarde'); },
     });

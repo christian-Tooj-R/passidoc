@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { TabSaveService } from '../../../../../core/services/tab-save.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-strategique.service';
 
@@ -19,16 +20,9 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
   ],
   template: `
     <div class="tab">
-      <div class="tab-header">
-        <h2>Analyse Stratégique</h2>
-        <button mat-flat-button color="primary" (click)="save()" [disabled]="readonly">
-          <mat-icon>save</mat-icon> {{ readonly ? 'Lecture seule' : 'Enregistrer' }}
-        </button>
-      </div>
 
-      <form [formGroup]="form">
-
-        <!-- SWOT -->
+      @if (!editMode()) {
+        <!-- ── Vue lecture ───────────────────────────────── -->
         <mat-expansion-panel class="panel" [expanded]="true">
           <mat-expansion-panel-header>
             <mat-panel-title><mat-icon>grid_view</mat-icon> Analyse SWOT</mat-panel-title>
@@ -36,59 +30,116 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
           <div class="swot-grid">
             <div class="swot-card swot-forces">
               <div class="swot-card__header"><mat-icon>thumb_up</mat-icon> Forces</div>
-              <textarea [value]="swot.forces" (input)="updateSwot('forces', $event)" placeholder="Une force par ligne..."></textarea>
+              <p class="swot-read-text">{{ swot.forces || '—' }}</p>
             </div>
             <div class="swot-card swot-faiblesses">
               <div class="swot-card__header"><mat-icon>thumb_down</mat-icon> Faiblesses</div>
-              <textarea [value]="swot.faiblesses" (input)="updateSwot('faiblesses', $event)" placeholder="Une faiblesse par ligne..."></textarea>
+              <p class="swot-read-text">{{ swot.faiblesses || '—' }}</p>
             </div>
             <div class="swot-card swot-opportunites">
               <div class="swot-card__header"><mat-icon>trending_up</mat-icon> Opportunités</div>
-              <textarea [value]="swot.opportunites" (input)="updateSwot('opportunites', $event)" placeholder="Une opportunité par ligne..."></textarea>
+              <p class="swot-read-text">{{ swot.opportunites || '—' }}</p>
             </div>
             <div class="swot-card swot-menaces">
               <div class="swot-card__header"><mat-icon>warning</mat-icon> Menaces</div>
-              <textarea [value]="swot.menaces" (input)="updateSwot('menaces', $event)" placeholder="Une menace par ligne..."></textarea>
+              <p class="swot-read-text">{{ swot.menaces || '—' }}</p>
             </div>
           </div>
         </mat-expansion-panel>
 
-        <!-- 5 Forces de Porter -->
         <mat-expansion-panel class="panel">
           <mat-expansion-panel-header>
             <mat-panel-title><mat-icon>hub</mat-icon> 5 Forces de Porter</mat-panel-title>
           </mat-expansion-panel-header>
-          <div class="porter-grid">
+          <div class="porter-read-list">
             @for (force of porterFields; track force.key) {
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>{{ force.label }}</mat-label>
-                <textarea matInput rows="2" [formControlName]="force.key" [placeholder]="force.hint"></textarea>
-              </mat-form-field>
+              <div class="read-field full">
+                <span class="read-label">{{ force.label }}</span>
+                <span class="read-value">{{ form.get(force.key)?.value || '—' }}</span>
+              </div>
             }
           </div>
         </mat-expansion-panel>
 
-        <!-- Business Model Canvas -->
         <mat-expansion-panel class="panel">
           <mat-expansion-panel-header>
             <mat-panel-title><mat-icon>dashboard</mat-icon> Business Model Canvas</mat-panel-title>
           </mat-expansion-panel-header>
-          <p class="bmc-hint">Décrivez le modèle économique du client : proposition de valeur, segments clients, canaux, sources de revenus, structure de coûts…</p>
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Business Model Canvas</mat-label>
-            <textarea matInput rows="8" formControlName="businessModelCanvas"
-              placeholder="Ex : Boulangerie artisanale, clientèle locale, fabrication sur place, vente directe en boutique. Revenus : vente au comptoir + commandes événementielles. Coûts principaux : masse salariale + matières premières + énergie..."></textarea>
-          </mat-form-field>
+          <p class="swot-read-text" style="padding:12px 0">{{ form.get('businessModelCanvas')?.value || '—' }}</p>
         </mat-expansion-panel>
 
-      </form>
+      } @else {
+        <!-- ── Vue édition ──────────────────────────────── -->
+        <form [formGroup]="form">
+
+          <!-- SWOT -->
+          <mat-expansion-panel class="panel" [expanded]="true">
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>grid_view</mat-icon> Analyse SWOT</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="swot-grid">
+              <div class="swot-card swot-forces">
+                <div class="swot-card__header"><mat-icon>thumb_up</mat-icon> Forces</div>
+                <textarea [value]="swot.forces" (input)="updateSwot('forces', $event)" placeholder="Une force par ligne..."></textarea>
+              </div>
+              <div class="swot-card swot-faiblesses">
+                <div class="swot-card__header"><mat-icon>thumb_down</mat-icon> Faiblesses</div>
+                <textarea [value]="swot.faiblesses" (input)="updateSwot('faiblesses', $event)" placeholder="Une faiblesse par ligne..."></textarea>
+              </div>
+              <div class="swot-card swot-opportunites">
+                <div class="swot-card__header"><mat-icon>trending_up</mat-icon> Opportunités</div>
+                <textarea [value]="swot.opportunites" (input)="updateSwot('opportunites', $event)" placeholder="Une opportunité par ligne..."></textarea>
+              </div>
+              <div class="swot-card swot-menaces">
+                <div class="swot-card__header"><mat-icon>warning</mat-icon> Menaces</div>
+                <textarea [value]="swot.menaces" (input)="updateSwot('menaces', $event)" placeholder="Une menace par ligne..."></textarea>
+              </div>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- 5 Forces de Porter -->
+          <mat-expansion-panel class="panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>hub</mat-icon> 5 Forces de Porter</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="porter-grid">
+              @for (force of porterFields; track force.key) {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>{{ force.label }}</mat-label>
+                  <textarea matInput rows="2" [formControlName]="force.key" [placeholder]="force.hint"></textarea>
+                </mat-form-field>
+              }
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Business Model Canvas -->
+          <mat-expansion-panel class="panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>dashboard</mat-icon> Business Model Canvas</mat-panel-title>
+            </mat-expansion-panel-header>
+            <p class="bmc-hint">Décrivez le modèle économique du client : proposition de valeur, segments clients, canaux, sources de revenus, structure de coûts…</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Business Model Canvas</mat-label>
+              <textarea matInput rows="8" formControlName="businessModelCanvas"
+                placeholder="Ex : Boulangerie artisanale, clientèle locale, fabrication sur place, vente directe en boutique. Revenus : vente au comptoir + commandes événementielles. Coûts principaux : masse salariale + matières premières + énergie..."></textarea>
+            </mat-form-field>
+          </mat-expansion-panel>
+
+        </form>
+      }
     </div>
   `,
   styles: [`
     .tab { padding: 24px; }
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .tab-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
     .panel { margin-bottom: 16px; border-radius: 14px !important; }
+
+    /* ── Read view ─────────────────────────────────── */
+    .swot-read-text { font-size: 0.85rem; color: #374151; line-height: 1.7; white-space: pre-line; padding: 4px 0; margin: 0; min-height: 40px; }
+    .porter-read-list { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
+    .read-field { display: flex; flex-direction: column; gap: 3px; }
+    .read-field.full { width: 100%; }
+    .read-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .read-value { font-size: 0.88rem; color: #1e293b; }
     mat-panel-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
     mat-panel-title mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6366f1; }
     .full-width { width: 100%; }
@@ -124,13 +175,18 @@ import { AnalyseStrategiqueService } from '../../../../../core/services/analyse-
     .bmc-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 16px; }
   `],
 })
-export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
+export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() clientId!: number;
   @Input() exerciceId!: number;
   @Input() readonly = false;
   private fb = inject(FormBuilder);
   private service = inject(AnalyseStrategiqueService);
   private toast = inject(ToastService);
+  private tabSave = inject(TabSaveService);
+
+  editMode = signal(false);
+  private _snapshot: any = null;
+  private _swotSnapshot: typeof this.swot | null = null;
 
   form = this.fb.group({
     porterConcurrence:      [''],
@@ -151,10 +207,21 @@ export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
     { key: 'porterSubstituts',       label: 'Menace des produits de substitution',       hint: 'Ex : Moyenne — grande distribution, snacking industriel' },
   ];
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.tabSave.registerEditMode(
+      () => this.enterEdit(),
+      () => this.save(),
+      () => this.cancelEdit()
+    );
+    this.load();
+  }
+
+  ngOnDestroy() { this.tabSave.clear(); }
 
   ngOnChanges(changes: SimpleChanges) {
     if ((changes['exerciceId'] || changes['clientId']) && this.clientId != null && this.exerciceId != null) {
+      this.editMode.set(false);
+      this.tabSave.setEditing(false);
       this.load();
     }
   }
@@ -172,6 +239,20 @@ export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
     });
   }
 
+  enterEdit() {
+    this._snapshot = this.form.value;
+    this._swotSnapshot = { ...this.swot };
+    this.editMode.set(true);
+    this.tabSave.setEditing(true);
+  }
+
+  cancelEdit() {
+    if (this._snapshot) this.form.patchValue(this._snapshot);
+    if (this._swotSnapshot) Object.assign(this.swot, this._swotSnapshot);
+    this.editMode.set(false);
+    this.tabSave.setEditing(false);
+  }
+
   updateSwot(key: keyof typeof this.swot, event: Event) {
     this.swot[key] = (event.target as HTMLTextAreaElement).value;
   }
@@ -185,6 +266,10 @@ export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges {
       faiblesses:   toArray(this.swot.faiblesses),
       opportunites: toArray(this.swot.opportunites),
       menaces:      toArray(this.swot.menaces),
-    }).subscribe(() => this.toast.success('Analyse stratégique enregistrée'));
+    }).subscribe(() => {
+      this.toast.success('Analyse stratégique enregistrée');
+      this.editMode.set(false);
+      this.tabSave.setEditing(false);
+    });
   }
 }

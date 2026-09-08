@@ -1,6 +1,6 @@
 import { IsEmail, IsEnum, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserAntenne, UserRole, UserSite } from '../../entities/user.entity';
+import { UserAntenne, UserRole, UserSite, PoleService } from '../../entities/user.entity';
 
 export class CreateUserDto {
   @ApiProperty() @IsEmail() email: string;
@@ -12,6 +12,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({ enum: UserAntenne }) @IsOptional() @IsEnum(UserAntenne) antenne?: UserAntenne;
   @ApiPropertyOptional() @IsOptional() @IsInt() referentId?: number;
+  @ApiPropertyOptional({ enum: PoleService }) @IsOptional() @IsEnum(PoleService) poleService?: PoleService;
 
   @ApiPropertyOptional() @IsOptional() @IsString() poste?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() typeContrat?: string;

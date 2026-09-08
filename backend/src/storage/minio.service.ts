@@ -43,9 +43,11 @@ export class MinioService implements OnModuleInit {
 
   async uploadFile(bucket: string, objectName: string, buffer: Buffer, mimeType: string): Promise<string> {
     if (this.useLocal) {
-      const filePath = path.join(this.localRoot, objectName.replace(/\//g, '_'));
+      const fileName = objectName.replace(/\//g, '_');
+      const filePath = path.join(this.localRoot, fileName);
       fs.writeFileSync(filePath, buffer);
-      return `local://${objectName}`;
+      const apiBase = this.config.get<string>('API_BASE_URL', 'http://localhost:3000');
+      return `${apiBase}/uploads/${fileName}`;
     }
     await this.client.putObject(bucket, objectName, buffer, buffer.length, { 'Content-Type': mimeType });
     const endpoint = this.config.get<string>('MINIO_ENDPOINT', 'localhost');

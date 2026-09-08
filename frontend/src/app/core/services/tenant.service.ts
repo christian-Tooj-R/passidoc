@@ -20,8 +20,9 @@ export class TenantService {
   readonly poleLabel2  = computed(() => this._config()?.poleLabel2  ?? 'Madagascar');
   readonly poleFlag1   = computed(() => this._config()?.poleFlag1   ?? '🇷🇪');
   readonly poleFlag2   = computed(() => this._config()?.poleFlag2   ?? '🇲🇬');
-  readonly isConfigured = computed(() => this._configured());
-  readonly slug         = computed(() => this._slug());
+  readonly isConfigured  = computed(() => this._configured());
+  readonly configLoaded  = computed(() => this._config() !== null);
+  readonly slug          = computed(() => this._slug());
 
   poleLabel(site: string): string {
     return site === 'REUNION' ? this.poleLabel1() : this.poleLabel2();

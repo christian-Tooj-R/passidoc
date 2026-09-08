@@ -105,6 +105,33 @@ export interface FicheIdentite {
   nbConcurrentsQuartier?: number;
   nbConcurrentsCommune?: number;
   nbConcurrentsGeneral?: number;
+  // TACHE-03
+  activitePrincipale?: string;
+  typeClientele?: string;
+  saisonnalite?: string;
+  pointsDeVente?: string;
+  photos?: string[];
+  // TACHE-04
+  cycleTresorerie?: {
+    nbComptesBancaires?: number;
+    aEmprunts?: boolean;
+    empruntsDetail?: string;
+    modeTransmissionReleves?: string;
+  };
+  cycleAchats?: {
+    modeDepotFacturesAchat?: string;
+    frequenceVolume?: string;
+  };
+  cycleVentes?: {
+    typeFacturation?: string;
+    modeTransmissionVentes?: string;
+    periodiciteDeclarationTva?: string;
+  };
+  cycleChargesPaie?: {
+    nbSalaries?: number;
+    gestionPaie?: string;
+  };
+  pointsVigilance?: string;
 }
 
 export interface Gerant {
@@ -183,6 +210,31 @@ export interface SyntheseCloture {
   canauxDistribution?: string;
   zonesExoneration?: string[];
   zonesRisque?: string[];
+}
+
+export interface RisqueIdentifie {
+  description: string;
+  niveauRisque: 'FAIBLE' | 'MOYEN' | 'ELEVE';
+}
+
+export interface Recommandation {
+  description: string;
+  statut: 'A_SOUMETTRE' | 'SOUMIS' | 'ACCEPTE' | 'EN_COURS' | 'MIS_EN_OEUVRE';
+}
+
+export interface ControleInterne {
+  id?: number;
+  processOk?: { description: string; raison: string }[];
+  processDefaillants?: { description: string; raison: string; risques: string }[];
+  outilsPilotage?: { nom: string; description: string }[];
+  noteGenerale?: string;
+  // TACHE-05
+  risquesIdentifies?: RisqueIdentifie[];
+  recommandations?: Recommandation[];
+  missionConseilPotentielle?: boolean;
+  clientId?: number;
+  exerciceId?: number;
+  updatedAt?: string;
 }
 
 export interface ClientDocument {

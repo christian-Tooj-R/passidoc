@@ -15,18 +15,27 @@ import { TenantService } from '../../core/services/tenant.service';
 import { NotificationStreamService } from '../../core/services/notification-stream.service';
 import { User, ROLE_LABELS } from '../../core/models/user.model';
 
+const POLE_SERVICE_OPTIONS = [
+  { value: 'COMPTA',    label: 'Comptabilité' },
+  { value: 'SOCIAL',    label: 'Social / RH' },
+  { value: 'JURIDIQUE', label: 'Juridique' },
+  { value: 'ADMIN',     label: 'Administration' },
+];
+
 interface EditForm {
   user: User;
   antenne: string;
   role: string;
   referentId: number | null;
+  poleService: string;
   saving: boolean;
   transferToId: number | null;
 }
 
 interface CreateForm {
   firstName: string; lastName: string; email: string; password: string;
-  role: string; site: string; antenne: string; referentId: number | null; saving: boolean;
+  role: string; site: string; antenne: string; referentId: number | null;
+  poleService: string; saving: boolean;
 }
 
 @Component({
@@ -731,6 +740,21 @@ interface CreateForm {
         </p>
       </div>
 
+      <!-- Pôle métier (inter-service notifications) -->
+      <div class="form-field">
+        <label>Pôle métier</label>
+        <div class="select-wrap">
+          <select [(ngModel)]="editForm()!.poleService">
+            <option value="">— Aucun —</option>
+            @for (p of poleServiceOptions; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+          <mat-icon class="select-icon">expand_more</mat-icon>
+        </div>
+        <p class="field-hint">Détermine les notifications reçues pour les tâches inter-service.</p>
+      </div>
+
       <!-- Superviseur (Chef de mission → chef d'antenne) -->
       @if (editForm()!.role === 'CHEF_MISSION' && editForm()!.antenne) {
         @let chefsAntenne = chefsAntenneFor(editForm()!.antenne);
@@ -959,6 +983,19 @@ interface CreateForm {
           </div>
         </div>
       }
+      <div class="form-field">
+        <label>Pôle métier</label>
+        <div class="select-wrap">
+          <select [(ngModel)]="createForm()!.poleService">
+            <option value="">— Aucun —</option>
+            @for (p of poleServiceOptions; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+          <mat-icon class="select-icon">expand_more</mat-icon>
+        </div>
+        <p class="field-hint">Détermine les notifications reçues pour les tâches inter-service.</p>
+      </div>
     </div>
 
     <div class="edit-drawer__footer">
@@ -1559,6 +1596,8 @@ export class EquipesComponent implements OnInit, OnDestroy {
   private notifStream  = inject(NotificationStreamService);
   private sub = new Subscription();
 
+  readonly poleServiceOptions = POLE_SERVICE_OPTIONS;
+
   users  = signal<User[]>([]);
   myTeam: { referent: User | null; team: User[] } | null = null;
 
@@ -1638,7 +1677,8 @@ export class EquipesComponent implements OnInit, OnDestroy {
     this.editForm.set(null);
     this.createForm.set({
       firstName: '', lastName: '', email: '', password: '',
-      role: 'COLLABORATEUR', site: 'MADAGASCAR', antenne: '', referentId: null, saving: false,
+      role: 'COLLABORATEUR', site: 'MADAGASCAR', antenne: '', referentId: null,
+      poleService: '', saving: false,
     });
   }
 
@@ -1653,6 +1693,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
       firstName: f.firstName, lastName: f.lastName, email: f.email,
       password: f.password, role: f.role, site: f.site,
       antenne: f.antenne || null, referentId: f.referentId,
+      poleService: f.poleService || undefined,
     }).subscribe({
       next: () => {
         this.toast.success(`${f.firstName} ${f.lastName} créé(e)`);
@@ -1845,6 +1886,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
       antenne:      user.antenne ?? '',
       role:         user.role,
       referentId:   user.referentId ?? null,
+      poleService:  user.poleService ?? '',
       saving:       false,
       transferToId: null,
     });
@@ -1874,9 +1916,10 @@ export class EquipesComponent implements OnInit, OnDestroy {
     this.editForm.set({ ...f });
 
     this.usersService.update(f.user.id, {
-      role:       f.role,
-      antenne:    f.antenne || null,
-      referentId: f.referentId,
+      role:        f.role,
+      antenne:     f.antenne || null,
+      referentId:  f.referentId,
+      poleService: f.poleService || null,
     }).subscribe({
       next: () => {
         this.toast.success(`${f.user.firstName} ${f.user.lastName} mis à jour`);

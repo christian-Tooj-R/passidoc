@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal, computed } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ import { ClientsService } from '../../../../../core/services/clients.service';
 import { SecteurService } from '../../../../../core/services/secteur.service';
 import { Secteur } from '../../../../../core/models/secteur.model';
 import { SecteurActivite, SECTEURS_LABELS, QuestionnaireAdnGlobal, QuestionnaireAdnSectoriel } from '../../../../../core/models/client.model';
+import { TabSaveService } from '../../../../../core/services/tab-save.service';
 import {
   VISION_OPTS, VALEUR_OPTS, PLACE_OPTS, AMBIANCE_OPTS, ENJEUX_RH_OPTS,
   CANAUX_OPTS, SAISONNALITE_OPTS, CAILLOU_OPTS, PROJETS_OPTS,
@@ -378,7 +379,7 @@ import {
     /* ── Mode bar ── */
     .mode-bar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 20px; background: #F8F9FF;
+      padding: 8px 20px; background: #F8F9FF;
       border: 1px solid #E0E2EC; border-radius: 14px;
     }
     .mode-bar__left { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: #1A1C1E; }
@@ -441,7 +442,7 @@ import {
     .q-hint { display: block; font-size: 11px; color: #94A3B8; margin: -4px 0 6px; }
   `],
 })
-export class AdnTabComponent implements OnInit {
+export class AdnTabComponent implements OnInit, OnDestroy {
   @Input({ required: true }) clientId!: number;
   @Input() secteurInitial?: SecteurActivite;
   @Input() readonly = false;
@@ -502,6 +503,8 @@ export class AdnTabComponent implements OnInit {
   readonly labelOf = labelOf;
   readonly labelsOf = labelsOf;
 
+  private tabSave = inject(TabSaveService);
+
   constructor(
     private svc: QuestionnaireAdnService,
     private clientsSvc: ClientsService,
@@ -510,10 +513,9 @@ export class AdnTabComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // ADN gère ses propres boutons via la mode-bar interne
     this.secteurSelectionne = this.secteurInitial ?? null;
-    // Chargement des secteurs dynamiques (admin)
     this.secteurSvc.getAll().subscribe(secteurs => this.allSecteurs.set(secteurs));
-
     Promise.all([
       this.svc.getGlobal(this.clientId).toPromise(),
       this.svc.getSectoriel(this.clientId).toPromise(),
@@ -528,6 +530,8 @@ export class AdnTabComponent implements OnInit {
       this.loading.set(false);
     });
   }
+
+  ngOnDestroy() { this.tabSave.clear(); }
 
   private takeSnapshot() {
     this.globalSnapshot   = JSON.parse(JSON.stringify(this.global));

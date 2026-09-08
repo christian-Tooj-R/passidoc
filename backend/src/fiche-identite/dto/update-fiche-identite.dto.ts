@@ -70,4 +70,24 @@ export class UpdateFicheIdentiteDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() nbConcurrentsGeneral?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() evolutionSecteur?: string;
   @ApiPropertyOptional() @IsOptional() organigramme?: object | object[] | null;
+
+  // ── TACHE-03 ──
+  @ApiPropertyOptional() @IsOptional() @IsString() activitePrincipale?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() typeClientele?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() saisonnalite?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() pointsDeVente?: string;
+  @ApiPropertyOptional() @IsOptional() @IsArray() photos?: string[];
+
+  // ── TACHE-04 ──
+  @ApiPropertyOptional() @IsOptional() @IsObject() cycleTresorerie?: Record<string, any>;
+  @ApiPropertyOptional() @IsOptional() @IsObject() cycleAchats?: Record<string, any>;
+  @ApiPropertyOptional() @IsOptional() @IsObject() cycleVentes?: Record<string, any>;
+  @ApiPropertyOptional() @IsOptional() @IsObject() cycleChargesPaie?: Record<string, any>;
+  @ApiPropertyOptional() @IsOptional() @IsString() pointsVigilance?: string;
+
+  // champs existants non couverts
+  @ApiPropertyOptional() @IsOptional() @IsString() dateCreation?: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() capital?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() entrepriseFamiliale?: string;
+  @ApiPropertyOptional() @IsOptional() @IsArray() reglementations?: string[];
 }

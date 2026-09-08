@@ -15,6 +15,8 @@ import { ToastService } from '../../core/services/toast.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { DatePipe } from '@angular/common';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { TasksService, Task, TaskStatut, TaskDashboard, TaskComment } from '../../core/services/tasks.service';
 import { ClientsService } from '../../core/services/clients.service';
@@ -28,6 +30,7 @@ import { Client } from '../../core/models/client.model';
 import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
+import { TimerService, SaisieTempsService, SaisieTemps, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
 
 interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolean; tasks: Task[]; }
 
@@ -481,6 +484,111 @@ export class SyntheseDialogComponent implements OnInit {
             }
           </div>
         </div>
+
+        <!-- Temps passé -->
+        <div class="ct-temps-section">
+          <div class="ct-section-label" style="margin-bottom:4px">⏱ Temps passé</div>
+
+          <!-- Toggle Facturable / Non facturable -->
+          <div class="ct-type-toggle">
+            <button class="ct-type-pill" [class.ct-type-pill--fact]="tempsType==='FACTURABLE'"
+                    (click)="tempsType='FACTURABLE'; tempsCategorie=''">
+              <span class="ct-type-dot ct-type-dot--fact"></span> Facturable
+            </button>
+            <button class="ct-type-pill" [class.ct-type-pill--nf]="tempsType==='NON_FACTURABLE'"
+                    (click)="tempsType='NON_FACTURABLE'">
+              <span class="ct-type-dot ct-type-dot--nf"></span> Non facturable
+            </button>
+          </div>
+
+          <div class="ct-temps-body">
+            <!-- Catégorie (NF uniquement) -->
+            @if (tempsType === 'NON_FACTURABLE') {
+              <div class="ct-row">
+                <div class="ct-field" style="grid-column:1/-1">
+                  <div class="ct-section-label">Catégorie <span class="required">*</span></div>
+                  <select class="ct-select" [(ngModel)]="tempsCategorie">
+                    <option value="">— Sélectionner —</option>
+                    <option value="APPEL_CLIENT">Appel téléphonique client</option>
+                    <option value="REUNION_INTERNE">Réunion interne</option>
+                    <option value="FORMATION">Formation</option>
+                    <option value="ADMINISTRATIF">Administratif</option>
+                    <option value="AUTRE">Autre (champ libre)</option>
+                  </select>
+                </div>
+              </div>
+              @if (tempsCategorie === 'AUTRE') {
+                <div class="ct-field">
+                  <div class="ct-section-label">Préciser <span class="required">*</span></div>
+                  <input class="ct-date-input" type="text" [(ngModel)]="tempsAutreLibre" placeholder="Décrivez l'activité…" />
+                </div>
+              }
+            }
+            @if (tempsType === 'FACTURABLE') {
+              <div class="ct-temps-info">
+                <mat-icon>info_outline</mat-icon>
+                Le chronomètre de la tâche capture le temps en temps réel. Renseigne les horaires si tu saisis à posteriori.
+              </div>
+            }
+            <!-- Date + Horaires -->
+            <div class="ct-row">
+              <div class="ct-field">
+                <div class="ct-section-label">Date</div>
+                <input class="ct-date-input" type="date" [(ngModel)]="tempsDate" />
+              </div>
+              <div class="ct-field">
+                <div class="ct-section-label">Durée <span class="required">*</span></div>
+                <input class="ct-date-input" type="text" [(ngModel)]="tempsDureeRaw" placeholder="ex: 1h30" />
+              </div>
+            </div>
+            <div class="ct-row">
+              <div class="ct-field">
+                <div class="ct-section-label">Heure début</div>
+                <input class="ct-date-input" type="time" [(ngModel)]="tempsHeureDebut" (change)="autoComputeTemps()" />
+              </div>
+              <div class="ct-field">
+                <div class="ct-section-label">Heure fin</div>
+                <input class="ct-date-input" type="time" [(ngModel)]="tempsHeureFin" (change)="autoComputeTemps()" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Facturable -->
+        <label class="ct-anyone-toggle ct-facturable-toggle">
+          <input type="checkbox" [(ngModel)]="estFacturable" />
+          <span>Tâche facturable</span>
+        </label>
+
+        <!-- Inter-services -->
+        <div class="ct-row">
+          <div class="ct-field">
+            <div class="ct-section-label">Service destinataire</div>
+            <select class="ct-select" [(ngModel)]="serviceDestinataire">
+              <option value="">— Aucun —</option>
+              <option value="COMPTA">Comptabilité</option>
+              <option value="SOCIAL">Social</option>
+              <option value="JURIDIQUE">Juridique</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+          <div class="ct-field">
+            <div class="ct-section-label">En attente d'un autre service</div>
+            <label class="ct-anyone-toggle" style="margin-top:8px">
+              <input type="checkbox" [(ngModel)]="enAttenteService" />
+              <span>En attente inter-service</span>
+            </label>
+            @if (enAttenteService) {
+              <select class="ct-select" style="margin-top:6px" [(ngModel)]="serviceAttendu">
+                <option value="">— Préciser —</option>
+                <option value="COMPTA">Comptabilité</option>
+                <option value="SOCIAL">Social</option>
+                <option value="JURIDIQUE">Juridique</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            }
+          </div>
+        </div>
       </div>
 
       <!-- Footer -->
@@ -613,11 +721,28 @@ export class SyntheseDialogComponent implements OnInit {
     .ct-recurrence__detail { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f1f5f9; border-radius: 8px; }
     .ct-recurrence__label { font-size: 12px; color: #64748b; }
     .ct-recurrence__day { width: 60px; padding: 4px 8px; text-align: center; }
+
+    .ct-temps-section { border: 1.5px solid #e0e7ff; border-radius: 12px; padding: 12px 14px; background: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+    .ct-temps-info { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #475569; background: #eff6ff; border-radius: 8px; padding: 7px 10px; }
+    .ct-temps-info mat-icon { font-size: 14px; width: 14px; height: 14px; color: #3b82f6; flex-shrink: 0; margin-top: 1px; }
+    .ct-temps-body { display: flex; flex-direction: column; gap: 10px; }
+    .ct-type-toggle { display: flex; gap: 6px; }
+    .ct-type-pill { display: flex; align-items: center; gap: 7px; padding: 7px 16px; border-radius: 20px; border: 1.5px solid #e2e8f0; background: white; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: all .15s; }
+    .ct-type-pill--fact { border-color: #86efac; background: #f0fdf4; color: #15803d; }
+    .ct-type-pill--nf  { border-color: #fca5a5; background: #fff1f2; color: #dc2626; }
+    .ct-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ct-type-dot--fact { background: #22c55e; }
+    .ct-type-dot--nf   { background: #ef4444; }
+    .ct-type-btns { display: flex; gap: 6px; }
+    .ct-type-btn { flex:1; padding: 7px 4px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: white; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; transition: all .12s; }
+    .ct-type-btn--fact { border-color: #86efac; background: #f0fdf4; color: #15803d; }
+    .ct-type-btn--nf  { border-color: #fca5a5; background: #fff1f2; color: #dc2626; }
   `],
 })
 export class CreateTaskDialogComponent {
   private tasksService = inject(TasksService);
   private toast = inject(ToastService);
+  private saisieTempsService = inject(SaisieTempsService);
   dialogRef = inject(MatDialogRef<CreateTaskDialogComponent>);
   data: { clients: Client[]; users: User[] } = inject(MAT_DIALOG_DATA);
 
@@ -632,6 +757,20 @@ export class CreateTaskDialogComponent {
   sansDossier = false;
   recurrenceActive = false;
   recurrenceJour = 20;
+  serviceDestinataire: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN' | '' = '';
+  enAttenteService = false;
+  serviceAttendu: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN' | '' = '';
+  estFacturable = true;
+
+  // Section temps passé
+  tempsType: 'FACTURABLE' | 'NON_FACTURABLE' = 'FACTURABLE';
+  tempsCategorie: 'APPEL_CLIENT' | 'REUNION_INTERNE' | 'FORMATION' | 'ADMINISTRATIF' | 'AUTRE' | '' = '';
+  tempsAutreLibre = '';
+  tempsHeureDebut = '';
+  tempsHeureFin = '';
+  tempsDureeRaw = '';
+  tempsDate = new Date().toISOString().split('T')[0];
+  readonly MISSIONS = MISSION_CODES;
 
   onAnyoneChange() {
     if (this.anyoneCanTake) this.assigneeId = null;
@@ -652,6 +791,28 @@ export class CreateTaskDialogComponent {
     { value: 'AUTRE',  label: 'Autre',  icon: 'more_horiz',      color: '#475569', bg: '#f1f5f9' },
   ];
 
+  autoComputeTemps() {
+    if (!this.tempsHeureDebut || !this.tempsHeureFin) return;
+    const [sh, sm] = this.tempsHeureDebut.split(':').map(Number);
+    const [eh, em] = this.tempsHeureFin.split(':').map(Number);
+    const diff = (eh + em / 60) - (sh + sm / 60);
+    if (diff > 0 && !this.tempsDureeRaw) {
+      const hrs = Math.floor(diff);
+      const min = Math.round((diff - hrs) * 60);
+      this.tempsDureeRaw = min > 0 ? `${hrs}h${String(min).padStart(2,'0')}` : `${hrs}h`;
+    }
+  }
+
+  private parseTemps(raw: string): number {
+    const s = raw.trim().toLowerCase();
+    const mH = s.match(/^(\d+(?:[.,]\d+)?)h(\d{0,2})$/);
+    if (mH) return parseFloat(mH[1].replace(',','.')) + (mH[2] ? parseInt(mH[2]) / 60 : 0);
+    const mMin = s.match(/^(\d+)min$/);
+    if (mMin) return parseInt(mMin[1]) / 60;
+    const num = parseFloat(s.replace(',','.'));
+    return isNaN(num) ? 0 : num;
+  }
+
   create() {
     if (!this.titre.trim()) return;
     if (!this.sansDossier && !this.clientId) return;
@@ -664,8 +825,12 @@ export class CreateTaskDialogComponent {
       dateEcheance:   this.dateEcheance || undefined,
       assigneeId:     this.anyoneCanTake ? undefined : (this.assigneeId ?? undefined),
       anyoneCanTake:  this.anyoneCanTake || undefined,
-      recurrenceType: this.recurrenceActive ? 'MENSUELLE' : undefined,
-      recurrenceJour: this.recurrenceActive ? this.recurrenceJour : undefined,
+      recurrenceType:       this.recurrenceActive ? 'MENSUELLE' : undefined,
+      recurrenceJour:       this.recurrenceActive ? this.recurrenceJour : undefined,
+      serviceDestinataire:  this.serviceDestinataire || undefined,
+      enAttenteService:     this.enAttenteService || undefined,
+      serviceAttendu:       (this.enAttenteService && this.serviceAttendu) ? this.serviceAttendu : undefined,
+      estFacturable:        this.estFacturable,
     };
 
     const obs$ = this.sansDossier
@@ -673,7 +838,26 @@ export class CreateTaskDialogComponent {
       : this.tasksService.create(this.clientId!, payload);
 
     obs$.subscribe(() => {
-      this.toast.success('Tâche créée');
+      const duree = this.parseTemps(this.tempsDureeRaw);
+      const isNF = this.tempsType === 'NON_FACTURABLE';
+      const canSave = duree > 0 && (!isNF || !!this.tempsCategorie);
+      if (canSave) {
+        const commentaire = isNF && this.tempsCategorie === 'AUTRE'
+          ? (this.tempsAutreLibre || this.titre)
+          : this.titre;
+        const dto: CreateSaisieTempsDto = {
+          date:        this.tempsDate,
+          dureeHeures: duree,
+          type:        this.tempsType,
+          categorie:   isNF ? (this.tempsCategorie as any) : undefined,
+          commentaire,
+          clientId:    this.clientId ?? undefined,
+          heureDebut:  this.tempsHeureDebut || undefined,
+          heureFin:    this.tempsHeureFin || undefined,
+        };
+        this.saisieTempsService.create(dto).subscribe();
+      }
+      this.toast.success('Tâche créée' + (canSave ? ' + saisie enregistrée' : ''));
       this.dialogRef.close('created');
     });
   }
@@ -688,11 +872,17 @@ export class CreateTaskDialogComponent {
     MatSelectModule, MatTooltipModule, MatDialogModule, LocalDatePipe, OnlyNumbersDirective],
   template: `
     <div class="td-wrap">
-      <!-- Header -->
+      <!-- ── HEADER ── -->
       <div class="td-header">
         <div class="td-header__left">
           <span class="td-id">{{ task.taskId ?? '—' }}</span>
           <span class="type-badge type-{{ (task.type ?? 'autre').toLowerCase() }}">{{ task.type ?? 'AUTRE' }}</span>
+          @if ($any(task).recurrenceType) {
+            <span class="td-rec-badge"><mat-icon>repeat</mat-icon> Récurrent</span>
+          }
+          @if (task.anyoneCanTake) {
+            <span class="td-any-badge"><mat-icon>group</mat-icon> Libre</span>
+          }
         </div>
         <div class="td-header__right">
           <span class="td-date-created">Créée le {{ task.createdAt | localDate:'dd/MM/yyyy' }}</span>
@@ -700,18 +890,25 @@ export class CreateTaskDialogComponent {
         </div>
       </div>
 
-      <!-- Title area -->
+      <!-- ── TITLE ── -->
       <div class="td-title-area">
         @if (canEdit) {
           <input class="td-title-input" [formControl]="titleCtrl" placeholder="Titre de la tâche..." />
         } @else {
           <h2 class="td-title-static">{{ task.titre }}</h2>
         }
-        @if (task.client) {
-          <a class="td-client-chip" [routerLink]="['/clients', task.client.id]" (click)="dialogRef.close()">
-            <mat-icon>folder_shared</mat-icon>{{ task.client.nom }}
-          </a>
-        }
+        <div class="td-title-meta">
+          @if (task.client) {
+            <a class="td-client-chip" [routerLink]="['/clients', task.client.id]" (click)="dialogRef.close()">
+              <mat-icon>folder_shared</mat-icon>{{ task.client.nom }}
+            </a>
+          }
+          @if (task.dateEcheance) {
+            <span class="td-deadline-chip" [class.td-deadline--overdue]="isOverdue()">
+              <mat-icon>schedule</mat-icon>{{ deadlineCountdown() }}
+            </span>
+          }
+        </div>
       </div>
 
       @if (!canEdit) {
@@ -725,49 +922,154 @@ export class CreateTaskDialogComponent {
         </div>
       }
 
-      <!-- Two-column body -->
-      <div class="td-body">
+      <!-- ── MAIN BODY (2 colonnes) ── -->
+      <div class="td-main">
 
-        <!-- Left: static info -->
-        <div class="td-left">
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Créée par</span>
-            @if (task.createdBy) {
-              <div class="td-user-badge td-user-badge--subtle">
-                <div class="td-av td-av--sm">{{ initials(task.createdBy) }}</div>
-                <span>{{ task.createdBy.firstName }} {{ task.createdBy.lastName }}</span>
-              </div>
-            } @else { <span class="none">—</span> }
+        <!-- ── COLONNE GAUCHE ── -->
+        <div class="td-col-left">
+
+          <!-- Description -->
+          <div class="td-section">
+            <div class="td-section-title"><mat-icon>notes</mat-icon> Description</div>
+            @if (canEdit) {
+              <textarea class="td-desc-input" [formControl]="descriptionCtrl"
+                        placeholder="Description de la tâche..." rows="3"></textarea>
+            } @else if (task.description) {
+              <p class="td-desc-text">{{ task.description }}</p>
+            } @else {
+              <p class="td-desc-empty">Aucune description</p>
+            }
           </div>
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Temps total</span>
-            <span class="td-prop-val">
-              @if (currentStatut === 'EN_COURS') {
-                <span class="time-badge time-badge--live">▶ {{ liveTimerDisplay }}</span>
-              } @else if (totalSecondes > 0) {
-                <span class="time-badge">{{ formatSeconds(totalSecondes) }}</span>
-              } @else {
-                <span class="none">—</span>
+
+          <!-- Checklist -->
+          <div class="td-section">
+            <div class="td-section-title">
+              <mat-icon>checklist</mat-icon> Sous-tâches
+              @if (checklistItems.length > 0) {
+                <span class="td-cl-pct">{{ checklistProgress }}%</span>
               }
-            </span>
-          </div>
-          @if (task.heureDebut && task.heureFin) {
-            <div class="td-prop-row">
-              <span class="td-prop-lbl">Horaires</span>
-              <span class="td-prop-val">{{ task.heureDebut | localDate:'HH:mm' }} → {{ task.heureFin | localDate:'HH:mm' }}</span>
             </div>
-          }
+            @if (checklistItems.length > 0) {
+              <div class="td-cl-bar"><div class="td-cl-fill" [style.width.%]="checklistProgress"></div></div>
+            }
+            <div class="td-cl-list">
+              @for (item of checklistItems; track $index; let i = $index) {
+                <div class="td-cl-item">
+                  <input type="checkbox" [checked]="item.done" (change)="toggleChecklistItem(i)" [disabled]="!canEdit" />
+                  <span [class.td-cl-done]="item.done">{{ item.text }}</span>
+                  @if (canEdit) {
+                    <button class="td-cl-del" (click)="removeChecklistItem(i)"><mat-icon>close</mat-icon></button>
+                  }
+                </div>
+              }
+            </div>
+            @if (canEdit) {
+              <div class="td-cl-add">
+                <input class="td-cl-input" [(ngModel)]="newChecklistText" placeholder="Ajouter une sous-tâche..."
+                       (keydown.enter)="addChecklistItem()" />
+                <button class="td-cl-add-btn" (click)="addChecklistItem()" [disabled]="!newChecklistText.trim()">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Saisies de temps liées -->
+          <div class="td-section">
+            <div class="td-section-title">
+              <mat-icon>timer</mat-icon> Temps passé
+              @if (saisiesLiees.length > 0) {
+                <span class="td-st-total">{{ formatH(saisiesTotal()) }}</span>
+              }
+            </div>
+            @if (loadingSaisies) { <div class="td-st-empty">Chargement…</div> }
+            @if (!loadingSaisies && saisiesLiees.length === 0) {
+              <div class="td-st-empty">Aucune saisie liée à ce client</div>
+            }
+            @if (!loadingSaisies && saisiesLiees.length > 0) {
+              <div class="td-st-list">
+                @for (s of saisiesLiees; track s.id) {
+                  <div class="td-st-row">
+                    <span class="td-st-date">{{ s.date }}</span>
+                    <span class="td-st-dur">{{ formatH(s.dureeHeures) }}</span>
+                    <span class="td-st-type" [class.fact]="s.type==='FACTURABLE'" [class.nf]="s.type!=='FACTURABLE'">
+                      {{ s.type === 'FACTURABLE' ? 'Fact.' : 'NF' }}
+                    </span>
+                    @if (s.missionCode) { <span class="td-st-code">{{ s.missionCode }}</span> }
+                    <span class="td-st-comment">{{ s.commentaire ?? '—' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Commentaires -->
+          <div class="td-section td-section--comments">
+            <div class="td-section-title">
+              <mat-icon>chat_bubble_outline</mat-icon> Commentaires
+              @if (comments.length > 0) { <span class="tdc-count">{{ comments.length }}</span> }
+            </div>
+            @if (loadingComments) { <div class="tdc-empty">Chargement…</div> }
+            @for (c of comments; track c.id) {
+              <div class="tdc-item">
+                <div class="tdc-av">{{ commentInitials(c.auteur) }}</div>
+                <div class="tdc-content">
+                  <div class="tdc-meta">
+                    <strong>{{ c.auteur.firstName }} {{ c.auteur.lastName }}</strong>
+                    <span class="tdc-date">{{ c.createdAt | localDate:'dd/MM HH:mm' }}</span>
+                  </div>
+                  <div class="tdc-text" [innerHTML]="renderComment(c.contenu)"></div>
+                </div>
+                @if (c.auteurId === data.currentUserId || data.currentUserIsAdmin) {
+                  <button class="tdc-del" (click)="deleteComment(c.id)" matTooltip="Supprimer">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </div>
+            }
+            @if (!loadingComments && comments.length === 0) {
+              <div class="tdc-empty">Aucun commentaire pour l'instant</div>
+            }
+            <div class="tdc-add">
+              <div class="tdc-av">{{ initials(currentUserObj) }}</div>
+              <div class="tdc-input-wrap">
+                @if (mentionDropdownVisible && mentionMatches.length > 0) {
+                  <div class="tdc-mention-dd">
+                    <div class="tdc-mention-header"><mat-icon>alternate_email</mat-icon> Mentionner</div>
+                    @for (u of mentionMatches; track u.id; let i = $index) {
+                      <div class="tdc-mention-opt" [class.tdc-mention-opt--active]="mentionActiveIndex === i"
+                           (mousedown)="selectMention(u)" (mouseenter)="mentionActiveIndex = i">
+                        <div class="tdc-mention-av" [style.background]="mentionAvatarColor(u)">{{ commentInitials(u) }}</div>
+                        <div class="tdc-mention-info">
+                          <span class="tdc-mention-name">{{ u.firstName }} {{ u.lastName }}</span>
+                          <span class="tdc-mention-role">{{ roleLabel(u) }}</span>
+                        </div>
+                        <span class="tdc-mention-site">{{ tenantSvc.poleFlag(u.site) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                <textarea class="tdc-textarea" [(ngModel)]="newCommentText"
+                          (input)="onCommentInput($event)" (keydown)="onCommentKeydown($event)"
+                          placeholder="Commentaire… (@mention pour notifier)" rows="2"></textarea>
+                <div class="tdc-input-actions">
+                  <button class="tdc-send" (click)="sendComment()" [disabled]="!newCommentText.trim() || sendingComment">
+                    <mat-icon>send</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Right: editable properties -->
-        <div class="td-right">
+        <!-- ── COLONNE DROITE (sidebar propriétés) ── -->
+        <div class="td-col-right">
 
-          <!-- Status -->
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Statut</span>
+          <!-- Statut -->
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Statut</div>
             <select class="statut-select statut-{{ currentStatut.toLowerCase() }}"
-                    [value]="currentStatut"
-                    [disabled]="!canChangeStatut"
+                    [value]="currentStatut" [disabled]="!canChangeStatut"
                     (change)="onStatutChange($any($event.target).value)">
               <option value="A_FAIRE">À faire</option>
               <option value="EN_COURS">En cours</option>
@@ -779,13 +1081,12 @@ export class CreateTaskDialogComponent {
           </div>
 
           <!-- Priorité -->
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Priorité</span>
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Priorité</div>
             @if (canEdit) {
               <div class="prio-picker">
                 @for (p of priorities; track p.value) {
-                  <button class="prio-chip"
-                          [class.prio-chip--active]="currentPrio === p.value"
+                  <button class="prio-chip" [class.prio-chip--active]="currentPrio === p.value"
                           [style.--pc]="p.color" [style.--pbg]="p.bg"
                           (click)="currentPrio = p.value; form.markAsDirty()">
                     <mat-icon>{{ p.icon }}</mat-icon>{{ p.label }}
@@ -793,15 +1094,13 @@ export class CreateTaskDialogComponent {
                 }
               </div>
             } @else {
-              <span class="prio-static prio-{{ (form.value.priorite ?? 'normale').toLowerCase() }}">
-                {{ form.value.priorite ?? 'NORMALE' }}
-              </span>
+              <span class="prio-static prio-{{ currentPrio.toLowerCase() }}">{{ currentPrio }}</span>
             }
           </div>
 
           <!-- Assigné -->
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Assigné à</span>
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Assigné à</div>
             @if (canEdit) {
               <select class="td-prop-select" [formControl]="assigneeCtrl">
                 <option [value]="null">— Non assignée —</option>
@@ -809,19 +1108,28 @@ export class CreateTaskDialogComponent {
                   <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
                 }
               </select>
-            } @else {
-              @if (task.assignee) {
-                <div class="td-user-badge">
-                  <div class="td-av td-av--sm">{{ initials(task.assignee) }}</div>
-                  <span>{{ task.assignee.firstName }} {{ task.assignee.lastName }}</span>
-                </div>
-              } @else { <span class="none">—</span> }
-            }
+            } @else if (task.assignee) {
+              <div class="td-user-badge">
+                <div class="td-av td-av--sm">{{ initials(task.assignee) }}</div>
+                <span>{{ task.assignee.firstName }} {{ task.assignee.lastName }}</span>
+              </div>
+            } @else { <span class="td-none">Non assignée</span> }
+          </div>
+
+          <!-- Créé par -->
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Créé par</div>
+            @if (task.createdBy) {
+              <div class="td-user-badge td-user-badge--subtle">
+                <div class="td-av td-av--sm">{{ initials(task.createdBy) }}</div>
+                <span>{{ task.createdBy.firstName }} {{ task.createdBy.lastName }}</span>
+              </div>
+            } @else { <span class="td-none">—</span> }
           </div>
 
           <!-- Échéance -->
-          <div class="td-prop-row">
-            <span class="td-prop-lbl">Échéance</span>
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Échéance</div>
             @if (canEdit) {
               <input class="td-prop-date" type="date" [formControl]="echeanceCtrl" />
             } @else {
@@ -831,85 +1139,63 @@ export class CreateTaskDialogComponent {
             }
           </div>
 
+          <!-- Type -->
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Type</div>
+            @if (canEdit) {
+              <select class="td-prop-select" [formControl]="typeCtrl">
+                @for (t of taskTypesDetail; track t.value) {
+                  <option [value]="t.value">{{ t.label }}</option>
+                }
+              </select>
+            } @else {
+              <span class="type-badge type-{{ (task.type ?? 'autre').toLowerCase() }}">{{ task.type ?? 'AUTRE' }}</span>
+            }
+          </div>
+
+          <!-- Service destinataire -->
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Service</div>
+            @if (canEdit) {
+              <select class="td-prop-select" [formControl]="serviceDestCtrl">
+                <option value="">— Aucun —</option>
+                <option value="COMPTA">Comptabilité</option>
+                <option value="SOCIAL">Social</option>
+                <option value="JURIDIQUE">Juridique</option>
+                <option value="ADMIN">Administratif</option>
+              </select>
+            } @else {
+              <span class="td-prop-val">{{ task.serviceDestinataire ?? '—' }}</span>
+            }
+          </div>
+
           <!-- H. Sup -->
           @if (canEdit) {
-            <div class="td-prop-row">
-              <span class="td-prop-lbl">H. Sup</span>
+            <div class="td-prop-group">
+              <div class="td-prop-lbl">H. Sup</div>
               <input class="td-prop-input" type="number" [formControl]="heuresSupCtrl" min="0" step="0.5" placeholder="0" />
             </div>
           }
 
-        </div>
-
-        <!-- Commentaires — s'étend sur toute la largeur de la grille -->
-        <div class="td-comments">
-          <div class="tdc-header">
-            <mat-icon>chat_bubble_outline</mat-icon>
-            <span>Commentaires</span>
-            @if (comments.length > 0) { <span class="tdc-count">{{ comments.length }}</span> }
+          <!-- Temps total -->
+          <div class="td-prop-group">
+            <div class="td-prop-lbl">Temps total</div>
+            <span class="td-prop-val">
+              @if (currentStatut === 'EN_COURS') {
+                <span class="time-badge time-badge--live">▶ {{ liveTimerDisplay }}</span>
+              } @else if (totalSecondes > 0) {
+                <span class="time-badge">{{ formatSeconds(totalSecondes) }}</span>
+              } @else { <span class="td-none">—</span> }
+            </span>
           </div>
 
-          @if (loadingComments) { <div class="tdc-empty">Chargement…</div> }
-
-          @for (c of comments; track c.id) {
-            <div class="tdc-item">
-              <div class="tdc-av">{{ commentInitials(c.auteur) }}</div>
-              <div class="tdc-content">
-                <div class="tdc-meta">
-                  <strong>{{ c.auteur.firstName }} {{ c.auteur.lastName }}</strong>
-                  <span class="tdc-date">{{ c.createdAt | localDate:'dd/MM HH:mm' }}</span>
-                </div>
-                <div class="tdc-text" [innerHTML]="renderComment(c.contenu)"></div>
-              </div>
-              @if (c.auteurId === data.currentUserId || data.currentUserIsAdmin) {
-                <button class="tdc-del" (click)="deleteComment(c.id)" matTooltip="Supprimer">
-                  <mat-icon>close</mat-icon>
-                </button>
-              }
+          <!-- Récurrence -->
+          @if ($any(task).recurrenceType) {
+            <div class="td-prop-group">
+              <div class="td-prop-lbl">Récurrence</div>
+              <span class="td-prop-val">Mensuelle — jour {{ $any(task).recurrenceJour }}</span>
             </div>
           }
-
-          @if (!loadingComments && comments.length === 0) {
-            <div class="tdc-empty">Aucun commentaire pour l'instant</div>
-          }
-
-          <!-- Zone de saisie -->
-          <div class="tdc-add">
-            <div class="tdc-av">{{ initials(currentUserObj) }}</div>
-            <div class="tdc-input-wrap">
-              @if (mentionDropdownVisible && mentionMatches.length > 0) {
-                <div class="tdc-mention-dd">
-                  <div class="tdc-mention-header">
-                    <mat-icon>alternate_email</mat-icon> Mentionner
-                  </div>
-                  @for (u of mentionMatches; track u.id; let i = $index) {
-                    <div class="tdc-mention-opt" [class.tdc-mention-opt--active]="mentionActiveIndex === i"
-                         (mousedown)="selectMention(u)" (mouseenter)="mentionActiveIndex = i">
-                      <div class="tdc-mention-av" [style.background]="mentionAvatarColor(u)">
-                        {{ commentInitials(u) }}
-                      </div>
-                      <div class="tdc-mention-info">
-                        <span class="tdc-mention-name">{{ u.firstName }} {{ u.lastName }}</span>
-                        <span class="tdc-mention-role">{{ roleLabel(u) }}</span>
-                      </div>
-                      <span class="tdc-mention-site">{{ tenantSvc.poleFlag(u.site) }}</span>
-                    </div>
-                  }
-                </div>
-              }
-              <textarea class="tdc-textarea"
-                        [(ngModel)]="newCommentText"
-                        (input)="onCommentInput($event)"
-                        (keydown)="onCommentKeydown($event)"
-                        placeholder="Commentaire… (@mention pour notifier)"
-                        rows="2"></textarea>
-              <div class="tdc-input-actions">
-                <button class="tdc-send" (click)="sendComment()" [disabled]="!newCommentText.trim() || sendingComment">
-                  <mat-icon>send</mat-icon>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -921,7 +1207,7 @@ export class CreateTaskDialogComponent {
           </button>
         }
         <span class="td-spacer"></span>
-        <button mat-stroked-button class="td-btn-cancel" (click)="dialogRef.close()">Annuler</button>
+        <button mat-stroked-button class="td-btn-cancel" (click)="dialogRef.close()">Fermer</button>
         @if (canChangeStatut) {
           <button class="td-btn-save" (click)="save()" [disabled]="!isDirty()">
             <mat-icon>check</mat-icon> Enregistrer
@@ -931,83 +1217,146 @@ export class CreateTaskDialogComponent {
     </div>
   `,
   styles: [`
-    .td-wrap { display: flex; flex-direction: column; width: 720px; max-height: 90vh; }
+    /* ── Conteneur principal ── */
+    .td-wrap { display: flex; flex-direction: column; width: min(900px, 96vw); max-height: 92vh; overflow: hidden; }
 
-    /* Header */
-    .td-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
+    /* ── Header ── */
+    .td-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px 10px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; background: white; }
     .td-header__left { display: flex; align-items: center; gap: 8px; }
-    .td-header__right { display: flex; align-items: center; gap: 8px; }
-    .td-id { font-family: monospace; font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 3px 8px; border-radius: 5px; }
+    .td-header__right { display: flex; align-items: center; gap: 6px; }
+    .td-id { font-family: monospace; font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 2px 7px; border-radius: 5px; letter-spacing: .3px; }
     .td-date-created { font-size: 11px; color: #94a3b8; }
     .td-close { color: #94a3b8 !important; }
+    .td-rec-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .td-any-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; }
 
-    /* Type badge */
+    /* ── Badges de type ── */
     .type-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
     .type-tva { background: #fef9c3; color: #854d0e; } .type-paie { background: #dbeafe; color: #1e40af; }
     .type-achats { background: #fce7f3; color: #9d174d; } .type-ventes { background: #dcfce7; color: #14532d; }
     .type-rb { background: #f0fdf4; color: #15803d; } .type-gv { background: #ede9fe; color: #5b21b6; }
     .type-dr { background: #fff7ed; color: #c2410c; } .type-autre { background: #f1f5f9; color: #475569; }
 
-    /* Title */
-    .td-title-area { padding: 16px 20px 10px; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    /* ── Zone titre ── */
+    .td-title-area { padding: 14px 18px 10px; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
     .td-title-input {
-      font-size: 19px; font-weight: 700; color: #0f172a; border: none; background: transparent;
+      font-size: 18px; font-weight: 700; color: #0f172a; border: none; background: transparent;
       font-family: inherit; padding: 0; width: 100%; line-height: 1.3;
     }
     .td-title-input:focus { outline: none; }
     .td-title-input::placeholder { color: #94a3b8; font-weight: 400; }
-    .td-title-static { font-size: 19px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.3; }
+    .td-title-static { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.3; }
+    .td-title-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .td-client-chip {
       display: inline-flex; align-items: center; gap: 5px;
       padding: 3px 10px 3px 6px; border-radius: 20px;
       background: #eef2ff; color: #4f46e5; font-size: 12px; font-weight: 600;
-      text-decoration: none; width: fit-content;
-      transition: background .12s;
+      text-decoration: none; transition: background .12s;
     }
     .td-client-chip:hover { background: #e0e7ff; }
     .td-client-chip mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    .td-deadline-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px 3px 6px; border-radius: 20px;
+      background: #f0fdf4; color: #15803d; font-size: 12px; font-weight: 600;
+      border: 1px solid #bbf7d0;
+    }
+    .td-deadline-chip mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .td-deadline--overdue { background: #fff1f2; color: #e11d48; border-color: #fda4af; }
 
-    /* Readonly banner */
-    .td-readonly-banner { display: flex; align-items: center; gap: 7px; background: #fefce8; border-bottom: 1px solid #fde68a; padding: 8px 20px; font-size: 12px; color: #92400e; flex-shrink: 0; }
+    /* ── Readonly banner ── */
+    .td-readonly-banner { display: flex; align-items: center; gap: 7px; background: #fefce8; border-bottom: 1px solid #fde68a; padding: 8px 18px; font-size: 12px; color: #92400e; flex-shrink: 0; }
     .td-readonly-banner mat-icon { font-size: 15px; width: 15px; height: 15px; color: #d97706; flex-shrink: 0; }
 
-    /* Body */
-    .td-body { display: grid; grid-template-columns: 1fr 1.4fr; gap: 0; flex: 1; overflow-y: auto; }
-    .td-left { padding: 18px 16px 18px 20px; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px; }
-    .td-right { padding: 18px 20px 18px 18px; display: flex; flex-direction: column; gap: 4px; }
+    /* ── Corps principal 2 colonnes ── */
+    .td-main { display: grid; grid-template-columns: 1fr 260px; gap: 0; flex: 1; overflow: hidden; min-height: 0; }
 
-    /* Property rows */
-    .td-prop-row { display: flex; align-items: center; gap: 12px; min-height: 38px; }
-    .td-prop-lbl { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; min-width: 80px; flex-shrink: 0; }
+    /* ── Colonne gauche (défilable) ── */
+    .td-col-left { overflow-y: auto; padding: 0; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; }
+
+    /* ── Sections dans la colonne gauche ── */
+    .td-section { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; }
+    .td-section--comments { border-bottom: none; flex: 1; }
+    .td-section-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 10px;
+    }
+    .td-section-title mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    /* Description dans section */
+    .td-desc-input {
+      width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      padding: 8px 12px; font-size: 13px; color: #1e293b; font-family: inherit;
+      background: #f8fafc; resize: vertical; line-height: 1.5; box-sizing: border-box;
+      transition: border-color .15s;
+    }
+    .td-desc-input:focus { outline: none; border-color: #6366f1; background: white; }
+    .td-desc-input::placeholder { color: #94a3b8; }
+    .td-desc-text { font-size: 13px; color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap; }
+    .td-desc-empty { font-size: 13px; color: #cbd5e1; margin: 0; font-style: italic; }
+
+    /* ── Checklist ── */
+    .td-cl-pct { margin-left: auto; font-size: 11px; font-weight: 800; color: #6366f1; background: #eef2ff; padding: 1px 6px; border-radius: 8px; }
+    .td-cl-bar { height: 5px; background: #e2e8f0; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
+    .td-cl-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 3px; transition: width .3s; }
+    .td-cl-list { display: flex; flex-direction: column; gap: 4px; }
+    .td-cl-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+    .td-cl-item input[type=checkbox] { cursor: pointer; accent-color: #6366f1; width: 15px; height: 15px; flex-shrink: 0; }
+    .td-cl-item span { flex: 1; font-size: 13px; color: #1e293b; }
+    .td-cl-done { text-decoration: line-through; color: #94a3b8 !important; }
+    .td-cl-del { background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; padding: 2px; border-radius: 4px; opacity: 0; transition: opacity .15s, color .15s; }
+    .td-cl-item:hover .td-cl-del { opacity: 1; }
+    .td-cl-del:hover { color: #ef4444; }
+    .td-cl-del mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    .td-cl-add { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .td-cl-input {
+      flex: 1; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 13px; color: #1e293b; font-family: inherit; background: white; transition: border-color .15s;
+    }
+    .td-cl-input:focus { outline: none; border-color: #6366f1; }
+    .td-cl-add-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; transition: all .12s; }
+    .td-cl-add-btn:hover:not(:disabled) { border-color: #6366f1; color: #6366f1; }
+    .td-cl-add-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .td-cl-add-btn mat-icon { font-size: 15px; width: 15px; height: 15px; }
+
+    /* ── Saisies de temps liées ── */
+    .td-st-total { margin-left: auto; font-size: 12px; font-weight: 800; color: #4f46e5; background: #eef2ff; padding: 1px 7px; border-radius: 8px; }
+    .td-st-empty { font-size: 13px; color: #94a3b8; font-style: italic; }
+    .td-st-list { display: flex; flex-direction: column; gap: 4px; }
+    .td-st-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px; background: #f8fafc; font-size: 12px; }
+    .td-st-date { color: #64748b; font-weight: 600; min-width: 60px; }
+    .td-st-dur { font-weight: 700; color: #1e293b; min-width: 38px; }
+    .td-st-type { padding: 1px 6px; border-radius: 5px; font-size: 10.5px; font-weight: 700; }
+    .td-st-type.fact { background: #dcfce7; color: #15803d; }
+    .td-st-type.nf   { background: #f1f5f9; color: #475569; }
+    .td-st-code { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ede9fe; color: #7c3aed; }
+    .td-st-comment { flex: 1; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Colonne droite (sidebar) ── */
+    .td-col-right { padding: 14px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 0; background: #fafbfd; }
+    .td-prop-group { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .td-prop-group:last-child { border-bottom: none; }
+    .td-prop-lbl { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
     .td-prop-val { font-size: 13px; color: #1e293b; font-weight: 500; }
     .td-prop-val.overdue { color: #dc2626; font-weight: 600; }
-    .none { color: #cbd5e1; font-size: 13px; }
-    .time-badge { background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; font-family: monospace; }
+    .td-none { color: #cbd5e1; font-size: 12.5px; font-style: italic; }
 
-    /* Assignee */
-    .td-assignee-display { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #1e293b; font-weight: 500; }
-    .td-av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; }
-    .td-av--sm { width: 22px; height: 22px; font-size: 8.5px; }
-
-    /* User badge pill */
-    .td-user-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 3px 10px 3px 4px;
-      background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 20px;
-      font-size: 12.5px; font-weight: 600; color: #4338ca;
+    /* Inputs sidebar */
+    .td-prop-select, .td-prop-date, .td-prop-input {
+      width: 100%; padding: 5px 9px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 13px; color: #1e293b; font-family: inherit; background: white; box-sizing: border-box;
+      transition: border-color .15s;
     }
-    .td-user-badge--subtle {
-      background: #f8fafc; border-color: #e2e8f0; color: #475569;
-    }
-    .td-user-badge--subtle .td-av { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .td-prop-select:focus, .td-prop-date:focus, .td-prop-input:focus { outline: none; border-color: #6366f1; }
 
-    /* Status select */
+    /* ── Statut select ── */
     .statut-select {
-      border: 1.5px solid transparent; outline: none; border-radius: 20px;
-      padding: 4px 26px 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer;
-      appearance: none; -webkit-appearance: none;
+      width: 100%; border: 1.5px solid transparent; outline: none; border-radius: 20px;
+      padding: 5px 28px 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer;
+      appearance: none; -webkit-appearance: none; box-sizing: border-box;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 7px center;
+      background-repeat: no-repeat; background-position: right 8px center;
       transition: opacity .15s;
     }
     .statut-select:disabled { opacity: .7; cursor: default; }
@@ -1018,38 +1367,42 @@ export class CreateTaskDialogComponent {
     .statut-non_fait  { background-color: #fff1f2; color: #e11d48; border-color: #fda4af; }
     .statut-en_attente { background-color: #f5f3ff; color: #7c3aed; border-color: #c4b5fd; }
 
-    /* Priority picker */
-    .prio-picker { display: flex; gap: 5px; }
+    /* ── Priorité ── */
+    .prio-picker { display: flex; flex-wrap: wrap; gap: 4px; }
     .prio-chip {
       display: flex; align-items: center; gap: 3px;
-      padding: 4px 9px; border-radius: 7px; border: 1.5px solid #e2e8f0;
-      background: white; font-size: 11.5px; font-weight: 600; color: #64748b;
+      padding: 4px 8px; border-radius: 7px; border: 1.5px solid #e2e8f0;
+      background: white; font-size: 11px; font-weight: 600; color: #64748b;
       cursor: pointer; transition: all .12s;
     }
-    .prio-chip mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    .prio-chip mat-icon { font-size: 12px; width: 12px; height: 12px; }
     .prio-chip:hover { border-color: #cbd5e1; background: #f8fafc; }
     .prio-chip--active { border-color: var(--pc) !important; background: var(--pbg) !important; color: var(--pc) !important; }
     .prio-static { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #475569; }
-    .prio-static.prio-haute  { background: #fee2e2; color: #dc2626; }
-    .prio-static.prio-basse  { background: #f0fdf4; color: #16a34a; }
+    .prio-static.prio-haute { background: #fee2e2; color: #dc2626; }
+    .prio-static.prio-basse { background: #f0fdf4; color: #16a34a; }
 
-    /* Prop inputs */
-    .td-prop-select, .td-prop-date, .td-prop-input {
-      flex: 1; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-      font-size: 13px; color: #1e293b; font-family: inherit; background: white;
-      transition: border-color .15s;
+    /* ── Utilisateur badge pill ── */
+    .td-av { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 8.5px; font-weight: 700; color: white; flex-shrink: 0; }
+    .td-av--sm { width: 20px; height: 20px; font-size: 8px; }
+    .td-user-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 8px 3px 4px;
+      background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: #4338ca;
     }
-    .td-prop-select:focus, .td-prop-date:focus, .td-prop-input:focus { outline: none; border-color: #6366f1; }
+    .td-user-badge--subtle { background: #f8fafc; border-color: #e2e8f0; color: #475569; }
+    .td-user-badge--subtle .td-av { background: linear-gradient(135deg, #94a3b8, #64748b); }
 
-    /* Footer */
-    .td-footer { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+    /* ── Badge timer ── */
+    .time-badge { background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; font-family: monospace; }
+    .time-badge--live { background: #fef3c7; color: #b45309; animation: td-pulse 2s ease-in-out infinite; }
+    @keyframes td-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+
+    /* ── Footer ── */
+    .td-footer { display: flex; align-items: center; gap: 10px; padding: 11px 18px; border-top: 1px solid #f1f5f9; flex-shrink: 0; background: white; }
     .td-spacer { flex: 1; }
-    .td-btn-del {
-      display: flex; align-items: center; gap: 5px;
-      padding: 6px 14px; border-radius: 8px; border: 1.5px solid #fecaca;
-      background: white; color: #ef4444; font-size: 13px; font-weight: 600; cursor: pointer;
-      transition: background .12s;
-    }
+    .td-btn-del { display: flex; align-items: center; gap: 5px; padding: 6px 13px; border-radius: 8px; border: 1.5px solid #fecaca; background: white; color: #ef4444; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .12s; }
     .td-btn-del:hover { background: #fff1f2; }
     .td-btn-del mat-icon { font-size: 15px; width: 15px; height: 15px; }
     .td-btn-cancel { border-radius: 8px !important; color: #64748b !important; border-color: #e2e8f0 !important; }
@@ -1058,118 +1411,44 @@ export class CreateTaskDialogComponent {
       padding: 7px 18px; border-radius: 8px; border: none; cursor: pointer;
       background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: white; font-size: 13px; font-weight: 600;
-      box-shadow: 0 2px 8px rgba(99,102,241,.25);
-      transition: transform .12s, box-shadow .12s;
+      box-shadow: 0 2px 8px rgba(99,102,241,.25); transition: transform .12s, box-shadow .12s;
     }
     .td-btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,.35); }
     .td-btn-save:disabled { opacity: .4; cursor: not-allowed; }
     .td-btn-save mat-icon { font-size: 15px; width: 15px; height: 15px; }
 
-    /* Live timer */
-    .time-badge--live { background: #fef3c7; color: #b45309; animation: td-pulse 2s ease-in-out infinite; }
-    @keyframes td-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
-
-    /* ── Comments section ─────────────────────────────────────────────── */
-    .td-comments {
-      grid-column: 1 / -1;
-      border-top: 1px solid #f1f5f9;
-      padding: 14px 20px 16px;
-      display: flex; flex-direction: column; gap: 0;
-    }
-    .tdc-header {
-      display: flex; align-items: center; gap: 6px;
-      margin-bottom: 10px;
-      font-size: 11px; font-weight: 700; color: #64748b;
-      text-transform: uppercase; letter-spacing: .5px;
-    }
-    .tdc-header mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .tdc-count {
-      background: #6366f1; color: white;
-      font-size: 10px; padding: 1px 6px; border-radius: 10px;
-    }
+    /* ── Commentaires ── */
+    .tdc-count { background: #6366f1; color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: 2px; }
     .tdc-empty { text-align: center; font-size: 13px; color: #94a3b8; padding: 8px 0 12px; }
-
-    /* Comment items */
-    .tdc-item {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 8px 0; border-bottom: 1px solid #f8fafc;
-      position: relative;
-    }
+    .tdc-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8fafc; position: relative; }
     .tdc-item:last-of-type { border-bottom: none; }
-    .tdc-av {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(135deg, #6366f1, #4f46e5);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; color: white; flex-shrink: 0;
-    }
+    .tdc-av { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; flex-shrink: 0; }
     .tdc-content { flex: 1; min-width: 0; }
     .tdc-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
     .tdc-meta strong { font-size: 12px; color: #1e293b; font-weight: 700; }
     .tdc-date { font-size: 11px; color: #94a3b8; }
     .tdc-text { font-size: 13px; color: #334155; line-height: 1.45; word-break: break-word; }
-    .tdc-del {
-      background: none; border: none; cursor: pointer;
-      color: #94a3b8; padding: 2px; border-radius: 4px;
-      display: flex; align-items: center; opacity: 0;
-      transition: opacity .15s, color .15s; flex-shrink: 0;
-    }
+    .tdc-del { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 2px; border-radius: 4px; display: flex; align-items: center; opacity: 0; transition: opacity .15s, color .15s; flex-shrink: 0; }
     .tdc-item:hover .tdc-del { opacity: 1; }
     .tdc-del:hover { color: #ef4444; }
     .tdc-del mat-icon { font-size: 13px; width: 13px; height: 13px; }
-
-    /* Add comment row */
-    .tdc-add {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding-top: 12px; margin-top: 6px;
-      border-top: 1px solid #f1f5f9;
-    }
+    .tdc-add { display: flex; align-items: flex-start; gap: 10px; padding-top: 12px; margin-top: 6px; border-top: 1px solid #f1f5f9; }
     .tdc-input-wrap { flex: 1; position: relative; }
-    .tdc-mention-dd {
-      position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
-      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.13), 0 2px 6px rgba(0,0,0,.07);
-      z-index: 10; overflow: hidden;
-    }
-    .tdc-mention-header {
-      display: flex; align-items: center; gap: 5px;
-      padding: 7px 12px 6px;
-      font-size: 10px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: .5px;
-      border-bottom: 1px solid #f1f5f9;
-    }
+    .tdc-mention-dd { position: absolute; bottom: calc(100% + 6px); left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.13), 0 2px 6px rgba(0,0,0,.07); z-index: 10; overflow: hidden; }
+    .tdc-mention-header { display: flex; align-items: center; gap: 5px; padding: 7px 12px 6px; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid #f1f5f9; }
     .tdc-mention-header mat-icon { font-size: 12px; width: 12px; height: 12px; }
-    .tdc-mention-opt {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 12px; cursor: pointer;
-      transition: background .1s; border-left: 3px solid transparent;
-    }
-    .tdc-mention-opt--active,
-    .tdc-mention-opt:hover {
-      background: #f5f3ff; border-left-color: #6366f1;
-    }
-    .tdc-mention-av {
-      width: 30px; height: 30px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: white; flex-shrink: 0;
-    }
+    .tdc-mention-opt { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; transition: background .1s; border-left: 3px solid transparent; }
+    .tdc-mention-opt--active, .tdc-mention-opt:hover { background: #f5f3ff; border-left-color: #6366f1; }
+    .tdc-mention-av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; flex-shrink: 0; }
     .tdc-mention-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
     .tdc-mention-name { font-size: 13px; font-weight: 600; color: #1e293b; }
     .tdc-mention-role { font-size: 11px; color: #94a3b8; margin-top: 1px; }
     .tdc-mention-site { font-size: 14px; flex-shrink: 0; }
-    .tdc-textarea {
-      width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
-      font-size: 13px; font-family: inherit; color: #1e293b; resize: none;
-      transition: border-color .15s; box-sizing: border-box;
-    }
+    .tdc-textarea { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; font-family: inherit; color: #1e293b; resize: none; transition: border-color .15s; box-sizing: border-box; }
     .tdc-textarea:focus { outline: none; border-color: #6366f1; }
     .tdc-textarea::placeholder { color: #94a3b8; }
     .tdc-input-actions { display: flex; justify-content: flex-end; margin-top: 5px; }
-    .tdc-send {
-      display: flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border-radius: 8px; border: none;
-      background: linear-gradient(135deg, #6366f1, #4f46e5);
-      color: white; cursor: pointer; transition: opacity .15s;
-    }
+    .tdc-send { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: none; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; cursor: pointer; transition: opacity .15s; }
     .tdc-send:disabled { opacity: .35; cursor: not-allowed; }
     .tdc-send mat-icon { font-size: 16px; width: 16px; height: 16px; }
   `],
@@ -1184,6 +1463,18 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   dialogRef = inject(MatDialogRef<TaskDetailDialogComponent>);
   data: { task: Task; users: User[]; currentUserId: number; currentUserIsAdmin: boolean } = inject(MAT_DIALOG_DATA);
   private fb = inject(FormBuilder);
+  private timerSvc = inject(TimerService);
+  private saisieTempsService = inject(SaisieTempsService);
+
+  // ── Saisies liées ────────────────────────────────────────────────────────────
+  saisiesLiees: any[] = [];
+  loadingSaisies = false;
+  readonly MISSIONS = MISSION_CODES;
+  missionCodeEdit = '';
+
+  // ── Checklist ────────────────────────────────────────────────────────────────
+  checklistItems: { text: string; done: boolean }[] = [];
+  newChecklistText = '';
 
   task = this.data.task;
   currentStatut: TaskStatut = this.data.task.statut;
@@ -1236,10 +1527,13 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     return this.data.users.find(u => u.id === this.data.currentUserId);
   }
 
-  titleCtrl    = this.fb.control(this.task.titre, Validators.required);
-  assigneeCtrl = this.fb.control(this.task.assignee?.id ?? null);
-  echeanceCtrl = this.fb.control(this.task.dateEcheance ? this.task.dateEcheance.substring(0, 10) : '');
-  heuresSupCtrl = this.fb.control(this.task.heuresSup ?? null);
+  titleCtrl       = this.fb.control(this.task.titre, Validators.required);
+  descriptionCtrl = this.fb.control(this.task.description ?? '');
+  typeCtrl        = this.fb.control(this.task.type ?? 'AUTRE');
+  assigneeCtrl    = this.fb.control(this.task.assignee?.id ?? null);
+  echeanceCtrl    = this.fb.control(this.task.dateEcheance ? this.task.dateEcheance.substring(0, 10) : '');
+  heuresSupCtrl   = this.fb.control(this.task.heuresSup ?? null);
+  serviceDestCtrl = this.fb.control(this.task.serviceDestinataire ?? '');
 
   // legacy form kept minimal (unused visually but needed for isDirty check)
   form = this.fb.group({ priorite: [this.currentPrio] });
@@ -1250,6 +1544,17 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     { value: 'HAUTE',   label: 'Haute',   icon: 'arrow_upward',   color: '#dc2626', bg: '#fee2e2' },
   ];
 
+  taskTypesDetail = [
+    { value: 'TVA',    label: 'TVA' },
+    { value: 'PAIE',   label: 'Paie' },
+    { value: 'ACHATS', label: 'Achats' },
+    { value: 'VENTES', label: 'Ventes' },
+    { value: 'RB',     label: 'Relevé bancaire' },
+    { value: 'GV',     label: 'Grand livre / GV' },
+    { value: 'DR',     label: 'Dossier de révision' },
+    { value: 'AUTRE',  label: 'Autre' },
+  ];
+
   get canEdit(): boolean {
     return this.data.currentUserIsAdmin || this.data.currentUserId === this.task.createdBy?.id;
   }
@@ -1258,12 +1563,16 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   isDirty(): boolean {
-    return this.titleCtrl.dirty || this.assigneeCtrl.dirty || this.echeanceCtrl.dirty ||
-           this.heuresSupCtrl.dirty || this.currentStatut !== this._initialStatut || this.currentPrio !== this._initialPrio;
+    return this.titleCtrl.dirty || this.descriptionCtrl.dirty || this.typeCtrl.dirty ||
+           this.assigneeCtrl.dirty || this.echeanceCtrl.dirty ||
+           this.heuresSupCtrl.dirty || this.serviceDestCtrl.dirty ||
+           this.currentStatut !== this._initialStatut || this.currentPrio !== this._initialPrio;
   }
 
   ngOnInit() {
     this.loadComments();
+    this.loadSaisiesLiees();
+    this.missionCodeEdit = (this.task as any).missionCode ?? '';
     if (this.task.statut === 'EN_COURS') {
       // Si debutEnCours absent (données migrées ou seed direct), ancrer à maintenant
       if (!this.task.debutEnCours) {
@@ -1295,6 +1604,16 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
       }
       this.refreshTimer();
       this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
+      // Démarrer le chrono global saisie-temps avec le contexte de cette tâche
+      if (!this.timerSvc.isRunning()) {
+        this.timerSvc.startWithTask({
+          taskId:    this.task.id,
+          clientId:  this.task.clientId,
+          clientNom: this.task.client?.nom,
+          taskTitre: this.task.titre,
+        });
+        this.toast.success('⏱ Chrono saisie-temps démarré');
+      }
     } else if (statut !== 'EN_COURS' && this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = undefined;
@@ -1305,12 +1624,15 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
 
   save() {
     this.tasksService.update(this.task.clientId, this.task.id, {
-      titre:        this.titleCtrl.value!,
-      statut:       this.currentStatut,
-      priorite:     this.currentPrio as any,
-      assigneeId:   this.assigneeCtrl.value ?? undefined,
-      dateEcheance: this.echeanceCtrl.value || undefined,
-      heuresSup:    this.heuresSupCtrl.value ?? undefined,
+      titre:               this.titleCtrl.value!,
+      description:         this.descriptionCtrl.value || undefined,
+      type:                this.typeCtrl.value as any,
+      statut:              this.currentStatut,
+      priorite:            this.currentPrio as any,
+      assigneeId:          this.assigneeCtrl.value ?? undefined,
+      dateEcheance:        this.echeanceCtrl.value || undefined,
+      heuresSup:           this.heuresSupCtrl.value ?? undefined,
+      serviceDestinataire: (this.serviceDestCtrl.value as any) || undefined,
     }).subscribe(() => {
       this.toast.success('Tâche mise à jour');
       this.dialogRef.close('updated');
@@ -1351,6 +1673,68 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     if (h > 0) return m > 0 ? `${h}h${m}min` : `${h}h`;
     if (m > 0) return s > 0 ? `${m}min ${s}s` : `${m}min`;
     return `${s}s`;
+  }
+
+  // ── Saisies liées ────────────────────────────────────────────────────────────
+
+  loadSaisiesLiees() {
+    if (!this.task.clientId) return;
+    this.loadingSaisies = true;
+    this.saisieTempsService.getMes().subscribe({
+      next: (all) => {
+        this.saisiesLiees = all
+          .filter(s => s.clientId === this.task.clientId)
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 8);
+        this.loadingSaisies = false;
+      },
+      error: () => { this.loadingSaisies = false; },
+    });
+  }
+
+  // ── Checklist ────────────────────────────────────────────────────────────────
+
+  addChecklistItem() {
+    if (!this.newChecklistText.trim()) return;
+    this.checklistItems = [...this.checklistItems, { text: this.newChecklistText.trim(), done: false }];
+    this.newChecklistText = '';
+    this.form.markAsDirty();
+  }
+
+  toggleChecklistItem(i: number) {
+    this.checklistItems = this.checklistItems.map((item, idx) =>
+      idx === i ? { ...item, done: !item.done } : item
+    );
+    this.form.markAsDirty();
+  }
+
+  removeChecklistItem(i: number) {
+    this.checklistItems = this.checklistItems.filter((_, idx) => idx !== i);
+    this.form.markAsDirty();
+  }
+
+  get checklistProgress(): number {
+    if (!this.checklistItems.length) return 0;
+    return Math.round(this.checklistItems.filter(i => i.done).length / this.checklistItems.length * 100);
+  }
+
+  deadlineCountdown(): string {
+    if (!this.task.dateEcheance) return '';
+    const diff = Math.ceil((new Date(this.task.dateEcheance).getTime() - Date.now()) / 86400000);
+    if (diff < 0) return `${Math.abs(diff)}j de retard`;
+    if (diff === 0) return "Aujourd'hui";
+    if (diff === 1) return 'Demain';
+    return `dans ${diff}j`;
+  }
+
+  saisiesTotal(): number {
+    return this.saisiesLiees.reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
+  }
+
+  formatH(h: number): string {
+    const hrs = Math.floor(h);
+    const min = Math.round((h - hrs) * 60);
+    return min > 0 ? `${hrs}h${String(min).padStart(2,'0')}` : `${hrs}h`;
   }
 
   // ── Commentaires ────────────────────────────────────────────────────────────
@@ -1483,7 +1867,7 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     CommonModule, RouterLink, ReactiveFormsModule, FormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatTooltipModule, MatDialogModule,
-    LocalDatePipe, DragDropModule,
+    LocalDatePipe, DragDropModule, MatDatepickerModule,
   ],
   template: `
     <div class="page">
@@ -1563,8 +1947,22 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
             </select>
           </label>
 
+          <!-- Service -->
+          <label class="fchip fchip--select" [class.fchip--active]="filterService !== null">
+            <mat-icon>swap_horiz</mat-icon>
+            <span>{{ filterService ?? 'Service' }}</span>
+            <mat-icon class="fchip__caret">expand_more</mat-icon>
+            <select [(ngModel)]="filterService" (ngModelChange)="applyFilter()">
+              <option [ngValue]="null">Tous</option>
+              <option value="COMPTA">Comptabilité</option>
+              <option value="SOCIAL">Social</option>
+              <option value="JURIDIQUE">Juridique</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </label>
+
           <!-- Reset -->
-          @if (mesTachesOnly || filterClientId !== null || filterAssigneeId !== null || filterType !== null) {
+          @if (mesTachesOnly || filterClientId !== null || filterAssigneeId !== null || filterType !== null || filterService !== null) {
             <button class="fchip fchip--reset" (click)="resetFilters()">
               <mat-icon>close</mat-icon>
               <span>Effacer</span>
@@ -1660,6 +2058,26 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                       </button>
                     }
 
+                    <!-- Badges inter-services -->
+                    <div class="card-service-badges">
+                      @if (t.serviceDestinataire) {
+                        <span class="card-svc-badge card-svc-badge--dest" matTooltip="Service destinataire">
+                          <mat-icon>send</mat-icon>{{ t.serviceDestinataire }}
+                        </span>
+                      }
+                      @if (t.enAttenteService) {
+                        <span class="card-svc-badge card-svc-badge--wait" matTooltip="En attente d'un autre service">
+                          <mat-icon>hourglass_top</mat-icon>
+                          @if (t.serviceAttendu) { {{ t.serviceAttendu }} } @else { En attente }
+                        </span>
+                      }
+                      @if (t.estRecurrente) {
+                        <span class="card-svc-badge card-svc-badge--rec" matTooltip="Tâche récurrente">
+                          <mat-icon>repeat</mat-icon>REC
+                        </span>
+                      }
+                    </div>
+
                     <!-- Footer carte -->
                     <div class="card-footer">
                       <div class="card-footer__left">
@@ -1713,6 +2131,54 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
       @if (viewMode === 'list') {
         <div class="tasks-list-wrap">
 
+          <!-- Bannière temps personnel -->
+          <div class="tl-time-banner">
+            <div class="tl-time-stat">
+              <mat-icon>today</mat-icon>
+              <span class="tl-time-val">{{ fmtH(monTotalAujourdhui) }}</span>
+              <span class="tl-time-lbl">Aujourd'hui</span>
+            </div>
+            <div class="tl-time-sep"></div>
+            <div class="tl-time-stat">
+              <mat-icon>date_range</mat-icon>
+              <span class="tl-time-val">{{ fmtH(monTotalSemaine) }}</span>
+              <span class="tl-time-lbl">Cette semaine</span>
+            </div>
+            <div class="tl-time-stat tl-time-stat--fact">
+              <mat-icon>check_circle</mat-icon>
+              <span class="tl-time-val">{{ fmtH(monTotalFactSemaine) }}</span>
+              <span class="tl-time-lbl">Facturables / semaine</span>
+            </div>
+            <div class="tl-time-spacer"></div>
+            <!-- Filtre date échéance -->
+            <div class="tl-date-filter">
+              <!-- Picker masqué, déclenché par le bouton icône -->
+              <span class="tl-cal-hidden">
+                <mat-date-range-input [rangePicker]="rangePicker">
+                  <input matStartDate [(ngModel)]="filterDateStart" (dateChange)="onRangeChange()" placeholder="" />
+                  <input matEndDate   [(ngModel)]="filterDateEnd"   (dateChange)="onRangeChange()" placeholder="" />
+                </mat-date-range-input>
+                <mat-date-range-picker #rangePicker></mat-date-range-picker>
+              </span>
+              <!-- Bouton calendrier -->
+              <button mat-icon-button class="tl-cal-btn"
+                      [class.tl-cal-btn--active]="filterDateStart || filterDateEnd"
+                      (click)="rangePicker.open()"
+                      matTooltip="Filtrer par date d'échéance">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
+              <!-- Plage sélectionnée -->
+              @if (filterDateStart || filterDateEnd) {
+                <span class="tl-df-range">
+                  {{ filterDateStart | date:'dd/MM' }}{{ filterDateEnd ? ' → ' + (filterDateEnd | date:'dd/MM') : '' }}
+                </span>
+                <button class="tl-df-clear" (click)="clearDateFilter()" matTooltip="Effacer le filtre date">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+
           <!-- Compteur résultats -->
           <div class="tl-meta">
             <span class="tl-count">{{ tableFilteredTasks.length }} tâche{{ tableFilteredTasks.length !== 1 ? 's' : '' }}</span>
@@ -1751,6 +2217,9 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                     </button>
                   </th>
                   <th class="th-type">Type</th>
+                  <th class="th-service">Service</th>
+                  <th class="th-fact">Facturable</th>
+                  <th class="th-flags">Tags</th>
                   <th class="th-client">
                     <button class="th-btn" (click)="sortTable('client')">
                       Dossier
@@ -1769,6 +2238,13 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                       @if (tableSort.col === 'dateEcheance') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
                     </button>
                   </th>
+                  <th class="th-temps">
+                    <button class="th-btn" (click)="sortTable('temps')">
+                      Temps
+                      @if (tableSort.col === 'temps') { <mat-icon>{{ tableSort.dir === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon> }
+                    </button>
+                  </th>
+                  <th class="th-created">Créé le</th>
                 </tr>
               </thead>
               <tbody>
@@ -1796,6 +2272,30 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                         <span class="tl-type type-{{ t.type.toLowerCase() }}">{{ t.type }}</span>
                       } @else { <span class="tl-empty">—</span> }
                     </td>
+                    <!-- Service destinataire -->
+                    <td class="td-service">
+                      @if (t.serviceDestinataire) {
+                        <span class="tl-service tl-service--{{ t.serviceDestinataire.toLowerCase() }}">{{ t.serviceDestinataire }}</span>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
+                    <!-- Facturable -->
+                    <td class="td-fact">
+                      @if (t.estFacturable !== false) {
+                        <span class="tl-fact tl-fact--oui"><mat-icon>attach_money</mat-icon>Fact.</span>
+                      } @else {
+                        <span class="tl-fact tl-fact--non"><mat-icon>money_off</mat-icon>Non fact.</span>
+                      }
+                    </td>
+                    <!-- Tags: Récurrente + En attente -->
+                    <td class="td-flags">
+                      @if (t.estRecurrente) {
+                        <span class="tl-tag tl-tag--recurrente"><mat-icon>repeat</mat-icon>Récurrente</span>
+                      }
+                      @if (t.enAttenteService) {
+                        <span class="tl-tag tl-tag--attente"><mat-icon>hourglass_empty</mat-icon>En attente</span>
+                      }
+                      @if (!t.estRecurrente && !t.enAttenteService) { <span class="tl-empty">—</span> }
+                    </td>
                     <td class="td-client">
                       @if (t.client) {
                         <a class="tl-client" [routerLink]="['/clients', t.client.id]" (click)="$event.stopPropagation()">
@@ -1818,9 +2318,23 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                         </span>
                       } @else { <span class="tl-empty">—</span> }
                     </td>
+                    <td class="td-temps">
+                      @if (t.tempsTotalSecondes && t.tempsTotalSecondes > 0) {
+                        <span class="tl-temps">{{ formatSeconds(t.tempsTotalSecondes) }}</span>
+                      } @else if (t.tempsExecution && t.tempsExecution > 0) {
+                        <span class="tl-temps tl-temps--exec">{{ formatTime(t.tempsExecution) }}</span>
+                      } @else {
+                        <span class="tl-empty">—</span>
+                      }
+                    </td>
+                    <td class="td-created">
+                      @if (t.createdAt) {
+                        <span class="tl-date">{{ t.createdAt | localDate:'dd MMM yy' }}</span>
+                      } @else { <span class="tl-empty">—</span> }
+                    </td>
                   </tr>
                 } @empty {
-                  <tr><td colspan="8" class="tl-empty-row">
+                  <tr><td colspan="13" class="tl-empty-row">
                     <mat-icon>task_alt</mat-icon>
                     <span>Aucune tâche{{ searchText ? ' pour cette recherche' : '' }}</span>
                   </td></tr>
@@ -1848,6 +2362,18 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                   <mat-icon>chevron_right</mat-icon>
                 </button>
               </div>
+            </div>
+          }
+
+          <!-- Bandeau total heures saisies (Mes tâches uniquement) -->
+          @if (mesTachesOnly) {
+            <div class="tl-mes-taches-total">
+              <mat-icon>timer</mat-icon>
+              <span>Heures saisies sur mes dossiers (toutes périodes) :</span>
+              <strong class="tl-mes-total-val">{{ fmtH(mesTachesHeuresSaisies) }}</strong>
+              @if (mesTachesHeuresSaisies === 0) {
+                <span class="tl-mes-total-hint">Aucune saisie enregistrée pour ces dossiers</span>
+              }
             </div>
           }
 
@@ -2106,6 +2632,12 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     .card-prendre-btn mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .card-anyone { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #8b5cf6; font-weight: 600; }
     .card-anyone mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .card-service-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .card-svc-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+    .card-svc-badge mat-icon { font-size: 11px; width: 11px; height: 11px; }
+    .card-svc-badge--dest { background: #dbeafe; color: #1e40af; }
+    .card-svc-badge--wait { background: #fef3c7; color: #92400e; }
+    .card-svc-badge--rec  { background: #dcfce7; color: #166534; }
 
     /* Type chips */
     .type-chip { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
@@ -2199,6 +2731,22 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
     .th-statut, .td-statut { width: 120px; }
     .th-prio, .td-prio { width: 90px; }
     .th-type, .td-type { width: 90px; }
+    .th-service, .td-service { width: 90px; }
+    .th-fact, .td-fact { width: 90px; }
+    .th-flags, .td-flags { width: 130px; }
+    .tl-service { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .tl-service--compta { background: #dbeafe; color: #1e40af; }
+    .tl-service--social { background: #dcfce7; color: #14532d; }
+    .tl-service--juridique { background: #ede9fe; color: #5b21b6; }
+    .tl-service--admin { background: #f1f5f9; color: #475569; }
+    .tl-fact { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+    .tl-fact mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    .tl-fact--oui { background: #dcfce7; color: #15803d; }
+    .tl-fact--non { background: #fef2f2; color: #dc2626; }
+    .tl-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 3px; font-weight: 600; }
+    .tl-tag mat-icon { font-size: 11px; width: 11px; height: 11px; }
+    .tl-tag--recurrente { background: #e0e7ff; color: #4338ca; }
+    .tl-tag--attente { background: #fff7ed; color: #c2410c; }
     .th-client, .td-client { width: 180px; }
     .th-assignee, .td-assignee { width: 150px; }
     .th-date, .td-date { width: 110px; }
@@ -2288,6 +2836,59 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
 
     /* tl-type réutilise les classes type-* existantes */
     .tl-type { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+
+    /* ── Bannière temps personnel ── */
+    .tl-time-banner {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 12px 18px; background: #f8faff;
+      border: 1px solid #e0e7ff; border-radius: 12px; margin-bottom: 10px;
+    }
+    .tl-time-stat {
+      display: flex; align-items: center; gap: 6px;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #6366f1; }
+    }
+    .tl-time-val { font-size: 15px; font-weight: 800; color: #1e293b; }
+    .tl-time-lbl { font-size: 11px; color: #94a3b8; font-weight: 500; }
+    .tl-time-stat--fact mat-icon { color: #16a34a; }
+    .tl-time-stat--fact .tl-time-val { color: #16a34a; }
+    .tl-time-sep { width: 1px; height: 28px; background: #e2e8f0; flex-shrink: 0; }
+    .tl-time-spacer { flex: 1; }
+    .tl-date-filter { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+    .tl-cal-hidden {
+      position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; overflow: hidden;
+    }
+    .tl-cal-btn {
+      width: 34px !important; height: 34px !important;
+      color: #64748b;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .tl-cal-btn--active { color: #6366f1 !important; background: #eef2ff !important; border-radius: 8px; }
+    .tl-df-range {
+      font-size: 12px; font-weight: 600; color: #6366f1;
+      background: #eef2ff; border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    }
+    .tl-df-clear {
+      display: flex; align-items: center; padding: 2px;
+      background: none; border: none; cursor: pointer; color: #94a3b8;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      &:hover { color: #dc2626; }
+    }
+    .th-created { width: 90px; }
+    .td-created { width: 90px; }
+    .th-temps, .td-temps { width: 80px; }
+    .tl-temps { font-size: 12px; font-weight: 700; color: #4f46e5; font-family: monospace; background: #eef2ff; padding: 2px 6px; border-radius: 5px; }
+    .tl-temps--exec { background: #f0fdf4; color: #15803d; }
+
+    /* ── Bandeau Mes tâches total ── */
+    .tl-mes-taches-total {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-top: 10px; padding: 10px 16px;
+      background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px;
+      font-size: 13px; color: #4338ca; flex-shrink: 0;
+    }
+    .tl-mes-taches-total mat-icon { font-size: 16px; width: 16px; height: 16px; color: #6366f1; }
+    .tl-mes-total-val { font-size: 15px; font-weight: 800; color: #4f46e5; }
+    .tl-mes-total-hint { font-size: 11px; color: #818cf8; font-style: italic; }
   `],
 })
 export class TasksGlobalComponent implements OnInit, OnDestroy {
@@ -2301,6 +2902,30 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   private sub = new Subscription();
   private auth = inject(AuthService);
   tenantSvc    = inject(TenantService);
+  private saisieTempsService = inject(SaisieTempsService);
+  mesSaisies: SaisieTemps[] = [];
+  tableFilterDateDebut = '';
+  tableFilterDateFin   = '';
+  filterDateStart: Date | null = null;
+  filterDateEnd:   Date | null = null;
+
+  onRangeChange() {
+    this.tableFilterDateDebut = this.filterDateStart ? this.toISODate(this.filterDateStart) : '';
+    this.tableFilterDateFin   = this.filterDateEnd   ? this.toISODate(this.filterDateEnd)   : '';
+    this.tablePage = 1;
+  }
+
+  clearDateFilter() {
+    this.filterDateStart = null;
+    this.filterDateEnd   = null;
+    this.tableFilterDateDebut = '';
+    this.tableFilterDateFin   = '';
+    this.tablePage = 1;
+  }
+
+  private toISODate(d: Date): string {
+    return d.toISOString().split('T')[0];
+  }
 
   tasks: Task[] = [];
   filteredTasks: Task[] = [];
@@ -2311,6 +2936,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   filterClientId: number | null = null;
   filterAssigneeId: number | null = null;
   filterType: string | null = null;
+  filterService: string | null = null;
 
   kanbanCols: { statut: TaskStatut; label: string; tasks: Task[] }[] = [];
   colIds: string[] = [];
@@ -2325,6 +2951,12 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   get tableFilteredTasks(): Task[] {
     let list = [...this.filteredTasks];
+    if (this.tableFilterDateDebut) {
+      list = list.filter(t => !t.dateEcheance || t.dateEcheance >= this.tableFilterDateDebut);
+    }
+    if (this.tableFilterDateFin) {
+      list = list.filter(t => !t.dateEcheance || t.dateEcheance <= this.tableFilterDateFin);
+    }
     if (this.searchText.trim()) {
       const q = this.searchText.trim().toLowerCase();
       list = list.filter(t =>
@@ -2347,6 +2979,11 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
           const db = b.dateEcheance ? new Date(b.dateEcheance).getTime() : Infinity;
           return dir * (da - db);
         }
+        case 'temps': {
+          const ta = a.tempsTotalSecondes ?? (a.tempsExecution ? a.tempsExecution * 60 : 0);
+          const tb = b.tempsTotalSecondes ?? (b.tempsExecution ? b.tempsExecution * 60 : 0);
+          return dir * (ta - tb);
+        }
         default: return 0;
       }
     });
@@ -2366,11 +3003,69 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
     return [...pages].sort((a, b) => a - b);
   }
 
+  get monTotalAujourdhui(): number {
+    const today = new Date().toISOString().split('T')[0];
+    return this.mesSaisies.filter(s => s.date === today)
+      .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
+  }
+
+  get monTotalSemaine(): number {
+    const mon = this._lundiSemaine(new Date());
+    const ven = new Date(mon); ven.setDate(ven.getDate() + 6);
+    const monStr = mon.toISOString().split('T')[0];
+    const venStr = ven.toISOString().split('T')[0];
+    return this.mesSaisies.filter(s => s.date >= monStr && s.date <= venStr)
+      .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
+  }
+
+  get monTotalFactSemaine(): number {
+    const mon = this._lundiSemaine(new Date());
+    const ven = new Date(mon); ven.setDate(ven.getDate() + 6);
+    const monStr = mon.toISOString().split('T')[0];
+    const venStr = ven.toISOString().split('T')[0];
+    return this.mesSaisies.filter(s => s.date >= monStr && s.date <= venStr && s.type === 'FACTURABLE')
+      .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
+  }
+
+  private _lundiSemaine(d: Date): Date {
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    const lundi = new Date(d);
+    lundi.setDate(d.getDate() + diff);
+    lundi.setHours(0, 0, 0, 0);
+    return lundi;
+  }
+
+  fmtH(h: number): string {
+    if (!h || h <= 0) return '0h';
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return mm > 0 ? `${hh}h${String(mm).padStart(2, '0')}` : `${hh}h`;
+  }
+
   sortTable(col: string) {
     this.tableSort = this.tableSort.col === col
       ? { col, dir: this.tableSort.dir === 'asc' ? 'desc' : 'asc' }
       : { col, dir: 'asc' };
     this.tablePage = 1;
+  }
+
+  /** Total heures saisies (mesSaisies) sur les dossiers des tâches filtrées */
+  get mesTachesHeuresSaisies(): number {
+    const clientIds = new Set(
+      this.tableFilteredTasks.filter(t => t.clientId != null).map(t => t.clientId!)
+    );
+    return this.mesSaisies
+      .filter(s => s.clientId != null && clientIds.has(s.clientId))
+      .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
+  }
+
+  formatSeconds(seconds: number): string {
+    if (!seconds || seconds <= 0) return '—';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+    return `${m}min`;
   }
 
   statutLabel(s: string): string {
@@ -2409,6 +3104,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.load();
+    this.saisieTempsService.getMes().subscribe(s => this.mesSaisies = s);
     this.clientsService.getAll().subscribe(c => this.clients = c);
     this.usersService.getAssignable().subscribe(u => this.users = u);
     this.sub.add(this.notifStream.newNotif$.pipe(filter(n => n.type === 'TASK_ASSIGNED')).subscribe(() => this.load()));
@@ -2430,7 +3126,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   openDetail(task: Task) {
     const ref = this.dialog.open(TaskDetailDialogComponent, {
-      width: '760px', maxWidth: '96vw',
+      width: '900px', maxWidth: '96vw',
       data: { task, users: this.users, currentUserId: this.auth.currentUser()?.id, currentUserIsAdmin: this.auth.isAdmin() },
     });
     ref.afterClosed().subscribe(result => { if (result === 'updated' || result === 'deleted') this.load(); });
@@ -2442,10 +3138,11 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   applyFilter() {
     this.filteredTasks = this.tasks.filter(t => {
-      if (this.mesTachesOnly    && t.assignee?.id  !== this.currentUserId)    return false;
-      if (this.filterClientId   && t.clientId      !== this.filterClientId)   return false;
-      if (this.filterAssigneeId && t.assignee?.id  !== this.filterAssigneeId) return false;
-      if (this.filterType       && t.type          !== this.filterType)       return false;
+      if (this.mesTachesOnly    && t.assignee?.id        !== this.currentUserId)    return false;
+      if (this.filterClientId   && t.clientId            !== this.filterClientId)   return false;
+      if (this.filterAssigneeId && t.assignee?.id        !== this.filterAssigneeId) return false;
+      if (this.filterType       && t.type                !== this.filterType)       return false;
+      if (this.filterService    && t.serviceDestinataire !== this.filterService)    return false;
       return true;
     });
     this.buildKanban();
@@ -2474,7 +3171,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
 
   resetFilters() {
     this.mesTachesOnly = false;
-    this.filterClientId = this.filterAssigneeId = this.filterType = null;
+    this.filterClientId = this.filterAssigneeId = this.filterType = this.filterService = null;
     this.applyFilter();
   }
 

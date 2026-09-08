@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Readable } from 'stream';
 import { Client } from '../entities/client.entity';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
@@ -240,6 +241,38 @@ export class ClientsService {
     const url = await this.minio.uploadFile('passidoc-logos', objectName, file.buffer, file.mimetype);
     await this.repo.update(id, { logoUrl: url });
     return this.findOne(id);
+  }
+
+  async uploadFichePhoto(id: number, file: Express.Multer.File, currentUser: User): Promise<Client> {
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
+    const ext = file.originalname.split('.').pop();
+    const objectName = `fiche-photos/${id}/${Date.now()}.${ext}`;
+    const url = await this.minio.uploadFile('passidoc-logos', objectName, file.buffer, file.mimetype);
+    const fiche = client.ficheIdentite;
+    if (fiche) {
+      const photos = [...(fiche.photos ?? []), url];
+      await this.ficheRepo.update(fiche.id, { photos });
+    }
+    return this.findOne(id);
+  }
+
+  async deleteFichePhoto(id: number, photoUrl: string, currentUser: User): Promise<Client> {
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
+    const fiche = client.ficheIdentite;
+    if (fiche) {
+      const photos = (fiche.photos ?? []).filter(p => p !== photoUrl);
+      await this.ficheRepo.update(fiche.id, { photos });
+    }
+    return this.findOne(id);
+  }
+
+  async streamPhoto(objectName: string): Promise<{ stream: Readable; mime: string }> {
+    const stream = await this.minio.getStream('passidoc-logos', objectName);
+    const ext = objectName.split('.').pop()?.toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    return { stream, mime };
   }
 }
 

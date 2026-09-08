@@ -43,6 +43,22 @@ export class FicheIdentite {
   @Column({ nullable: true })
   activite: string;
 
+  // ── TACHE-03 : activité et mode de fonctionnement ──
+  @Column({ type: 'text', nullable: true })
+  activitePrincipale: string;
+
+  @Column({ type: 'text', nullable: true })
+  typeClientele: string;
+
+  @Column({ type: 'text', nullable: true })
+  saisonnalite: string;
+
+  @Column({ type: 'text', nullable: true })
+  pointsDeVente: string;
+
+  @Column({ type: 'json', nullable: true })
+  photos: string[];
+
   @Column({ nullable: true })
   emailContact: string;
 
@@ -119,6 +135,37 @@ export class FicheIdentite {
 
   @Column({ type: 'json', nullable: true })
   organigramme: OrgNode | OrgNode[] | null;
+
+  // ── TACHE-04 : cycles opérationnels ──
+  @Column({ type: 'json', nullable: true })
+  cycleTresorerie: {
+    nbComptesBancaires?: number;
+    aEmprunts?: boolean;
+    empruntsDetail?: string;
+    modeTransmissionReleves?: string;
+  };
+
+  @Column({ type: 'json', nullable: true })
+  cycleAchats: {
+    modeDepotFacturesAchat?: string;
+    frequenceVolume?: string;
+  };
+
+  @Column({ type: 'json', nullable: true })
+  cycleVentes: {
+    typeFacturation?: string;
+    modeTransmissionVentes?: string;
+    periodiciteDeclarationTva?: string;
+  };
+
+  @Column({ type: 'json', nullable: true })
+  cycleChargesPaie: {
+    nbSalaries?: number;
+    gestionPaie?: string;
+  };
+
+  @Column({ type: 'text', nullable: true })
+  pointsVigilance: string;
 
   @OneToOne(() => Client, (client) => client.ficheIdentite)
   @JoinColumn()

@@ -35,21 +35,12 @@ interface CycleUI {
 
   <!-- En-tête -->
   <div class="dt-header">
-    <div class="dt-header__left">
-      <mat-icon class="dt-header__icon">work_history</mat-icon>
-      <div>
-        <h2 class="dt-header__title">Dossier de travail</h2>
-        <p class="dt-header__sub">Révision par cycle — exercice {{ exerciceId }}</p>
-      </div>
-    </div>
-    <div class="dt-header__actions">
-      <button mat-stroked-button class="dt-copy-btn" (click)="copyContent()" matTooltip="Copier tout le contenu">
-        <mat-icon>content_copy</mat-icon> Copier
-      </button>
-      @if (readonly) {
-        <span class="dt-badge dt-badge--readonly"><mat-icon>lock</mat-icon> Lecture seule</span>
-      }
-    </div>
+    <button mat-stroked-button class="dt-copy-btn" (click)="copyContent()" matTooltip="Copier tout le contenu">
+      <mat-icon>content_copy</mat-icon> Copier
+    </button>
+    @if (readonly) {
+      <span class="dt-badge dt-badge--readonly"><mat-icon>lock</mat-icon> Lecture seule</span>
+    }
   </div>
 
   @if (loading) {
@@ -210,7 +201,7 @@ interface CycleUI {
     .dt-tab { padding: 24px; max-width: 1100px; }
 
     /* Header */
-    .dt-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
+    .dt-header { display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 10; background: white; margin: -24px -24px 28px; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
     .dt-header__left { display: flex; align-items: center; gap: 16px; }
     .dt-header__icon { font-size: 32px; width: 32px; height: 32px; color: #6366f1; }
     .dt-header__title { margin: 0; font-size: 1.4rem; font-weight: 600; }
@@ -303,7 +294,7 @@ interface CycleUI {
       border-left: 3px solid var(--cycle-color, #6366f1);
     }
 
-    .dt-cycle__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .dt-cycle__header { display: flex; align-items: flex-start; justify-content: flex-end; margin-bottom: 20px; }
     .dt-cycle__title-row { display: flex; align-items: center; gap: 10px; }
     .dt-cycle__title { margin: 0; font-size: 1rem; font-weight: 700; }
     .dt-cycle__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }

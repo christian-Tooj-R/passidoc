@@ -23,16 +23,16 @@ export class TenantConfig {
   @Column({ nullable: true })
   pays: string;
 
-  @Column({ default: 'La Réunion' })
+  @Column({ default: 'Pôle EST' })
   poleLabel1: string;
 
-  @Column({ default: 'Madagascar' })
+  @Column({ default: 'Pôle OUEST' })
   poleLabel2: string;
 
-  @Column({ nullable: true })
+  @Column({ default: '🔵', nullable: true })
   poleFlag1: string;
 
-  @Column({ nullable: true })
+  @Column({ default: '🟠', nullable: true })
   poleFlag2: string;
 
   @Column({ nullable: true })

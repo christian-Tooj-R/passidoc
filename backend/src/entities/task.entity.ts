@@ -124,6 +124,22 @@ export class Task {
   @JoinColumn({ name: 'creePar' })
   createdBy: User;
 
+  // ── TACHE-07 : inter-services ──
+  @Column({ nullable: true })
+  serviceDestinataire: string;
+
+  @Column({ nullable: true })
+  serviceAttendu: string;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  enAttenteService: boolean;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  estRecurrente: boolean;
+
+  @Column({ type: 'boolean', nullable: true, default: true })
+  estFacturable: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

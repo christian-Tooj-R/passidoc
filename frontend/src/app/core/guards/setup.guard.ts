@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
-import { map } from 'rxjs';
+import { map, catchError, of } from 'rxjs';
 import { TenantService } from '../services/tenant.service';
 import { AuthService } from '../services/auth.service';
 
@@ -10,8 +10,12 @@ export const setupGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
 
-  // Utilisateur déjà authentifié → le tenant était forcément configuré au login
-  if (auth.isLoggedIn()) return true;
+  // Utilisateur déjà authentifié → le tenant était forcément configuré au login.
+  // Si la config n'est pas encore chargée (ex: rechargement de page), on la charge avant de continuer.
+  if (auth.isLoggedIn()) {
+    if (tenant.configLoaded()) return true;
+    return tenant.loadConfig().pipe(map(() => true), catchError(() => of(true)));
+  }
 
   const cached = tenant.isConfigured();
   if (cached === true)  return true;

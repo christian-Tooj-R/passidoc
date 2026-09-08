@@ -21,6 +21,22 @@ export class ControleInterne {
   @Column({ type: 'text', nullable: true })
   noteGenerale: string;
 
+  // ── TACHE-05 : enrichissement contrôle interne ──
+  @Column({ type: 'json', nullable: true })
+  risquesIdentifies: {
+    description: string;
+    niveauRisque: 'FAIBLE' | 'MOYEN' | 'ELEVE';
+  }[];
+
+  @Column({ type: 'json', nullable: true })
+  recommandations: {
+    description: string;
+    statut: 'A_SOUMETTRE' | 'SOUMIS' | 'ACCEPTE' | 'EN_COURS' | 'MIS_EN_OEUVRE';
+  }[];
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  missionConseilPotentielle: boolean;
+
   @ManyToOne(() => Client, (c: any) => c.controlesInternes, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clientId' })
   client: Client;

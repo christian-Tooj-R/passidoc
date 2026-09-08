@@ -18,6 +18,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   GERANT_MADAGASCAR: 'Gérant Pôle 2',
 };
 
+export type PoleService = 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
+
 export interface User {
   id: number;
   email: string;
@@ -27,6 +29,7 @@ export interface User {
   site: UserSite;
   antenne?: UserAntenne | null;
   referentId?: number | null;
+  poleService?: PoleService | null;
   isTwoFactorEnabled: boolean;
   isActive: boolean;
   createdAt: string;

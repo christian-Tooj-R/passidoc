@@ -486,7 +486,7 @@ export class SidebarComponent implements OnInit {
   private syncFromRoute(url: string) {
     if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
     else if (url.startsWith('/clients') || url.startsWith('/portefeuilles'))      this.activeModule.set('dossiers');
-    else if (url.startsWith('/tasks'))                                            this.activeModule.set('travail');
+    else if (url.startsWith('/tasks'))  this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
     else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');

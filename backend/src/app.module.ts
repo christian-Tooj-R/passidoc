@@ -39,6 +39,8 @@ import { DossierTravailModule } from './dossier-travail/dossier-travail.module';
 import { DossierMessagesModule } from './dossier-messages/dossier-messages.module';
 import { BalanceModule } from './balance/balance.module';
 import { HelpModule } from './help/help.module';
+import { SaisieTempsModule } from './saisie-temps/saisie-temps.module';
+import { TacheRecurrenteModule } from './tache-recurrente/tache-recurrente.module';
 import { MailModule } from './mail/mail.module';
 import { CanvasModule } from './canvas/canvas.module';
 import { SetupModule } from './setup/setup.module';
@@ -117,6 +119,8 @@ import { TenantConfig } from './entities/tenant-config.entity';
     DossierMessagesModule,
     BalanceModule,
     HelpModule,
+    SaisieTempsModule,
+    TacheRecurrenteModule,
     MailModule,
     CanvasModule,
     SetupModule,

@@ -11,6 +11,7 @@ import { ExerciceService } from '../../../core/services/exercice.service';
 import { UsersService } from '../../../core/services/users.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
+import { TabSaveService } from '../../../core/services/tab-save.service';
 import { Client, Exercice } from '../../../core/models/client.model';
 import { User } from '../../../core/models/user.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
@@ -28,11 +29,14 @@ import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
 import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
+import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
+import GalerieTabComponent from './tabs/galerie-tab/galerie-tab.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'historique' | 'dossier-travail' | 'canvas';
+  | 'documents' | 'historique' | 'dossier-travail' | 'canvas'
+  | 'taches-recurrentes' | 'galerie';
 
 interface TabGroup {
   label: string;
@@ -66,7 +70,8 @@ interface TabGroup {
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
     AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
-    DossierChatComponent,
+    DossierChatComponent, TachesRecurrentesTabComponent,
+    GalerieTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -437,6 +442,24 @@ interface TabGroup {
                 <div class="ch-group" [style.color]="activeGroupStyle().color">{{ activeGroup()?.label }}</div>
                 <h3>{{ activeTabMeta()?.label }}</h3>
               </div>
+              @if (canEdit() && exerciceCourant()?.statut !== 'CLOTURE') {
+                @if (tabSave.hasToggle()) {
+                  @if (!tabSave.isEditing()) {
+                    <button mat-stroked-button class="ch-edit-btn" (click)="tabSave.enterEdit()">
+                      <mat-icon>edit</mat-icon> Modifier
+                    </button>
+                  } @else {
+                    <button mat-stroked-button class="ch-cancel-btn" (click)="tabSave.cancel()">Annuler</button>
+                    <button mat-flat-button color="primary" class="ch-save-btn" (click)="tabSave.trigger()">
+                      <mat-icon>save</mat-icon> Enregistrer
+                    </button>
+                  }
+                } @else if (tabSave.hasSave()) {
+                  <button mat-flat-button color="primary" class="ch-save-btn" (click)="tabSave.trigger()">
+                    <mat-icon>save</mat-icon> Enregistrer
+                  </button>
+                }
+              }
             </div>
 
             <!-- Bannière lecture seule -->
@@ -458,13 +481,15 @@ interface TabGroup {
                   @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" [exerciceAnnee]="exerciceCourant()?.annee ?? 0" [prefill]="missionCIPrefill()" (prefillUsed)="missionCIPrefill.set(null)" /> }
+                  @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (navigateTo)="activeTab.set($any($event))" (exporterReco)="recommandationsCIImportees.set($event)" (creerMissionCI)="missionCIPrefill.set($event)" /> }
+                  @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" [recommandationsCIImportees]="recommandationsCIImportees()" (recommandationsIntegrees)="recommandationsCIImportees.set([])" /> }
                   @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('taches-recurrentes') { <app-taches-recurrentes-tab [clientId]="client.id" /> }
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+                  @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                 }
               </div>
             </div>
@@ -683,7 +708,11 @@ interface TabGroup {
       padding: 14px 24px;
       background: #FFFBFE; border-bottom: 1px solid #E0E2EC;
       flex-shrink: 0;
+      position: sticky; top: 0; z-index: 20;
     }
+    .ch-save-btn  { margin-left: auto; flex-shrink: 0; }
+    .ch-edit-btn  { margin-left: auto; flex-shrink: 0; }
+    .ch-cancel-btn { margin-left: auto; flex-shrink: 0; }
     .ch-icon {
       width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -1082,6 +1111,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   client: Client | null = null;
   loading = signal(true);
   activeTab = signal<TabId>('fiche');
+  recommandationsCIImportees = signal<string[]>([]);
+  missionCIPrefill = signal<{ titre: string; type: string; description: string; arguments: string } | null>(null);
 
   exercices       = signal<Exercice[]>([]);
   exerciceCourant = signal<Exercice | null>(null);
@@ -1114,22 +1145,25 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
         { id: 'missions',         icon: 'assignment',   label: 'Missions' },
         { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
         { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
-        { id: 'dossier-travail',  icon: 'work_history', label: 'Dossier de travail' },
-        { id: 'canvas',           icon: 'grid_view',    label: 'Modèle Canvas' },
+        { id: 'dossier-travail',      icon: 'work_history', label: 'Dossier de travail' },
+        { id: 'canvas',               icon: 'grid_view',    label: 'Modèle Canvas' },
+        { id: 'taches-recurrentes',   icon: 'repeat',       label: 'Tâches récurrentes' },
       ],
     },
     {
       label: 'Ressources',
       icon: 'inventory_2',
       tabs: [
-        { id: 'documents',  icon: 'attach_file', label: 'Documents' },
-        { id: 'historique', icon: 'history',     label: 'Historique' },
+        { id: 'galerie',    icon: 'photo_library',   label: 'Galerie' },
+        { id: 'documents',  icon: 'attach_file',    label: 'Documents' },
+        { id: 'historique', icon: 'history',         label: 'Historique' },
       ],
     },
   ];
 
   auth             = inject(AuthService);
   tenantSvc        = inject(TenantService);
+  tabSave          = inject(TabSaveService);
   private users    = inject(UsersService);
 
   canEdit = computed(() => {
