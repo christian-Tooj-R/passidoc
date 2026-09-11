@@ -54,8 +54,38 @@ export class AiAssistantService {
     return this.http.delete(`${this.api}/clients/${clientId}/ai/history`);
   }
 
+  /**
+   * Contexte "Mes temps" (module Travail) — scopé au collaborateur connecté,
+   * pas de clientId. Pas d'historique persisté côté backend pour ce premier
+   * lot : la conversation vit uniquement en mémoire dans le widget tant que
+   * la page n'est pas rechargée.
+   */
+  getMeContext() {
+    return this.http.get<any>(`${this.api}/me/ai/context`);
+  }
+
+  async chatStreamMe(
+    messages: ChatMessage[],
+    onChunk: (text: string) => void,
+    onDone: () => void,
+    onError: (msg: string) => void,
+  ): Promise<void> {
+    await this.streamFrom(`/api/me/ai/chat`, messages, onChunk, onDone, onError);
+  }
+
   async chatStream(
     clientId: number,
+    messages: ChatMessage[],
+    onChunk: (text: string) => void,
+    onDone: () => void,
+    onError: (msg: string) => void,
+  ): Promise<void> {
+    await this.streamFrom(`/api/clients/${clientId}/ai/chat`, messages, onChunk, onDone, onError);
+  }
+
+  /** Logique de streaming partagée entre le chat "dossier client" et le chat "Mes temps". */
+  private async streamFrom(
+    path: string,
     messages: ChatMessage[],
     onChunk: (text: string) => void,
     onDone: () => void,
@@ -66,7 +96,7 @@ export class AiAssistantService {
 
     let response: Response;
     try {
-      response = await fetch(`${baseUrl}/api/clients/${clientId}/ai/chat`, {
+      response = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

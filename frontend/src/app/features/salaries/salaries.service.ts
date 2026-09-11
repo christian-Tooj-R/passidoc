@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 
 export type UserRole = 'ADMIN' | 'EXPERT_COMPTABLE' | 'COLLABORATEUR';
 export type UserSite = 'REUNION' | 'MADAGASCAR';
+export type UserAntenne = 'EST' | 'OUEST';
 
 export interface Collaborateur {
   id: number;
@@ -12,6 +13,7 @@ export interface Collaborateur {
   lastName: string;
   role: UserRole;
   site: UserSite;
+  antenne: UserAntenne | null;
   isActive: boolean;
   isTwoFactorEnabled: boolean;
   referentId: number | null;

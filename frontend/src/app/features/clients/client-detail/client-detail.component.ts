@@ -31,12 +31,14 @@ import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
 import GalerieTabComponent from './tabs/galerie-tab/galerie-tab.component';
+import { PaieTabComponent } from './tabs/paie-tab/paie-tab.component';
+import { GlobalTimerIndicatorComponent } from '../../../shared/global-timer-indicator/global-timer-indicator.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
   | 'documents' | 'historique' | 'dossier-travail' | 'canvas'
-  | 'taches-recurrentes' | 'galerie';
+  | 'taches-recurrentes' | 'galerie' | 'paie';
 
 interface TabGroup {
   label: string;
@@ -71,7 +73,7 @@ interface TabGroup {
     HistoriqueTabComponent,
     AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
     DossierChatComponent, TachesRecurrentesTabComponent,
-    GalerieTabComponent,
+    GalerieTabComponent, PaieTabComponent, GlobalTimerIndicatorComponent,
   ],
   template: `
     @if (loading()) {
@@ -134,6 +136,7 @@ interface TabGroup {
             <span class="bc-current">{{ client.nom }}</span>
           </div>
           <div class="topbar__right">
+            <app-global-timer-indicator />
             <span class="score-chip score-chip--{{ getScoreChipClass(client.santePassation) }}">
               <mat-icon class="score-chip__icon">{{ getScoreChipClass(client.santePassation) === 'ok' ? 'check_circle' : getScoreChipClass(client.santePassation) === 'partial' ? 'warning' : 'error' }}</mat-icon>
               {{ client.santePassation }}% — {{ getScoreStatus(client.santePassation) }}
@@ -490,6 +493,7 @@ interface TabGroup {
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
                   @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('paie')         { <app-paie-tab                [clientId]="client.id" /> }
                 }
               </div>
             </div>
@@ -1157,6 +1161,13 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
         { id: 'galerie',    icon: 'photo_library',   label: 'Galerie' },
         { id: 'documents',  icon: 'attach_file',    label: 'Documents' },
         { id: 'historique', icon: 'history',         label: 'Historique' },
+      ],
+    },
+    {
+      label: 'RH & Paie',
+      icon: 'groups',
+      tabs: [
+        { id: 'paie', icon: 'payments', label: 'Paie' },
       ],
     },
   ];

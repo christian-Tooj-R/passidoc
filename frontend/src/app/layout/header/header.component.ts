@@ -8,13 +8,14 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService, TaskNotification } from '../../core/services/notification-stream.service';
+import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicator/global-timer-indicator.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [
     CommonModule, MatButtonModule, MatIconModule,
-    MatMenuModule, MatDividerModule,
+    MatMenuModule, MatDividerModule, GlobalTimerIndicatorComponent,
   ],
   template: `
     <header class="topbar">
@@ -31,6 +32,9 @@ import { NotificationStreamService, TaskNotification } from '../../core/services
 
       <!-- ── Right ────────────────────────────────── -->
       <div class="topbar__right">
+
+        <!-- Minuteur en cours (module Travail) -->
+        <app-global-timer-indicator />
 
         <!-- Bell -->
         <div class="bell-wrap">

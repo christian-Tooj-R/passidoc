@@ -16,6 +16,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CongesAbsencesService, SoldeConge, TYPE_CONGE_LABELS, TYPE_CONGE_COLORS } from '../../core/services/conges-absences.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { SalariesCongesComponent } from './salaries-conges.component';
+import { PaieRhSalarieTabComponent } from '../paie-rh/paie-rh-salarie-tab.component';
 
 const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', 'Freelance', 'Autre'];
 const STATUTS_PRO   = [
@@ -27,7 +28,7 @@ const STATUTS_PRO   = [
 const MODES_PAIEMENT = ['VIREMENT', 'ESPECES', 'CHEQUE'];
 const DEVISES        = ['EUR', 'MGA', 'USD'];
 
-type Section = 'profil' | 'conges' | 'documents';
+type Section = 'profil' | 'conges' | 'documents' | 'contratPaie';
 
 type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
 @Component({
@@ -37,7 +38,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule,
     MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, OnlyNumbersDirective, SalariesCongesComponent,
+    MatTooltipModule, OnlyNumbersDirective, SalariesCongesComponent, PaieRhSalarieTabComponent,
   ],
   template: `
 @if (loading()) {
@@ -117,6 +118,10 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     <button class="tab-item" [class.active]="section()==='documents'" (click)="section.set('documents')">
       <mat-icon>folder_open</mat-icon>
       <span>Documents</span>
+    </button>
+    <button class="tab-item" [class.active]="section()==='contratPaie'" (click)="section.set('contratPaie')">
+      <mat-icon>payments</mat-icon>
+      <span>Contrat & Paie</span>
     </button>
   </div>
 
@@ -248,6 +253,13 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         <mat-icon>folder_open</mat-icon>
         <p>Module documents — à venir</p>
       </div>
+    </div>
+    }
+
+    <!-- ═══ SECTION CONTRAT & PAIE (module Paie RH interne) ═══ -->
+    @if (section() === 'contratPaie') {
+    <div class="content-area">
+      <app-paie-rh-salarie-tab [userId]="collab()!.id" [userAntenne]="collab()!.antenne" [userDevise]="collab()!.devise" />
     </div>
     }
 
@@ -775,7 +787,7 @@ export class SalariesDetailComponent implements OnInit {
   });
 
   sectionLabel() {
-    return { profil: 'Fiche salarié', conges: 'Congés & Absences', documents: 'Documents' }[this.section()];
+    return { profil: 'Fiche salarié', conges: 'Congés & Absences', documents: 'Documents', contratPaie: 'Contrat & Paie' }[this.section()];
   }
 
   canEditCollab(): boolean {

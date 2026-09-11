@@ -9,9 +9,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 interface NavItem { label: string; icon: string; route: string; }
 
 const NAV: NavItem[] = [
-  { label: 'Collaborateurs',    icon: 'badge',        route: '/rh/salaries'    },
+  { label: 'Salariés',          icon: 'badge',        route: '/rh/salaries'    },
   { label: 'Congés & Absences', icon: 'event_busy',   route: '/rh/conges'      },
   { label: 'Agenda',            icon: 'calendar_month', route: '/rh/calendrier' },
+  { label: 'Période en cours',  icon: 'event_note',   route: '/rh/periode'     },
+  { label: 'Activité',          icon: 'assignment',   route: '/rh/activite'    },
+  { label: 'Paie interne',      icon: 'payments',     route: '/rh/paie'        },
+  { label: 'Mes bulletins',     icon: 'receipt_long', route: '/rh/mes-bulletins' },
 ];
 
 @Component({

@@ -17,11 +17,11 @@ import { ClientsService } from '../../core/services/clients.service';
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule],
   template: `
-@if (checkLoggedIn() && clientId() && !isFullscreen()) {
+@if (checkLoggedIn() && (clientId() || isTravail()) && !isFullscreen()) {
 
   <!-- ── FAB ──────────────────────────────────────────────────────── -->
   <button class="fab"
-          [class.fab--active]="!!clientId()"
+          [class.fab--active]="!!clientId() || isTravail()"
           [class.fab--open]="isOpen()"
           (click)="togglePanel()"
           [matTooltip]="fabTooltip"
@@ -40,13 +40,14 @@ import { ClientsService } from '../../core/services/clients.service';
       <div class="panel-header">
         <div class="panel-header__ai">
           <div class="panel-avatar">
-            <mat-icon>smart_toy</mat-icon>
+            <mat-icon>{{ isTravail() ? 'schedule' : 'smart_toy' }}</mat-icon>
             <span class="panel-avatar__dot"></span>
           </div>
           <div class="panel-header__info">
             <div class="panel-title">Assistant IA</div>
             <div class="panel-subtitle">
               @if (clientId()) { Dossier : <strong>{{ clientName() }}</strong> }
+              @else if (isTravail()) { <strong>Mes temps</strong> — module Travail }
               @else { Aucun dossier sélectionné }
             </div>
           </div>
@@ -65,13 +66,13 @@ import { ClientsService } from '../../core/services/clients.service';
       </div>
 
       <!-- Corps : chat actif -->
-      @if (clientId()) {
+      @if (clientId() || isTravail()) {
 
         <!-- Messages -->
         <div class="panel-messages" #messagesContainer>
           @if (messages().length === 0 && !loading()) {
             <div class="panel-suggestions">
-              @for (s of suggestions; track s.text) {
+              @for (s of currentSuggestions; track s.text) {
                 <button class="sugg-chip" (click)="sendSuggestion(s.text)">
                   <mat-icon>{{ s.icon }}</mat-icon>{{ s.text }}
                 </button>
@@ -300,6 +301,7 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
 
   isOpen       = signal(false);
   isFullscreen = signal(false);
+  isTravail    = signal(false);
   clientId     = signal<number | null>(null);
   clientName  = signal('');
   messages    = signal<ChatMessage[]>([]);
@@ -313,15 +315,30 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
 
   checkLoggedIn() { return this.authService.isLoggedIn(); }
   get fabTooltip() {
-    return `Assistant IA — ${this.clientName()}`;
+    if (this.clientId()) return `Assistant IA — ${this.clientName()}`;
+    if (this.isTravail()) return `Assistant IA — Mes temps`;
+    return 'Assistant IA';
   }
 
-  suggestions = [
+  /** Suggestions mode "dossier client". */
+  suggestionsClient = [
     { icon: 'summarize',      text: 'Résume ce dossier rapidement' },
     { icon: 'warning',        text: 'Quels sont les risques identifiés ?' },
     { icon: 'account_balance', text: 'Points d\'attention fiscaux ?' },
     { icon: 'handshake',      text: 'État de la relation client ?' },
   ];
+
+  /** Suggestions mode "Mes temps" (module Travail — pas de clientId dans l'URL). */
+  suggestionsTravail = [
+    { icon: 'schedule',   text: 'Combien d\'heures j\'ai fait cette semaine ?' },
+    { icon: 'pie_chart',  text: 'Quel est mon ratio facturable/non facturable ce mois-ci ?' },
+    { icon: 'groups',     text: 'Sur quels clients j\'ai le plus travaillé récemment ?' },
+    { icon: 'history',    text: 'Résume mes dernières saisies de temps' },
+  ];
+
+  get currentSuggestions() {
+    return this.isTravail() ? this.suggestionsTravail : this.suggestionsClient;
+  }
 
   ngOnInit() {
     this.extractClientFromUrl(this.router.url);
@@ -349,6 +366,18 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
 
   private extractClientFromUrl(url: string) {
     this.isFullscreen.set(/\/clients\/\d+\/ai$/.test(url));
+
+    const travail = /^\/travail(\/|$)/.test(url);
+    if (travail !== this.isTravail()) {
+      this.isTravail.set(travail);
+      if (travail) {
+        // Mode "Mes temps" : nouvelle conversation en mémoire — pas d'historique
+        // persisté côté backend pour ce premier lot (voir AiAssistantTravailService).
+        this.messages.set([]);
+        this.loadedClientId = null;
+      }
+    }
+
     const match = url.match(/\/clients\/(\d+)/);
     const newId = match ? +match[1] : null;
     if (newId === this.clientId()) return;
@@ -383,7 +412,7 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
 
   async send() {
     const content = this.inputText.trim();
-    if (!content || this.loading() || !this.clientId()) return;
+    if (!content || this.loading() || !(this.clientId() || this.isTravail())) return;
     this.inputText = '';
     this.loading.set(true);
 
@@ -396,24 +425,27 @@ export class AiChatWidgetComponent implements OnInit, OnDestroy, AfterViewChecke
     const idx = this.messages().length - 1;
     const toSend = this.messages().slice(0, -1).filter(m => m.content.trim()).slice(-10);
 
-    await this.aiService.chatStream(
-      this.clientId()!, toSend,
-      chunk => {
-        const updated = [...this.messages()];
-        updated[idx] = { ...updated[idx], content: updated[idx].content + chunk };
-        this.messages.set(updated);
-        this.shouldScroll = true;
-        if (!this.isOpen()) this.unread.update(n => n + 1);
-      },
-      () => { this.loading.set(false); this.shouldScroll = true; this.inputAreaEl?.nativeElement?.focus(); },
-      err => {
-        const updated = [...this.messages()];
-        updated[idx] = { ...updated[idx], content: `⚠️ ${err}` };
-        this.messages.set(updated);
-        this.loading.set(false);
-        this.inputAreaEl?.nativeElement?.focus();
-      },
-    );
+    const onChunk = (chunk: string) => {
+      const updated = [...this.messages()];
+      updated[idx] = { ...updated[idx], content: updated[idx].content + chunk };
+      this.messages.set(updated);
+      this.shouldScroll = true;
+      if (!this.isOpen()) this.unread.update(n => n + 1);
+    };
+    const onDone = () => { this.loading.set(false); this.shouldScroll = true; this.inputAreaEl?.nativeElement?.focus(); };
+    const onError = (err: string) => {
+      const updated = [...this.messages()];
+      updated[idx] = { ...updated[idx], content: `⚠️ ${err}` };
+      this.messages.set(updated);
+      this.loading.set(false);
+      this.inputAreaEl?.nativeElement?.focus();
+    };
+
+    if (this.clientId()) {
+      await this.aiService.chatStream(this.clientId()!, toSend, onChunk, onDone, onError);
+    } else {
+      await this.aiService.chatStreamMe(toSend, onChunk, onDone, onError);
+    }
   }
 
   formatContent(text: string): string {

@@ -13,6 +13,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
 import { SalariesService, Collaborateur, UpdateRHDto } from './salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ROLE_LABELS } from '../../core/models/user.model';
 const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', 'Freelance', 'Autre'];
 
 @Component({
@@ -30,7 +31,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
 
   <div class="page-header">
     <div class="page-header__left">
-      <h2>Collaborateurs</h2>
+      <h2>Salariés</h2>
       <div class="page-header__stats">
         <span class="stat-chip stat-chip--actif">
           <span class="stat-dot"></span>
@@ -48,7 +49,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
              [value]="search()" (input)="search.set($any($event.target).value)" />
     </div>
     <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
-      <option value="">Tous les sites</option>
+      <option value="">Tous les pôles</option>
       <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
       <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
     </select>
@@ -125,7 +126,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
       <mat-form-field appearance="outline" class="w100">
         <input matInput formControlName="lastName" />
       </mat-form-field>
-      <label>Site</label>
+      <label>Pôle</label>
       <mat-form-field appearance="outline" class="w100">
         <mat-select formControlName="site">
           <mat-option value="REUNION">{{ tenantSvc.poleLabel1() }}</mat-option>
@@ -230,6 +231,9 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     .role-badge--admin            { background: #FEE2E2; color: #991B1B; }
     .role-badge--expert_comptable { background: #DBEAFE; color: #1E40AF; }
     .role-badge--collaborateur    { background: #E4E8F4; color: #334473; }
+    .role-badge--chef_antenne     { background: #EDE9FE; color: #5B21B6; }
+    .role-badge--chef_mission     { background: #E0F2FE; color: #0C4A6E; }
+    .role-badge--gerant_madagascar { background: #FEF3C7; color: #92400E; }
 
     /* ── Drawer ── */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 999; }
@@ -279,7 +283,7 @@ export class SalariesComponent implements OnInit {
     { key: 'nom',        label: 'Nom Prénom'    },
     { key: 'email',      label: 'Email'         },
     { key: 'poste',      label: 'Poste'         },
-    { key: 'site',       label: 'Site'          },
+    { key: 'site',       label: 'Pôle'          },
     { key: 'typeContrat',label: 'Contrat'       },
     { key: 'role',       label: 'Rôle'          },
     { key: 'dateEntree', label: "Date d'entrée" },
@@ -331,10 +335,7 @@ export class SalariesComponent implements OnInit {
   }
 
   roleLabel(role: string): string {
-    const map: Record<string, string> = {
-      ADMIN: 'Admin', EXPERT_COMPTABLE: 'Expert-comptable', COLLABORATEUR: 'Collaborateur',
-    };
-    return map[role] ?? role;
+    return (ROLE_LABELS as Record<string, string>)[role] ?? role;
   }
 
   openForm(c: Collaborateur) {

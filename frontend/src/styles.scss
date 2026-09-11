@@ -658,6 +658,7 @@ body.theme-dark .cdk-overlay-container {
 .no-pad-dialog .mdc-dialog__surface { padding: 0 !important; height: 100% !important; display: flex !important; flex-direction: column !important; }
 .no-pad-dialog .mat-mdc-dialog-container { height: 100% !important; }
 .no-pad-dialog app-create-client-wizard { flex: 1; display: flex; flex-direction: column; }
+.no-pad-dialog app-bulletin-salarie-dialog { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
 /* Buttons */
 .mat-mdc-raised-button,

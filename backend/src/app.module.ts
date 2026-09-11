@@ -44,6 +44,8 @@ import { TacheRecurrenteModule } from './tache-recurrente/tache-recurrente.modul
 import { MailModule } from './mail/mail.module';
 import { CanvasModule } from './canvas/canvas.module';
 import { SetupModule } from './setup/setup.module';
+import { PaieModule } from './paie/paie.module';
+import { PaieRhModule } from './paie-rh/paie-rh.module';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantMiddleware } from './tenant/tenant.middleware';
 import { TenantConfig } from './entities/tenant-config.entity';
@@ -124,6 +126,8 @@ import { TenantConfig } from './entities/tenant-config.entity';
     MailModule,
     CanvasModule,
     SetupModule,
+    PaieModule,
+    PaieRhModule,
     TenantModule,
     TypeOrmModule.forFeature([TenantConfig]),
   ],

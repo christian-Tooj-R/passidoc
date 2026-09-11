@@ -105,7 +105,7 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
       </select>
     }
     <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
-      <option value="">Tous les sites</option>
+      <option value="">Tous les pôles</option>
       <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
       <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
     </select>

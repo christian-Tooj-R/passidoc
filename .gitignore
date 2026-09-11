@@ -59,3 +59,4 @@ grand_livre*.csv
 # Résultats de tests Playwright
 frontend/test-results/
 frontend/playwright-report/
+test-results/

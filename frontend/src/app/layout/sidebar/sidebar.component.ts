@@ -486,7 +486,7 @@ export class SidebarComponent implements OnInit {
   private syncFromRoute(url: string) {
     if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
     else if (url.startsWith('/clients') || url.startsWith('/portefeuilles'))      this.activeModule.set('dossiers');
-    else if (url.startsWith('/tasks'))  this.activeModule.set('travail');
+    else if (url.startsWith('/tasks') || url.startsWith('/travail'))  this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
     else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');
@@ -520,10 +520,19 @@ export class SidebarComponent implements OnInit {
       }] : []),
       ...(this.canSeeMenu('tasks') ? [{
         id: 'travail' as ModuleId, icon: 'checklist_rtl', label: 'Travail',
-        color: '#E8710A', activeBg: '#FEF3E2',
-        groups: [{ label: '', items: [
-          { label: 'Toutes les tâches', route: '/tasks', icon: 'task_alt' },
-        ]}],
+        color: '#6366f1', activeBg: '#EEF2FF',
+        groups: [
+          { label: 'Tâches', items: [
+            { label: 'Toutes les tâches',  route: '/travail/taches',      icon: 'task_alt'       },
+            { label: 'Récurrentes',         route: '/travail/recurrentes', icon: 'repeat'         },
+          ]},
+          { label: 'Temps passés', items: [
+            { label: 'Par jour',            route: '/travail/temps/jour',    icon: 'today'          },
+            { label: 'Par semaine',         route: '/travail/temps/semaine', icon: 'date_range'     },
+            { label: 'Par mois',            route: '/travail/temps/mois',    icon: 'calendar_month' },
+            { label: 'Détail des temps',    route: '/travail/temps/detail',  icon: 'manage_search'  },
+          ]},
+        ],
       }] : []),
       ...(this.canSeeMenu('documents') ? [{
         id: 'documents' as ModuleId, icon: 'insert_drive_file', label: 'Documents',
