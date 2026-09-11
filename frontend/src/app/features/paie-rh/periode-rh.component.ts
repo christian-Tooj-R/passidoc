@@ -14,6 +14,14 @@ import {
   STATUT_CYCLE_LABELS, deviseSymbole,
 } from '../../core/services/paie-rh.service';
 
+/** Étapes du cycle mensuel, dans l'ordre métier (voir StatutCyclePaieRh côté backend). */
+const ETAPES_CYCLE: Array<{ code: StatutCyclePaieRh; label: string }> = [
+  { code: 'OUVERT', label: 'Ouvert' },
+  { code: 'CALCULE', label: 'Calculé' },
+  { code: 'VALIDE', label: 'Validé' },
+  { code: 'CLOTURE', label: 'Clôturé' },
+];
+
 const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 /**
@@ -34,61 +42,110 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   template: `
 <div class="pr-wrap">
 
-  <div class="pr-header">
-    <div class="pr-header-main">
-      <div class="pr-header-icon"><mat-icon>event_note</mat-icon></div>
+  <div class="rhx-page-head">
+    <div class="rhx-page-head__main">
+      <div class="rhx-page-head__icon"><mat-icon>event_note</mat-icon></div>
       <div>
         <h1>Période en cours</h1>
-        <p class="pr-sub">Exercice RH annuel de l'entreprise et cycle de paie du mois.</p>
+        <p class="rhx-page-head__sub">Exercice RH annuel de l'entreprise et cycle de paie du mois.</p>
       </div>
     </div>
   </div>
 
   <!-- ═══ EXERCICE RH ═══ -->
-  <div class="pr-card">
-    <div class="pr-card-title"><mat-icon>event_note</mat-icon> Exercice RH</div>
-
-    @if (exerciceOuvert()) {
-      <div class="pr-exercice-bar">
-        <span class="badge-exercice" data-statut="OUVERT">Exercice {{ exerciceOuvert()!.annee }} — ouvert</span>
-        <span class="pr-stat">Du {{ exerciceOuvert()!.dateDebut | date:'dd/MM/yyyy' }} au {{ exerciceOuvert()!.dateFin | date:'dd/MM/yyyy' }}</span>
-        <div class="pr-spacer"></div>
+  <div class="rhx-card">
+    <div class="rhx-card__head">
+      <div class="rhx-card__title"><mat-icon>event_note</mat-icon> Exercice RH</div>
+      <div class="rhx-card__spacer"></div>
+      @if (exerciceOuvert()) {
+        <span class="rhx-chip rhx-chip--blue">Exercice {{ exerciceOuvert()!.annee }} — ouvert</span>
         <button mat-stroked-button color="warn" (click)="cloturerExercice()"><mat-icon>lock</mat-icon> Clôturer l'exercice</button>
-      </div>
-    } @else {
-      <div class="pr-exercice-bar">
-        <span class="pr-stat">Aucun exercice RH ouvert — aucun nouveau cycle de paie ne peut être ouvert tant qu'un exercice n'est pas créé.</span>
-        <div class="pr-spacer"></div>
+      } @else {
         <mat-form-field appearance="outline" class="sm">
           <mat-label>Année</mat-label>
           <input matInput type="number" [(ngModel)]="nouvelleAnnee" />
         </mat-form-field>
         <button mat-flat-button color="primary" (click)="ouvrirExercice()"><mat-icon>lock_open</mat-icon> Ouvrir l'exercice {{ nouvelleAnnee }}</button>
+      }
+    </div>
+
+    @if (exerciceOuvert()) {
+      <div class="rhx-kpis pr-kpis">
+        <div class="rhx-kpi rhx-kpi--blue">
+          <div class="rhx-kpi__icon"><mat-icon>calendar_today</mat-icon></div>
+          <div class="rhx-kpi__body">
+            <div class="rhx-kpi__label">Exercice</div>
+            <div class="rhx-kpi__value">{{ exerciceOuvert()!.annee }}</div>
+            <div class="rhx-kpi__sub">du {{ exerciceOuvert()!.dateDebut | date:'dd/MM/yyyy' }} au {{ exerciceOuvert()!.dateFin | date:'dd/MM/yyyy' }}</div>
+          </div>
+        </div>
+        <div class="rhx-kpi rhx-kpi--teal">
+          <div class="rhx-kpi__icon"><mat-icon>task_alt</mat-icon></div>
+          <div class="rhx-kpi__body">
+            <div class="rhx-kpi__label">Mois clôturés</div>
+            <div class="rhx-kpi__value">{{ nbMoisClotures() }} <small>/ 12</small></div>
+            <div class="rhx-progress pr-kpi-progress"><div class="rhx-progress__bar rhx-progress__bar--teal" [style.width.%]="nbMoisClotures() / 12 * 100"></div></div>
+          </div>
+        </div>
+        <div class="rhx-kpi rhx-kpi--amber">
+          <div class="rhx-kpi__icon"><mat-icon>pending_actions</mat-icon></div>
+          <div class="rhx-kpi__body">
+            <div class="rhx-kpi__label">Cycles en cours</div>
+            <div class="rhx-kpi__value">{{ nbCyclesEnCours() }}</div>
+            <div class="rhx-kpi__sub">ouverts, calculés ou validés</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rhx-months">
+        @for (m of moisOptions; track m.v) {
+          <div class="rhx-month" [class]="'rhx-month rhx-month--' + (statutMois(m.v) ?? 'AUCUN')" [class.rhx-month--selected]="m.v === mois"
+               (click)="selectionnerMois(m.v)" [matTooltip]="m.l + ' ' + annee + ' — ' + (statutMois(m.v) ? statutLabel(statutMois(m.v)!) : 'aucun cycle')">
+            <div class="rhx-month__label">{{ abrevMois(m.v) }}</div>
+            <div class="rhx-month__dot"></div>
+          </div>
+        }
+      </div>
+      <div class="rhx-legend pr-legend">
+        <span class="rhx-legend__item"><span class="rhx-legend__dot" style="background:#3B82F6"></span> Ouvert</span>
+        <span class="rhx-legend__item"><span class="rhx-legend__dot" style="background:#F59E0B"></span> Calculé</span>
+        <span class="rhx-legend__item"><span class="rhx-legend__dot" style="background:#10B981"></span> Validé</span>
+        <span class="rhx-legend__item"><span class="rhx-legend__dot" style="background:#475569"></span> Clôturé</span>
+        <span class="rhx-legend__item"><span class="rhx-legend__dot" style="background:#E2E8F0"></span> Aucun cycle</span>
+      </div>
+    } @else {
+      <div class="rhx-empty">
+        <mat-icon>lock</mat-icon>
+        <div class="rhx-empty__title">Aucun exercice RH ouvert</div>
+        <div class="rhx-empty__hint">Aucun nouveau cycle de paie ne peut être ouvert tant qu'un exercice n'est pas créé.</div>
       </div>
     }
 
-    @if (historique().length) {
-      <table class="pr-table">
-        <thead><tr><th>Année</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead>
-        <tbody>
-          @for (e of historique(); track e.id) {
-            <tr>
-              <td>{{ e.annee }}</td>
-              <td>{{ e.dateDebut | date:'dd/MM/yyyy' }}</td>
-              <td>{{ e.dateFin | date:'dd/MM/yyyy' }}</td>
-              <td><span class="badge-exercice" [attr.data-statut]="e.statut">{{ e.statut === 'OUVERT' ? 'Ouvert' : 'Clôturé' }}</span></td>
-            </tr>
-          }
-        </tbody>
-      </table>
+    @if (historique().length > 1) {
+      <details class="pr-historique">
+        <summary>Historique des exercices ({{ historique().length }})</summary>
+        <table class="pr-table rhx-table">
+          <thead><tr><th>Année</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead>
+          <tbody>
+            @for (e of historique(); track e.id) {
+              <tr>
+                <td class="strong">{{ e.annee }}</td>
+                <td>{{ e.dateDebut | date:'dd/MM/yyyy' }}</td>
+                <td>{{ e.dateFin | date:'dd/MM/yyyy' }}</td>
+                <td><span class="rhx-chip badge-exercice" [class]="'rhx-chip badge-exercice ' + (e.statut === 'OUVERT' ? 'rhx-chip--blue' : 'rhx-chip--muted')" [attr.data-statut]="e.statut">{{ e.statut === 'OUVERT' ? 'Ouvert' : 'Clôturé' }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
     }
   </div>
 
   <!-- ═══ CYCLE DU MOIS ═══ -->
-  <div class="pr-card">
-    <div class="pr-card-title"><mat-icon>event_repeat</mat-icon> Cycle de paie du mois</div>
-
-    <div class="pr-periode">
+  <div class="rhx-card">
+    <div class="rhx-card__head">
+      <div class="rhx-card__title"><mat-icon>event_repeat</mat-icon> Cycle de paie — {{ moisOptions[mois-1]?.l }} {{ annee }}</div>
+      <div class="rhx-card__spacer"></div>
       <mat-form-field appearance="outline" class="sm">
         <mat-label>Mois</mat-label>
         <mat-select [(ngModel)]="mois" (ngModelChange)="reloadCycle()">
@@ -97,24 +154,36 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
       </mat-form-field>
       <mat-form-field appearance="outline" class="sm">
         <mat-label>Année</mat-label>
-        <input matInput type="number" [(ngModel)]="annee" (ngModelChange)="reloadCycle()" />
+        <input matInput type="number" [(ngModel)]="annee" (ngModelChange)="onAnneeChange()" />
       </mat-form-field>
+    </div>
+
+    <div class="rhx-steps">
+      @for (e of etapes; track e.code) {
+        <div class="rhx-step" [class.rhx-step--done]="etapeIndex() > $index" [class.rhx-step--current]="etapeIndex() === $index">
+          <div class="rhx-step__dot">
+            @if (etapeIndex() > $index) { <mat-icon>check</mat-icon> } @else { {{ $index + 1 }} }
+          </div>
+          <span class="rhx-step__label">{{ e.label }}</span>
+          <div class="rhx-step__line"></div>
+        </div>
+      }
     </div>
 
     <div class="pr-cycle-bar">
       @if (cycle()) {
-        <span class="badge-cycle" [attr.data-statut]="cycle()!.statut">{{ statutLabel(cycle()!.statut) }}</span>
-        <span class="pr-stat">{{ nbBulletinsGeneres() }} / {{ salaries().length }} bulletins générés</span>
-        <span class="pr-stat">Net à payer total : {{ cycle()!.totalNetAPayer | number:'1.2-2' }} {{ deviseCommune() }}</span>
+        <span class="rhx-chip badge-cycle" [class]="'rhx-chip badge-cycle ' + statutChipClasse(cycle()!.statut)" [attr.data-statut]="cycle()!.statut">{{ statutLabel(cycle()!.statut) }}</span>
+        <span class="rhx-stat">{{ nbBulletinsGeneres() }} / {{ salaries().length }} bulletins générés</span>
+        <span class="rhx-stat">Net à payer total : <strong>{{ cycle()!.totalNetAPayer | number:'1.2-2' }} {{ deviseCommune() }}</strong></span>
         @if (!deviseCommune()) {
-          <span class="pr-stat pr-stat--warn" matTooltip="Les salariés de ce cycle n'ont pas tous la même devise — un total additionné mélangerait des devises différentes, aucun symbole n'est affiché pour ne pas induire en erreur.">
-            <mat-icon>warning</mat-icon> devises mélangées
+          <span class="rhx-chip rhx-chip--amber" matTooltip="Les salariés de ce cycle n'ont pas tous la même devise — un total additionné mélangerait des devises différentes, aucun symbole n'est affiché pour ne pas induire en erreur.">
+            devises mélangées
           </span>
         }
       } @else {
-        <span class="pr-stat">Aucun cycle ouvert pour cette période.</span>
+        <span class="rhx-stat">Aucun cycle ouvert pour cette période.</span>
       }
-      <div class="pr-spacer"></div>
+      <div class="rhx-card__spacer"></div>
       @if (!cycle()) {
         <button mat-flat-button color="primary" (click)="ouvrirCycle()"><mat-icon>lock_open</mat-icon> Ouvrir la période</button>
       }
@@ -126,33 +195,15 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   `,
   styles: [`
     .pr-wrap { padding: 24px 28px 48px; max-width: 1200px; margin: 0 auto; }
-    .pr-header { margin-bottom: 18px; }
-    .pr-header-main { display: flex; align-items: center; gap: 12px; }
-    .pr-header-icon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #7C3AED, #6D28D9);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 10px rgba(109,40,217,.25);
-      mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; } }
-    .pr-header h1 { font-size: 20px; font-weight: 700; color: #1E293B; margin: 0 0 4px; }
-    .pr-sub { font-size: 12px; color: #94A3B8; margin: 0; max-width: 640px; }
-    .pr-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-    .pr-card-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 14px;
-      mat-icon { color: #7C3AED; font-size: 20px; width: 20px; height: 20px; } }
-    .pr-exercice-bar, .pr-cycle-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
-    .pr-periode { display: flex; gap: 10px; margin-bottom: 12px; }
     mat-form-field.sm { max-width: 140px; }
-    .pr-spacer { flex: 1; }
-    .pr-stat { font-size: 12px; color: #64748B; }
-    .pr-stat--warn { display: inline-flex; align-items: center; gap: 4px; color: #B45309;
-      mat-icon { font-size: 15px; width: 15px; height: 15px; } }
-    .badge-exercice, .badge-cycle { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; background: #F1F5F9; color: #64748B; }
-    .badge-exercice[data-statut="OUVERT"] { background: #DBEAFE; color: #1D4ED8; }
-    .badge-exercice[data-statut="CLOTURE"] { background: #E2E8F0; color: #334155; }
-    .badge-cycle[data-statut="OUVERT"] { background: #DBEAFE; color: #1D4ED8; }
-    .badge-cycle[data-statut="CALCULE"] { background: #FEF3C7; color: #92400E; }
-    .badge-cycle[data-statut="VALIDE"] { background: #D1FAE5; color: #047857; }
-    .badge-cycle[data-statut="CLOTURE"] { background: #E2E8F0; color: #334155; }
-    .pr-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    .pr-table th { text-align: left; color: #94A3B8; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-    .pr-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
+    .pr-kpis { margin-bottom: 16px; }
+    .pr-kpi-progress { margin-top: 8px; }
+    .pr-legend { margin-top: 10px; }
+    .pr-historique { margin-top: 16px; }
+    .pr-historique summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: #64748B; padding: 4px 0; }
+    .pr-historique summary:hover { color: #7C3AED; }
+    .pr-table { margin-top: 8px; }
+    .pr-cycle-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   `],
 })
 export class PeriodeRhComponent implements OnInit {
@@ -160,6 +211,7 @@ export class PeriodeRhComponent implements OnInit {
   private snack = inject(MatSnackBar);
 
   readonly moisOptions = MOIS_LABEL.map((l, i) => ({ v: i + 1, l }));
+  readonly etapes = ETAPES_CYCLE;
 
   today = new Date();
   mois = this.today.getMonth() + 1;
@@ -170,10 +222,49 @@ export class PeriodeRhComponent implements OnInit {
   historique = signal<ExerciceRh[]>([]);
   cycle = signal<CyclePaieRh | null>(null);
   salaries = signal<SalarieATraiter[]>([]);
+  /** Tous les cycles du tenant — filtrés sur l'année sélectionnée pour la frise des 12 mois. */
+  cycles = signal<CyclePaieRh[]>([]);
 
   ngOnInit() {
     this.reloadExercices();
+    this.reloadCycles();
     this.reloadCycle();
+  }
+
+  reloadCycles() {
+    this.paieRh.findCycles().subscribe({ next: (c) => this.cycles.set(c), error: () => this.cycles.set([]) });
+  }
+
+  /** Abréviations distinctes (Juin ≠ Juillet), là où slice(0,3) donnait « JUI » deux fois. */
+  abrevMois(m: number): string {
+    return ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'][m - 1];
+  }
+
+  onAnneeChange() { this.reloadCycle(); }
+
+  selectionnerMois(m: number) { this.mois = m; this.reloadCycle(); }
+
+  private cyclesAnnee(): CyclePaieRh[] { return this.cycles().filter((c) => c.annee === Number(this.annee)); }
+
+  statutMois(m: number): StatutCyclePaieRh | null {
+    return this.cyclesAnnee().find((c) => c.mois === m)?.statut ?? null;
+  }
+
+  nbMoisClotures(): number { return this.cyclesAnnee().filter((c) => c.statut === 'CLOTURE').length; }
+
+  nbCyclesEnCours(): number { return this.cyclesAnnee().filter((c) => c.statut !== 'CLOTURE').length; }
+
+  /** Index de l'étape courante dans le stepper (-1 si aucun cycle ouvert). */
+  etapeIndex(): number {
+    const c = this.cycle();
+    return c ? ETAPES_CYCLE.findIndex((e) => e.code === c.statut) : -1;
+  }
+
+  statutChipClasse(s: StatutCyclePaieRh): string {
+    if (s === 'OUVERT') return 'rhx-chip--blue';
+    if (s === 'CALCULE') return 'rhx-chip--amber';
+    if (s === 'VALIDE') return 'rhx-chip--teal';
+    return 'rhx-chip--muted';
   }
 
   reloadExercices() {
@@ -225,7 +316,7 @@ export class PeriodeRhComponent implements OnInit {
 
   ouvrirCycle() {
     this.paieRh.ouvrirCycle(this.mois, this.annee).subscribe({
-      next: (c) => { this.cycle.set(c); this.reloadCycle(); this.snack.open('Période ouverte', undefined, { duration: 2500 }); },
+      next: (c) => { this.cycle.set(c); this.reloadCycle(); this.reloadCycles(); this.snack.open('Période ouverte', undefined, { duration: 2500 }); },
       error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3500 }),
     });
   }

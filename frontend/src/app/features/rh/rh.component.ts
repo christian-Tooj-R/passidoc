@@ -7,15 +7,22 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface NavItem { label: string; icon: string; route: string; }
+interface NavSection { title: string; items: NavItem[]; }
 
-const NAV: NavItem[] = [
-  { label: 'Salariés',          icon: 'badge',        route: '/rh/salaries'    },
-  { label: 'Congés & Absences', icon: 'event_busy',   route: '/rh/conges'      },
-  { label: 'Agenda',            icon: 'calendar_month', route: '/rh/calendrier' },
-  { label: 'Période en cours',  icon: 'event_note',   route: '/rh/periode'     },
-  { label: 'Activité',          icon: 'assignment',   route: '/rh/activite'    },
-  { label: 'Paie interne',      icon: 'payments',     route: '/rh/paie'        },
-  { label: 'Mes bulletins',     icon: 'receipt_long', route: '/rh/mes-bulletins' },
+const NAV: NavSection[] = [
+  { title: 'Équipe', items: [
+    { label: 'Salariés',          icon: 'badge',          route: '/rh/salaries'   },
+    { label: 'Congés & Absences', icon: 'event_busy',     route: '/rh/conges'     },
+    { label: 'Agenda',            icon: 'calendar_month', route: '/rh/calendrier' },
+  ]},
+  { title: 'Paie', items: [
+    { label: 'Période en cours',  icon: 'event_note',     route: '/rh/periode'    },
+    { label: 'Activité',          icon: 'assignment',     route: '/rh/activite'   },
+    { label: 'Paie interne',      icon: 'payments',       route: '/rh/paie'       },
+  ]},
+  { title: 'Espace personnel', items: [
+    { label: 'Mes bulletins',     icon: 'receipt_long',   route: '/rh/mes-bulletins' },
+  ]},
 ];
 
 @Component({
@@ -55,15 +62,17 @@ const NAV: NavItem[] = [
 
     <!-- Navigation -->
     <nav class="rh-nav">
-      <span class="rh-nav__section">Navigation</span>
-      @for (item of nav; track item.route) {
-        <a class="rh-nav__item"
-           [routerLink]="item.route"
-           routerLinkActive="active"
-           [routerLinkActiveOptions]="{ exact: false }">
-          <mat-icon class="rh-nav__icon">{{ item.icon }}</mat-icon>
-          <span class="rh-nav__label">{{ item.label }}</span>
-        </a>
+      @for (section of nav; track section.title) {
+        <span class="rh-nav__section" [class.rh-nav__section--gap]="!$first">{{ section.title }}</span>
+        @for (item of section.items; track item.route) {
+          <a class="rh-nav__item"
+             [routerLink]="item.route"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: false }">
+            <mat-icon class="rh-nav__icon">{{ item.icon }}</mat-icon>
+            <span class="rh-nav__label">{{ item.label }}</span>
+          </a>
+        }
       }
     </nav>
 
@@ -200,6 +209,7 @@ const NAV: NavItem[] = [
       padding: 0 8px 8px;
       display: block;
     }
+    .rh-nav__section--gap { margin-top: 16px; }
     .rh-nav__item {
       display: flex;
       align-items: center;

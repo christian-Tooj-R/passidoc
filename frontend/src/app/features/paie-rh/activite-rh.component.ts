@@ -36,15 +36,15 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   template: `
 <div class="ar-wrap">
 
-  <div class="ar-header">
-    <div class="ar-header-main">
-      <div class="ar-header-icon"><mat-icon>assignment</mat-icon></div>
+  <div class="rhx-page-head">
+    <div class="rhx-page-head__main">
+      <div class="rhx-page-head__icon"><mat-icon>assignment</mat-icon></div>
       <div>
         <h1>Activité</h1>
-        <p class="ar-sub">Heures sup, absences, primes, avantages et retenues du mois, salarié par salarié.</p>
+        <p class="rhx-page-head__sub">Heures sup, absences, primes, avantages et retenues du mois, salarié par salarié.</p>
       </div>
     </div>
-    <div class="ar-periode">
+    <div class="rhx-page-head__actions">
       <mat-form-field appearance="outline" class="sm">
         <mat-label>Mois</mat-label>
         <mat-select [(ngModel)]="mois" (ngModelChange)="reload()">
@@ -58,35 +58,85 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
     </div>
   </div>
 
-  <div class="ar-card">
-    <div class="ar-toolbar">
-      <span class="ar-stat">{{ lignes().length }} salarié(s) en contrat sur la période</span>
-      <div class="ar-spacer"></div>
+  <div class="rhx-kpis">
+    <div class="rhx-kpi">
+      <div class="rhx-kpi__icon"><mat-icon>groups</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Salariés en contrat</div>
+        <div class="rhx-kpi__value">{{ lignes().length }}</div>
+        <div class="rhx-kpi__sub">sur la période</div>
+      </div>
+    </div>
+    <div class="rhx-kpi rhx-kpi--blue">
+      <div class="rhx-kpi__icon"><mat-icon>schedule</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Heures sup</div>
+        <div class="rhx-kpi__value">{{ totalHeuresSup() | number:'1.0-2' }} <small>h</small></div>
+        <div class="rhx-kpi__sub">cumul du mois</div>
+      </div>
+    </div>
+    <div class="rhx-kpi rhx-kpi--amber">
+      <div class="rhx-kpi__icon"><mat-icon>event_busy</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Absences</div>
+        @if (deviseCommune()) {
+          <div class="rhx-kpi__value">{{ totalAbsences() | number:'1.2-2' }} <small>{{ deviseCommune() }}</small></div>
+          <div class="rhx-kpi__sub">{{ nbAbsencesAuto() }} ligne(s) synchronisée(s) des congés</div>
+        } @else {
+          <div class="rhx-kpi__value">{{ nbAbsencesAuto() }} <small>ligne(s)</small></div>
+          <div class="rhx-kpi__sub">devises mélangées — pas de total</div>
+        }
+      </div>
+    </div>
+    <div class="rhx-kpi rhx-kpi--rose">
+      <div class="rhx-kpi__icon"><mat-icon>edit_off</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Sans saisie</div>
+        <div class="rhx-kpi__value">{{ nbSansSaisie() }}</div>
+        <div class="rhx-kpi__sub">aucune variable ce mois</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rhx-card">
+    <div class="rhx-card__head">
+      <div class="rhx-card__title"><mat-icon>badge</mat-icon> Salariés de la période</div>
+      <div class="rhx-card__spacer"></div>
       <button mat-stroked-button (click)="recalculer()"><mat-icon>sync</mat-icon> Recalculer les activités du mois</button>
     </div>
 
-    <table class="ar-table">
+    <table class="ar-table rhx-table">
       <thead>
-        <tr><th>Salarié</th><th>Statut</th><th>Heures sup</th><th>Absences</th><th>Primes</th><th>Avantages</th><th>Retenues</th><th></th></tr>
+        <tr><th>Salarié</th><th>Statut</th><th class="num">Heures sup</th><th class="num">Absences</th><th class="num">Primes</th><th class="num">Avantages</th><th class="num">Retenues</th><th></th></tr>
       </thead>
       <tbody>
         @for (l of lignes(); track l.salarieId) {
           <tr>
-            <td [routerLink]="['/rh/salaries', l.salarieId]" class="ar-link">{{ l.salarie ? l.salarie.firstName + ' ' + l.salarie.lastName : ('#' + l.salarieId) }}</td>
-            <td><span class="badge-statut" [attr.data-statut]="l.statut ?? 'AUCUNE'">{{ statutLabel(l.statut) }}</span></td>
-            <td>{{ l.heuresSupplementaires }} h</td>
-            <td>{{ l.totalAbsences | number:'1.2-2' }} {{ symboleDevise(l) }} @if (l.nbAbsencesAuto) { <span class="ar-tag" matTooltip="Lignes synchronisées automatiquement depuis les congés validés">{{ l.nbAbsencesAuto }} auto</span> }</td>
-            <td>{{ l.totalPrimes | number:'1.2-2' }} {{ symboleDevise(l) }}</td>
-            <td>{{ l.totalAvantagesNature | number:'1.2-2' }} {{ symboleDevise(l) }}</td>
-            <td>{{ l.totalRetenues | number:'1.2-2' }} {{ symboleDevise(l) }}</td>
-            <td class="ar-actions-cell">
+            <td [routerLink]="['/rh/salaries', l.salarieId]" class="ar-link">
+              <div class="rhx-person">
+                <span class="rhx-avatar" [class]="'rhx-avatar ' + avatarClasse(l.salarieId)">{{ initiales(l) }}</span>
+                <div>
+                  <div class="rhx-person__name">{{ l.salarie ? l.salarie.firstName + ' ' + l.salarie.lastName : ('#' + l.salarieId) }}</div>
+                  <div class="rhx-person__meta">Montants en {{ symboleDevise(l) }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="rhx-chip badge-statut" [class]="'rhx-chip badge-statut ' + statutChipClasse(l.statut)" [attr.data-statut]="l.statut ?? 'AUCUNE'">{{ statutLabel(l.statut) }}</span></td>
+            <td class="num">{{ l.heuresSupplementaires | number:'1.0-2' }} h</td>
+            <td class="num">{{ l.totalAbsences | number:'1.2-2' }} @if (l.nbAbsencesAuto) { <span class="rhx-chip rhx-chip--violet rhx-chip--nodot ar-tag" matTooltip="Lignes synchronisées automatiquement depuis les congés validés">{{ l.nbAbsencesAuto }} auto</span> }</td>
+            <td class="num">{{ l.totalPrimes | number:'1.2-2' }}</td>
+            <td class="num">{{ l.totalAvantagesNature | number:'1.2-2' }}</td>
+            <td class="num">{{ l.totalRetenues | number:'1.2-2' }}</td>
+            <td class="actions ar-actions-cell">
               <button mat-icon-button matTooltip="Feuille d'activité journalière" aria-label="Feuille d'activité journalière" (click)="voirFeuilleJournaliere(l)"><mat-icon>calendar_view_week</mat-icon></button>
               <button mat-icon-button matTooltip="Variables mensuelles (bulletin)" aria-label="Variables mensuelles (bulletin)" (click)="voirFeuille(l)"><mat-icon>assignment</mat-icon></button>
             </td>
           </tr>
         }
         @if (!lignes().length) {
-          <tr><td colspan="8" class="ar-empty-row">Aucun salarié en contrat sur cette période.</td></tr>
+          <tr><td colspan="8" class="ar-empty-row">
+            <div class="rhx-empty"><mat-icon>person_off</mat-icon><div class="rhx-empty__title">Aucun salarié en contrat sur cette période</div><div class="rhx-empty__hint">Changez de mois ou créez un contrat depuis la fiche d'un salarié.</div></div>
+          </td></tr>
         }
       </tbody>
     </table>
@@ -96,31 +146,10 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   `,
   styles: [`
     .ar-wrap { padding: 24px 28px 48px; max-width: 1400px; margin: 0 auto; }
-    .ar-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
-    .ar-header-main { display: flex; align-items: center; gap: 12px; }
-    .ar-header-icon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #7C3AED, #6D28D9);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 10px rgba(109,40,217,.25);
-      mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; } }
-    .ar-header h1 { font-size: 20px; font-weight: 700; color: #1E293B; margin: 0 0 4px; }
-    .ar-sub { font-size: 12px; color: #94A3B8; margin: 0; max-width: 560px; }
-    .ar-periode { display: flex; gap: 10px; }
     mat-form-field.sm { max-width: 140px; }
-    .ar-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; }
-    .ar-toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-    .ar-spacer { flex: 1; }
-    .ar-stat { font-size: 12px; color: #64748B; }
-    .ar-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .ar-table th { text-align: left; color: #94A3B8; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-    .ar-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
     .ar-link { cursor: pointer; }
-    .ar-link:hover { color: #7C3AED; }
-    .ar-actions-cell { text-align: right; }
-    .ar-empty-row { text-align: center; color: #94A3B8; padding: 16px !important; }
-    .ar-tag { font-size: 10px; background: #EDE9F8; color: #6D28D9; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .badge-statut { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #F1F5F9; color: #64748B; }
-    .badge-statut[data-statut="VALIDEE"] { background: #D1FAE5; color: #047857; }
-    .badge-statut[data-statut="BULLETIN_GENERE"] { background: #DBEAFE; color: #1D4ED8; }
-    .badge-statut[data-statut="AUCUNE"] { background: #FEF3C7; color: #92400E; }
+    .ar-link:hover .rhx-person__name { color: #7C3AED; }
+    .ar-tag { margin-left: 6px; }
   `],
 })
 export class ActiviteRhComponent implements OnInit {
@@ -143,6 +172,30 @@ export class ActiviteRhComponent implements OnInit {
   reload() {
     this.paieRh.findActivitePeriode(this.mois, this.annee).subscribe((l) => this.lignes.set(l));
   }
+
+  initiales(l: ActivitePeriodeRh): string {
+    return l.salarie ? `${l.salarie.firstName?.[0] ?? ''}${l.salarie.lastName?.[0] ?? ''}`.toUpperCase() : '#';
+  }
+
+  avatarClasse(id: number): string { return `rhx-avatar--h${id % 6}`; }
+
+  statutChipClasse(s: ActivitePeriodeRh['statut']): string {
+    if (s === 'VALIDEE') return 'rhx-chip--teal';
+    if (s === 'BULLETIN_GENERE') return 'rhx-chip--blue';
+    if (s === 'BROUILLON') return 'rhx-chip--amber';
+    return 'rhx-chip--muted';
+  }
+
+  /** Symbole commun si tous les salariés partagent la même devise, sinon '' (pas de total mélangé). */
+  deviseCommune(): string {
+    const devises = new Set(this.lignes().map((l) => l.salarie?.devise ?? 'EUR'));
+    return devises.size === 1 ? deviseSymbole([...devises][0]) : '';
+  }
+
+  totalHeuresSup(): number { return this.lignes().reduce((t, l) => t + (l.heuresSupplementaires || 0), 0); }
+  totalAbsences(): number { return this.lignes().reduce((t, l) => t + (l.totalAbsences || 0), 0); }
+  nbAbsencesAuto(): number { return this.lignes().reduce((t, l) => t + (l.nbAbsencesAuto || 0), 0); }
+  nbSansSaisie(): number { return this.lignes().filter((l) => !l.statut).length; }
 
   symboleDevise(l: ActivitePeriodeRh): string {
     return deviseSymbole(l.salarie?.devise);

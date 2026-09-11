@@ -80,20 +80,24 @@ const SOURCES_OPERANDE: { v: SourceOperandeRubriqueRh; l: string }[] = [
         </button>
       </div>
 
-      <table class="rpr-table">
+      <table class="rpr-table rhx-table">
         <thead>
-          <tr><th>Code</th><th>Libellé</th><th>Type de calcul</th><th>Imputation</th><th>Régime</th><th>Effet</th><th></th></tr>
+          <tr><th>Code</th><th>Libellé</th><th>Type de calcul</th><th>Imputation</th><th>Pôle</th><th>Effet</th><th></th></tr>
         </thead>
         <tbody>
           @for (r of filtered(); track r.id) {
             <tr [class.rpr-row--placeholder]="r.estPlaceholder" [class.rpr-row--inactive]="!r.isActive">
-              <td class="mono">{{ r.code }}</td>
-              <td>{{ r.libelle }} @if (r.estPlaceholder) { <span class="badge-ph">Placeholder</span> } @if (!r.isActive) { <span class="badge-off">Inactive</span> }</td>
-              <td>{{ typeCalculLabel(r.typeCalcul) }}</td>
-              <td>{{ imputationLabel(r.imputation) }}</td>
-              <td>{{ r.regimePaieCode }}</td>
-              <td>{{ r.dateEffet | date:'dd/MM/yyyy' }}</td>
-              <td class="rpr-actions-cell">
+              <td><span class="rpr-code">{{ r.code }}</span></td>
+              <td>
+                <span class="strong">{{ r.libelle }}</span>
+                @if (r.estPlaceholder) { <span class="rhx-chip rhx-chip--amber rhx-chip--nodot badge-ph">Placeholder</span> }
+                @if (!r.isActive) { <span class="rhx-chip rhx-chip--muted rhx-chip--nodot badge-off">Inactive</span> }
+              </td>
+              <td class="muted">{{ typeCalculLabel(r.typeCalcul) }}</td>
+              <td><span class="rhx-chip rhx-chip--nodot" [class.rhx-chip--rose]="r.imputation === 'COTISATION'" [class.rhx-chip--teal]="r.imputation === 'PRIME' || r.imputation === 'AVANTAGE'" [class.rhx-chip--amber]="r.imputation === 'RETENUE'" [class.rhx-chip--muted]="r.imputation === 'INFORMATION'">{{ imputationLabel(r.imputation) }}</span></td>
+              <td><span class="rhx-chip" [class.rhx-chip--violet]="r.regimePaieCode === 'EST'" [class.rhx-chip--blue]="r.regimePaieCode === 'OUEST'" [class.rhx-chip--muted]="r.regimePaieCode !== 'EST' && r.regimePaieCode !== 'OUEST'">{{ r.regimePaieCode }}</span></td>
+              <td class="muted">{{ r.dateEffet | date:'dd/MM/yyyy' }}</td>
+              <td class="rpr-actions-cell actions">
                 <button mat-icon-button matTooltip="Modifier" aria-label="Modifier" (click)="startEdit(r)"><mat-icon>edit</mat-icon></button>
                 <button mat-icon-button matTooltip="Dupliquer" aria-label="Dupliquer" (click)="dupliquer(r)"><mat-icon>content_copy</mat-icon></button>
                 <button mat-icon-button matTooltip="Supprimer" aria-label="Supprimer" (click)="remove(r)"><mat-icon>delete</mat-icon></button>
@@ -101,7 +105,9 @@ const SOURCES_OPERANDE: { v: SourceOperandeRubriqueRh; l: string }[] = [
             </tr>
           }
           @if (!filtered().length) {
-            <tr><td colspan="6" class="rpr-empty-row">Aucune rubrique.</td></tr>
+            <tr><td colspan="7" class="rpr-empty-row">
+              <div class="rhx-empty"><mat-icon>list_alt</mat-icon><div class="rhx-empty__title">Aucune rubrique</div><div class="rhx-empty__hint">Créez une rubrique pour définir une ligne de calcul du bulletin.</div></div>
+            </td></tr>
           }
         </tbody>
       </table>
@@ -274,7 +280,7 @@ const SOURCES_OPERANDE: { v: SourceOperandeRubriqueRh; l: string }[] = [
     .rpr-wrap { display: flex; flex-direction: column; gap: 14px; }
     .rpr-hint { font-size: 12px; color: #64748B; margin: 0; }
     .rpr-body { display: flex; gap: 16px; align-items: flex-start; }
-    .rpr-tree { width: 220px; flex-shrink: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .rpr-tree { width: 220px; flex-shrink: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; box-shadow: var(--rhx-shadow); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
     .rpr-tree-item {
       display: flex; align-items: center; gap: 8px; border: none; background: none; cursor: pointer; text-align: left;
       padding: 8px 10px; font-size: 12.5px; color: #475569; border-radius: 8px; width: 100%;
@@ -285,19 +291,15 @@ const SOURCES_OPERANDE: { v: SourceOperandeRubriqueRh; l: string }[] = [
     .rpr-tree-item.active { background: #EDE9F8; color: #5B21B6; font-weight: 700; }
     .rpr-tree-item.active mat-icon { color: #7C3AED; }
     .rpr-count { margin-left: auto; font-size: 10px; color: #94A3B8; }
-    .rpr-list { flex: 1; min-width: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; }
+    .rpr-list { flex: 1; min-width: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; box-shadow: var(--rhx-shadow); padding: 18px 20px; }
     .rpr-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
     .rpr-search { width: 280px; }
-    .rpr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .rpr-table th { text-align: left; color: #94A3B8; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-    .rpr-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
     .rpr-row--placeholder { background: #FFFBEB; }
     .rpr-row--inactive { opacity: .55; }
-    .rpr-empty-row { text-align: center; color: #94A3B8; padding: 16px !important; }
+    .rpr-empty-row { padding: 0 !important; }
     .rpr-actions-cell { text-align: right; white-space: nowrap; }
-    .badge-ph { font-size: 10px; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .badge-off { font-size: 10px; background: #F1F5F9; color: #64748B; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .mono { font-family: monospace; }
+    .badge-ph, .badge-off { margin-left: 6px; }
+    .rpr-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; color: #4C1D95; background: #F5F3FF; padding: 2px 7px; border-radius: 6px; }
     .rpr-form-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
     .rpr-form-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #1E293B; margin-bottom: 10px; mat-icon { color: #7C3AED; } }
     .rpr-form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 14px; align-items: center; margin-bottom: 6px; }

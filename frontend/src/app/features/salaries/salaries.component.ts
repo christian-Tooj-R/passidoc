@@ -29,35 +29,66 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
   template: `
 <div class="page">
 
-  <div class="page-header">
-    <div class="page-header__left">
-      <h2>Salariés</h2>
-      <div class="page-header__stats">
-        <span class="stat-chip stat-chip--actif">
-          <span class="stat-dot"></span>
-          {{ stats().actifs }} actif{{ stats().actifs > 1 ? 's' : '' }}
-        </span>
-        <span class="stat-chip">{{ stats().total }} au total</span>
+  <div class="rhx-page-head">
+    <div class="rhx-page-head__main">
+      <div class="rhx-page-head__icon"><mat-icon>badge</mat-icon></div>
+      <div>
+        <h1>Salariés</h1>
+        <p class="rhx-page-head__sub">{{ stats().actifs }} actif{{ stats().actifs > 1 ? 's' : '' }} · {{ stats().total }} au total</p>
       </div>
+    </div>
+    <div class="rhx-page-head__actions toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input class="search" type="text" placeholder="Nom, poste, email…"
+               [value]="search()" (input)="search.set($any($event.target).value)" />
+      </div>
+      <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
+        <option value="">Tous les pôles</option>
+        <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
+        <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
+      </select>
+      <select class="filter-select" [value]="statutFiltre()" (change)="statutFiltre.set($any($event.target).value)">
+        <option value="">Tous statuts</option>
+        <option value="actif">Actifs</option>
+        <option value="ancien">Anciens</option>
+      </select>
     </div>
   </div>
 
-  <div class="toolbar">
-    <div class="search-wrap">
-      <svg class="search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <input class="search" type="text" placeholder="Nom, poste, email…"
-             [value]="search()" (input)="search.set($any($event.target).value)" />
+  <div class="rhx-kpis">
+    <div class="rhx-kpi">
+      <div class="rhx-kpi__icon"><mat-icon>groups</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Effectif actif</div>
+        <div class="rhx-kpi__value">{{ kpis().actifs }}<small>/ {{ stats().total }}</small></div>
+        <div class="rhx-kpi__sub">{{ kpis().anciens }} ancien{{ kpis().anciens > 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
-      <option value="">Tous les pôles</option>
-      <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
-      <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
-    </select>
-    <select class="filter-select" [value]="statutFiltre()" (change)="statutFiltre.set($any($event.target).value)">
-      <option value="">Tous statuts</option>
-      <option value="actif">Actifs</option>
-      <option value="ancien">Anciens</option>
-    </select>
+    <div class="rhx-kpi rhx-kpi--teal">
+      <div class="rhx-kpi__icon"><mat-icon>work</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">CDI</div>
+        <div class="rhx-kpi__value">{{ kpis().cdi }}<small>/ {{ kpis().actifs }}</small></div>
+        <div class="rhx-kpi__sub">{{ kpis().contratRenseigne }} contrat{{ kpis().contratRenseigne > 1 ? 's' : '' }} renseigné{{ kpis().contratRenseigne > 1 ? 's' : '' }}</div>
+      </div>
+    </div>
+    <div class="rhx-kpi rhx-kpi--blue">
+      <div class="rhx-kpi__icon"><mat-icon>place</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Par pôle</div>
+        <div class="rhx-kpi__value">{{ kpis().pole1 }}<small>{{ tenantSvc.poleLabel1() }}</small></div>
+        <div class="rhx-kpi__sub">{{ kpis().pole2 }} · {{ tenantSvc.poleLabel2() }}</div>
+      </div>
+    </div>
+    <div class="rhx-kpi rhx-kpi--amber">
+      <div class="rhx-kpi__icon"><mat-icon>person_add</mat-icon></div>
+      <div class="rhx-kpi__body">
+        <div class="rhx-kpi__label">Entrées sur 12 mois</div>
+        <div class="rhx-kpi__value">{{ kpis().entrees12 }}</div>
+        <div class="rhx-kpi__sub">{{ kpis().dateEntreeRenseignee }} date{{ kpis().dateEntreeRenseignee > 1 ? 's' : '' }} d'entrée renseignée{{ kpis().dateEntreeRenseignee > 1 ? 's' : '' }}</div>
+      </div>
+    </div>
   </div>
 
   <div class="table-wrap">
@@ -69,8 +100,24 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     [rowClass]="rowClass"
     (rowClick)="router.navigate(['/rh/salaries',$event.id])">
 
+    <ng-template appCol="nom" let-c>
+      <div class="rhx-person">
+        <span class="rhx-avatar rhx-avatar--sm" [class]="'rhx-avatar rhx-avatar--sm ' + avatarClasse(c)">{{ initiales(c) }}</span>
+        <div>
+          <div class="rhx-person__name">{{ c.lastName }} {{ c.firstName }}</div>
+          @if (c.poste) { <div class="rhx-person__meta">{{ c.poste }}</div> }
+        </div>
+      </div>
+    </ng-template>
+
     <ng-template appCol="site" let-c>
-      {{ tenantSvc.poleLabel(c.site) }}
+      <span class="rhx-chip rhx-chip--nodot" [class]="'rhx-chip rhx-chip--nodot ' + (c.site === 'REUNION' ? 'rhx-chip--violet' : 'rhx-chip--blue')">
+        {{ tenantSvc.poleFlag(c.site) }} {{ tenantSvc.poleLabel(c.site) }}
+      </span>
+    </ng-template>
+
+    <ng-template appCol="typeContrat" let-c>
+      @if (c.typeContrat) { <span class="rhx-chip rhx-chip--muted rhx-chip--nodot">{{ c.typeContrat }}</span> } @else { <span class="muted">—</span> }
     </ng-template>
 
     <ng-template appCol="dateEntree" let-c>
@@ -78,7 +125,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     </ng-template>
 
     <ng-template appCol="role" let-c>
-      <span class="role-badge role-badge--{{ c.role.toLowerCase() }}">{{ roleLabel(c.role) }}</span>
+      <span class="rhx-chip" [class]="'rhx-chip ' + roleChipClasse(c.role)">{{ roleLabel(c.role) }}</span>
     </ng-template>
 
     <ng-template appCol="actions" let-c>
@@ -167,33 +214,13 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
 }
   `,
   styles: [`
-    .page { padding: 0; }
+    .page { padding: 24px 28px 48px; max-width: 1680px; margin: 0 auto; }
 
-    /* ── Bandeau en-tête violet ── */
-    .page-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      padding: 22px 28px 20px;
-      background: linear-gradient(135deg, #200B45 0%, #2d0a5e 100%);
-    }
-    .page-header__left { display: flex; flex-direction: column; gap: 8px; }
-    h2 { margin: 0; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
-    .page-header__stats { display: flex; gap: 6px; align-items: center; }
-    .stat-chip {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 11.5px; font-weight: 500;
-      background: rgba(255,255,255,.12); color: rgba(255,255,255,.8);
-      border-radius: 20px; padding: 3px 10px;
-    }
-    .stat-chip--actif { background: rgba(167,139,250,.3); color: #e9d5ff; }
-    .stat-dot {
-      width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; flex-shrink: 0;
-    }
 
     /* ── Barre de filtre ── */
     .toolbar {
       display: flex; gap: 8px; align-items: center;
-      padding: 14px 28px; margin-bottom: 0; flex-wrap: wrap;
-      background: #fff; border-bottom: 1px solid #EDE9FE;
+      padding: 0; margin: 0; flex-wrap: wrap;
     }
     .search-wrap {
       position: relative; display: flex; align-items: center;
@@ -221,19 +248,9 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     }
 
     /* ── Zone table ── */
-    .table-wrap { padding: 20px 28px; }
+    .table-wrap { padding: 0; }
 
     /* ── Badges rôle ── */
-    .role-badge {
-      display: inline-block; font-size: 11px; font-weight: 600;
-      padding: 2px 8px; border-radius: 4px;
-    }
-    .role-badge--admin            { background: #FEE2E2; color: #991B1B; }
-    .role-badge--expert_comptable { background: #DBEAFE; color: #1E40AF; }
-    .role-badge--collaborateur    { background: #E4E8F4; color: #334473; }
-    .role-badge--chef_antenne     { background: #EDE9FE; color: #5B21B6; }
-    .role-badge--chef_mission     { background: #E0F2FE; color: #0C4A6E; }
-    .role-badge--gerant_madagascar { background: #FEF3C7; color: #92400E; }
 
     /* ── Drawer ── */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 999; }
@@ -303,6 +320,41 @@ export class SalariesComponent implements OnInit {
     total:  this.liste().length,
     actifs: this.liste().filter(c => !c.dateSortie).length,
   }));
+
+  /** Indicateurs de l'en-tête — uniquement dérivés des données réellement renseignées. */
+  kpis = computed(() => {
+    const tous = this.liste();
+    const actifs = tous.filter(c => !c.dateSortie);
+    const ilYA12Mois = new Date(); ilYA12Mois.setFullYear(ilYA12Mois.getFullYear() - 1);
+    return {
+      actifs: actifs.length,
+      anciens: tous.length - actifs.length,
+      cdi: actifs.filter(c => c.typeContrat === 'CDI').length,
+      contratRenseigne: actifs.filter(c => !!c.typeContrat).length,
+      pole1: actifs.filter(c => c.site === 'REUNION').length,
+      pole2: actifs.filter(c => c.site === 'MADAGASCAR').length,
+      entrees12: tous.filter(c => c.dateEntree && new Date(c.dateEntree) >= ilYA12Mois).length,
+      dateEntreeRenseignee: tous.filter(c => !!c.dateEntree).length,
+    };
+  });
+
+  initiales(c: Collaborateur): string {
+    return `${c.firstName?.[0] ?? ''}${c.lastName?.[0] ?? ''}`.toUpperCase();
+  }
+
+  avatarClasse(c: Collaborateur): string {
+    return `rhx-avatar--h${c.id % 6}`;
+  }
+
+  roleChipClasse(role: string): string {
+    switch (role) {
+      case 'ADMIN': return 'rhx-chip--rose';
+      case 'EXPERT_COMPTABLE': return 'rhx-chip--blue';
+      case 'CHEF_ANTENNE': return 'rhx-chip--violet';
+      case 'CHEF_MISSION': return 'rhx-chip--teal';
+      default: return 'rhx-chip--muted';
+    }
+  }
 
   listeFiltree = computed(() => {
     const q    = this.search().toLowerCase().trim();

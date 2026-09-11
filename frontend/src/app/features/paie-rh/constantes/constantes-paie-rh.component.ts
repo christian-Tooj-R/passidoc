@@ -52,23 +52,27 @@ const OPERATEURS: OperateurCalculConstante[] = ['+', '-', '*', '/'];
       </button>
     </div>
 
-    <table class="cpr-table">
+    <table class="cpr-table rhx-table">
       <thead>
-        <tr><th>Code</th><th>Libellé</th><th>Type</th><th>Valeur / Composition</th><th>Régime</th><th>Date d'effet</th><th></th></tr>
+        <tr><th>Code</th><th>Libellé</th><th>Type</th><th class="num">Valeur / Composition</th><th>Pôle</th><th>Date d'effet</th><th></th></tr>
       </thead>
       <tbody>
         @for (c of filtered(); track c.id) {
           <tr [class.cpr-row--placeholder]="c.estPlaceholder" [class.cpr-row--hidden]="!c.visible">
-            <td class="mono">{{ c.code }}</td>
-            <td>{{ c.libelle }} @if (c.estPlaceholder) { <span class="badge-ph">Placeholder</span> } @if (!c.visible) { <span class="badge-off">Masquée</span> }</td>
-            <td>{{ c.typeConstante === 'CALCUL' ? 'Calculée' : 'Valeur' }}</td>
+            <td><span class="cpr-code">{{ c.code }}</span></td>
             <td>
-              @if (c.typeConstante === 'VALEUR') { {{ c.valeur | number:'1.0-4' }} }
+              <span class="strong">{{ c.libelle }}</span>
+              @if (c.estPlaceholder) { <span class="rhx-chip rhx-chip--amber rhx-chip--nodot badge-ph">Placeholder</span> }
+              @if (!c.visible) { <span class="rhx-chip rhx-chip--muted rhx-chip--nodot badge-off">Masquée</span> }
+            </td>
+            <td><span class="rhx-chip rhx-chip--nodot" [class.rhx-chip--violet]="c.typeConstante === 'CALCUL'" [class.rhx-chip--muted]="c.typeConstante !== 'CALCUL'">{{ c.typeConstante === 'CALCUL' ? 'Calculée' : 'Valeur' }}</span></td>
+            <td class="num">
+              @if (c.typeConstante === 'VALEUR') { <span class="strong">{{ c.valeur | number:'1.0-4' }}</span> }
               @else { <span class="cpr-composition">{{ compositionResume(c) }}</span> }
             </td>
-            <td>{{ c.regimePaieCode }}</td>
-            <td>{{ c.dateEffet | date:'dd/MM/yyyy' }}</td>
-            <td class="cpr-actions-cell">
+            <td><span class="rhx-chip" [class.rhx-chip--violet]="c.regimePaieCode === 'EST'" [class.rhx-chip--blue]="c.regimePaieCode === 'OUEST'" [class.rhx-chip--muted]="c.regimePaieCode !== 'EST' && c.regimePaieCode !== 'OUEST'">{{ c.regimePaieCode }}</span></td>
+            <td class="muted">{{ c.dateEffet | date:'dd/MM/yyyy' }}</td>
+            <td class="cpr-actions-cell actions">
               <button mat-icon-button matTooltip="Modifier" aria-label="Modifier" (click)="startEdit(c)"><mat-icon>edit</mat-icon></button>
               <button mat-icon-button matTooltip="Nouvelle date d'effet (historiser)" aria-label="Nouvelle date d'effet (historiser)" (click)="startNouvelleDateEffet(c)"><mat-icon>event_repeat</mat-icon></button>
               <button mat-icon-button matTooltip="Supprimer" aria-label="Supprimer" (click)="remove(c)"><mat-icon>delete</mat-icon></button>
@@ -76,7 +80,9 @@ const OPERATEURS: OperateurCalculConstante[] = ['+', '-', '*', '/'];
           </tr>
         }
         @if (!filtered().length) {
-          <tr><td colspan="7" class="cpr-empty-row">Aucune constante.</td></tr>
+          <tr><td colspan="7" class="cpr-empty-row">
+            <div class="rhx-empty"><mat-icon>functions</mat-icon><div class="rhx-empty__title">Aucune constante</div><div class="rhx-empty__hint">Créez une constante (taux, plafond…) pour la réutiliser dans vos rubriques.</div></div>
+          </td></tr>
         }
       </tbody>
     </table>
@@ -192,20 +198,16 @@ const OPERATEURS: OperateurCalculConstante[] = ['+', '-', '*', '/'];
   styles: [`
     .cpr-wrap { display: flex; flex-direction: column; gap: 14px; }
     .cpr-hint { font-size: 12px; color: #64748B; margin: 0; }
-    .cpr-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; }
+    .cpr-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; box-shadow: var(--rhx-shadow); padding: 18px 20px; }
     .cpr-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
     .cpr-search { width: 280px; }
-    .cpr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .cpr-table th { text-align: left; color: #94A3B8; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-    .cpr-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
     .cpr-row--placeholder { background: #FFFBEB; }
     .cpr-row--hidden { opacity: .55; }
     .cpr-composition { font-family: monospace; font-size: 12px; color: #64748B; }
-    .cpr-empty-row { text-align: center; color: #94A3B8; padding: 16px !important; }
+    .cpr-empty-row { padding: 0 !important; }
     .cpr-actions-cell { text-align: right; white-space: nowrap; }
-    .badge-ph { font-size: 10px; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .badge-off { font-size: 10px; background: #F1F5F9; color: #64748B; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .mono { font-family: monospace; }
+    .badge-ph, .badge-off { margin-left: 6px; }
+    .cpr-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; color: #4C1D95; background: #F5F3FF; padding: 2px 7px; border-radius: 6px; }
     .cpr-form-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
     .cpr-form-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #1E293B; margin-bottom: 10px; mat-icon { color: #7C3AED; } }
     .cpr-form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 14px; align-items: center; margin-bottom: 6px; }

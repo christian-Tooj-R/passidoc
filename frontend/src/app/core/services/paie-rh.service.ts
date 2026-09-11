@@ -335,6 +335,10 @@ export interface SalarieATraiter {
   bulletinId: number | null;
   bulletinStatut: 'GENERE' | 'A_TRAITER';
   netAPayer: number | null;
+  totalBrut: number | null;
+  totalCotisationsSalariales: number | null;
+  totalCotisationsPatronales: number | null;
+  coutEmployeur: number | null;
 }
 
 /** Exercice RH annuel de l'entreprise (~"Gestion des exercices" RADIAN) — voir "Période en cours". */

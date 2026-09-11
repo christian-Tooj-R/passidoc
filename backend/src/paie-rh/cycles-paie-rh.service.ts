@@ -84,6 +84,10 @@ export class CyclesPaieRhService {
         bulletinId: bulletin?.id ?? null,
         bulletinStatut: bulletin ? 'GENERE' : 'A_TRAITER',
         netAPayer: bulletin ? Number(bulletin.netAPayer) : null,
+        totalBrut: bulletin ? Number(bulletin.totalBrut) : null,
+        totalCotisationsSalariales: bulletin ? Number(bulletin.totalCotisationsSalariales) : null,
+        totalCotisationsPatronales: bulletin ? Number(bulletin.totalCotisationsPatronales) : null,
+        coutEmployeur: bulletin ? Number(bulletin.coutEmployeur) : null,
       };
     });
   }

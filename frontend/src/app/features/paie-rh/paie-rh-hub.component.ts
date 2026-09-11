@@ -21,10 +21,18 @@ import { BulletinPdfPreviewDialogComponent } from './bulletin-pdf-preview-dialog
 type HubTab = 'cycle' | 'rubriques' | 'constantes';
 const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+/** Étapes du cycle mensuel, dans l'ordre métier (voir StatutCyclePaieRh côté backend). */
+const ETAPES_CYCLE: Array<{ code: StatutCyclePaieRh; label: string }> = [
+  { code: 'OUVERT', label: 'Ouvert' },
+  { code: 'CALCULE', label: 'Calculé' },
+  { code: 'VALIDE', label: 'Validé' },
+  { code: 'CLOTURE', label: 'Clôturé' },
+];
+
 /**
  * Hub d'administration du module Paie & RH interne (collaborateurs AFYM) : cycle mensuel
  * (assistant de préparation, calcul en masse, validation, clôture) et paramétrage des
- * rubriques/paramètres de paie. Accessible depuis /rh/paie. Voir Doc/MODULE_PAIE_RH_NOTES.md.
+ * rubriques/constantes de paie. Accessible depuis /rh/paie.
  */
 @Component({
   selector: 'app-paie-rh-hub',
@@ -38,16 +46,16 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   template: `
 <div class="prhh-wrap">
 
-  <div class="prhh-header">
-    <div class="prhh-header-main">
-      <div class="prhh-header-icon"><mat-icon>payments</mat-icon></div>
+  <div class="rhx-page-head">
+    <div class="rhx-page-head__main">
+      <div class="rhx-page-head__icon"><mat-icon>payments</mat-icon></div>
       <div>
         <h1>Paie interne</h1>
-        <p class="prhh-sub">Cycle de paie mensuel des salariés, rubriques et constantes de calcul.</p>
+        <p class="rhx-page-head__sub">Cycle de paie mensuel des salariés, rubriques et constantes de calcul.</p>
       </div>
     </div>
     @if (tab() === 'cycle') {
-      <div class="prhh-periode">
+      <div class="rhx-page-head__actions">
         <mat-form-field appearance="outline" class="sm">
           <mat-label>Mois</mat-label>
           <mat-select [(ngModel)]="mois" (ngModelChange)="reloadCycle()">
@@ -75,68 +83,157 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
 
   <!-- ═══ CYCLE MENSUEL ═══ -->
   @if (tab() === 'cycle') {
-  <div class="prhh-card">
-    <div class="prhh-cycle-bar">
-      @if (cycle()) {
-        <span class="badge-cycle" [attr.data-statut]="cycle()!.statut">{{ statutLabel(cycle()!.statut) }}</span>
-        <span class="prhh-stat">{{ nbBulletinsGeneres() }} / {{ salaries().length }} bulletins générés</span>
-        <span class="prhh-stat">Total brut : {{ cycle()!.totalBrut | number:'1.2-2' }} {{ deviseCommune() }}</span>
-        <span class="prhh-stat">Net à payer total : {{ cycle()!.totalNetAPayer | number:'1.2-2' }} {{ deviseCommune() }}</span>
-        @if (!deviseCommune()) {
-          <span class="prhh-stat prhh-stat--warn" matTooltip="Les salariés de ce cycle n'ont pas tous la même devise — un total additionné mélangerait des devises différentes, aucun symbole n'est affiché pour ne pas induire en erreur.">
-            <mat-icon>warning</mat-icon> devises mélangées
+
+    <!-- Avancement du cycle + actions -->
+    <div class="rhx-card">
+      <div class="rhx-card__head">
+        <div class="rhx-card__title"><mat-icon>event_repeat</mat-icon> {{ moisOptions[mois-1]?.l }} {{ annee }}</div>
+        <div class="rhx-card__spacer"></div>
+        @if (cycle() && !deviseCommune()) {
+          <span class="rhx-chip rhx-chip--amber" matTooltip="Les salariés de ce cycle n'ont pas tous la même devise — les totaux additionnés ne portent aucun symbole pour ne pas induire en erreur.">
+            devises mélangées
           </span>
         }
-      } @else {
-        <span class="prhh-stat">Aucun cycle ouvert pour cette période.</span>
-      }
-      <div class="prhh-spacer"></div>
-      @if (!cycle()) {
-        <button mat-flat-button color="primary" (click)="ouvrirCycle()"><mat-icon>lock_open</mat-icon> Ouvrir la période</button>
-      }
-      @if (cycle() && cycle()!.statut !== 'CLOTURE') {
-        @if (nbBulletinsGeneres() < salaries().length) {
-          <button mat-stroked-button (click)="calculerCycle()"><mat-icon>calculate</mat-icon> Calculer les bulletins restants</button>
+      </div>
+
+      <div class="rhx-steps">
+        @for (e of etapes; track e.code) {
+          <div class="rhx-step" [class.rhx-step--done]="etapeIndex() > $index" [class.rhx-step--current]="etapeIndex() === $index">
+            <div class="rhx-step__dot">
+              @if (etapeIndex() > $index) { <mat-icon>check</mat-icon> } @else { {{ $index + 1 }} }
+            </div>
+            <span class="rhx-step__label">{{ e.label }}</span>
+            <div class="rhx-step__line"></div>
+          </div>
         }
-        @if (nbBulletinsGeneres() > 0) {
-          <button mat-stroked-button (click)="recalculerTousCycle()"
-                  matTooltip="Régénère tous les bulletins du mois (les bulletins déjà payés sont conservés) — à utiliser après un changement de rubriques, constantes ou variables">
-            <mat-icon>refresh</mat-icon> Recalculer tous les bulletins
-          </button>
+      </div>
+
+      <div class="prhh-cycle-bar">
+        @if (!cycle()) {
+          <span class="rhx-stat">Aucun cycle ouvert pour cette période.</span>
         }
-      }
-      @if (cycle() && cycle()!.statut === 'CALCULE') {
-        <button mat-flat-button color="primary" (click)="validerCycle()"><mat-icon>check_circle</mat-icon> Valider le cycle</button>
-      }
-      @if (cycle() && cycle()!.statut === 'VALIDE') {
-        <button mat-flat-button color="warn" (click)="cloturerCycle()"><mat-icon>lock</mat-icon> Clôturer (verrouille la période)</button>
-      }
+        <div class="prhh-spacer"></div>
+        @if (!cycle()) {
+          <button mat-flat-button color="primary" (click)="ouvrirCycle()"><mat-icon>lock_open</mat-icon> Ouvrir la période</button>
+        }
+        @if (cycle() && cycle()!.statut !== 'CLOTURE') {
+          @if (nbBulletinsGeneres() < salaries().length) {
+            <button mat-stroked-button (click)="calculerCycle()"><mat-icon>calculate</mat-icon> Calculer les bulletins restants</button>
+          }
+          @if (nbBulletinsGeneres() > 0) {
+            <button mat-stroked-button (click)="recalculerTousCycle()"
+                    matTooltip="Régénère tous les bulletins du mois (les bulletins déjà payés sont conservés) — à utiliser après un changement de rubriques, constantes ou variables">
+              <mat-icon>refresh</mat-icon> Recalculer tous les bulletins
+            </button>
+          }
+        }
+        @if (cycle() && cycle()!.statut === 'CALCULE') {
+          <button mat-flat-button color="primary" (click)="validerCycle()"><mat-icon>check_circle</mat-icon> Valider le cycle</button>
+        }
+        @if (cycle() && cycle()!.statut === 'VALIDE') {
+          <button mat-flat-button color="warn" (click)="cloturerCycle()"><mat-icon>lock</mat-icon> Clôturer (verrouille la période)</button>
+        }
+      </div>
     </div>
 
-    <table class="prhh-table">
-      <thead><tr><th>Salarié</th><th>Pôle / Régime</th><th>Salaire base</th><th>Statut bulletin</th><th>Net à payer</th><th></th></tr></thead>
-      <tbody>
-        @for (s of salaries(); track s.salarieId) {
-          <tr class="prhh-row-link">
-            <td [routerLink]="['/rh/salaries', s.salarieId]">{{ s.salarie ? s.salarie.firstName + ' ' + s.salarie.lastName : ('#' + s.salarieId) }}</td>
-            <td [routerLink]="['/rh/salaries', s.salarieId]">{{ s.regimePaieCode }}</td>
-            <td [routerLink]="['/rh/salaries', s.salarieId]">{{ s.salaireBase | number:'1.2-2' }} {{ symboleDevise(s) }}</td>
-            <td [routerLink]="['/rh/salaries', s.salarieId]"><span class="badge-statut" [attr.data-statut]="s.bulletinStatut">{{ s.bulletinStatut === 'GENERE' ? 'Généré' : 'À traiter' }}</span></td>
-            <td [routerLink]="['/rh/salaries', s.salarieId]">{{ s.netAPayer != null ? (s.netAPayer | number:'1.2-2') + ' ' + symboleDevise(s) : '—' }}</td>
-            <td class="prhh-actions-cell">
-              @if (s.bulletinId) {
-                <button mat-icon-button matTooltip="Visualiser le bulletin" aria-label="Visualiser le bulletin" (click)="visualiserPdf(s)"><mat-icon>visibility</mat-icon></button>
-              }
-              <button mat-icon-button matTooltip="Ouvrir le bulletin détaillé" aria-label="Ouvrir le bulletin détaillé" (click)="ouvrirBulletin(s)"><mat-icon>receipt_long</mat-icon></button>
-            </td>
+    <!-- Indicateurs -->
+    <div class="rhx-kpis rhx-kpis--5">
+      <div class="rhx-kpi">
+        <div class="rhx-kpi__icon"><mat-icon>groups</mat-icon></div>
+        <div class="rhx-kpi__body">
+          <div class="rhx-kpi__label">Salariés à traiter</div>
+          <div class="rhx-kpi__value">{{ salaries().length }}</div>
+          <div class="rhx-kpi__sub">contrats en vigueur</div>
+        </div>
+      </div>
+      <div class="rhx-kpi rhx-kpi--teal">
+        <div class="rhx-kpi__icon"><mat-icon>fact_check</mat-icon></div>
+        <div class="rhx-kpi__body">
+          <div class="rhx-kpi__label">Bulletins générés</div>
+          <div class="rhx-kpi__value">{{ nbBulletinsGeneres() }} <small>/ {{ salaries().length }}</small></div>
+          <div class="rhx-progress prhh-kpi-progress"><div class="rhx-progress__bar rhx-progress__bar--teal" [style.width.%]="progressionBulletins()"></div></div>
+        </div>
+      </div>
+      <div class="rhx-kpi rhx-kpi--blue">
+        <div class="rhx-kpi__icon"><mat-icon>account_balance_wallet</mat-icon></div>
+        <div class="rhx-kpi__body">
+          <div class="rhx-kpi__label">Masse salariale brute</div>
+          <div class="rhx-kpi__value">{{ masseBrute() | number:'1.2-2' }} <small>{{ deviseCommune() }}</small></div>
+          <div class="rhx-kpi__sub">{{ nbBulletinsGeneres() < salaries().length ? 'salaire de base pour les bulletins non générés' : 'brut des bulletins générés' }}</div>
+        </div>
+      </div>
+      <div class="rhx-kpi rhx-kpi--amber">
+        <div class="rhx-kpi__icon"><mat-icon>payments</mat-icon></div>
+        <div class="rhx-kpi__body">
+          <div class="rhx-kpi__label">Net à payer total</div>
+          <div class="rhx-kpi__value">{{ netTotal() | number:'1.2-2' }} <small>{{ deviseCommune() }}</small></div>
+          <div class="rhx-kpi__sub">bulletins générés uniquement</div>
+        </div>
+      </div>
+      <div class="rhx-kpi rhx-kpi--rose">
+        <div class="rhx-kpi__icon"><mat-icon>business</mat-icon></div>
+        <div class="rhx-kpi__body">
+          <div class="rhx-kpi__label">Charges patronales</div>
+          <div class="rhx-kpi__value">{{ chargesPatronales() | number:'1.2-2' }} <small>{{ deviseCommune() }}</small></div>
+          <div class="rhx-kpi__sub">coût employeur : {{ coutEmployeurTotal() | number:'1.2-2' }} {{ deviseCommune() }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salariés du cycle -->
+    <div class="rhx-card">
+      <div class="rhx-card__head">
+        <div class="rhx-card__title"><mat-icon>badge</mat-icon> Salariés du cycle</div>
+        <div class="rhx-card__spacer"></div>
+        <span class="rhx-stat">{{ salaries().length }} salarié(s)</span>
+      </div>
+
+      <table class="rhx-table rhx-table--clickable prhh-table">
+        <thead>
+          <tr>
+            <th>Salarié</th><th>Pôle</th><th class="num">Salaire de base</th><th>Bulletin</th><th class="num">Net à payer</th><th></th>
           </tr>
-        }
-        @if (!salaries().length) {
-          <tr><td colspan="6" class="prhh-empty-row">Aucun salarié avec un contrat actif.</td></tr>
-        }
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @for (s of salaries(); track s.salarieId) {
+            <tr>
+              <td [routerLink]="['/rh/salaries', s.salarieId]">
+                <div class="rhx-person">
+                  <span class="rhx-avatar" [class]="'rhx-avatar ' + avatarClasse(s.salarieId)">{{ initiales(s) }}</span>
+                  <div>
+                    <div class="rhx-person__name">{{ nomComplet(s) }}</div>
+                    <div class="rhx-person__meta">Régime {{ s.regimePaieCode }}</div>
+                  </div>
+                </div>
+              </td>
+              <td [routerLink]="['/rh/salaries', s.salarieId]"><span class="rhx-chip rhx-chip--nodot" [class]="'rhx-chip rhx-chip--nodot ' + poleClasse(s.regimePaieCode)">{{ s.regimePaieCode }}</span></td>
+              <td class="num" [routerLink]="['/rh/salaries', s.salarieId]">{{ s.salaireBase | number:'1.2-2' }} {{ symboleDevise(s) }}</td>
+              <td [routerLink]="['/rh/salaries', s.salarieId]">
+                <span class="rhx-chip" [class]="'rhx-chip ' + (s.bulletinStatut === 'GENERE' ? 'rhx-chip--teal' : 'rhx-chip--amber')" [attr.data-statut]="s.bulletinStatut">
+                  {{ s.bulletinStatut === 'GENERE' ? 'Généré' : 'À traiter' }}
+                </span>
+              </td>
+              <td class="num strong" [routerLink]="['/rh/salaries', s.salarieId]">{{ s.netAPayer != null ? (s.netAPayer | number:'1.2-2') + ' ' + symboleDevise(s) : '—' }}</td>
+              <td class="actions">
+                @if (s.bulletinId) {
+                  <button mat-icon-button matTooltip="Visualiser le bulletin" aria-label="Visualiser le bulletin" (click)="visualiserPdf(s)"><mat-icon>visibility</mat-icon></button>
+                }
+                <button mat-icon-button matTooltip="Ouvrir le bulletin détaillé" aria-label="Ouvrir le bulletin détaillé" (click)="ouvrirBulletin(s)"><mat-icon>receipt_long</mat-icon></button>
+              </td>
+            </tr>
+          }
+          @if (!salaries().length) {
+            <tr><td colspan="6">
+              <div class="rhx-empty">
+                <mat-icon>person_off</mat-icon>
+                <div class="rhx-empty__title">Aucun salarié avec un contrat actif</div>
+                <div class="rhx-empty__hint">Créez un contrat de travail depuis la fiche d'un salarié (onglet Contrat &amp; Paie) pour l'inclure dans le cycle.</div>
+              </div>
+            </td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
 
   <!-- ═══ RUBRIQUES ═══ -->
@@ -156,50 +253,22 @@ const MOIS_LABEL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
   `,
   styles: [`
     .prhh-wrap { padding: 24px 28px 48px; max-width: 1680px; margin: 0 auto; }
-    .prhh-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
-    .prhh-header-main { display: flex; align-items: center; gap: 12px; }
-    .prhh-header-icon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #7C3AED, #6D28D9);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 10px rgba(109,40,217,.25);
-      mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; } }
-    .prhh-header h1 { font-size: 20px; font-weight: 700; color: #1E293B; margin: 0 0 4px; }
-    .prhh-sub { font-size: 12px; color: #94A3B8; margin: 0; max-width: 560px; }
-    .prhh-periode { display: flex; gap: 10px; }
     mat-form-field.sm { max-width: 140px; }
     .prhh-body { display: flex; align-items: flex-start; gap: 24px; }
-    .prhh-nav { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; width: 200px; }
+    .prhh-nav { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; width: 200px; background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; padding: 8px; box-shadow: var(--rhx-shadow); }
     .prhh-nav-item {
       display: flex; align-items: center; gap: 10px; border: none; background: none; cursor: pointer;
-      padding: 10px 14px; font-size: 13px; font-weight: 500; color: #64748B; border-radius: 8px;
-      text-align: left; width: 100%; border-left: 3px solid transparent;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+      padding: 10px 12px; font-size: 13px; font-weight: 500; color: #64748B; border-radius: 9px;
+      text-align: left; width: 100%; transition: background .12s, color .12s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; color: #94A3B8; }
     }
     .prhh-nav-item:hover { color: #1E293B; background: #F8FAFC; }
-    .prhh-nav-item.active { color: #7C3AED; background: #F5F3FF; border-left-color: #7C3AED; font-weight: 700; }
+    .prhh-nav-item.active { color: #6D28D9; background: #F5F3FF; font-weight: 700; mat-icon { color: #7C3AED; } }
     .prhh-content { flex: 1; min-width: 0; }
-    .prhh-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; }
-    .prhh-hint { font-size: 12px; color: #64748B; margin: 0 0 14px; }
-    .prhh-cycle-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+    .prhh-cycle-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .prhh-spacer { flex: 1; }
-    .prhh-stat { font-size: 12px; color: #64748B; }
-    .prhh-stat--warn { display: inline-flex; align-items: center; gap: 4px; color: #B45309;
-      mat-icon { font-size: 15px; width: 15px; height: 15px; } }
-    .badge-cycle { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; background: #F1F5F9; color: #64748B; }
-    .badge-cycle[data-statut="OUVERT"] { background: #DBEAFE; color: #1D4ED8; }
-    .badge-cycle[data-statut="CALCULE"] { background: #FEF3C7; color: #92400E; }
-    .badge-cycle[data-statut="VALIDE"] { background: #D1FAE5; color: #047857; }
-    .badge-cycle[data-statut="CLOTURE"] { background: #E2E8F0; color: #334155; }
-    .prhh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .prhh-table th { text-align: left; color: #94A3B8; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-    .prhh-table td { padding: 8px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
-    .prhh-row-link td[routerLink] { cursor: pointer; }
-    .prhh-row-link:hover { background: #F8FAFC; }
-    .prhh-actions-cell { text-align: right; }
-    .prhh-row--placeholder { background: #FFFBEB; }
-    .prhh-empty-row { text-align: center; color: #94A3B8; padding: 16px !important; }
-    .badge-statut { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #F1F5F9; color: #64748B; }
-    .badge-statut[data-statut="GENERE"] { background: #DCFCE7; color: #15803D; }
-    .badge-ph { font-size: 10px; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    .mono { font-family: monospace; }
+    .prhh-kpi-progress { margin-top: 8px; }
+    .rhx-table td[routerLink] { cursor: pointer; }
   `],
 })
 export class PaieRhHubComponent implements OnInit {
@@ -208,6 +277,7 @@ export class PaieRhHubComponent implements OnInit {
   private dialog = inject(MatDialog);
 
   readonly moisOptions = MOIS_LABEL.map((l, i) => ({ v: i + 1, l }));
+  readonly etapes = ETAPES_CYCLE;
 
   tab = signal<HubTab>('cycle');
   today = new Date();
@@ -216,6 +286,8 @@ export class PaieRhHubComponent implements OnInit {
 
   cycle = signal<CyclePaieRh | null>(null);
   salaries = signal<SalarieATraiter[]>([]);
+
+  /* ── Présentation ─────────────────────────────────────────────────────────── */
 
   symboleDevise(s: SalarieATraiter): string {
     return deviseSymbole(s.salarie?.devise);
@@ -233,21 +305,59 @@ export class PaieRhHubComponent implements OnInit {
     return STATUT_CYCLE_LABELS[s] ?? s;
   }
 
-  /** Compté sur la liste vivante plutôt que sur le compteur figé du cycle. */
+  /** Index de l'étape courante dans le stepper (-1 si aucun cycle ouvert). */
+  etapeIndex(): number {
+    const c = this.cycle();
+    return c ? ETAPES_CYCLE.findIndex((e) => e.code === c.statut) : -1;
+  }
+
+  nomComplet(s: SalarieATraiter): string {
+    return s.salarie ? `${s.salarie.firstName} ${s.salarie.lastName}` : `#${s.salarieId}`;
+  }
+
+  initiales(s: SalarieATraiter): string {
+    return s.salarie ? `${s.salarie.firstName?.[0] ?? ''}${s.salarie.lastName?.[0] ?? ''}`.toUpperCase() : '#';
+  }
+
+  avatarClasse(id: number): string {
+    return `rhx-avatar--h${id % 6}`;
+  }
+
+  poleClasse(regime: string): string {
+    if (regime === 'EST') return 'rhx-chip--violet';
+    if (regime === 'OUEST') return 'rhx-chip--blue';
+    return 'rhx-chip--muted';
+  }
+
+  /* ── Indicateurs (calculés sur la liste vivante, pas sur les compteurs figés du cycle) ── */
+
   nbBulletinsGeneres(): number {
     return this.salaries().filter((s) => s.bulletinId).length;
   }
 
-  recalculerTousCycle() {
-    if (!confirm('Régénérer tous les bulletins du mois avec le paramétrage actuel ? Les bulletins déjà payés ne seront pas touchés.')) return;
-    this.paieRh.calculerCycle(this.mois, this.annee, true).subscribe({
-      next: (res) => {
-        this.snack.open(`${res.generes} bulletin(s) régénéré(s)${res.erreurs.length ? `, ${res.erreurs.length} ignoré(s) (déjà payés ou en erreur)` : ''}`, undefined, { duration: 3500 });
-        this.reloadCycle();
-      },
-      error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3000 }),
-    });
+  progressionBulletins(): number {
+    const n = this.salaries().length;
+    return n ? Math.round((this.nbBulletinsGeneres() / n) * 100) : 0;
   }
+
+  /** Brut des bulletins générés ; repli sur le salaire de base du contrat pour les autres. */
+  masseBrute(): number {
+    return this.salaries().reduce((t, s) => t + (s.totalBrut ?? s.salaireBase ?? 0), 0);
+  }
+
+  netTotal(): number {
+    return this.salaries().reduce((t, s) => t + (s.netAPayer ?? 0), 0);
+  }
+
+  chargesPatronales(): number {
+    return this.salaries().reduce((t, s) => t + (s.totalCotisationsPatronales ?? 0), 0);
+  }
+
+  coutEmployeurTotal(): number {
+    return this.salaries().reduce((t, s) => t + (s.coutEmployeur ?? 0), 0);
+  }
+
+  /* ── Chargement ───────────────────────────────────────────────────────────── */
 
   ngOnInit() {
     this.reloadCycle();
@@ -264,14 +374,15 @@ export class PaieRhHubComponent implements OnInit {
     this.paieRh.listerSalariesATraiter(this.mois, this.annee).subscribe((s) => this.salaries.set(s));
   }
 
+  /* ── Actions ──────────────────────────────────────────────────────────────── */
+
   visualiserPdf(s: SalarieATraiter) {
     if (!s.bulletinId) return;
     this.paieRh.telechargerBulletinPdf(s.bulletinId).subscribe((blob) => {
-      const nom = s.salarie ? `${s.salarie.firstName} ${s.salarie.lastName}` : `#${s.salarieId}`;
       this.dialog.open(BulletinPdfPreviewDialogComponent, {
         panelClass: ['rounded-dialog', 'no-pad-dialog'],
         width: '900px', maxWidth: '96vw', height: '90vh', maxHeight: '90vh',
-        data: { blob, titre: `Bulletin — ${nom}` },
+        data: { blob, titre: `Bulletin — ${this.nomComplet(s)}` },
       });
     });
   }
@@ -304,6 +415,17 @@ export class PaieRhHubComponent implements OnInit {
     });
   }
 
+  recalculerTousCycle() {
+    if (!confirm('Régénérer tous les bulletins du mois avec le paramétrage actuel ? Les bulletins déjà payés ne seront pas touchés.')) return;
+    this.paieRh.calculerCycle(this.mois, this.annee, true).subscribe({
+      next: (res) => {
+        this.snack.open(`${res.generes} bulletin(s) régénéré(s)${res.erreurs.length ? `, ${res.erreurs.length} ignoré(s) (déjà payés ou en erreur)` : ''}`, undefined, { duration: 3500 });
+        this.reloadCycle();
+      },
+      error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3000 }),
+    });
+  }
+
   validerCycle() {
     this.paieRh.validerCycle(this.mois, this.annee).subscribe({
       next: (c) => { this.cycle.set(c); this.snack.open('Cycle validé', undefined, { duration: 2500 }); },
@@ -318,5 +440,4 @@ export class PaieRhHubComponent implements OnInit {
       error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3000 }),
     });
   }
-
 }
