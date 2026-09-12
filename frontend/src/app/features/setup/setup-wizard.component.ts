@@ -9,223 +9,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRippleModule } from '@angular/material/core';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { environment } from '../../../environments/environment';
 import { TenantService } from '../../core/services/tenant.service';
 
-interface Country { code: string; name: string; flag: string; }
-
-function buildFlag(code: string): string {
-  return code.toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0) + 0x1F1A5));
-}
-
-const COUNTRIES: Country[] = [
-  { code: 'AF', name: 'Afghanistan' },
-  { code: 'ZA', name: 'Afrique du Sud' },
-  { code: 'AL', name: 'Albanie' },
-  { code: 'DZ', name: 'Algérie' },
-  { code: 'DE', name: 'Allemagne' },
-  { code: 'AD', name: 'Andorre' },
-  { code: 'AO', name: 'Angola' },
-  { code: 'AG', name: 'Antigua-et-Barbuda' },
-  { code: 'SA', name: 'Arabie saoudite' },
-  { code: 'AR', name: 'Argentine' },
-  { code: 'AM', name: 'Arménie' },
-  { code: 'AU', name: 'Australie' },
-  { code: 'AT', name: 'Autriche' },
-  { code: 'AZ', name: 'Azerbaïdjan' },
-  { code: 'BS', name: 'Bahamas' },
-  { code: 'BH', name: 'Bahreïn' },
-  { code: 'BD', name: 'Bangladesh' },
-  { code: 'BB', name: 'Barbade' },
-  { code: 'BE', name: 'Belgique' },
-  { code: 'BZ', name: 'Belize' },
-  { code: 'BJ', name: 'Bénin' },
-  { code: 'BT', name: 'Bhoutan' },
-  { code: 'BY', name: 'Biélorussie' },
-  { code: 'BO', name: 'Bolivie' },
-  { code: 'BA', name: 'Bosnie-Herzégovine' },
-  { code: 'BW', name: 'Botswana' },
-  { code: 'BR', name: 'Brésil' },
-  { code: 'BN', name: 'Brunéi' },
-  { code: 'BG', name: 'Bulgarie' },
-  { code: 'BF', name: 'Burkina Faso' },
-  { code: 'BI', name: 'Burundi' },
-  { code: 'KH', name: 'Cambodge' },
-  { code: 'CM', name: 'Cameroun' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'CV', name: 'Cap-Vert' },
-  { code: 'CF', name: 'Centrafrique' },
-  { code: 'CL', name: 'Chili' },
-  { code: 'CN', name: 'Chine' },
-  { code: 'CY', name: 'Chypre' },
-  { code: 'CO', name: 'Colombie' },
-  { code: 'KM', name: 'Comores' },
-  { code: 'CG', name: 'Congo' },
-  { code: 'CD', name: 'Congo (RDC)' },
-  { code: 'KR', name: 'Corée du Sud' },
-  { code: 'KP', name: 'Corée du Nord' },
-  { code: 'CR', name: 'Costa Rica' },
-  { code: 'HR', name: 'Croatie' },
-  { code: 'CU', name: 'Cuba' },
-  { code: 'CI', name: "Côte d'Ivoire" },
-  { code: 'DK', name: 'Danemark' },
-  { code: 'DJ', name: 'Djibouti' },
-  { code: 'DM', name: 'Dominique' },
-  { code: 'EG', name: 'Égypte' },
-  { code: 'SV', name: 'El Salvador' },
-  { code: 'AE', name: 'Émirats arabes unis' },
-  { code: 'EC', name: 'Équateur' },
-  { code: 'ER', name: 'Érythrée' },
-  { code: 'ES', name: 'Espagne' },
-  { code: 'EE', name: 'Estonie' },
-  { code: 'SZ', name: 'Eswatini' },
-  { code: 'US', name: 'États-Unis' },
-  { code: 'ET', name: 'Éthiopie' },
-  { code: 'FJ', name: 'Fidji' },
-  { code: 'FI', name: 'Finlande' },
-  { code: 'FR', name: 'France' },
-  { code: 'GA', name: 'Gabon' },
-  { code: 'GM', name: 'Gambie' },
-  { code: 'GE', name: 'Géorgie' },
-  { code: 'GH', name: 'Ghana' },
-  { code: 'GR', name: 'Grèce' },
-  { code: 'GD', name: 'Grenade' },
-  { code: 'GP', name: 'Guadeloupe' },
-  { code: 'GT', name: 'Guatemala' },
-  { code: 'GF', name: 'Guyane française' },
-  { code: 'GN', name: 'Guinée' },
-  { code: 'GW', name: 'Guinée-Bissau' },
-  { code: 'GQ', name: 'Guinée équatoriale' },
-  { code: 'GY', name: 'Guyana' },
-  { code: 'HT', name: 'Haïti' },
-  { code: 'HN', name: 'Honduras' },
-  { code: 'HU', name: 'Hongrie' },
-  { code: 'IN', name: 'Inde' },
-  { code: 'ID', name: 'Indonésie' },
-  { code: 'IQ', name: 'Irak' },
-  { code: 'IR', name: 'Iran' },
-  { code: 'IE', name: 'Irlande' },
-  { code: 'IS', name: 'Islande' },
-  { code: 'IL', name: 'Israël' },
-  { code: 'IT', name: 'Italie' },
-  { code: 'JM', name: 'Jamaïque' },
-  { code: 'JP', name: 'Japon' },
-  { code: 'JO', name: 'Jordanie' },
-  { code: 'KZ', name: 'Kazakhstan' },
-  { code: 'KE', name: 'Kenya' },
-  { code: 'KI', name: 'Kiribati' },
-  { code: 'KG', name: 'Kirghizistan' },
-  { code: 'KW', name: 'Koweït' },
-  { code: 'LA', name: 'Laos' },
-  { code: 'LS', name: 'Lesotho' },
-  { code: 'LV', name: 'Lettonie' },
-  { code: 'LB', name: 'Liban' },
-  { code: 'LR', name: 'Libéria' },
-  { code: 'LY', name: 'Libye' },
-  { code: 'LI', name: 'Liechtenstein' },
-  { code: 'LT', name: 'Lituanie' },
-  { code: 'LU', name: 'Luxembourg' },
-  { code: 'MK', name: 'Macédoine du Nord' },
-  { code: 'MG', name: 'Madagascar' },
-  { code: 'MY', name: 'Malaisie' },
-  { code: 'MW', name: 'Malawi' },
-  { code: 'MV', name: 'Maldives' },
-  { code: 'ML', name: 'Mali' },
-  { code: 'MT', name: 'Malte' },
-  { code: 'MQ', name: 'Martinique' },
-  { code: 'MA', name: 'Maroc' },
-  { code: 'MU', name: 'Maurice' },
-  { code: 'MR', name: 'Mauritanie' },
-  { code: 'YT', name: 'Mayotte' },
-  { code: 'MX', name: 'Mexique' },
-  { code: 'FM', name: 'Micronésie' },
-  { code: 'MD', name: 'Moldavie' },
-  { code: 'MC', name: 'Monaco' },
-  { code: 'MN', name: 'Mongolie' },
-  { code: 'ME', name: 'Monténégro' },
-  { code: 'MZ', name: 'Mozambique' },
-  { code: 'MM', name: 'Myanmar' },
-  { code: 'NA', name: 'Namibie' },
-  { code: 'NR', name: 'Nauru' },
-  { code: 'NP', name: 'Népal' },
-  { code: 'NI', name: 'Nicaragua' },
-  { code: 'NE', name: 'Niger' },
-  { code: 'NG', name: 'Nigéria' },
-  { code: 'NO', name: 'Norvège' },
-  { code: 'NC', name: 'Nouvelle-Calédonie' },
-  { code: 'NZ', name: 'Nouvelle-Zélande' },
-  { code: 'OM', name: 'Oman' },
-  { code: 'UG', name: 'Ouganda' },
-  { code: 'UZ', name: 'Ouzbékistan' },
-  { code: 'PK', name: 'Pakistan' },
-  { code: 'PW', name: 'Palaos' },
-  { code: 'PA', name: 'Panama' },
-  { code: 'PG', name: 'Papouasie-Nouvelle-Guinée' },
-  { code: 'PY', name: 'Paraguay' },
-  { code: 'NL', name: 'Pays-Bas' },
-  { code: 'PE', name: 'Pérou' },
-  { code: 'PH', name: 'Philippines' },
-  { code: 'PL', name: 'Pologne' },
-  { code: 'PF', name: 'Polynésie française' },
-  { code: 'PT', name: 'Portugal' },
-  { code: 'QA', name: 'Qatar' },
-  { code: 'DO', name: 'Rép. dominicaine' },
-  { code: 'RE', name: 'La Réunion' },
-  { code: 'RO', name: 'Roumanie' },
-  { code: 'GB', name: 'Royaume-Uni' },
-  { code: 'RU', name: 'Russie' },
-  { code: 'RW', name: 'Rwanda' },
-  { code: 'BL', name: 'Saint-Barthélemy' },
-  { code: 'KN', name: 'Saint-Kitts-et-Nevis' },
-  { code: 'LC', name: 'Sainte-Lucie' },
-  { code: 'MF', name: 'Saint-Martin' },
-  { code: 'PM', name: 'Saint-Pierre-et-Miquelon' },
-  { code: 'SM', name: 'Saint-Marin' },
-  { code: 'VC', name: 'Saint-Vincent' },
-  { code: 'WS', name: 'Samoa' },
-  { code: 'ST', name: 'Sao Tomé-et-Principe' },
-  { code: 'SN', name: 'Sénégal' },
-  { code: 'RS', name: 'Serbie' },
-  { code: 'SC', name: 'Seychelles' },
-  { code: 'SL', name: 'Sierra Leone' },
-  { code: 'SG', name: 'Singapour' },
-  { code: 'SK', name: 'Slovaquie' },
-  { code: 'SI', name: 'Slovénie' },
-  { code: 'SO', name: 'Somalie' },
-  { code: 'SD', name: 'Soudan' },
-  { code: 'SS', name: 'Soudan du Sud' },
-  { code: 'LK', name: 'Sri Lanka' },
-  { code: 'SE', name: 'Suède' },
-  { code: 'CH', name: 'Suisse' },
-  { code: 'SR', name: 'Suriname' },
-  { code: 'SY', name: 'Syrie' },
-  { code: 'TJ', name: 'Tadjikistan' },
-  { code: 'TW', name: 'Taïwan' },
-  { code: 'TZ', name: 'Tanzanie' },
-  { code: 'TD', name: 'Tchad' },
-  { code: 'CZ', name: 'Tchéquie' },
-  { code: 'TH', name: 'Thaïlande' },
-  { code: 'TL', name: 'Timor-Leste' },
-  { code: 'TG', name: 'Togo' },
-  { code: 'TO', name: 'Tonga' },
-  { code: 'TT', name: 'Trinité-et-Tobago' },
-  { code: 'TN', name: 'Tunisie' },
-  { code: 'TM', name: 'Turkménistan' },
-  { code: 'TR', name: 'Turquie' },
-  { code: 'TV', name: 'Tuvalu' },
-  { code: 'UA', name: 'Ukraine' },
-  { code: 'UY', name: 'Uruguay' },
-  { code: 'VU', name: 'Vanuatu' },
-  { code: 'VE', name: 'Venezuela' },
-  { code: 'VN', name: 'Viêt Nam' },
-  { code: 'WF', name: 'Wallis-et-Futuna' },
-  { code: 'YE', name: 'Yémen' },
-  { code: 'ZM', name: 'Zambie' },
-  { code: 'ZW', name: 'Zimbabwe' },
-  { code: 'SB', name: 'Îles Salomon' },
-  { code: 'MH', name: 'Îles Marshall' },
-].map(c => ({ ...c, flag: buildFlag(c.code) }));
+// Pôles fixes de l'application (plus de saisie de pays dans l'assistant).
+// Libellés et pastilles alignés sur les valeurs par défaut de l'entité TenantConfig.
+const POLE_LABEL_1 = 'Pôle EST';
+const POLE_LABEL_2 = 'Pôle OUEST';
+const POLE_FLAG_1  = '🔵';
+const POLE_FLAG_2  = '🟠';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const pw  = control.get('password')?.value;
@@ -255,7 +47,6 @@ function generateSlug(name: string): string {
     MatIconModule,
     MatProgressSpinnerModule,
     MatRippleModule,
-    MatAutocompleteModule,
   ],
   template: `
 <!-- ══════════════════════════════════════════════════════
@@ -390,7 +181,7 @@ function generateSlug(name: string): string {
         <div class="lp-sstat-sep"></div>
         <div class="lp-sstat">
           <span class="lp-sstat__num">2</span>
-          <span class="lp-sstat__lbl">Pôles géographiques</span>
+          <span class="lp-sstat__lbl">Pôles</span>
         </div>
         <div class="lp-sstat-sep"></div>
         <div class="lp-sstat">
@@ -600,56 +391,33 @@ function generateSlug(name: string): string {
         </div>
       }
 
-      <!-- ── Étape 1 : Pôles géographiques ──────────── -->
+      <!-- ── Étape 1 : Pôles ──────────────────────── -->
       @if (currentStep() === 1) {
-        <div class="sw-body" [formGroup]="step1">
+        <div class="sw-body">
           <div class="sw-step-hd">
             <div class="sw-step-icon" style="background:#F0FDF4">
               <mat-icon style="color:#16A34A">language</mat-icon>
             </div>
             <div>
-              <h3 class="sw-step-title">Pôles géographiques</h3>
-              <p class="sw-step-desc">Ces libellés désignent vos deux entités dans toute l'application.</p>
+              <h3 class="sw-step-title">Pôles</h3>
+              <p class="sw-step-desc">Passidoc s'organise autour de deux pôles fixes, utilisés dans toute l'application.</p>
             </div>
           </div>
 
-          <div class="pole-row">
-            <div class="pole-row__flag">{{ flagFromCode(step1.get('poleCode1')?.value) }}</div>
-            <mat-form-field appearance="outline" class="sw-field--flex">
-              <mat-label>Pôle 1 — pays</mat-label>
-              <input matInput [formControl]="poleSearch1" [matAutocomplete]="auto1"
-                     placeholder="Chercher un pays…" />
-              <mat-autocomplete #auto1 (optionSelected)="onPole1Selected($event.option.value)">
-                @for (c of filteredCountries1; track c.code) {
-                  <mat-option [value]="c.name">{{ c.flag }} {{ c.name }}</mat-option>
-                }
-              </mat-autocomplete>
-              @if (step1.get('poleCode1')?.hasError('required') && step1.get('poleCode1')?.touched) {
-                <mat-error>Sélectionnez un pays</mat-error>
-              }
-            </mat-form-field>
-          </div>
-
-          <div class="pole-row">
-            <div class="pole-row__flag">{{ flagFromCode(step1.get('poleCode2')?.value) }}</div>
-            <mat-form-field appearance="outline" class="sw-field--flex">
-              <mat-label>Pôle 2 — pays</mat-label>
-              <input matInput [formControl]="poleSearch2" [matAutocomplete]="auto2"
-                     placeholder="Chercher un pays…" />
-              <mat-autocomplete #auto2 (optionSelected)="onPole2Selected($event.option.value)">
-                @for (c of filteredCountries2; track c.code) {
-                  <mat-option [value]="c.name">{{ c.flag }} {{ c.name }}</mat-option>
-                }
-              </mat-autocomplete>
-              @if (step1.get('poleCode2')?.hasError('required') && step1.get('poleCode2')?.touched) {
-                <mat-error>Sélectionnez un pays</mat-error>
-              }
-            </mat-form-field>
+          <div class="pole-fixed" data-testid="poles-fixes">
+            <div class="pole-fixed__item">
+              <span class="pole-fixed__dot">{{ POLE_FLAG_1 }}</span>
+              <span>{{ POLE_LABEL_1 }}</span>
+            </div>
+            <div class="pole-fixed__item">
+              <span class="pole-fixed__dot">{{ POLE_FLAG_2 }}</span>
+              <span>{{ POLE_LABEL_2 }}</span>
+            </div>
           </div>
 
           <div class="sw-info">
             <mat-icon>info_outline</mat-icon>
-            <span>Les codes internes <strong>REUNION</strong> / <strong>MADAGASCAR</strong> restent inchangés. Seuls les libellés d'affichage sont personnalisés.</span>
+            <span>Ces deux pôles ne sont pas modifiables : ils sont communs à tous les cabinets et servent à répartir collaborateurs et dossiers.</span>
           </div>
         </div>
       }
@@ -758,14 +526,9 @@ function generateSlug(name: string): string {
               }
               <div class="recap__divider"></div>
               <div class="recap__row">
-                <span class="rr-flag">{{ flagFromCode(step1.get('poleCode1')?.value) }}</span>
-                <span class="rr-label">Pôle 1</span>
-                <span class="rr-val">{{ pole1Name }}</span>
-              </div>
-              <div class="recap__row">
-                <span class="rr-flag">{{ flagFromCode(step1.get('poleCode2')?.value) }}</span>
-                <span class="rr-label">Pôle 2</span>
-                <span class="rr-val">{{ pole2Name }}</span>
+                <mat-icon>explore</mat-icon>
+                <span class="rr-label">Pôles</span>
+                <span class="rr-val">{{ POLE_FLAG_1 }} {{ POLE_LABEL_1 }} · {{ POLE_FLAG_2 }} {{ POLE_LABEL_2 }}</span>
               </div>
               <div class="recap__divider"></div>
               <div class="recap__row">
@@ -1399,7 +1162,6 @@ function generateSlug(name: string): string {
 
     /* Champs */
     .sw-field--full { width: 100%; margin-bottom: 2px; }
-    .sw-field--flex { flex: 1; }
     .sw-field       { flex: 1; }
     .sw-row { display: flex; gap: 12px; }
     .sw-row .sw-field { min-width: 0; }
@@ -1473,8 +1235,14 @@ function generateSlug(name: string): string {
     }
 
     /* Pôles */
-    .pole-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-    .pole-row__flag { font-size: 28px; flex-shrink: 0; }
+    .pole-fixed { display: flex; gap: 12px; margin-bottom: 14px; }
+    .pole-fixed__item {
+      flex: 1; display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; border-radius: 12px;
+      background: #F0FDF4; border: 1px solid #BBF7D0;
+      font-size: 14px; font-weight: 600; color: #166534;
+    }
+    .pole-fixed__dot { font-size: 18px; line-height: 1; flex-shrink: 0; }
 
     /* Info */
     .sw-info {
@@ -1501,7 +1269,6 @@ function generateSlug(name: string): string {
     }
     .recap__row:last-child { border-bottom: none; }
     .recap__row mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94A3B8; flex-shrink: 0; }
-    .rr-flag { font-size: 16px; flex-shrink: 0; }
     .rr-label { font-size: 11.5px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: .4px; flex-shrink: 0; min-width: 80px; }
     .rr-val   { font-size: 13.5px; font-weight: 500; color: #1E293B; flex: 1; text-align: right; }
     .recap__divider { height: 3px; background: linear-gradient(90deg, #1A73E8 0%, #7C3AED 100%); }
@@ -1865,6 +1632,12 @@ export class SetupWizardComponent implements OnInit {
     { icon: 'analytics',        label: 'Tableau de bord' },
   ];
 
+  // Les deux pôles sont fixes : plus aucune saisie dans l'assistant.
+  readonly POLE_LABEL_1 = POLE_LABEL_1;
+  readonly POLE_LABEL_2 = POLE_LABEL_2;
+  readonly POLE_FLAG_1  = POLE_FLAG_1;
+  readonly POLE_FLAG_2  = POLE_FLAG_2;
+
   readonly steps = [
     { n: 0, label: 'Cabinet'  },
     { n: 1, label: 'Pôles'    },
@@ -1878,55 +1651,6 @@ export class SetupWizardComponent implements OnInit {
     ville:      [''],
     pays:       [''],
   });
-
-  step1: FormGroup = this.fb.group({
-    poleCode1: ['', Validators.required],
-    poleCode2: ['', Validators.required],
-  });
-
-  poleSearch1 = new FormControl('');
-  poleSearch2 = new FormControl('');
-
-  get filteredCountries1(): Country[] {
-    const q = (this.poleSearch1.value || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    if (!q) return COUNTRIES;
-    return COUNTRIES.filter(c =>
-      c.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q) ||
-      c.code.toLowerCase().includes(q)
-    );
-  }
-
-  get filteredCountries2(): Country[] {
-    const q = (this.poleSearch2.value || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    if (!q) return COUNTRIES;
-    return COUNTRIES.filter(c =>
-      c.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q) ||
-      c.code.toLowerCase().includes(q)
-    );
-  }
-
-  get pole1Name(): string {
-    return COUNTRIES.find(c => c.code === this.step1.value.poleCode1)?.name ?? this.step1.value.poleCode1;
-  }
-
-  get pole2Name(): string {
-    return COUNTRIES.find(c => c.code === this.step1.value.poleCode2)?.name ?? this.step1.value.poleCode2;
-  }
-
-  flagFromCode(code: string): string {
-    if (!code) return '🌍';
-    return buildFlag(code);
-  }
-
-  onPole1Selected(name: string) {
-    const c = COUNTRIES.find(x => x.name === name);
-    if (c) this.step1.get('poleCode1')?.setValue(c.code, { emitEvent: false });
-  }
-
-  onPole2Selected(name: string) {
-    const c = COUNTRIES.find(x => x.name === name);
-    if (c) this.step1.get('poleCode2')?.setValue(c.code, { emitEvent: false });
-  }
 
   step2: FormGroup = this.fb.group({
     adminFirstName:  ['', Validators.required],
@@ -1990,9 +1714,6 @@ export class SetupWizardComponent implements OnInit {
     this.submitError.set('');
     this.loading.set(true);
 
-    const p1 = COUNTRIES.find(c => c.code === this.step1.value.poleCode1);
-    const p2 = COUNTRIES.find(c => c.code === this.step1.value.poleCode2);
-
     // N'utilise le slug existant que s'il vient du paramètre URL (?tenant=) → reconfiguration admin.
     // Dans tous les autres cas (defaultTenantSlug, localStorage), on génère depuis le nom du cabinet.
     const fromUrl = new URLSearchParams(window.location.search).get('tenant');
@@ -2003,10 +1724,10 @@ export class SetupWizardComponent implements OnInit {
       ville:          this.step0.value.ville    || undefined,
       pays:           this.step0.value.pays     || undefined,
       logoUrl:        this.logoPreview()         || undefined,
-      poleLabel1:     p1?.name  ?? 'Pôle 1',
-      poleLabel2:     p2?.name  ?? 'Pôle 2',
-      poleFlag1:      p1?.flag  ?? '',
-      poleFlag2:      p2?.flag  ?? '',
+      poleLabel1:     POLE_LABEL_1,
+      poleLabel2:     POLE_LABEL_2,
+      poleFlag1:      POLE_FLAG_1,
+      poleFlag2:      POLE_FLAG_2,
       adminFirstName: this.step2.value.adminFirstName,
       adminLastName:  this.step2.value.adminLastName,
       adminEmail:     this.step2.value.adminEmail,
@@ -2120,7 +1841,6 @@ export class SetupWizardComponent implements OnInit {
 
   private currentForm(): FormGroup | null {
     if (this.currentStep() === 0) return this.step0;
-    if (this.currentStep() === 1) return this.step1;
     if (this.currentStep() === 2) return this.step2;
     return null;
   }

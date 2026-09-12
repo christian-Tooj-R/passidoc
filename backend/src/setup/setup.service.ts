@@ -36,10 +36,12 @@ export class SetupService {
       slogan:      dto.slogan,
       ville:       dto.ville,
       pays:        dto.pays,
-      poleLabel1:  dto.poleLabel1 || 'La Réunion',
-      poleLabel2:  dto.poleLabel2 || 'Madagascar',
-      poleFlag1:   dto.poleFlag1  || '🇷🇪',
-      poleFlag2:   dto.poleFlag2  || '🇲🇬',
+      // Les deux pôles sont fixes (plus de pays paramétrable dans l'assistant) :
+      // mêmes valeurs que les défauts de l'entité TenantConfig.
+      poleLabel1:  dto.poleLabel1 || 'Pôle EST',
+      poleLabel2:  dto.poleLabel2 || 'Pôle OUEST',
+      poleFlag1:   dto.poleFlag1  || '🔵',
+      poleFlag2:   dto.poleFlag2  || '🟠',
       isConfigured: true,
     });
     const savedConfig = await this.configRepo.save(config);

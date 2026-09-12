@@ -14,10 +14,10 @@ const mockTenant = {
   switchTenant:      vi.fn(),
   markConfigured:    vi.fn(),
   setSlug:           vi.fn(),
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
   poleFlag:   vi.fn(),
   poleLabel:  vi.fn(),
 };
@@ -71,6 +71,15 @@ describe('SetupWizardComponent', () => {
   it('urlCopied est false par défaut', async () => {
     const { comp } = await createComponent();
     expect(comp.urlCopied()).toBe(false);
+  });
+
+  it('expose les deux pôles fixes (plus de saisie de pays)', async () => {
+    const { comp } = await createComponent();
+    expect(comp.POLE_LABEL_1).toBe('Pôle EST');
+    expect(comp.POLE_LABEL_2).toBe('Pôle OUEST');
+    expect(comp.POLE_FLAG_1).toBe('🔵');
+    expect(comp.POLE_FLAG_2).toBe('🟠');
+    expect((comp as unknown as Record<string, unknown>)['step1']).toBeUndefined();
   });
 
   it('affiche un contenu de configuration', async () => {
