@@ -263,7 +263,7 @@ export class SyntheseDialogComponent implements OnInit {
       const wb = XLSX.utils.book_new();
       const rows: any[][] = [];
       rows.push([`Rapport hebdomadaire – Semaine : ${this.semaine}`]); rows.push([]);
-      rows.push(['ID', 'DATE', 'HEURE DEBUT', 'COLLAB MADA', 'CLIENT', 'TACHE', 'TYPE', 'ATTRIBUE PAR', 'STATUT', 'HEURE FIN', 'TEMPS D\'EXECUTION (min)', 'SEMAINE']);
+      rows.push(['ID', 'DATE', 'HEURE DEBUT', 'COLLABORATEUR', 'CLIENT', 'TACHE', 'TYPE', 'ATTRIBUE PAR', 'STATUT', 'HEURE FIN', 'TEMPS D\'EXECUTION (min)', 'SEMAINE']);
       for (const t of tasks) {
         rows.push([t.taskId ?? '', t.createdAt ? new Date(t.createdAt).toLocaleDateString('fr-FR') : '',
           t.heureDebut ?? '', t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '',

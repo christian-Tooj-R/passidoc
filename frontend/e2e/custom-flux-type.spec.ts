@@ -7,7 +7,7 @@ const FAKE_USER  = { id: 1, email: 'admin@afym.eu', role: 'ADMIN', firstName: 'A
 const FAKE_CLIENT = {
   id: 1,
   nom: 'AFYM Test',
-  site: 'REUNION',
+  site: 'EST',
   typesFluxActifs: ['RELEVE_BANCAIRE', 'PAIE'],
   customFluxTypes: [] as { key: string; label: string }[],
   isActive: true,
@@ -17,7 +17,7 @@ const FAKE_CLIENT = {
   intervenants: [],
   responsable: null,
   directeur: null,
-  collaborateurMg: null,
+  collaborateurOuest: null,
 };
 
 // ── Helper : mocke les routes puis navigue ───────────────────────────────────

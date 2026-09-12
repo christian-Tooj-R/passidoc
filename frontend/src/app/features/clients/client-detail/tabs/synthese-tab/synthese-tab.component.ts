@@ -269,7 +269,7 @@ export class SyntheseTabComponent implements OnInit {
   private confirm = inject(ConfirmService);
 
   @Input() clientId!: number;
-  @Input() site: ClientSite = 'REUNION';
+  @Input() site: ClientSite = 'EST';
   @Input() readonly = false;
 
   syntheses: SyntheseCloture[] = [];

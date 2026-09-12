@@ -179,7 +179,7 @@ interface AppModule {
               <span class="panel-user__role">{{ roleLabel() }}</span>
             </div>
             <span class="panel-user__flag">
-              {{ tenant.poleFlag(auth.currentUser()?.site ?? 'REUNION') }}
+              {{ tenant.poleFlag(auth.currentUser()?.site ?? 'EST') }}
             </span>
           </div>
         </div>
@@ -595,7 +595,7 @@ export class SidebarComponent implements OnInit {
       CHEF_ANTENNE:      'Chef d\'antenne',
       CHEF_MISSION:      'Chef de mission',
       COLLABORATEUR:     'Collaborateur',
-      GERANT_MADAGASCAR: `Gérant ${this.tenant.poleLabel2()}`,
+      GERANT_OUEST: `Gérant ${this.tenant.poleLabel2()}`,
     };
     return labels[role ?? ''] ?? 'Collaborateur';
   }

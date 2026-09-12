@@ -353,7 +353,7 @@ interface CreateForm {
             <option value="CHEF_ANTENNE">Chef d'antenne</option>
             <option value="CHEF_MISSION">Chef de mission</option>
             <option value="COLLABORATEUR">Collaborateur</option>
-            <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
+            <option value="GERANT_OUEST">Gérant {{ tenantSvc.poleLabel2() }}</option>
           </select>
           <select class="filter-select" [value]="filterAntenne()" (change)="filterAntenne.set($any($event.target).value)">
             <option value="">Toutes antennes</option>
@@ -362,8 +362,8 @@ interface CreateForm {
           </select>
           <select class="filter-select" [value]="filterSite()" (change)="filterSite.set($any($event.target).value)">
             <option value="">Tous sites</option>
-            <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
-            <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
+            <option value="EST">{{ tenantSvc.poleLabel1() }}</option>
+            <option value="OUEST">{{ tenantSvc.poleLabel2() }}</option>
           </select>
           @if (activeFiltersCount() > 0) {
             <button class="btn-clear-filters" (click)="clearFilters()">
@@ -406,7 +406,7 @@ interface CreateForm {
                   </div>
                 </td>
                 <td>
-                  <span class="site-badge" [class.site-badge--mg]="u.site === 'MADAGASCAR'">
+                  <span class="site-badge" [class.site-badge--ouest]="u.site === 'OUEST'">
                     {{ tenantSvc.poleFlag(u.site) }} {{ tenantSvc.poleLabel(u.site) }}
                   </span>
                 </td>
@@ -535,7 +535,7 @@ interface CreateForm {
 
     <!-- Fiche "Mon superviseur / Mon équipe directe" -->
     <div class="collab-team-section">
-      @if (auth.currentUser()?.site === 'REUNION') {
+      @if (auth.currentUser()?.site === 'EST') {
         @if ((myTeam?.team?.length ?? 0) > 0) {
           <div class="collab-section-label"><mat-icon>groups</mat-icon> Mes collaborateurs {{ tenantSvc.poleLabel2() }}</div>
           <div class="my-team-grid">
@@ -725,7 +725,7 @@ interface CreateForm {
             @if (editForm()!.antenne) {
               <option value="CHEF_MISSION">Chef de mission</option>
               <option value="CHEF_ANTENNE">Chef d'antenne</option>
-              <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
+              <option value="GERANT_OUEST">Gérant {{ tenantSvc.poleLabel2() }}</option>
             }
           </select>
           <mat-icon class="select-icon">expand_more</mat-icon>
@@ -734,7 +734,7 @@ interface CreateForm {
           @switch (editForm()!.role) {
             @case ('CHEF_ANTENNE')      { Responsable de l'ensemble de l'antenne. Voit toutes les données de son antenne. }
             @case ('CHEF_MISSION')      { Gère une équipe de collaborateurs. Attribue les tâches à ses collaborateurs directs. }
-            @case ('GERANT_MADAGASCAR') { Vision globale de l'antenne sans gestion directe d'équipe. }
+            @case ('GERANT_OUEST') { Vision globale de l'antenne sans gestion directe d'équipe. }
             @case ('COLLABORATEUR')     { Reçoit et exécute des tâches de son chef de mission. }
           }
         </p>
@@ -923,8 +923,8 @@ interface CreateForm {
           <label>Site *</label>
           <div class="select-wrap">
             <select [(ngModel)]="createForm()!.site">
-              <option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</option>
-              <option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</option>
+              <option value="EST">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</option>
+              <option value="OUEST">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</option>
             </select>
             <mat-icon class="select-icon">expand_more</mat-icon>
           </div>
@@ -948,7 +948,7 @@ interface CreateForm {
             <option value="COLLABORATEUR">Collaborateur</option>
             <option value="CHEF_MISSION">Chef de mission</option>
             <option value="CHEF_ANTENNE">Chef d'antenne</option>
-            <option value="GERANT_MADAGASCAR">Gérant {{ tenantSvc.poleLabel2() }}</option>
+            <option value="GERANT_OUEST">Gérant {{ tenantSvc.poleLabel2() }}</option>
             <option value="EXPERT_COMPTABLE">Expert-comptable</option>
             <option value="ADMIN">Administrateur</option>
           </select>
@@ -1253,7 +1253,7 @@ interface CreateForm {
     .badge-CHEF_ANTENNE      { background: #DBEAFE; color: #1D4ED8; }
     .badge-CHEF_MISSION      { background: #DCFCE7; color: #166534; }
     .badge-COLLABORATEUR     { background: #F3E8FF; color: #7E22CE; }
-    .badge-GERANT_MADAGASCAR { background: #FEF3C7; color: #92400E; }
+    .badge-GERANT_OUEST { background: #FEF3C7; color: #92400E; }
     .empty-team {
       display: flex; flex-direction: column; align-items: center;
       padding: 64px 32px; text-align: center; color: #94A3B8;
@@ -1333,7 +1333,7 @@ interface CreateForm {
       display: inline-block; font-size: 11.5px; font-weight: 500;
       padding: 3px 8px; border-radius: 6px; background: #EFF6FF; color: #1D4ED8;
     }
-    .site-badge--mg { background: #F0FDF4; color: #166534; }
+    .site-badge--ouest { background: #F0FDF4; color: #166534; }
     .role-badge {
       display: inline-block; font-size: 11px; font-weight: 700;
       padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em;
@@ -1343,7 +1343,7 @@ interface CreateForm {
     .role-CHEF_ANTENNE      { background: #EFF6FF; color: #1E40AF; }
     .role-CHEF_MISSION      { background: #F0FDF4; color: #166534; }
     .role-COLLABORATEUR     { background: #F5F3FF; color: #7C3AED; }
-    .role-GERANT_MADAGASCAR { background: #FFF7ED; color: #9A3412; }
+    .role-GERANT_OUEST { background: #FFF7ED; color: #9A3412; }
     .antenne-badge {
       display: inline-block; font-size: 11.5px; font-weight: 700;
       padding: 3px 10px; border-radius: 20px; background: #162351; color: #93C5FD; letter-spacing: .05em;
@@ -1653,7 +1653,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
     return this.users().find(u => u.role === 'CHEF_ANTENNE' && u.antenne === antenne && u.isActive);
   }
   gerantMadagascar(antenne: string): User | undefined {
-    return this.users().find(u => u.role === 'GERANT_MADAGASCAR' && u.antenne === antenne && u.isActive);
+    return this.users().find(u => u.role === 'GERANT_OUEST' && u.antenne === antenne && u.isActive);
   }
   chefsMission(antenne: string): User[] {
     return this.users().filter(u => u.role === 'CHEF_MISSION' && u.antenne === antenne && u.isActive);
@@ -1677,7 +1677,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
     this.editForm.set(null);
     this.createForm.set({
       firstName: '', lastName: '', email: '', password: '',
-      role: 'COLLABORATEUR', site: 'MADAGASCAR', antenne: '', referentId: null,
+      role: 'COLLABORATEUR', site: 'OUEST', antenne: '', referentId: null,
       poleService: '', saving: false,
     });
   }
@@ -1970,13 +1970,13 @@ export class EquipesComponent implements OnInit, OnDestroy {
     return (u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '');
   }
   roleLabel(role: string): string {
-    if (role === 'GERANT_MADAGASCAR') return `Gérant ${this.tenantSvc.poleLabel2()}`;
+    if (role === 'GERANT_OUEST') return `Gérant ${this.tenantSvc.poleLabel2()}`;
     return ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role;
   }
   avatarClass(u: User): string {
     const map: Record<string, string> = {
       CHEF_ANTENNE: 'chef-antenne', CHEF_MISSION: 'chef-mission',
-      COLLABORATEUR: 'collab', GERANT_MADAGASCAR: 'gerant',
+      COLLABORATEUR: 'collab', GERANT_OUEST: 'gerant',
     };
     return map[u.role] ?? 'default';
   }

@@ -480,8 +480,8 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
       {
         icon: 'manage_accounts',
         label: 'Responsable cabinet',
-        detail: this.ctx.responsable ?? (this.ctx.collaborateurMg ? `MG : ${this.ctx.collaborateurMg}` : 'Non assigné'),
-        available: !!(this.ctx.responsable || this.ctx.collaborateurMg),
+        detail: this.ctx.responsable ?? (this.ctx.collaborateurOuest ? `MG : ${this.ctx.collaborateurOuest}` : 'Non assigné'),
+        available: !!(this.ctx.responsable || this.ctx.collaborateurOuest),
       },
     ];
   }

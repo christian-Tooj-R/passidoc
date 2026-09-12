@@ -12,10 +12,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { UsersService } from '../../../core/services/users.service';
 
-const mockClients  = { getOne: vi.fn().mockReturnValue(of(null)), getById: vi.fn().mockReturnValue(of(null)), update: vi.fn().mockReturnValue(of({})), delete: vi.fn().mockReturnValue(of({})), assign: vi.fn().mockReturnValue(of({})), assignDirecteur: vi.fn().mockReturnValue(of({})), assignMg: vi.fn().mockReturnValue(of({})), exportPdf: vi.fn().mockReturnValue(of(new Blob())), uploadLogo: vi.fn().mockReturnValue(of(null)) };
+const mockClients  = { getOne: vi.fn().mockReturnValue(of(null)), getById: vi.fn().mockReturnValue(of(null)), update: vi.fn().mockReturnValue(of({})), delete: vi.fn().mockReturnValue(of({})), assign: vi.fn().mockReturnValue(of({})), assignDirecteur: vi.fn().mockReturnValue(of({})), assignOuest: vi.fn().mockReturnValue(of({})), exportPdf: vi.fn().mockReturnValue(of(new Blob())), uploadLogo: vi.fn().mockReturnValue(of(null)) };
 const mockExercice = { list: vi.fn().mockReturnValue(of([])), create: vi.fn().mockReturnValue(of({})), cloturer: vi.fn().mockReturnValue(of({})) };
 const mockAuth     = { currentUser: vi.fn().mockReturnValue({ id: 1, role: 'COLLABORATEUR' }), isAdmin: vi.fn().mockReturnValue(false), hasFullVisibility: vi.fn().mockReturnValue(false), canCreateDossier: vi.fn().mockReturnValue(true) };
-const mockTenant   = { poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'), poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'), poleFlag: vi.fn(), poleLabel: vi.fn() };
+const mockTenant   = { poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'), poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), poleFlag: vi.fn(), poleLabel: vi.fn() };
 const mockUsers    = { getAll: vi.fn().mockReturnValue(of([])), getAssignable: vi.fn().mockReturnValue(of([])) };
 
 async function createComponent() {

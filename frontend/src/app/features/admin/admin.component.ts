@@ -42,7 +42,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
         </div>
         <div class="stat-chip">
           <mat-icon>flag</mat-icon>
-          <span>{{ countSite('REUNION') }} {{ tenantSvc.poleLabel1() }} · {{ countSite('MADAGASCAR') }} {{ tenantSvc.poleLabel2() }}</span>
+          <span>{{ countSite('EST') }} {{ tenantSvc.poleLabel1() }} · {{ countSite('OUEST') }} {{ tenantSvc.poleLabel2() }}</span>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
         </ng-template>
 
         <ng-template appCol="site" let-u>
-          <span [class]="u.site === 'REUNION' ? 'badge-reunion' : 'badge-madagascar'">
+          <span [class]="u.site === 'EST' ? 'badge-pole-est' : 'badge-pole-ouest'">
             {{ tenantSvc.poleFlag(u.site) }} {{ tenantSvc.poleLabel(u.site) }}
           </span>
         </ng-template>
@@ -126,8 +126,8 @@ import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-t
     .role-expert_comptable { background: #dbeafe; color: #1d4ed8; }
     .role-collaborateur { background: #f0fdf4; color: #15803d; }
 
-    .badge-reunion { display: inline-flex; align-items: center; background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-    .badge-madagascar { display: inline-flex; align-items: center; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-pole-est { display: inline-flex; align-items: center; background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-pole-ouest { display: inline-flex; align-items: center; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
 
     .twofa-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: #94a3b8; }
     .twofa-badge mat-icon { font-size: 15px; width: 15px; height: 15px; }

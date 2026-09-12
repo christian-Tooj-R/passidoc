@@ -15,10 +15,10 @@ const mockPointage = {
 };
 const mockGeo = { getCurrentPosition: vi.fn() };
 const mockTenant = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
   poleFlag:   vi.fn().mockReturnValue('🇷🇪'),
   poleLabel:  vi.fn().mockReturnValue('Réunion'),
 };
@@ -58,7 +58,7 @@ describe('PointageConfigComponent', () => {
   it('affiche les deux sites (Réunion et Madagascar)', async () => {
     const { fixture } = await createComponent();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('REUNION');
-    expect(el.textContent).toContain('MADAGASCAR');
+    expect(el.textContent).toContain('EST');
+    expect(el.textContent).toContain('OUEST');
   });
 });

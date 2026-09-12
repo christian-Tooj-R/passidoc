@@ -35,8 +35,8 @@ export class ClientsService {
     return this.http.patch<Client>(`${this.api}/${clientId}/assign`, { responsableId });
   }
 
-  assignMg(clientId: number, collaborateurMgId: number | null) {
-    return this.http.patch<Client>(`${this.api}/${clientId}/assign-mg`, { collaborateurMgId });
+  assignOuest(clientId: number, collaborateurOuestId: number | null) {
+    return this.http.patch<Client>(`${this.api}/${clientId}/assign-ouest`, { collaborateurOuestId });
   }
 
   assignDirecteur(clientId: number, directeurId: number | null) {

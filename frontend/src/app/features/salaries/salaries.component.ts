@@ -45,8 +45,8 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
       </div>
       <select class="filter-select" [value]="siteFiltre()" (change)="siteFiltre.set($any($event.target).value)">
         <option value="">Tous les pôles</option>
-        <option value="REUNION">{{ tenantSvc.poleLabel1() }}</option>
-        <option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</option>
+        <option value="EST">{{ tenantSvc.poleLabel1() }}</option>
+        <option value="OUEST">{{ tenantSvc.poleLabel2() }}</option>
       </select>
       <select class="filter-select" [value]="statutFiltre()" (change)="statutFiltre.set($any($event.target).value)">
         <option value="">Tous statuts</option>
@@ -111,7 +111,7 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
     </ng-template>
 
     <ng-template appCol="site" let-c>
-      <span class="rhx-chip rhx-chip--nodot" [class]="'rhx-chip rhx-chip--nodot ' + (c.site === 'REUNION' ? 'rhx-chip--violet' : 'rhx-chip--blue')">
+      <span class="rhx-chip rhx-chip--nodot" [class]="'rhx-chip rhx-chip--nodot ' + (c.site === 'EST' ? 'rhx-chip--violet' : 'rhx-chip--blue')">
         {{ tenantSvc.poleFlag(c.site) }} {{ tenantSvc.poleLabel(c.site) }}
       </span>
     </ng-template>
@@ -176,8 +176,8 @@ const TYPES_CONTRAT = ['CDI', 'CDD', 'Apprentissage', 'Stage', 'Intérimaire', '
       <label>Pôle</label>
       <mat-form-field appearance="outline" class="w100">
         <mat-select formControlName="site">
-          <mat-option value="REUNION">{{ tenantSvc.poleLabel1() }}</mat-option>
-          <mat-option value="MADAGASCAR">{{ tenantSvc.poleLabel2() }}</mat-option>
+          <mat-option value="EST">{{ tenantSvc.poleLabel1() }}</mat-option>
+          <mat-option value="OUEST">{{ tenantSvc.poleLabel2() }}</mat-option>
         </mat-select>
       </mat-form-field>
       <label>Poste</label>
@@ -310,7 +310,7 @@ export class SalariesComponent implements OnInit {
   rowClass = (c: Collaborateur) => c.dateSortie ? 'row--ancien' : '';
 
   form = this.fb.group({
-    firstName: [''], lastName: [''], site: ['REUNION'],
+    firstName: [''], lastName: [''], site: ['EST'],
     poste: [null as string | null], typeContrat: [null as string | null],
     dateEntree: [null as string | null], dateSortie: [null as string | null],
     telephone: [null as string | null],
@@ -331,8 +331,8 @@ export class SalariesComponent implements OnInit {
       anciens: tous.length - actifs.length,
       cdi: actifs.filter(c => c.typeContrat === 'CDI').length,
       contratRenseigne: actifs.filter(c => !!c.typeContrat).length,
-      pole1: actifs.filter(c => c.site === 'REUNION').length,
-      pole2: actifs.filter(c => c.site === 'MADAGASCAR').length,
+      pole1: actifs.filter(c => c.site === 'EST').length,
+      pole2: actifs.filter(c => c.site === 'OUEST').length,
       entrees12: tous.filter(c => c.dateEntree && new Date(c.dateEntree) >= ilYA12Mois).length,
       dateEntreeRenseignee: tous.filter(c => !!c.dateEntree).length,
     };

@@ -8,7 +8,7 @@ import { FicheIdentite } from '../entities/fiche-identite.entity';
 const mockClient: Client = {
   id: 1,
   nom: 'Boulangerie Du Four',
-  site: ClientSite.REUNION,
+  site: ClientSite.EST,
   santePassation: 0,
   isActive: true,
   logoUrl: null,
@@ -69,8 +69,8 @@ describe('ClientsService', () => {
     });
 
     it('doit filtrer par site si fourni', async () => {
-      await service.findAll('REUNION');
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('client.site = :site', { site: 'REUNION' });
+      await service.findAll('EST');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('client.site = :site', { site: 'EST' });
     });
   });
 
@@ -89,7 +89,7 @@ describe('ClientsService', () => {
 
   describe('create', () => {
     it('doit créer un client et une fiche identité vide', async () => {
-      await service.create({ nom: 'Nouveau Client', site: ClientSite.MADAGASCAR });
+      await service.create({ nom: 'Nouveau Client', site: ClientSite.OUEST });
       expect(mockClientRepo.save).toHaveBeenCalled();
       expect(mockFicheRepo.save).toHaveBeenCalled();
     });

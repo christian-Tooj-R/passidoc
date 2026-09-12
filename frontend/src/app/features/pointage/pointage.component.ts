@@ -317,8 +317,8 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
         </div>
         <mat-button-toggle-group [(ngModel)]="siteFiltre" (ngModelChange)="chargerJourAdmin()">
           <mat-button-toggle value="">Tous</mat-button-toggle>
-          <mat-button-toggle value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-button-toggle>
-          <mat-button-toggle value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-button-toggle>
+          <mat-button-toggle value="EST">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-button-toggle>
+          <mat-button-toggle value="OUEST">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
 
@@ -376,8 +376,8 @@ type EtatLigne = 'absent' | 'present' | 'en_pause' | 'revenu' | 'parti';
 
         <ng-template appCol="site" let-e>
           <span class="site-badge"
-                [class.site-badge--re]="e.user.site === 'REUNION'"
-                [class.site-badge--mg]="e.user.site === 'MADAGASCAR'">
+                [class.site-badge--est]="e.user.site === 'EST'"
+                [class.site-badge--ouest]="e.user.site === 'OUEST'">
             {{ tenantSvc.poleFlag(e.user.site) }}
             {{ tenantSvc.poleLabel(e.user.site) }}
           </span>

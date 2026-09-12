@@ -11,7 +11,7 @@ import { SalariesService } from './salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
 
 const mockSvc   = { list: vi.fn().mockReturnValue(of([])), create: vi.fn().mockReturnValue(of({})), updateRH: vi.fn().mockReturnValue(of({})) };
-const mockTenant = { poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'), poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'), poleFlag: vi.fn(), poleLabel: vi.fn() };
+const mockTenant = { poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'), poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), poleFlag: vi.fn(), poleLabel: vi.fn() };
 const mockSnack = { open: vi.fn() };
 
 async function createComponent() {
@@ -83,9 +83,9 @@ describe('SalariesComponent', () => {
 
     it('compte correctement les actifs', async () => {
       mockSvc.list.mockReturnValue(of([
-        { id: 1, dateSortie: null,         site: 'REUNION',    role: 'COLLABORATEUR', firstName: 'A', lastName: 'A' },
-        { id: 2, dateSortie: '2023-01-01', site: 'REUNION',    role: 'COLLABORATEUR', firstName: 'B', lastName: 'B' },
-        { id: 3, dateSortie: null,         site: 'MADAGASCAR', role: 'COLLABORATEUR', firstName: 'C', lastName: 'C' },
+        { id: 1, dateSortie: null,         site: 'EST',    role: 'COLLABORATEUR', firstName: 'A', lastName: 'A' },
+        { id: 2, dateSortie: '2023-01-01', site: 'EST',    role: 'COLLABORATEUR', firstName: 'B', lastName: 'B' },
+        { id: 3, dateSortie: null,         site: 'OUEST', role: 'COLLABORATEUR', firstName: 'C', lastName: 'C' },
       ]));
       const { comp } = await createComponent();
       expect(comp.stats().actifs).toBe(2);
@@ -96,19 +96,19 @@ describe('SalariesComponent', () => {
   describe('listeFiltree', () => {
     it('filtre par siteFiltre', async () => {
       mockSvc.list.mockReturnValue(of([
-        { id: 1, firstName: 'Sophie', lastName: 'M', site: 'REUNION',    isActive: true, role: 'COLLABORATEUR' },
-        { id: 2, firstName: 'Jean',   lastName: 'D', site: 'MADAGASCAR', isActive: true, role: 'COLLABORATEUR' },
+        { id: 1, firstName: 'Sophie', lastName: 'M', site: 'EST',    isActive: true, role: 'COLLABORATEUR' },
+        { id: 2, firstName: 'Jean',   lastName: 'D', site: 'OUEST', isActive: true, role: 'COLLABORATEUR' },
       ]));
       const { comp } = await createComponent();
-      comp.siteFiltre.set('REUNION');
+      comp.siteFiltre.set('EST');
       expect(comp.listeFiltree()).toHaveLength(1);
       expect(comp.listeFiltree()[0].firstName).toBe('Sophie');
     });
 
     it('filtre par recherche textuelle', async () => {
       mockSvc.list.mockReturnValue(of([
-        { id: 1, firstName: 'Sophie', lastName: 'Martin', site: 'REUNION', isActive: true, role: 'COLLABORATEUR' },
-        { id: 2, firstName: 'Jean',   lastName: 'Dupont', site: 'REUNION', isActive: true, role: 'COLLABORATEUR' },
+        { id: 1, firstName: 'Sophie', lastName: 'Martin', site: 'EST', isActive: true, role: 'COLLABORATEUR' },
+        { id: 2, firstName: 'Jean',   lastName: 'Dupont', site: 'EST', isActive: true, role: 'COLLABORATEUR' },
       ]));
       const { comp } = await createComponent();
       comp.search.set('sophie');

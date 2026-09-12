@@ -13,11 +13,20 @@ Remplacer les options "La Réunion" / "Madagascar" dans la création/édition de
 - **Pôle OUEST**
 
 Fichiers concernés :
-- [ ] Formulaire création dossier (`create-client-wizard.component.ts`)
-- [ ] Formulaire édition dossier
-- [ ] Entité `client.entity.ts` — enum `UserSite` ou champ `site`
-- [ ] Partout où le champ `site` est affiché ou filtré
-- [ ] Labels dans `TenantConfig` (poleLabel1 / poleLabel2 déjà dynamiques ✓ — vérifier les valeurs en DB)
+- [x] Formulaire création dossier (`create-client-wizard.component.ts`)
+- [x] Formulaire édition dossier
+- [x] Entité `client.entity.ts` — enums `UserSite` / `ClientSite` / `SiteName` : valeurs `EST` / `OUEST`
+- [x] Partout où le champ `site` est affiché ou filtré
+- [x] Labels dans `TenantConfig` (poleLabel1 / poleLabel2 dynamiques ✓ — défauts `Pôle EST` / `Pôle OUEST`)
+- [x] Assistant de configuration : suppression des 2 champs « Pôle 1/2 — pays », pôles désormais fixes
+- [x] Rôle `GERANT_MADAGASCAR` → `GERANT_OUEST`, champ `collaborateurMg` → `collaborateurOuest`,
+      route `PATCH /clients/:id/assign-mg` → `/assign-ouest`
+- [x] Règles de supervision / d'assignation rendues **symétriques** entre les deux pôles
+- [x] Migration PostgreSQL : `migrations/2026-09-12_poles-est-ouest.sql` (**à jouer sur chaque
+      environnement avant le déploiement** — renomme les valeurs d'enum, la colonne et les libellés)
+
+Reste à arbitrer : `User.site` (EST/OUEST) et `User.antenne` (EST/OUEST) décrivent désormais la
+même chose sous deux noms — une fusion des deux axes est à décider avec la direction.
 
 ---
 

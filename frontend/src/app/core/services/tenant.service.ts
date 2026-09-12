@@ -16,19 +16,19 @@ export class TenantService {
 
   readonly nomSociete  = computed(() => this._config()?.nomSociete  ?? 'Passidoc');
   readonly logoUrl     = computed(() => this._config()?.logoUrl     ?? null);
-  readonly poleLabel1  = computed(() => this._config()?.poleLabel1  ?? 'La Réunion');
-  readonly poleLabel2  = computed(() => this._config()?.poleLabel2  ?? 'Madagascar');
-  readonly poleFlag1   = computed(() => this._config()?.poleFlag1   ?? '🇷🇪');
-  readonly poleFlag2   = computed(() => this._config()?.poleFlag2   ?? '🇲🇬');
+  readonly poleLabel1  = computed(() => this._config()?.poleLabel1  ?? 'Pôle EST');
+  readonly poleLabel2  = computed(() => this._config()?.poleLabel2  ?? 'Pôle OUEST');
+  readonly poleFlag1   = computed(() => this._config()?.poleFlag1   ?? '🔵');
+  readonly poleFlag2   = computed(() => this._config()?.poleFlag2   ?? '🟠');
   readonly isConfigured  = computed(() => this._configured());
   readonly configLoaded  = computed(() => this._config() !== null);
   readonly slug          = computed(() => this._slug());
 
   poleLabel(site: string): string {
-    return site === 'REUNION' ? this.poleLabel1() : this.poleLabel2();
+    return site === 'EST' ? this.poleLabel1() : this.poleLabel2();
   }
   poleFlag(site: string): string {
-    return site === 'REUNION' ? this.poleFlag1() : this.poleFlag2();
+    return site === 'EST' ? this.poleFlag1() : this.poleFlag2();
   }
 
   private _detectSlug(): string | null {

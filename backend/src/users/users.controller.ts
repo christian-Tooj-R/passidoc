@@ -48,7 +48,7 @@ export class UsersController {
 
   @Get('salaries')
   @ApiOperation({ summary: 'Liste des collaborateurs (vue RH)' })
-  @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
+  @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
   findSalaries(@Req() req: any, @Query('site') site?: string) {
     return this.usersService.findSalaries(site, req.user?.tenantId);
   }
@@ -80,7 +80,7 @@ export class UsersController {
   }
 
   @Get('my-team')
-  @ApiOperation({ summary: 'Mon équipe (référent ou collaborateurs MG)' })
+  @ApiOperation({ summary: 'Mon équipe (référent et collaborateurs supervisés)' })
   getMyTeam(@Req() req: any) {
     return this.usersService.getMyTeam(req.user);
   }
@@ -93,7 +93,7 @@ export class UsersController {
 
   @Patch(':id/referent')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Définir le collaborateur Réunion d\'un utilisateur Madagascar' })
+  @ApiOperation({ summary: 'Définir le référent (autre pôle) d\'un utilisateur' })
   setReferent(
     @Param('id', ParseIntPipe) id: number,
     @Body('referentId') referentId: number | null,

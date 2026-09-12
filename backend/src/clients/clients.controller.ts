@@ -27,7 +27,7 @@ export class ClientsController {
 
   @Get()
   @ApiOperation({ summary: 'Liste des dossiers clients (filtrée par responsable pour non-admin)' })
-  @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
+  @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
   @ApiQuery({ name: 'collaborateurId', required: false, type: Number })
   findAll(@Req() req: any, @Query('site') site?: string, @Query('collaborateurId') collaborateurId?: number) {
     return this.clientsService.findAll(req.user, site, collaborateurId ? +collaborateurId : undefined);
@@ -63,7 +63,7 @@ export class ClientsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_MADAGASCAR)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_OUEST)
   @ApiOperation({ summary: 'Modifier un dossier client' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateClientDto, @Req() req: any) {
     return this.clientsService.update(id, dto, req.user);
@@ -71,7 +71,7 @@ export class ClientsController {
 
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Assigner un responsable Réunion à un dossier (ADMIN uniquement)' })
+  @ApiOperation({ summary: 'Assigner un responsable (pôle EST) à un dossier (ADMIN uniquement)' })
   assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number, @Req() req: any) {
     return this.clientsService.assign(id, responsableId, req.user.id);
   }
@@ -86,18 +86,18 @@ export class ClientsController {
     return this.clientsService.assignDirecteur(id, directeurId, req.user);
   }
 
-  @Patch(':id/assign-mg')
-  @ApiOperation({ summary: 'Sous-assigner un collaborateur Madagascar (admin ou collaborateur Réunion)' })
-  assignMg(
+  @Patch(':id/assign-ouest')
+  @ApiOperation({ summary: 'Sous-assigner un collaborateur du pôle OUEST (admin ou collaborateur de l\'autre pôle)' })
+  assignOuest(
     @Param('id', ParseIntPipe) id: number,
-    @Body('collaborateurMgId') collaborateurMgId: number | null,
+    @Body('collaborateurOuestId') collaborateurOuestId: number | null,
     @Req() req: any,
   ) {
-    return this.clientsService.assignMg(id, collaborateurMgId, req.user);
+    return this.clientsService.assignOuest(id, collaborateurOuestId, req.user);
   }
 
   @Post(':id/logo')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_MADAGASCAR)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_OUEST)
   @UseInterceptors(FileInterceptor('logo', {
     limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
     fileFilter: (_req, file, cb) => {
@@ -116,7 +116,7 @@ export class ClientsController {
   }
 
   @Post(':id/fiche/photos')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_MADAGASCAR)
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_OUEST)
   @UseInterceptors(FileInterceptor('photo', {
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {

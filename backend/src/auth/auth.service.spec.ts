@@ -17,7 +17,7 @@ const mockUser: User = {
   firstName: 'Jean',
   lastName: 'Dupont',
   role: UserRole.COLLABORATEUR,
-  site: UserSite.REUNION,
+  site: UserSite.EST,
   isTwoFactorEnabled: false,
   twoFactorSecret: null,
   isActive: true,

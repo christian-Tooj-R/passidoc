@@ -166,7 +166,7 @@ export const elementParDefaut = (): ElementCalculPartRubriqueRh => ({
  * Principe fondamental inchangé : aucun taux/plafond n'est codé en dur dans le moteur de
  * calcul (`moteur-calcul-paie-rh.service.ts`). Tout passe par cette table + par
  * `ConstantePaieRh`, éditables depuis l'admin RH, rattachées à un régime (pôle/pays) via
- * `regimePaieCode` plutôt que par un branchement conditionnel "if site === REUNION".
+ * `regimePaieCode` plutôt que par un branchement conditionnel "if site === EST".
  *
  * Les rubriques insérées automatiquement (`estPlaceholder = true`) sont des valeurs
  * d'EXEMPLE non vérifiées — voir Doc/MODULE_PAIE_RH_NOTES.md avant toute utilisation
@@ -190,7 +190,7 @@ export class RubriquePaieRh {
   @Column({ type: 'varchar', nullable: true })
   memo: string | null;
 
-  /** 'REUNION' | 'MADAGASCAR' | 'TOUS' | tout autre code de régime créé par l'admin */
+  /** 'EST' | 'OUEST' | 'TOUS' | tout autre code de régime créé par l'admin */
   @Column({ default: 'TOUS' })
   regimePaieCode: string;
 

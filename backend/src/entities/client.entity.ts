@@ -22,8 +22,8 @@ import { QuestionnaireAdnSectoriel } from './questionnaire-adn-sectoriel.entity'
 import { Exercice } from './exercice.entity';
 
 export enum ClientSite {
-  REUNION = 'REUNION',
-  MADAGASCAR = 'MADAGASCAR',
+  EST = 'EST',
+  OUEST = 'OUEST',
 }
 
 /** @deprecated — les codes secteur sont désormais stockés dans la table `secteurs` */
@@ -198,7 +198,7 @@ export class Client {
   @Column({ nullable: true })
   directeurId: number;
 
-  // Collaborateur Réunion qui traite le dossier au quotidien
+  // Collaborateur du pôle EST qui traite le dossier au quotidien
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'responsableId' })
   responsable: User;
@@ -206,13 +206,13 @@ export class Client {
   @Column({ nullable: true })
   responsableId: number;
 
-  // Collaborateur Madagascar qui traite ce dossier (sous-assignation du portefeuille Réunion)
+  // Collaborateur du pôle OUEST qui traite ce dossier (sous-assignation du portefeuille de l'autre pôle)
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
-  @JoinColumn({ name: 'collaborateurMgId' })
-  collaborateurMg: User;
+  @JoinColumn({ name: 'collaborateurOuestId' })
+  collaborateurOuest: User;
 
   @Column({ nullable: true })
-  collaborateurMgId: number;
+  collaborateurOuestId: number;
 
   // Utilisateur qui a créé le dossier
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })

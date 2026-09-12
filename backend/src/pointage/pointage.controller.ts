@@ -33,7 +33,7 @@ export class PointageController {
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Vue journalière de tous les collaborateurs (admin/expert)' })
   @ApiQuery({ name: 'date', required: false, example: '2026-05-18' })
-  @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
+  @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
   getJournee(@CurrentUser() user: User, @Query('date') date?: string, @Query('site') site?: string) {
     const d = date ?? new Date().toISOString().split('T')[0];
     return this.svc.getJournee(d, site, user.tenantId);
@@ -54,7 +54,7 @@ export class PointageController {
   @Get('historique/all')
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Historique global tous utilisateurs (admin/expert)' })
-  @ApiQuery({ name: 'site', required: false, enum: ['REUNION', 'MADAGASCAR'] })
+  @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
   getHistoriqueAll(@CurrentUser() user: User, @Query('site') site?: string) {
     return this.svc.getHistoriqueAll(site, user.tenantId);
   }

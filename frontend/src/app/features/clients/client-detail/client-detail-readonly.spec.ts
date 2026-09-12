@@ -50,15 +50,15 @@ import { SecteurService } from '../../../core/services/secteur.service';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeUser(id: number, role = 'COLLABORATEUR') {
-  return { id, firstName: 'Test', lastName: 'User', role, email: 'test@test.com', site: 'REUNION' };
+  return { id, firstName: 'Test', lastName: 'User', role, email: 'test@test.com', site: 'EST' };
 }
 
 function makeClient(overrides: Partial<Client> = {}): Client {
   return {
-    id: 1, nom: 'Dossier Test', site: 'REUNION', tenantId: 1,
+    id: 1, nom: 'Dossier Test', site: 'EST', tenantId: 1,
     isActive: true,
-    directeur: null as any, responsable: null as any, collaborateurMg: null as any,
-    directeurId: null as any, responsableId: null as any, collaborateurMgId: null as any,
+    directeur: null as any, responsable: null as any, collaborateurOuest: null as any,
+    directeurId: null as any, responsableId: null as any, collaborateurOuestId: null as any,
     ficheIdentite: null as any, missions: [], fluxMensuels: [], completude: 0,
     completudePilotage: 0, santePassation: 0, typesFluxActifs: [],
     customFluxTypes: [], createdAt: new Date().toISOString(),
@@ -72,8 +72,8 @@ const mockUsersSvc    = { getAssignable: vi.fn().mockReturnValue(of([])), getAll
 const mockTenant      = {
   poleFlag: vi.fn().mockReturnValue('🇷🇪'),
   poleLabel: vi.fn().mockReturnValue('Réunion'),
-  poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockToast      = { success: vi.fn(), error: vi.fn() };
 const mockConfirm    = { confirm: vi.fn().mockReturnValue(of(true)) };
@@ -91,10 +91,10 @@ function makeAuthMock(user: any) {
     isChefAntenne:    vi.fn().mockReturnValue(false),
     isChefMission:    vi.fn().mockReturnValue(false),
     isCollaborateur:  vi.fn().mockReturnValue(user.role === 'COLLABORATEUR'),
-    isGerantMadagascar: vi.fn().mockReturnValue(false),
+    isGerantOuest: vi.fn().mockReturnValue(false),
     hasFullVisibility: vi.fn().mockReturnValue(['ADMIN','EXPERT_COMPTABLE','CHEF_ANTENNE'].includes(user.role)),
     canCreateDossier:  vi.fn().mockReturnValue(['ADMIN','EXPERT_COMPTABLE'].includes(user.role)),
-    isReunion: vi.fn().mockReturnValue(user.site === 'REUNION'),
+    isPoleEst: vi.fn().mockReturnValue(user.site === 'EST'),
   };
 }
 
@@ -156,14 +156,14 @@ describe('ClientDetailComponent — canEdit()', () => {
     expect(comp.canEdit()).toBe(true);
   });
 
-  it('retourne true si l\'utilisateur est collaborateurMg du dossier', async () => {
+  it('retourne true si l\'utilisateur est collaborateurOuest du dossier', async () => {
     const auth = makeAuthMock(makeUser(42, 'COLLABORATEUR'));
     await TestBed.configureTestingModule({
       imports: [ClientDetailComponent],
       providers: [...baseProviders, { provide: AuthService, useValue: auth }],
     }).compileComponents();
     const comp = TestBed.createComponent(ClientDetailComponent).componentInstance;
-    comp.client = makeClient({ collaborateurMg: { id: 42, firstName: 'T', lastName: 'U', email: 't@t.com' } as any });
+    comp.client = makeClient({ collaborateurOuest: { id: 42, firstName: 'T', lastName: 'U', email: 't@t.com' } as any });
     expect(comp.canEdit()).toBe(true);
   });
 
@@ -177,7 +177,7 @@ describe('ClientDetailComponent — canEdit()', () => {
     comp.client = makeClient({
       directeur:        { id: 99, firstName: 'X', lastName: 'Y', email: 'x@y.com' } as any,
       responsable:      { id: 99, firstName: 'X', lastName: 'Y', email: 'x@y.com' } as any,
-      collaborateurMg:  { id: 99, firstName: 'X', lastName: 'Y', email: 'x@y.com' } as any,
+      collaborateurOuest:  { id: 99, firstName: 'X', lastName: 'Y', email: 'x@y.com' } as any,
     });
     expect(comp.canEdit()).toBe(false);
   });

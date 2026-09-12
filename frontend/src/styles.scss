@@ -571,8 +571,8 @@ body.theme-dark .cdk-overlay-container {
 .badge-purple { background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE; }
 .badge-gray   { background: #F8F9FC; color: #4B5563; border: 1px solid #E4E7F0; }
 
-.badge-reunion    { @extend .badge; @extend .badge-blue; }
-.badge-madagascar { @extend .badge; @extend .badge-teal; }
+.badge-pole-est    { @extend .badge; @extend .badge-blue; }
+.badge-pole-ouest { @extend .badge; @extend .badge-teal; }
 
 .score-pill { @extend .badge; font-weight: 700; }
 .score-pill.high   { @extend .badge-green; }
@@ -1046,8 +1046,8 @@ body.theme-dark .layout__main {
     background: rgba(99,102,241,.20) !important;
     color: #A5B4FC !important;
   }
-  .user-avatar.re, .profile__site.site--re, .hc-info__site.site--re { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
-  .user-avatar.mg, .profile__site.site--mg, .hc-info__site.site--mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .user-avatar.est, .profile__site.site--est, .hc-info__site.site--est { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
+  .user-avatar.ouest, .profile__site.site--ouest, .hc-info__site.site--ouest { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
   .resp-av { background: rgba(255,255,255,.10) !important; color: #94A3B8 !important; }
 
   /* ── Client list / Client detail ─────────────────────────── */
@@ -1108,8 +1108,8 @@ body.theme-dark .layout__main {
   .seg-bar--pause   { background: rgba(217,119,6,.12) !important; }
   .pause-tag { background: rgba(217,119,6,.18) !important; color: #FCD34D !important; }
   .site-badge { background: rgba(255,255,255,.07) !important; color: #94A3B8 !important; }
-  .site-badge--re { background: rgba(234,88,12,.18) !important; color: #FDBA74 !important; }
-  .site-badge--mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .site-badge--est { background: rgba(234,88,12,.18) !important; color: #FDBA74 !important; }
+  .site-badge--ouest { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
 
   /* ── Documents ───────────────────────────────────────────── */
   .fm-view-btn:not(.fm-view-btn--active) { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.08) !important; }
@@ -1206,8 +1206,8 @@ body.theme-dark app-client-detail {
   }
   .profile__bg { background: linear-gradient(180deg, rgba(37,99,235,.10) 0%, transparent 100%) !important; }
   .profile__name { color: #F1F5F9 !important; }
-  .profile__site.site--re { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
-  .profile__site.site--mg { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
+  .profile__site.site--est { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
+  .profile__site.site--ouest { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
   .profile__score-label { color: #64748B !important; }
   .score-track { background: rgba(255,255,255,.08) !important; }
   .score-pct--ok      { color: #86EFAC !important; }
@@ -1247,8 +1247,8 @@ body.theme-dark app-client-detail {
   }
   .hc-info__lbl { color: #64748B !important; }
   .hc-info__val { color: #F1F5F9 !important; }
-  .hc-info__site.site--re { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
-  .hc-info__site.site--mg { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
+  .hc-info__site.site--est { background: rgba(29,78,216,.15) !important; color: #93C5FD !important; }
+  .hc-info__site.site--ouest { background: rgba(22,163,74,.15) !important; color: #86EFAC !important; }
   .hc-info__ico-wrap--grey { background: rgba(255,255,255,.08) !important; mat-icon { color: #64748B !important; } }
   .hc-info__ico-wrap--blue { background: rgba(37,99,235,.15) !important; mat-icon { color: #93C5FD !important; } }
   .hc-info__ico-wrap--teal { background: rgba(13,148,136,.15) !important; mat-icon { color: #5EEAD4 !important; } }
@@ -1335,8 +1335,8 @@ body.theme-dark app-client-detail {
   .flux-type-icon { color: #818CF8 !important; }
 
   /* ── Onglet Fiche identité / badges ─────────────────────── */
-  .badge-re { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
-  .badge-mg { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
+  .badge-pole-est { background: rgba(29,78,216,.18) !important; color: #93C5FD !important; }
+  .badge-pole-ouest { background: rgba(22,163,74,.18) !important; color: #86EFAC !important; }
 }
 
 /* ── CLIENT DETAIL — complément dark mode pour tous les onglets ── */

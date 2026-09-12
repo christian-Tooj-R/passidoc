@@ -40,7 +40,7 @@ export class CreateEmployeClientDto {
   @IsOptional()
   quotiteTravail?: number;
 
-  /** Si omis, hérité de `client.site` (REUNION/MADAGASCAR) */
+  /** Si omis, hérité de `client.site` (EST/OUEST) */
   @IsString()
   @IsOptional()
   regimePaieCode?: string;

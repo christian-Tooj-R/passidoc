@@ -78,11 +78,11 @@ import { Client } from '../../core/models/client.model';
     <button class="filter-chip" [class.active]="siteFilter === null" (click)="siteFilter = null">
       <mat-icon>layers</mat-icon> Tous ({{ allClients.length }})
     </button>
-    <button class="filter-chip" [class.active]="siteFilter === 'REUNION'" (click)="siteFilter = 'REUNION'">
-      {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }} ({{ countSite('REUNION') }})
+    <button class="filter-chip" [class.active]="siteFilter === 'EST'" (click)="siteFilter = 'EST'">
+      {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }} ({{ countSite('EST') }})
     </button>
-    <button class="filter-chip" [class.active]="siteFilter === 'MADAGASCAR'" (click)="siteFilter = 'MADAGASCAR'">
-      {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }} ({{ countSite('MADAGASCAR') }})
+    <button class="filter-chip" [class.active]="siteFilter === 'OUEST'" (click)="siteFilter = 'OUEST'">
+      {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }} ({{ countSite('OUEST') }})
     </button>
     <div class="filter-search">
       <mat-icon>search</mat-icon>
@@ -108,7 +108,7 @@ import { Client } from '../../core/models/client.model';
             <!-- Nom dossier -->
             <td class="td-nom">
               <div class="client-cell">
-                <div class="client-avatar" [class.ca--re]="c.site === 'REUNION'" [class.ca--mg]="c.site !== 'REUNION'">
+                <div class="client-avatar" [class.ca--re]="c.site === 'EST'" [class.ca--mg]="c.site !== 'EST'">
                   {{ c.nom[0] }}
                 </div>
                 <span class="client-name">{{ c.nom }}</span>
@@ -117,9 +117,9 @@ import { Client } from '../../core/models/client.model';
 
             <!-- Pôle -->
             <td class="td-pole">
-              <span class="pole-chip" [class.pole-chip--re]="c.site === 'REUNION'" [class.pole-chip--mg]="c.site !== 'REUNION'">
-                {{ c.site === 'REUNION' ? tenantSvc.poleFlag1() : tenantSvc.poleFlag2() }}
-                {{ c.site === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
+              <span class="pole-chip" [class.pole-chip--re]="c.site === 'EST'" [class.pole-chip--mg]="c.site !== 'EST'">
+                {{ c.site === 'EST' ? tenantSvc.poleFlag1() : tenantSvc.poleFlag2() }}
+                {{ c.site === 'EST' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
               </span>
             </td>
 
@@ -140,10 +140,10 @@ import { Client } from '../../core/models/client.model';
 
             <!-- Collaborateur -->
             <td class="td-collab">
-              <div class="assign-cell" [class.assign-cell--empty]="!c.collaborateurMg">
+              <div class="assign-cell" [class.assign-cell--empty]="!c.collaborateurOuest">
                 <mat-icon class="assign-icon">person</mat-icon>
                 <select class="assign-select"
-                        [value]="c.collaborateurMg?.id ?? ''"
+                        [value]="c.collaborateurOuest?.id ?? ''"
                         (change)="onCollabChange(c, $any($event.target).value)">
                   <option value="">— Non assigné —</option>
                   @for (u of assignableUsers; track u.id) {
@@ -322,7 +322,7 @@ export class PortefeuillesComponent implements OnInit {
   }
 
   get noCollabCount(): number {
-    return this.allClients.filter(c => !c.collaborateurMg).length;
+    return this.allClients.filter(c => !c.collaborateurOuest).length;
   }
 
   get filteredClients(): Client[] {
@@ -355,8 +355,8 @@ export class PortefeuillesComponent implements OnInit {
 
   onCollabChange(client: Client, value: string) {
     const id = value ? +value : null;
-    this.clientsSvc.assignMg(client.id, id).subscribe(updated => {
-      client.collaborateurMg = updated.collaborateurMg;
+    this.clientsSvc.assignOuest(client.id, id).subscribe(updated => {
+      client.collaborateurOuest = updated.collaborateurOuest;
       this.toast.success(id ? 'Collaborateur assigné' : 'Collaborateur retiré');
     });
   }

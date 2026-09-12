@@ -16,10 +16,10 @@ const mockUsers   = { getAll: vi.fn().mockReturnValue(of([])), getAssignable: vi
 const mockClients = { getAll:     vi.fn().mockReturnValue(of([])), update: vi.fn().mockReturnValue(of({})) };
 const mockAuth    = { currentUser: vi.fn().mockReturnValue({ id: 1, role: 'ADMIN' }), isAdmin: vi.fn().mockReturnValue(true), hasFullVisibility: vi.fn().mockReturnValue(true) };
 const mockTenant  = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockToast   = { success: vi.fn(), error: vi.fn() };
 

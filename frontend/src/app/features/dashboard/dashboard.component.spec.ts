@@ -15,7 +15,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { TenantService } from '../../core/services/tenant.service';
 import { Client } from '../../core/models/client.model';
 
-const makeClient = (id: number, nom: string, site: 'REUNION' | 'MADAGASCAR', score: number): Client =>
+const makeClient = (id: number, nom: string, site: 'EST' | 'OUEST', score: number): Client =>
   ({ id, nom, site, santePassation: score } as Client);
 
 const mockClientsService = { getAll: vi.fn().mockReturnValue(of([])) };
@@ -24,10 +24,10 @@ const mockTasksService   = { getAllGlobal: vi.fn().mockReturnValue(of([])) };
 const mockAuth           = { currentUser: vi.fn().mockReturnValue({ firstName: 'Sophie' }) };
 const mockTheme          = { prefs: vi.fn().mockReturnValue({ panelStyleId: 'light' }) };
 const mockTenant         = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 
 async function createComponent() {
@@ -84,7 +84,7 @@ describe('DashboardComponent', () => {
     });
 
     it('popule clients avec les données reçues', async () => {
-      const clients = [makeClient(1, 'SARL Test', 'REUNION', 85)];
+      const clients = [makeClient(1, 'SARL Test', 'EST', 85)];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
       expect(comp.clients).toHaveLength(1);
@@ -126,10 +126,10 @@ describe('DashboardComponent', () => {
   describe('dossiersTransmissibles / dossiersPartiels / dossiersEnAlerte', () => {
     it('compte correctement les dossiers par catégorie', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 90),   // transmissible
-        makeClient(2, 'B', 'REUNION', 65),   // partiel
-        makeClient(3, 'C', 'MADAGASCAR', 30), // alerte
-        makeClient(4, 'D', 'MADAGASCAR', 80), // transmissible
+        makeClient(1, 'A', 'EST', 90),   // transmissible
+        makeClient(2, 'B', 'EST', 65),   // partiel
+        makeClient(3, 'C', 'OUEST', 30), // alerte
+        makeClient(4, 'D', 'OUEST', 80), // transmissible
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -140,37 +140,37 @@ describe('DashboardComponent', () => {
   });
 
   describe('filterSite', () => {
-    it('filtre par site REUNION', async () => {
+    it('filtre par site EST', async () => {
       const clients = [
-        makeClient(1, 'RE Client', 'REUNION', 80),
-        makeClient(2, 'MG Client', 'MADAGASCAR', 70),
+        makeClient(1, 'RE Client', 'EST', 80),
+        makeClient(2, 'MG Client', 'OUEST', 70),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
-      comp.filterSite('REUNION');
+      comp.filterSite('EST');
       expect(comp.filteredClients).toHaveLength(1);
       expect(comp.filteredClients[0].nom).toBe('RE Client');
     });
 
-    it('filtre par site MADAGASCAR', async () => {
+    it('filtre par site OUEST', async () => {
       const clients = [
-        makeClient(1, 'RE Client', 'REUNION', 80),
-        makeClient(2, 'MG Client', 'MADAGASCAR', 70),
+        makeClient(1, 'RE Client', 'EST', 80),
+        makeClient(2, 'MG Client', 'OUEST', 70),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
-      comp.filterSite('MADAGASCAR');
+      comp.filterSite('OUEST');
       expect(comp.filteredClients).toHaveLength(1);
     });
 
     it('filtre vide montre tous les clients', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 80),
-        makeClient(2, 'B', 'MADAGASCAR', 60),
+        makeClient(1, 'A', 'EST', 80),
+        makeClient(2, 'B', 'OUEST', 60),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
-      comp.filterSite('REUNION');
+      comp.filterSite('EST');
       comp.filterSite('');
       expect(comp.filteredClients).toHaveLength(2);
     });
@@ -179,22 +179,22 @@ describe('DashboardComponent', () => {
   describe('poleStats', () => {
     it('calcule correctement le score moyen par pôle', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 80),
-        makeClient(2, 'B', 'REUNION', 60),
-        makeClient(3, 'C', 'MADAGASCAR', 40),
+        makeClient(1, 'A', 'EST', 80),
+        makeClient(2, 'B', 'EST', 60),
+        makeClient(3, 'C', 'OUEST', 40),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
-      expect(comp.poleStats.reunion.avg).toBe(70);
-      expect(comp.poleStats.reunion.total).toBe(2);
-      expect(comp.poleStats.madagascar.total).toBe(1);
+      expect(comp.poleStats.est.avg).toBe(70);
+      expect(comp.poleStats.est.total).toBe(2);
+      expect(comp.poleStats.ouest.total).toBe(1);
     });
 
     it('retourne 0 pour un pôle sans dossiers', async () => {
       mockClientsService.getAll.mockReturnValue(of([]));
       const { comp } = await createComponent();
-      expect(comp.poleStats.reunion.avg).toBe(0);
-      expect(comp.poleStats.madagascar.avg).toBe(0);
+      expect(comp.poleStats.est.avg).toBe(0);
+      expect(comp.poleStats.ouest.avg).toBe(0);
     });
   });
 

@@ -46,7 +46,7 @@ export class ContratsTravailService {
       salaireBase: dto.salaireBase,
       // Le régime de paie (taux de cotisation applicables) suit désormais le pôle/antenne
       // (EST/OUEST, géré dans le menu Équipes) — l'ancienne distinction par site
-      // (REUNION/MADAGASCAR) est abandonnée. Repli sur 'TOUS' si le salarié n'a pas encore
+      // (EST/OUEST) est abandonnée. Repli sur 'TOUS' si le salarié n'a pas encore
       // d'antenne assignée (cf. "sans antenne" dans Équipes), pour ne jamais bloquer la
       // création d'un contrat.
       regimePaieCode: dto.regimePaieCode ?? user.antenne ?? 'TOUS',

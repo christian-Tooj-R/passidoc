@@ -51,7 +51,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
   <!-- ══ Header salarié ══ -->
   <div class="emp-header">
     <div class="emp-header__identity">
-      <div class="emp-avatar" [class.emp-avatar--re]="collab()!.site==='REUNION'" [class.emp-avatar--mg]="collab()!.site==='MADAGASCAR'">
+      <div class="emp-avatar" [class.emp-avatar--re]="collab()!.site==='EST'" [class.emp-avatar--mg]="collab()!.site==='OUEST'">
         {{ initials(collab()!) }}
       </div>
       <div class="emp-header__info">
@@ -333,8 +333,8 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         <mat-form-field appearance="outline">
           <mat-label>Site</mat-label>
           <mat-select formControlName="site">
-            <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
-            <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
+            <mat-option value="EST">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+            <mat-option value="OUEST">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
@@ -757,7 +757,7 @@ export class SalariesDetailComponent implements OnInit {
     situationMatrimoniale: [null as string|null], nbEnfantsCharge: [null as number|null],
     adresse: [null as string|null], codePostal: [null as string|null],
     ville: [null as string|null], pays: [null as string|null], telephone: [null as string|null],
-    site: ['REUNION'], poste: [null as string|null], departement: [null as string|null],
+    site: ['EST'], poste: [null as string|null], departement: [null as string|null],
     typeContrat: [null as string|null], dateEntree: [null as string|null],
     dateFinContrat: [null as string|null], dateSortie: [null as string|null],
     statut: [null as string|null], tempsTravail: [null as string|null], heuresHebdo: [null as number|null],

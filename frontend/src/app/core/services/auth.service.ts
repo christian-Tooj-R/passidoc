@@ -75,16 +75,18 @@ export class AuthService {
   isChefAntenne(): boolean     { return this._user()?.role === 'CHEF_ANTENNE'; }
   isChefMission(): boolean     { return this._user()?.role === 'CHEF_MISSION'; }
   isCollaborateur(): boolean   { return this._user()?.role === 'COLLABORATEUR'; }
-  isGerantMadagascar(): boolean{ return this._user()?.role === 'GERANT_MADAGASCAR'; }
-  isReunion(): boolean         { return this._user()?.site === 'REUNION'; }
-  isMadagascar(): boolean      { return this._user()?.site === 'MADAGASCAR'; }
+  isGerantOuest(): boolean     { return this._user()?.role === 'GERANT_OUEST'; }
+  isPoleEst(): boolean         { return this._user()?.site === 'EST'; }
+  isPoleOuest(): boolean       { return this._user()?.site === 'OUEST'; }
+  /** Rattaché à un pôle, quel qu'il soit — les droits liés au pôle sont symétriques. */
+  hasPole(): boolean           { return !!this._user()?.site; }
 
   hasFullVisibility(): boolean {
     const r = this._user()?.role;
     return r === 'ADMIN' || r === 'EXPERT_COMPTABLE';
   }
   canManagePortefeuilles(): boolean {
-    return this.isAdmin() || this.isExpert() || this.isChefAntenne() || this.isReunion();
+    return this.isAdmin() || this.isExpert() || this.isChefAntenne() || this.hasPole();
   }
   canCreateDossier(): boolean {
     const r = this._user()?.role;
@@ -92,7 +94,7 @@ export class AuthService {
   }
   canAssignTasks(): boolean {
     const r = this._user()?.role;
-    return ['ADMIN','EXPERT_COMPTABLE','CHEF_ANTENNE','CHEF_MISSION'].includes(r ?? '') || this.isReunion();
+    return ['ADMIN','EXPERT_COMPTABLE','CHEF_ANTENNE','CHEF_MISSION'].includes(r ?? '') || this.hasPole();
   }
 
   private setSession(res: any) {

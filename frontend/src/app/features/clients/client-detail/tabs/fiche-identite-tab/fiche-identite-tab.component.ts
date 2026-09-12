@@ -575,7 +575,7 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
               <mat-expansion-panel-header>
                 <mat-panel-title>
                   <mat-icon>account_balance</mat-icon>&nbsp;Spécificités fiscales
-                  <span class="site-badge" [class]="site === 'REUNION' ? 'badge-re' : 'badge-mg'">
+                  <span class="site-badge" [class]="site === 'EST' ? 'badge-pole-est' : 'badge-pole-ouest'">
                     {{ tenantSvc.poleLabel(site) }}
                   </span>
                 </mat-panel-title>
@@ -714,8 +714,8 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .tab-content__actions { margin-top: 24px; display: flex; justify-content: flex-end; }
 
     .site-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
-    .badge-re { background: #dbeafe; color: #1d4ed8; }
-    .badge-mg { background: #dcfce7; color: #15803d; }
+    .badge-pole-est { background: #dbeafe; color: #1d4ed8; }
+    .badge-pole-ouest { background: #dcfce7; color: #15803d; }
 
     .fiscal-section { display: flex; flex-direction: column; gap: 20px; padding: 16px 0; }
     .fiscal-group-title {
@@ -972,7 +972,7 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
   private fiscalRefService = inject(FiscalReferenceService);
 
   @Input() clientId!: number;
-  @Input() site: ClientSite = 'REUNION';
+  @Input() site: ClientSite = 'EST';
   @Input() readonly = false;
   @Output() typesChanged = new EventEmitter<TypeFlux[]>();
 

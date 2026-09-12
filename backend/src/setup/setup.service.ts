@@ -57,7 +57,7 @@ export class SetupService {
         email:     dto.adminEmail,
         password:  hashed,
         role:      UserRole.ADMIN,
-        site:      UserSite.REUNION,
+        site:      UserSite.EST,
         isActive:  true,
         tenantId:  savedConfig.id,
       }));
@@ -103,7 +103,7 @@ export class SetupService {
     const lastName  = opts?.lastName  ?? slug;
     await this.userRepo.save(this.userRepo.create({
       email, firstName, lastName, password: hashed,
-      role: UserRole.ADMIN, site: UserSite.REUNION,
+      role: UserRole.ADMIN, site: UserSite.EST,
       isActive: true, tenantId: config.id,
     }));
     return { message: 'Admin créé', email };

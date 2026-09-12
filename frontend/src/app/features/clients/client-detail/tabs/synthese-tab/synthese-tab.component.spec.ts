@@ -12,8 +12,8 @@ import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 const mockSynthese   = { getAll: vi.fn().mockReturnValue(of([])), update: vi.fn().mockReturnValue(of({})) };
 const mockFiscalRef  = { get: vi.fn().mockResolvedValue({
-  REUNION:    { zonesExoneration: [], zonesRisque: [], taux: [] },
-  MADAGASCAR: { zonesExoneration: [], zonesRisque: [], taux: [] },
+  EST:    { zonesExoneration: [], zonesRisque: [], taux: [] },
+  OUEST: { zonesExoneration: [], zonesRisque: [], taux: [] },
 }) };
 const mockToast      = { success: vi.fn(), error: vi.fn() };
 const mockConfirm    = { confirm: vi.fn().mockReturnValue(of(true)) };
@@ -44,8 +44,8 @@ describe('SyntheseTabComponent', () => {
     vi.clearAllMocks();
     mockSynthese.getAll.mockReturnValue(of([]));
     mockFiscalRef.get.mockResolvedValue({
-      REUNION:    { zonesExoneration: [], zonesRisque: [], taux: [] },
-      MADAGASCAR: { zonesExoneration: [], zonesRisque: [], taux: [] },
+      EST:    { zonesExoneration: [], zonesRisque: [], taux: [] },
+      OUEST: { zonesExoneration: [], zonesRisque: [], taux: [] },
     });
   });
 

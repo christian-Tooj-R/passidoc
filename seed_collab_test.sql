@@ -25,19 +25,19 @@ DELETE FROM fiche_identite WHERE "clientId" > 2;
 DELETE FROM clients     WHERE id > 2;
 
 -- Dossiers Réunion
-INSERT INTO clients (id, "tenantId", nom, site, "secteurActivite", "isActive", "responsableId", "directeurId", "collaborateurMgId")
+INSERT INTO clients (id, "tenantId", nom, site, "secteurActivite", "isActive", "responsableId", "directeurId", "collaborateurOuestId")
 VALUES
-  (10, 1, 'Cabinet Réunion Expertise', 'REUNION', 'Comptabilité',      true, 5, 6, NULL),
-  (11, 1, 'SARL Bourbon Digital',      'REUNION', 'Informatique',       true, 5, 6, NULL),
-  (12, 1, 'Association Lire & Vivre',  'REUNION', 'Associatif',         true, 6, 6, NULL),
-  (13, 1, 'EURL Soleil Tropic',        'REUNION', 'BTP',                true, 6, 6, NULL)
+  (10, 1, 'Cabinet Réunion Expertise', 'EST', 'Comptabilité',      true, 5, 6, NULL),
+  (11, 1, 'SARL Bourbon Digital',      'EST', 'Informatique',       true, 5, 6, NULL),
+  (12, 1, 'Association Lire & Vivre',  'EST', 'Associatif',         true, 6, 6, NULL),
+  (13, 1, 'EURL Soleil Tropic',        'EST', 'BTP',                true, 6, 6, NULL)
 ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom, "responsableId" = EXCLUDED."responsableId";
 
--- Dossiers Madagascar (Marie est collaborateurMg)
-INSERT INTO clients (id, "tenantId", nom, site, "secteurActivite", "isActive", "responsableId", "directeurId", "collaborateurMgId")
+-- Dossiers pôle OUEST (Marie est collaborateurOuest)
+INSERT INTO clients (id, "tenantId", nom, site, "secteurActivite", "isActive", "responsableId", "directeurId", "collaborateurOuestId")
 VALUES
-  (14, 1, 'SGA Audit Madagascar',       'MADAGASCAR', 'Audit',           true, 7, 6, 5),
-  (15, 1, 'Société Mada Commerce',      'MADAGASCAR', 'Commerce',        true, 7, 7, NULL)
+  (14, 1, 'SGA Audit Madagascar',       'OUEST', 'Audit',           true, 7, 6, 5),
+  (15, 1, 'Société Mada Commerce',      'OUEST', 'Commerce',        true, 7, 7, NULL)
 ON CONFLICT (id) DO UPDATE SET nom = EXCLUDED.nom;
 
 -- Mettre à jour la séquence

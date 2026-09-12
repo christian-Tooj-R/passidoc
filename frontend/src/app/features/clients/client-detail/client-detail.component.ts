@@ -212,7 +212,7 @@ interface TabGroup {
               </div>
               <input #logoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onLogoChange($event)" />
               <h2 class="profile__name">{{ client.nom }}</h2>
-              <span class="profile__site" [class]="client.site === 'REUNION' ? 'site--re' : 'site--mg'">
+              <span class="profile__site" [class]="client.site === 'EST' ? 'site--est' : 'site--ouest'">
                 {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
               </span>
 
@@ -326,7 +326,7 @@ interface TabGroup {
 
               <!-- Card 3 : infos clés -->
               <div class="hero-card hc-info">
-                <div class="hc-info__site" [class.site--re]="client.site === 'REUNION'" [class.site--mg]="client.site !== 'REUNION'">
+                <div class="hc-info__site" [class.site--est]="client.site === 'EST'" [class.site--ouest]="client.site !== 'EST'">
                   {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
                 </div>
 
@@ -373,7 +373,7 @@ interface TabGroup {
                     <div class="hc-interv__row">
                       <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
                       <span class="hc-interv__val">
-                        {{ client.collaborateurMg ? client.collaborateurMg.firstName + ' ' + client.collaborateurMg.lastName : '— Non assigné —' }}
+                        {{ client.collaborateurOuest ? client.collaborateurOuest.firstName + ' ' + client.collaborateurOuest.lastName : '— Non assigné —' }}
                       </span>
                     </div>
                   } @else {
@@ -404,9 +404,9 @@ interface TabGroup {
                       <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
                       <select class="hc-interv__select"
                               (change)="onAssignMg($any($event.target).value || null)">
-                        <option value="" [selected]="!client.collaborateurMg">— Non assigné —</option>
+                        <option value="" [selected]="!client.collaborateurOuest">— Non assigné —</option>
                         @for (u of allUsers(); track u.id) {
-                          <option [value]="u.id" [selected]="client.collaborateurMg?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                          <option [value]="u.id" [selected]="client.collaborateurOuest?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
                         }
                       </select>
                     </div>
@@ -628,8 +628,8 @@ interface TabGroup {
       font-size: 11.5px; font-weight: 600;
       padding: 3px 12px; border-radius: 20px; margin-bottom: 18px;
     }
-    .profile__site.site--re { background: #E8F0FE; color: #1565C0; }
-    .profile__site.site--mg { background: #D7F5EC; color: #006B57; }
+    .profile__site.site--est { background: #E8F0FE; color: #1565C0; }
+    .profile__site.site--ouest { background: #D7F5EC; color: #006B57; }
 
     .profile__score-label {
       width: 100%; display: flex; justify-content: space-between; align-items: center;
@@ -876,8 +876,8 @@ interface TabGroup {
       padding: 4px 12px; border-radius: 20px;
       width: fit-content; margin-bottom: 2px;
     }
-    .hc-info__site.site--re { background: #E8F0FE; color: #1565C0; }
-    .hc-info__site.site--mg { background: #D7F5EC; color: #006B57; }
+    .hc-info__site.site--est { background: #E8F0FE; color: #1565C0; }
+    .hc-info__site.site--ouest { background: #D7F5EC; color: #006B57; }
     .hc-info__row {
       display: flex; align-items: center; gap: 10px;
     }
@@ -1182,7 +1182,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const meId = this.auth.currentUser()?.id;
     const c = this.client;
     if (!meId || !c) return false;
-    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
+    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurOuest?.id === meId;
   });
 
   allUsers         = signal<User[]>([]);
@@ -1249,7 +1249,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     if (!this.client) return;
     const id = this.client.id;
     const userId = val ? Number(val) : null;
-    this.clientsService.assignMg(id, userId).subscribe({
+    this.clientsService.assignOuest(id, userId).subscribe({
       next: c => { this.client = c; },
       error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
     });

@@ -9,7 +9,7 @@ import { GeoLocationService } from '../../core/services/geo-location.service';
 import { TenantService } from '../../core/services/tenant.service';
 
 interface SiteForm {
-  site: 'REUNION' | 'MADAGASCAR';
+  site: 'EST' | 'OUEST';
   label: string;
   flag: string;
   latitude: string;
@@ -233,8 +233,8 @@ export class PointageConfigComponent implements OnInit {
   private tenantSvc = inject(TenantService);
 
   sites = signal<SiteForm[]>([
-    { site: 'REUNION',    label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
-    { site: 'MADAGASCAR', label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
+    { site: 'EST',    label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
+    { site: 'OUEST', label: '', flag: '', latitude: '', longitude: '', radiusMeters: 300, adresse: '', loading: true, saving: false, locating: false, saved: false },
   ]);
 
   ngOnInit() {

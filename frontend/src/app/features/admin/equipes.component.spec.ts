@@ -25,8 +25,8 @@ const mockAuth = {
   currentUser:      vi.fn().mockReturnValue({ id: 1, role: 'ADMIN' }),
 };
 const mockTenant = {
-  poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockToast  = { success: vi.fn(), error: vi.fn() };
 const mockNotif  = { newNotif$ };
@@ -73,7 +73,7 @@ describe('EquipesComponent', () => {
   });
 
   it('popule users() avec les données reçues', async () => {
-    const u = { id: 1, firstName: 'Anna', lastName: 'B', role: 'COLLABORATEUR', site: 'REUNION' };
+    const u = { id: 1, firstName: 'Anna', lastName: 'B', role: 'COLLABORATEUR', site: 'EST' };
     mockUsers.getAll.mockReturnValue(of([u]));
     const { comp } = await createComponent();
     expect(comp.users()).toHaveLength(1);

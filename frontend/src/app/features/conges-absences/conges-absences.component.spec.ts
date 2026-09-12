@@ -21,8 +21,8 @@ const mockConges  = {
 };
 const mockSalaries = { list: vi.fn().mockReturnValue(of([])) };
 const mockTenant  = {
-  poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
   poleFlag: vi.fn(), poleLabel: vi.fn(),
 };
 const mockSnack   = { open: vi.fn() };
@@ -102,8 +102,8 @@ describe('CongesAbsencesComponent', () => {
   describe('demandesFiltrees', () => {
     it('filtre par statutFiltre', async () => {
       const demandes = [
-        { id: 1, statut: 'EN_ATTENTE', type: 'CONGE_PAYE', collaborateur: { firstName: 'Sophie', lastName: 'M', site: 'REUNION' } },
-        { id: 2, statut: 'APPROUVE',   type: 'CONGE_PAYE', collaborateur: { firstName: 'Jean',   lastName: 'D', site: 'REUNION' } },
+        { id: 1, statut: 'EN_ATTENTE', type: 'CONGE_PAYE', collaborateur: { firstName: 'Sophie', lastName: 'M', site: 'EST' } },
+        { id: 2, statut: 'APPROUVE',   type: 'CONGE_PAYE', collaborateur: { firstName: 'Jean',   lastName: 'D', site: 'EST' } },
       ];
       mockConges.findAll.mockReturnValue(of(demandes));
       const { comp } = await createComponent();

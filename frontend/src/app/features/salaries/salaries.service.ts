@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 export type UserRole = 'ADMIN' | 'EXPERT_COMPTABLE' | 'COLLABORATEUR';
-export type UserSite = 'REUNION' | 'MADAGASCAR';
+export type UserSite = 'EST' | 'OUEST';
 export type UserAntenne = 'EST' | 'OUEST';
 
 export interface Collaborateur {

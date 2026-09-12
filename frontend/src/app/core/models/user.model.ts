@@ -4,9 +4,9 @@ export type UserRole =
   | 'CHEF_ANTENNE'
   | 'CHEF_MISSION'
   | 'COLLABORATEUR'
-  | 'GERANT_MADAGASCAR';
+  | 'GERANT_OUEST';
 
-export type UserSite    = 'REUNION' | 'MADAGASCAR';
+export type UserSite    = 'EST' | 'OUEST';
 export type UserAntenne = 'EST' | 'OUEST';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -15,7 +15,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   CHEF_ANTENNE:      'Chef d\'antenne',
   CHEF_MISSION:      'Chef de mission',
   COLLABORATEUR:     'Collaborateur',
-  GERANT_MADAGASCAR: 'Gérant Pôle 2',
+  GERANT_OUEST: 'Gérant Pôle OUEST',
 };
 
 export type PoleService = 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';

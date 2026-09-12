@@ -95,8 +95,8 @@ interface SiteGroup {
       </div>
       <div class="site-chips">
         <button class="site-chip" [class.active]="siteFilter === ''"           (click)="setSite('')">Tous les sites</button>
-        <button class="site-chip" [class.active]="siteFilter === 'REUNION'"    (click)="setSite('REUNION')">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</button>
-        <button class="site-chip" [class.active]="siteFilter === 'MADAGASCAR'" (click)="setSite('MADAGASCAR')">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</button>
+        <button class="site-chip" [class.active]="siteFilter === 'EST'"    (click)="setSite('EST')">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</button>
+        <button class="site-chip" [class.active]="siteFilter === 'OUEST'" (click)="setSite('OUEST')">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</button>
       </div>
     </div>
 

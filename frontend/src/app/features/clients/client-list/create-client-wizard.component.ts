@@ -216,12 +216,12 @@ interface WizardStep { id: StepId; label: string; }
             <!-- Site de rattachement -->
             <label class="field-label">Site de rattachement *</label>
             <div class="site-cards">
-              <label class="site-card" [class.selected]="siteCtrl.value === 'REUNION'"
-                     (click)="siteCtrl.setValue('REUNION')">
+              <label class="site-card" [class.selected]="siteCtrl.value === 'EST'"
+                     (click)="siteCtrl.setValue('EST')">
                 <span class="site-flag">{{ tenantSvc.poleFlag1() }}</span><span>{{ tenantSvc.poleLabel1() }}</span>
               </label>
-              <label class="site-card" [class.selected]="siteCtrl.value === 'MADAGASCAR'"
-                     (click)="siteCtrl.setValue('MADAGASCAR')">
+              <label class="site-card" [class.selected]="siteCtrl.value === 'OUEST'"
+                     (click)="siteCtrl.setValue('OUEST')">
                 <span class="site-flag">{{ tenantSvc.poleFlag2() }}</span><span>{{ tenantSvc.poleLabel2() }}</span>
               </label>
             </div>
@@ -606,7 +606,7 @@ interface WizardStep { id: StepId; label: string; }
               <div class="recap-row">
                 <mat-icon>location_on</mat-icon>
                 <span class="recap-label">Site</span>
-                <span class="recap-val">{{ tenantSvc.poleFlag(siteCtrl.value ?? 'REUNION') }} {{ tenantSvc.poleLabel(siteCtrl.value ?? 'REUNION') }}</span>
+                <span class="recap-val">{{ tenantSvc.poleFlag(siteCtrl.value ?? 'EST') }} {{ tenantSvc.poleLabel(siteCtrl.value ?? 'EST') }}</span>
               </div>
               @if (secteurSelectionne) {
                 <div class="recap-row">

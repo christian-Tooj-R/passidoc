@@ -136,10 +136,10 @@ PERSONNALISATION (/personnalisation)
 === RÔLES UTILISATEURS ===
 - ADMIN : accès complet à tout.
 - EXPERT_COMPTABLE : accès aux dossiers, missions, RH.
-- CHEF_ANTENNE : gestion de l'antenne du pôle secondaire.
+- CHEF_ANTENNE : gestion de son antenne.
 - CHEF_MISSION : gestion des dossiers assignés.
 - COLLABORATEUR : accès aux dossiers assignés.
-- GERANT_MADAGASCAR : accès restreint côté MG.
+- GERANT_OUEST : accès restreint au pôle OUEST.
 
 RÈGLES :
 1. Réponds uniquement sur Passidoc et ses fonctionnalités.

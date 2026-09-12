@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Readable } from 'stream';
 import { Client } from '../entities/client.entity';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
-import { User, UserRole, UserSite } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -66,7 +66,7 @@ export class ClientsService {
     const query = this.repo.createQueryBuilder('client')
       .leftJoinAndSelect('client.directeur', 'directeur')
       .leftJoinAndSelect('client.responsable', 'responsable')
-      .leftJoinAndSelect('client.collaborateurMg', 'collaborateurMg')
+      .leftJoinAndSelect('client.collaborateurOuest', 'collaborateurOuest')
       .leftJoinAndSelect('client.ficheIdentite', 'ficheIdentite')
       .leftJoinAndSelect('client.missions', 'missions')
       .leftJoinAndSelect('client.fluxMensuels', 'fluxMensuels')
@@ -81,7 +81,7 @@ export class ClientsService {
 
     if (collaborateurId) {
       query.andWhere(
-        '(client.responsableId = :cid OR client.collaborateurMgId = :cid OR client.directeurId = :cid)',
+        '(client.responsableId = :cid OR client.collaborateurOuestId = :cid OR client.directeurId = :cid)',
         { cid: collaborateurId },
       );
     }
@@ -96,7 +96,7 @@ export class ClientsService {
     const client = await this.repo.findOne({
       where: { id },
       relations: [
-        'ficheIdentite', 'directeur', 'responsable', 'collaborateurMg',
+        'ficheIdentite', 'directeur', 'responsable', 'collaborateurOuest',
         'missions', 'fluxMensuels', 'questionnaireAdnGlobal',
         'questionnaireAdnSectoriel', 'objectifsItems',
       ],
@@ -119,7 +119,7 @@ export class ClientsService {
     if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.EXPERT_COMPTABLE) return;
     if (client.directeurId === currentUser.id) return;
     if (client.responsableId === currentUser.id) return;
-    if (client.collaborateurMgId === currentUser.id) return;
+    if (client.collaborateurOuestId === currentUser.id) return;
     throw new ForbiddenException('Vous n\'êtes pas assigné à ce dossier');
   }
 
@@ -170,60 +170,60 @@ export class ClientsService {
     return this.findOne(clientId);
   }
 
-  async assignMg(clientId: number, collaborateurMgId: number | null, currentUser: User) {
+  async assignOuest(clientId: number, collaborateurOuestId: number | null, currentUser: User) {
     const client = await this.findOne(clientId);
-    const previousMgId = client.collaborateurMgId ?? null;
+    const previousOuestId = client.collaborateurOuestId ?? null;
 
     if (currentUser.role !== UserRole.ADMIN) {
       if (client.responsableId !== currentUser.id) {
         throw new ForbiddenException('Ce dossier ne fait pas partie de votre portefeuille');
       }
-      if (collaborateurMgId) {
-        const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
-        if (!mgUser) {
+      if (collaborateurOuestId) {
+        const ouestUser = await this.userRepo.findOne({ where: { id: collaborateurOuestId } });
+        if (!ouestUser) {
           throw new ForbiddenException('Collaborateur introuvable');
         }
       }
     }
 
-    await this.repo.update(clientId, { collaborateurMgId: collaborateurMgId as any });
+    await this.repo.update(clientId, { collaborateurOuestId: collaborateurOuestId as any });
 
-    if (collaborateurMgId) {
-      // Assignation : notifier le collab MG (sauf si c'est lui qui agit)
-      if (collaborateurMgId !== currentUser.id) {
-        await this.notifications.emit(collaborateurMgId, {
+    if (collaborateurOuestId) {
+      // Assignation : notifier le collaborateur du pôle OUEST (sauf si c'est lui qui agit)
+      if (collaborateurOuestId !== currentUser.id) {
+        await this.notifications.emit(collaborateurOuestId, {
           type: 'CLIENT_ASSIGNED',
           message: `Le dossier "${client.nom}" vous a été distribué`,
           titre: client.nom,
           clientId,
         });
       }
-      // Notifier le responsable Réunion (sauf si c'est lui qui agit)
+      // Notifier le responsable du dossier (sauf si c'est lui qui agit)
       if (client.responsableId && client.responsableId !== currentUser.id) {
-        const mgUser = await this.userRepo.findOne({ where: { id: collaborateurMgId } });
+        const ouestUser = await this.userRepo.findOne({ where: { id: collaborateurOuestId } });
         await this.notifications.emit(client.responsableId, {
           type: 'CLIENT_ASSIGNED',
-          message: `${mgUser?.firstName} ${mgUser?.lastName} a été assigné au dossier "${client.nom}"`,
+          message: `${ouestUser?.firstName} ${ouestUser?.lastName} a été assigné au dossier "${client.nom}"`,
           titre: client.nom,
           clientId,
         });
       }
-    } else if (previousMgId) {
-      // Dé-assignation : notifier le collab MG retiré (sauf si c'est lui qui agit)
-      if (previousMgId !== currentUser.id) {
-        await this.notifications.emit(previousMgId, {
+    } else if (previousOuestId) {
+      // Dé-assignation : notifier le collaborateur du pôle OUEST retiré (sauf si c'est lui qui agit)
+      if (previousOuestId !== currentUser.id) {
+        await this.notifications.emit(previousOuestId, {
           type: 'CLIENT_ASSIGNED',
           message: `Le dossier "${client.nom}" vous a été retiré`,
           titre: client.nom,
           clientId,
         });
       }
-      // Notifier le responsable Réunion (sauf si c'est lui qui agit)
+      // Notifier le responsable du dossier (sauf si c'est lui qui agit)
       if (client.responsableId && client.responsableId !== currentUser.id) {
-        const previousMg = await this.userRepo.findOne({ where: { id: previousMgId } });
+        const previousOuest = await this.userRepo.findOne({ where: { id: previousOuestId } });
         await this.notifications.emit(client.responsableId, {
           type: 'CLIENT_ASSIGNED',
-          message: `${previousMg?.firstName} ${previousMg?.lastName} a été retiré du dossier "${client.nom}"`,
+          message: `${previousOuest?.firstName} ${previousOuest?.lastName} a été retiré du dossier "${client.nom}"`,
           titre: client.nom,
           clientId,
         });

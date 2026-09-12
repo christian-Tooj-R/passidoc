@@ -17,10 +17,10 @@ const mockRolePerms = {
 const mockAuth  = { isAdmin: vi.fn().mockReturnValue(true) };
 const mockToast = { success: vi.fn(), error: vi.fn() };
 const mockTenant = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
   poleFlag:   vi.fn().mockReturnValue('🇷🇪'),
   poleLabel:  vi.fn().mockReturnValue('Réunion'),
 };

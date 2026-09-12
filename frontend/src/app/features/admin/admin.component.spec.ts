@@ -12,10 +12,10 @@ const mockUsers = {
   update: vi.fn().mockReturnValue(of({})),
 };
 const mockTenant = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
   poleFlag:   vi.fn().mockReturnValue('🇷🇪'),
   poleLabel:  vi.fn().mockReturnValue('Réunion'),
 };
@@ -60,7 +60,7 @@ describe('AdminComponent (Utilisateurs)', () => {
   });
 
   it('popule users avec les données reçues', async () => {
-    const data = [{ id: 1, firstName: 'Sophie', lastName: 'M', role: 'COLLABORATEUR', site: 'REUNION' }];
+    const data = [{ id: 1, firstName: 'Sophie', lastName: 'M', role: 'COLLABORATEUR', site: 'EST' }];
     mockUsers.getAll.mockReturnValue(of(data));
     const { comp } = await createComponent();
     expect(comp.users).toHaveLength(1);
@@ -69,9 +69,9 @@ describe('AdminComponent (Utilisateurs)', () => {
   describe('countRole', () => {
     it('compte les utilisateurs par rôle', async () => {
       mockUsers.getAll.mockReturnValue(of([
-        { id: 1, role: 'ADMIN',          site: 'REUNION' },
-        { id: 2, role: 'COLLABORATEUR',  site: 'REUNION' },
-        { id: 3, role: 'COLLABORATEUR',  site: 'MADAGASCAR' },
+        { id: 1, role: 'ADMIN',          site: 'EST' },
+        { id: 2, role: 'COLLABORATEUR',  site: 'EST' },
+        { id: 3, role: 'COLLABORATEUR',  site: 'OUEST' },
       ]));
       const { comp } = await createComponent();
       expect(comp.countRole('ADMIN')).toBe(1);
@@ -82,13 +82,13 @@ describe('AdminComponent (Utilisateurs)', () => {
   describe('countSite', () => {
     it('compte les utilisateurs par site', async () => {
       mockUsers.getAll.mockReturnValue(of([
-        { id: 1, site: 'REUNION' },
-        { id: 2, site: 'REUNION' },
-        { id: 3, site: 'MADAGASCAR' },
+        { id: 1, site: 'EST' },
+        { id: 2, site: 'EST' },
+        { id: 3, site: 'OUEST' },
       ]));
       const { comp } = await createComponent();
-      expect(comp.countSite('REUNION')).toBe(2);
-      expect(comp.countSite('MADAGASCAR')).toBe(1);
+      expect(comp.countSite('EST')).toBe(2);
+      expect(comp.countSite('OUEST')).toBe(1);
     });
   });
 

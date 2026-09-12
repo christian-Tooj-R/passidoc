@@ -66,8 +66,8 @@ const mockToast       = { success: vi.fn(), error: vi.fn() };
 const mockConfirm     = { confirm: vi.fn().mockReturnValue(of(true)) };
 const mockDialogRef   = { close: vi.fn() };
 const mockTenant      = {
-  poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockAuth = { currentUser: vi.fn().mockReturnValue({ id: 1, firstName: 'A', lastName: 'B', role: 'ADMIN' }) };
 

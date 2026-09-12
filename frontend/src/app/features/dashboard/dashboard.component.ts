@@ -101,25 +101,25 @@ const TYPE_LABELS: Record<string, string> = {
                 <span class="pole-flag">{{ tenantSvc.poleFlag1() }}</span>
                 <div class="pole-card__info">
                   <h3 class="pole-card__name">{{ tenantSvc.poleLabel1() }}</h3>
-                  <span class="pole-card__total">{{ poleStats.reunion.total }} dossier{{ poleStats.reunion.total > 1 ? 's' : '' }}</span>
+                  <span class="pole-card__total">{{ poleStats.est.total }} dossier{{ poleStats.est.total > 1 ? 's' : '' }}</span>
                 </div>
                 <div class="pole-card__score">
-                  <span class="pole-score-val" [class.psv--high]="poleStats.reunion.avg>=80" [class.psv--mid]="poleStats.reunion.avg>=50&&poleStats.reunion.avg<80" [class.psv--low]="poleStats.reunion.avg<50">{{ poleStats.reunion.avg }}%</span>
+                  <span class="pole-score-val" [class.psv--high]="poleStats.est.avg>=80" [class.psv--mid]="poleStats.est.avg>=50&&poleStats.est.avg<80" [class.psv--low]="poleStats.est.avg<50">{{ poleStats.est.avg }}%</span>
                   <span class="pole-score-lbl">Score moy.</span>
                 </div>
               </div>
               <div class="pole-bar-wrap">
                 <div class="pole-bar"
-                  [style.width.%]="poleStats.reunion.avg"
-                  [class.pole-bar--high]="poleStats.reunion.avg>=80"
-                  [class.pole-bar--mid]="poleStats.reunion.avg>=50&&poleStats.reunion.avg<80"
-                  [class.pole-bar--low]="poleStats.reunion.avg<50">
+                  [style.width.%]="poleStats.est.avg"
+                  [class.pole-bar--high]="poleStats.est.avg>=80"
+                  [class.pole-bar--mid]="poleStats.est.avg>=50&&poleStats.est.avg<80"
+                  [class.pole-bar--low]="poleStats.est.avg<50">
                 </div>
               </div>
               <div class="pole-chips">
-                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.reunion.transmissibles }} Transmissibles</span>
-                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.reunion.encours }} En cours</span>
-                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.reunion.alertes }} En alerte</span>
+                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.est.transmissibles }} Transmissibles</span>
+                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.est.encours }} En cours</span>
+                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.est.alertes }} En alerte</span>
               </div>
             </div>
             <div class="pole-card pole-card--mg">
@@ -127,25 +127,25 @@ const TYPE_LABELS: Record<string, string> = {
                 <span class="pole-flag">{{ tenantSvc.poleFlag2() }}</span>
                 <div class="pole-card__info">
                   <h3 class="pole-card__name">{{ tenantSvc.poleLabel2() }}</h3>
-                  <span class="pole-card__total">{{ poleStats.madagascar.total }} dossier{{ poleStats.madagascar.total > 1 ? 's' : '' }}</span>
+                  <span class="pole-card__total">{{ poleStats.ouest.total }} dossier{{ poleStats.ouest.total > 1 ? 's' : '' }}</span>
                 </div>
                 <div class="pole-card__score">
-                  <span class="pole-score-val" [class.psv--high]="poleStats.madagascar.avg>=80" [class.psv--mid]="poleStats.madagascar.avg>=50&&poleStats.madagascar.avg<80" [class.psv--low]="poleStats.madagascar.avg<50">{{ poleStats.madagascar.avg }}%</span>
+                  <span class="pole-score-val" [class.psv--high]="poleStats.ouest.avg>=80" [class.psv--mid]="poleStats.ouest.avg>=50&&poleStats.ouest.avg<80" [class.psv--low]="poleStats.ouest.avg<50">{{ poleStats.ouest.avg }}%</span>
                   <span class="pole-score-lbl">Score moy.</span>
                 </div>
               </div>
               <div class="pole-bar-wrap">
                 <div class="pole-bar"
-                  [style.width.%]="poleStats.madagascar.avg"
-                  [class.pole-bar--high]="poleStats.madagascar.avg>=80"
-                  [class.pole-bar--mid]="poleStats.madagascar.avg>=50&&poleStats.madagascar.avg<80"
-                  [class.pole-bar--low]="poleStats.madagascar.avg<50">
+                  [style.width.%]="poleStats.ouest.avg"
+                  [class.pole-bar--high]="poleStats.ouest.avg>=80"
+                  [class.pole-bar--mid]="poleStats.ouest.avg>=50&&poleStats.ouest.avg<80"
+                  [class.pole-bar--low]="poleStats.ouest.avg<50">
                 </div>
               </div>
               <div class="pole-chips">
-                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.madagascar.transmissibles }} Transmissibles</span>
-                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.madagascar.encours }} En cours</span>
-                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.madagascar.alertes }} En alerte</span>
+                <span class="pole-chip pole-chip--green"><mat-icon>check_circle</mat-icon>{{ poleStats.ouest.transmissibles }} Transmissibles</span>
+                <span class="pole-chip pole-chip--orange"><mat-icon>schedule</mat-icon>{{ poleStats.ouest.encours }} En cours</span>
+                <span class="pole-chip pole-chip--red"><mat-icon>warning_amber</mat-icon>{{ poleStats.ouest.alertes }} En alerte</span>
               </div>
             </div>
           </div>
@@ -279,10 +279,10 @@ const TYPE_LABELS: Record<string, string> = {
           <button class="md-chip" [class.md-chip--active]="siteFilter===''" (click)="filterSite('')">
             <mat-icon>public</mat-icon> Tous
           </button>
-          <button class="md-chip" [class.md-chip--active]="siteFilter==='REUNION'" (click)="filterSite('REUNION')">
+          <button class="md-chip" [class.md-chip--active]="siteFilter==='EST'" (click)="filterSite('EST')">
             {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}
           </button>
-          <button class="md-chip" [class.md-chip--active]="siteFilter==='MADAGASCAR'" (click)="filterSite('MADAGASCAR')">
+          <button class="md-chip" [class.md-chip--active]="siteFilter==='OUEST'" (click)="filterSite('OUEST')">
             {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}
           </button>
         </div>
@@ -294,14 +294,14 @@ const TYPE_LABELS: Record<string, string> = {
 
             <!-- Card top -->
             <div class="c-card__head">
-              <div class="c-card__avatar" [class.av--re]="client.site==='REUNION'" [class.av--mg]="client.site==='MADAGASCAR'">
+              <div class="c-card__avatar" [class.av--re]="client.site==='EST'" [class.av--mg]="client.site==='OUEST'">
                 {{ getInitials(client.nom) }}
               </div>
               <div class="c-card__info">
                 <h3 class="c-card__name">{{ client.nom }}</h3>
-                <span class="c-card__site" [class.site--re]="client.site==='REUNION'" [class.site--mg]="client.site==='MADAGASCAR'">
+                <span class="c-card__site" [class.site--est]="client.site==='EST'" [class.site--ouest]="client.site==='OUEST'">
                   <mat-icon>location_on</mat-icon>
-                  {{ client.site === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
+                  {{ client.site === 'EST' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
                 </span>
               </div>
               <div class="c-card__score-badge" [class.sb--high]="client.santePassation>=80" [class.sb--mid]="client.santePassation>=50&&client.santePassation<80" [class.sb--low]="client.santePassation<50">
@@ -583,8 +583,8 @@ const TYPE_LABELS: Record<string, string> = {
       font-size: 11.5px; font-weight: 500;
     }
     .c-card__site mat-icon { font-size: 12px; width: 12px; height: 12px; }
-    .site--re { color: #006B57; }
-    .site--mg { color: #162351; }
+    .site--est { color: #006B57; }
+    .site--ouest { color: #162351; }
 
     .c-card__score-badge {
       flex-shrink: 0; font-size: 13px; font-weight: 700;
@@ -731,7 +731,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         alertes: list.filter(c => c.santePassation < 50).length,
       };
     };
-    return { reunion: calc('REUNION'), madagascar: calc('MADAGASCAR') };
+    return { est: calc('EST'), ouest: calc('OUEST') };
   }
 
   get dossiersTransmissibles() { return this.clients.filter(c => c.santePassation >= 80).length; }

@@ -85,9 +85,9 @@ export class ContratTravail {
 
   /**
    * Code de régime de paie utilisé pour sélectionner les rubriques/paramètres applicables
-   * (ex: 'REUNION', 'MADAGASCAR', ou tout autre code créé dans l'admin). Initialisé depuis
+   * (ex: 'EST', 'OUEST', ou tout autre code créé dans l'admin). Initialisé depuis
    * `user.site` à la création mais surchargeable par contrat — voir RubriquePaieRh.regimePaieCode.
-   * Aucune règle Réunion/Madagascar n'est codée en dur : tout passe par ce code + les tables
+   * Aucune règle propre à un pôle n'est codée en dur : tout passe par ce code + les tables
    * de paramétrage (RubriquePaieRh, ConstantePaieRh).
    */
   @Column()

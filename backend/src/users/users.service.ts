@@ -84,10 +84,13 @@ export class UsersService {
       const all = self ? [self, ...team] : team;
       return all.map(u => this.sanitize(u));
     }
-    if (currentUser.site === UserSite.REUNION) {
-      const mgTeam = await this.repo.find({ where: { ...base, site: UserSite.MADAGASCAR, isActive: true } });
+    // Symétrique depuis le passage à EST/OUEST : un collaborateur voit l'équipe de
+    // l'autre pôle, quel que soit le sien (avant, réservé au pôle 1).
+    if (currentUser.site) {
+      const autrePole = currentUser.site === UserSite.EST ? UserSite.OUEST : UserSite.EST;
+      const autreTeam = await this.repo.find({ where: { ...base, site: autrePole, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
-      const result = self ? [self, ...mgTeam] : mgTeam;
+      const result = self ? [self, ...autreTeam] : autreTeam;
       return result.map(u => this.sanitize(u));
     }
     const self = await this.repo.findOne({ where: { id: currentUser.id } });
@@ -101,7 +104,7 @@ export class UsersService {
       const team = await this.repo.find({ where: { ...base, isActive: true }, order: { lastName: 'ASC', firstName: 'ASC' } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
-    if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
+    if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_OUEST) {
       const team = await this.repo.find({ where: { ...base, antenne: currentUser.antenne as UserAntenne, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
@@ -109,14 +112,13 @@ export class UsersService {
       const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
       return { referent: null, team: team.map(u => this.sanitize(u)) };
     }
-    if (currentUser.site === UserSite.REUNION) {
-      const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
-      return { referent: null, team: team.map(u => this.sanitize(u)) };
-    }
+    // Symétrique depuis le passage à EST/OUEST : plus de branche réservée au pôle 1.
+    // Tout collaborateur voit à la fois son référent et ses propres supervisés.
+    const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
     const referent = currentUser.referentId
       ? await this.repo.findOne({ where: { id: currentUser.referentId } })
       : null;
-    return { referent: referent ? this.sanitize(referent) : null, team: [] };
+    return { referent: referent ? this.sanitize(referent) : null, team: team.map(u => this.sanitize(u)) };
   }
 
   async setReferent(userId: number, referentId: number | null, actorId: number) {

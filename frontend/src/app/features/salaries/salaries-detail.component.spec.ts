@@ -13,7 +13,7 @@ import { TenantService } from '../../core/services/tenant.service';
 
 const mockSvc  = { getOne: vi.fn().mockReturnValue(of(null)), updateRH: vi.fn().mockReturnValue(of({})), updateRole: vi.fn().mockReturnValue(of({})) };
 const mockCSvc = { mesDemandes: vi.fn().mockReturnValue(of([])), getSoldes: vi.fn().mockReturnValue(of([])), findAll: vi.fn().mockReturnValue(of([])) };
-const mockTenant = { poleFlag1: vi.fn().mockReturnValue('🇷🇪'), poleLabel1: vi.fn().mockReturnValue('Réunion'), poleFlag2: vi.fn().mockReturnValue('🇲🇬'), poleLabel2: vi.fn().mockReturnValue('Madagascar'), poleFlag: vi.fn(), poleLabel: vi.fn() };
+const mockTenant = { poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'), poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), poleFlag: vi.fn(), poleLabel: vi.fn() };
 const mockSnack  = { open: vi.fn() };
 
 async function createComponent() {

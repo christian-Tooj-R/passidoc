@@ -11,12 +11,12 @@ export enum UserRole {
   CHEF_ANTENNE = 'CHEF_ANTENNE',
   CHEF_MISSION = 'CHEF_MISSION',
   COLLABORATEUR = 'COLLABORATEUR',
-  GERANT_MADAGASCAR = 'GERANT_MADAGASCAR',
+  GERANT_OUEST = 'GERANT_OUEST',
 }
 
 export enum UserSite {
-  REUNION = 'REUNION',
-  MADAGASCAR = 'MADAGASCAR',
+  EST = 'EST',
+  OUEST = 'OUEST',
 }
 
 export enum UserAntenne {
@@ -70,10 +70,14 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ nullable: true, default: 'Indian/Reunion' })
+  /**
+   * Fuseau horaire de l'utilisateur. Plus de défaut géographique codé en dur :
+   * si la valeur est nulle, le front retombe sur le fuseau du navigateur.
+   */
+  @Column({ nullable: true })
   timezone: string;
 
-  /** Antenne rattachée — EST ou OUEST (null pour les utilisateurs Réunion) */
+  /** Antenne rattachée — EST ou OUEST (null si l'utilisateur n'est rattaché à aucune antenne) */
   @Column({ type: 'enum', enum: UserAntenne, nullable: true })
   antenne: UserAntenne | null;
 

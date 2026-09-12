@@ -41,7 +41,7 @@ export class AiAssistantService {
           'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
           'missions', 'objectifsItems', 'controlesInternes',
           'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
-          'exercices', 'responsable', 'collaborateurMg',
+          'exercices', 'responsable', 'collaborateurOuest',
         ],
       }),
       this.fluxRepo.find({ where: { client: { id: clientId } } }),
@@ -73,7 +73,7 @@ export class AiAssistantService {
       taches:             0,
       exercices:          client.exercices?.length ?? 0,
       responsable:        client.responsable ? `${client.responsable.firstName} ${client.responsable.lastName}` : null,
-      collaborateurMg:    client.collaborateurMg ? `${client.collaborateurMg.firstName} ${client.collaborateurMg.lastName}` : null,
+      collaborateurOuest:    client.collaborateurOuest ? `${client.collaborateurOuest.firstName} ${client.collaborateurOuest.lastName}` : null,
     };
   }
 
@@ -102,7 +102,7 @@ export class AiAssistantService {
           'ficheIdentite', 'synthesesCloture', 'analysesStrategiques',
           'missions', 'objectifsItems', 'controlesInternes',
           'questionnaireAdnGlobal', 'questionnaireAdnSectoriel',
-          'exercices', 'responsable', 'collaborateurMg',
+          'exercices', 'responsable', 'collaborateurOuest',
         ],
       }),
       this.dossierRepo.find({
@@ -216,11 +216,11 @@ export class AiAssistantService {
 
     // ── En-tête et règles ──────────────────────────────────────────────────────
     const { pole1, pole2 } = await this.getTenantLabels(client.tenantId);
-    const siteLabel = client.site === 'REUNION' ? pole1 : pole2;
+    const siteLabel = client.site === 'EST' ? pole1 : pole2;
     lines.push(`Tu es l'assistant dossier du cabinet, dédié UNIQUEMENT au dossier "${client.nom}".`);
     lines.push(`Site : ${siteLabel}. Score de santé de passation : ${client.santePassation}%.`);
     if (client.responsable)    lines.push(`Responsable ${pole1} : ${client.responsable.firstName} ${client.responsable.lastName}`);
-    if (client.collaborateurMg) lines.push(`Collaborateur ${pole2} : ${client.collaborateurMg.firstName} ${client.collaborateurMg.lastName}`);
+    if (client.collaborateurOuest) lines.push(`Collaborateur ${pole2} : ${client.collaborateurOuest.firstName} ${client.collaborateurOuest.lastName}`);
     lines.push(``);
     lines.push(`DONNÉES DISPONIBLES DANS CE DOSSIER :`);
     if (sections.length) {

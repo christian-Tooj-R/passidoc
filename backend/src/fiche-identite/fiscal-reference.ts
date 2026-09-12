@@ -1,5 +1,5 @@
 export const FISCAL_REFERENCE = {
-  REUNION: {
+  EST: {
     zonesExoneration: [
       'ZFA NG (Zone Franche Active Nouvelle Génération)',
       'Exonération DOM — IS réduit (taux 15%)',
@@ -23,7 +23,7 @@ export const FISCAL_REFERENCE = {
       'LODEOM (Loi pour le développement économique des outre-mer)',
     ],
   },
-  MADAGASCAR: {
+  OUEST: {
     zonesExoneration: [
       'Zone Économique Spéciale (ZES)',
       'Exonération IR Entreprise — Zone franche exportation',

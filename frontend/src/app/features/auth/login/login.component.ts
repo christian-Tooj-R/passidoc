@@ -186,8 +186,8 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
                 <label>Site de rattachement <span class="req">*</span></label>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-select formControlName="site">
-                    <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
-                    <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
+                    <mat-option value="EST">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+                    <mat-option value="OUEST">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
                   </mat-select>
                 </mat-form-field>
               </div>
@@ -419,7 +419,7 @@ export class LoginComponent {
     confirmPassword: ['', Validators.required],
     telephone:       [''],
     poste:           [''],
-    site:            ['REUNION', Validators.required],
+    site:            ['EST', Validators.required],
   }, { validators: passwordMatchValidator });
   hideRegisterPassword = true;
   registerLoading      = false;

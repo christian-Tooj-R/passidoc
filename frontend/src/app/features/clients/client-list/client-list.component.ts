@@ -43,7 +43,7 @@ type ViewMode = 'grid' | 'list';
           <span class="bc-current">Tous les dossiers</span>
           @if (siteFilter()) {
             <mat-icon class="bc-sep">chevron_right</mat-icon>
-            <span class="bc-current">{{ siteFilter() === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
+            <span class="bc-current">{{ siteFilter() === 'EST' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}</span>
           }
         </div>
 
@@ -124,7 +124,7 @@ type ViewMode = 'grid' | 'list';
             }
             @if (siteFilter()) {
               <span class="fas-chip">
-                {{ siteFilter() === 'REUNION' ? tenantSvc.poleFlag1() : tenantSvc.poleFlag2() }} {{ siteFilter() === 'REUNION' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
+                {{ siteFilter() === 'EST' ? tenantSvc.poleFlag1() : tenantSvc.poleFlag2() }} {{ siteFilter() === 'EST' ? tenantSvc.poleLabel1() : tenantSvc.poleLabel2() }}
                 <button (click)="siteFilter.set('')"><mat-icon>close</mat-icon></button>
               </span>
             }
@@ -177,10 +177,10 @@ type ViewMode = 'grid' | 'list';
               <button class="fchip" [class.fchip--active]="siteFilter()===''"          (click)="siteFilter.set('')">
                 <mat-icon>public</mat-icon> Tous
               </button>
-              <button class="fchip" [class.fchip--active]="siteFilter()==='REUNION'"   (click)="siteFilter.set('REUNION')">
+              <button class="fchip" [class.fchip--active]="siteFilter()==='EST'"   (click)="siteFilter.set('EST')">
                 {{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}
               </button>
-              <button class="fchip" [class.fchip--active]="siteFilter()==='MADAGASCAR'" (click)="siteFilter.set('MADAGASCAR')">
+              <button class="fchip" [class.fchip--active]="siteFilter()==='OUEST'" (click)="siteFilter.set('OUEST')">
                 {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}
               </button>
             </div>
@@ -257,8 +257,8 @@ type ViewMode = 'grid' | 'list';
                 <div class="folder-body">
                   <span class="folder-name">{{ c.nom }}</span>
                   <div class="folder-sub-row">
-                    <span class="folder-site" [class]="c.site==='REUNION' ? 'sub--re' : 'sub--mg'">
-                      {{ c.site === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
+                    <span class="folder-site" [class]="c.site==='EST' ? 'sub--re' : 'sub--mg'">
+                      {{ c.site === 'EST' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
                     </span>
                     @if (c.secteurActivite) {
                       <span class="folder-sec-sep">·</span>
@@ -289,16 +289,16 @@ type ViewMode = 'grid' | 'list';
                       </span>
                     }
                     @if (c.responsable) {
-                      <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                      <span class="fi-av fi-av--est" [title]="tenantSvc.poleLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
                         {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
                       </span>
                     }
-                    @if (c.collaborateurMg) {
-                      <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
-                        {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                    @if (c.collaborateurOuest) {
+                      <span class="fi-av fi-av--ouest" [title]="tenantSvc.poleLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
+                        {{ c.collaborateurOuest.firstName[0] }}{{ c.collaborateurOuest.lastName[0] }}
                       </span>
                     }
-                    @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
+                    @if (!c.directeur && !c.responsable && !c.collaborateurOuest) {
                       <span class="fi-none">Non assigné</span>
                     }
                   </div>
@@ -349,8 +349,8 @@ type ViewMode = 'grid' | 'list';
               </div>
 
               <!-- Site -->
-              <span class="lr-site" [class]="c.site==='REUNION' ? 'site--re' : 'site--mg'">
-                {{ c.site === 'REUNION' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
+              <span class="lr-site" [class]="c.site==='EST' ? 'site--est' : 'site--ouest'">
+                {{ c.site === 'EST' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
               </span>
 
               <!-- Intervenants -->
@@ -361,16 +361,16 @@ type ViewMode = 'grid' | 'list';
                   </span>
                 }
                 @if (c.responsable) {
-                  <span class="fi-av fi-av--run" [title]="'Collab. RUN : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                  <span class="fi-av fi-av--est" [title]="tenantSvc.poleLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
                     {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
                   </span>
                 }
-                @if (c.collaborateurMg) {
-                  <span class="fi-av fi-av--mg" [title]="'Collab. MADA : ' + c.collaborateurMg.firstName + ' ' + c.collaborateurMg.lastName">
-                    {{ c.collaborateurMg.firstName[0] }}{{ c.collaborateurMg.lastName[0] }}
+                @if (c.collaborateurOuest) {
+                  <span class="fi-av fi-av--ouest" [title]="tenantSvc.poleLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
+                    {{ c.collaborateurOuest.firstName[0] }}{{ c.collaborateurOuest.lastName[0] }}
                   </span>
                 }
-                @if (!c.directeur && !c.responsable && !c.collaborateurMg) {
+                @if (!c.directeur && !c.responsable && !c.collaborateurOuest) {
                   <span class="resp-none">—</span>
                 }
               </div>
@@ -621,8 +621,8 @@ type ViewMode = 'grid' | 'list';
       cursor: default; text-transform: uppercase;
     }
     .fi-av--dir { background: #EDE9FE; color: #5B21B6; }
-    .fi-av--run { background: #C8F8EE; color: #006B57; }
-    .fi-av--mg  { background: #DDE3EA; color: #162351; }
+    .fi-av--est { background: #C8F8EE; color: #006B57; }
+    .fi-av--ouest  { background: #DDE3EA; color: #162351; }
     .fi-none { font-size: 10px; color: #C8C6CA; font-style: italic; }
     /* Barre de complétude sur les folder cards */
     .folder-completude { width: 100%; margin-top: 6px; }
@@ -805,8 +805,8 @@ type ViewMode = 'grid' | 'list';
     .lr-lock { font-size: 14px; width: 14px; height: 14px; color: #9CA3AF; flex-shrink: 0; }
 
     .lr-site { font-size: 12.5px; font-weight: 500; }
-    .site--re { color: #006B57; }
-    .site--mg { color: #162351; }
+    .site--est { color: #006B57; }
+    .site--ouest { color: #162351; }
 
     .lr-resp { display: flex; align-items: center; gap: 7px; }
     .resp-av {
@@ -931,7 +931,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const seen = new Set<number>();
     const out: CollabOption[] = [];
     for (const c of this.clients()) {
-      for (const u of [c.directeur, c.responsable, c.collaborateurMg]) {
+      for (const u of [c.directeur, c.responsable, c.collaborateurOuest]) {
         if (u && !seen.has(u.id)) {
           seen.add(u.id);
           out.push({ id: u.id, label: `${u.firstName} ${u.lastName}` });
@@ -963,13 +963,13 @@ export class ClientListComponent implements OnInit, OnDestroy {
       if (h === 'ok'      && score < 80)                    return false;
       if (h === 'partial' && (score < 50 || score >= 80))   return false;
       if (h === 'alert'   && score >= 50)                   return false;
-      if (mes && meId && c.responsable?.id !== meId && c.collaborateurMg?.id !== meId && c.directeur?.id !== meId) return false;
+      if (mes && meId && c.responsable?.id !== meId && c.collaborateurOuest?.id !== meId && c.directeur?.id !== meId) return false;
       if (collab) {
         const fonc = this.fonctionFilter();
         if (fonc === 'DIRECTEUR'   && c.directeur?.id     !== collab) return false;
         if (fonc === 'COLLAB_RUN'  && c.responsable?.id   !== collab) return false;
-        if (fonc === 'COLLAB_MADA' && c.collaborateurMg?.id !== collab) return false;
-        if (!fonc && c.directeur?.id !== collab && c.responsable?.id !== collab && c.collaborateurMg?.id !== collab) return false;
+        if (fonc === 'COLLAB_OUEST' && c.collaborateurOuest?.id !== collab) return false;
+        if (!fonc && c.directeur?.id !== collab && c.responsable?.id !== collab && c.collaborateurOuest?.id !== collab) return false;
       }
       return true;
     });
@@ -1012,7 +1012,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     if (this.auth.isAdmin() || this.auth.isExpert()) return true;
     const meId = this.auth.currentUser()?.id;
     if (!meId) return false;
-    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurMg?.id === meId;
+    return c.directeur?.id === meId || c.responsable?.id === meId || c.collaborateurOuest?.id === meId;
   }
 
   canDelete(c: Client): boolean {

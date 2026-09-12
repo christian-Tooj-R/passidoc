@@ -159,8 +159,8 @@ import { SecteurActivite, SECTEURS_LABELS } from '../../../core/models/client.mo
           <mat-label>Site de rattachement</mat-label>
           <mat-icon matPrefix>location_on</mat-icon>
           <mat-select [formControl]="siteCtrl">
-            <mat-option value="REUNION">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
-            <mat-option value="MADAGASCAR">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
+            <mat-option value="EST">{{ tenantSvc.poleFlag1() }} {{ tenantSvc.poleLabel1() }}</mat-option>
+            <mat-option value="OUEST">{{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}</mat-option>
           </mat-select>
           @if (siteCtrl.touched && siteCtrl.hasError('required')) {
             <mat-error>Le site est requis</mat-error>

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatut } from '../entities/task.entity';
-import { User, UserRole, UserSite, PoleService } from '../entities/user.entity'; // UserSite kept for legacy path
+import { User, UserRole, PoleService } from '../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -41,8 +41,10 @@ export class TasksService {
     if (assigner.role === UserRole.CHEF_MISSION) {
       return assignee.referentId === assigner.id;
     }
-    if (assigner.site === UserSite.REUNION) {
-      return assignee.site === UserSite.MADAGASCAR;
+    // Sous-assignation inter-pôles : symétrique depuis le passage à EST/OUEST —
+    // chaque pôle peut assigner vers l'autre (avant, seul le pôle 1 le pouvait).
+    if (assigner.site && assignee.site) {
+      return assignee.site !== assigner.site;
     }
     return false;
   }
@@ -86,7 +88,7 @@ export class TasksService {
 
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
       if (currentUser.tenantId) qb.andWhere('task.tenantId = :tenantId', { tenantId: currentUser.tenantId });
-    } else if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_MADAGASCAR) {
+    } else if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_OUEST) {
       qb.andWhere('(assignee.antenne = :antenne OR task.assigneeId = :userId OR task.anyoneCanTake = 1)', {
         antenne: currentUser.antenne, userId: currentUser.id,
       });

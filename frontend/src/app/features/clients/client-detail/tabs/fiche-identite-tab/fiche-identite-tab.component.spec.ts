@@ -21,10 +21,10 @@ const mockFicheService = {
 };
 const mockFiscalService = { get: vi.fn().mockResolvedValue({}) };
 const mockTenantService = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockToastService = { success: vi.fn(), error: vi.fn() };
 
@@ -47,7 +47,7 @@ async function createComponent() {
   const fixture = TestBed.createComponent(FicheIdentiteTabComponent);
   const comp    = fixture.componentInstance;
   comp.clientId = 42;
-  comp.site     = 'REUNION';
+  comp.site     = 'EST';
   fixture.detectChanges();
   return { fixture, comp };
 }

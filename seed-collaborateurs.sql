@@ -18,7 +18,7 @@ INSERT INTO users (
     'marie.dubois@afym.re',
     '$2b$10$rYNNXRkK1WZJnbQEau8mmueruWFOpTFc4EjaOaqURhGG2X9EPEFh.',
     'Marie', 'Dubois',
-    'COLLABORATEUR', 'REUNION',
+    'COLLABORATEUR', 'EST',
     true, false, 'Indian/Reunion', 'RE-001',
     'Collaboratrice comptable', 'CDI', '2022-03-15', 'NON_CADRE', 'PLEIN',
     39, 'EUR'
@@ -28,7 +28,7 @@ INSERT INTO users (
     'pierre.martin@afym.re',
     '$2b$10$99DkunzsCGJy9MSp0C50a.QlnVUFeqsQziLnFPVO2kTahSF7SAKqa',
     'Pierre', 'Martin',
-    'CHEF_MISSION', 'REUNION',
+    'CHEF_MISSION', 'EST',
     true, false, 'Indian/Reunion', 'RE-002',
     'Chef de mission', 'CDI', '2019-06-01', 'CADRE', 'PLEIN',
     39, 'EUR'
@@ -38,7 +38,7 @@ INSERT INTO users (
     'haja.rasolofo@afym.mg',
     '$2b$10$d0G/aEm3FhyE1pAue078c.J8fgkThvHPSDH7bsgmzJ/rSIpFYnaSy',
     'Haja', 'Rasolofo',
-    'COLLABORATEUR', 'MADAGASCAR',
+    'COLLABORATEUR', 'OUEST',
     true, false, 'Indian/Antananarivo', 'MG-001',
     'Collaborateur comptable', 'CDI', '2021-09-01', 'NON_CADRE', 'PLEIN',
     40, 'MGA'
@@ -48,7 +48,7 @@ INSERT INTO users (
     'fara.andriamaro@afym.mg',
     '$2b$10$B/6QuuC6JW2tYaDkqh.llOU2NN2JmstzGOPBMfxZtU8JMRwivv1fK',
     'Fara', 'Andriamaro',
-    'GERANT_MADAGASCAR', 'MADAGASCAR',
+    'GERANT_OUEST', 'OUEST',
     true, false, 'Indian/Antananarivo', 'MG-002',
     'Gérante bureau Madagascar', 'CDI', '2018-01-10', 'CADRE', 'PLEIN',
     40, 'MGA'

@@ -20,7 +20,7 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
  * `CONGE_ABSENCE` à partir des congés validés qui chevauchent la période, en appliquant un
  * taux de maintien de salaire PARAMÉTRABLE par type de congé (`ConstantePaieRh`, code
  * `MAINTIEN_<TYPE_CONGE>` — fusionné depuis l'ancien `ParametrePaieRh`, voir
- * Doc/MODULE_PAIE_RH_NOTES.md) — jamais de règle Réunion/Madagascar ni de barème légal codé en
+ * Doc/MODULE_PAIE_RH_NOTES.md) — jamais de règle propre à un pôle ni de barème légal codé en
  * dur. Les lignes saisies manuellement (sans `origine` ou `origine: MANUELLE`) sont
  * préservées ; seules les lignes `CONGE_ABSENCE` sont régénérées à chaque appel
  * (idempotent). Voir Doc/MODULE_PAIE_RH_NOTES.md pour le détail de l'hypothèse de

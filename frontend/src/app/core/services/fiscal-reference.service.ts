@@ -8,8 +8,8 @@ export interface FiscalRef {
   reglementations: string[];
 }
 export interface FiscalReferenceData {
-  REUNION: FiscalRef;
-  MADAGASCAR: FiscalRef;
+  EST: FiscalRef;
+  OUEST: FiscalRef;
 }
 
 @Injectable({ providedIn: 'root' })

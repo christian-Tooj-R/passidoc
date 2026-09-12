@@ -29,7 +29,7 @@ export interface AiContextSummary {
   taches: number;
   exercices: number;
   responsable: string | null;
-  collaborateurMg: string | null;
+  collaborateurOuest: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

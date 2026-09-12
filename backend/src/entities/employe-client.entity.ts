@@ -73,9 +73,9 @@ export class EmployeClient {
 
   /**
    * Code de régime de paie utilisé pour sélectionner les rubriques/paramètres applicables
-   * (ex: 'REUNION', 'MADAGASCAR', ou tout autre code créé dans l'admin). Initialisé depuis
+   * (ex: 'EST', 'OUEST', ou tout autre code créé dans l'admin). Initialisé depuis
    * `client.site` à la création mais surchargeable par employé — voir RubriquePaie.regimePaieCode.
-   * Aucune règle Réunion/Madagascar n'est codée en dur : tout passe par ce code + les tables
+   * Aucune règle propre à un pôle n'est codée en dur : tout passe par ce code + les tables
    * de paramétrage (RubriquePaie, ParametrePaie).
    */
   @Column()

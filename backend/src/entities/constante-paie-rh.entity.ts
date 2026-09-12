@@ -83,7 +83,7 @@ export class ConstantePaieRh {
   @Column({ type: 'varchar', nullable: true })
   memo: string | null;
 
-  /** 'REUNION' | 'MADAGASCAR' | 'TOUS' | tout autre code de régime créé par l'admin */
+  /** 'EST' | 'OUEST' | 'TOUS' | tout autre code de régime créé par l'admin */
   @Column({ default: 'TOUS' })
   regimePaieCode: string;
 

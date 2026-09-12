@@ -31,7 +31,7 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
 /**
  * Moteur de calcul du bulletin de paie.
  *
- * ⚠️ AUCUN taux, plafond ni règle Réunion/Madagascar n'est codé en dur ici : toutes les
+ * ⚠️ AUCUN taux, plafond ni règle propre à un pôle n'est codé en dur ici : toutes les
  * valeurs viennent des tables de paramétrage (`RubriquePaie`, `ParametrePaie`), sélectionnées
  * via `employe.regimePaieCode`. Voir Doc/MODULE_PAIE_NOTES.md pour le détail des hypothèses
  * de simplification prises (heures sup, avantages en nature, net imposable...) — cette classe

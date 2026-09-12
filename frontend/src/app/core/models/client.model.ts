@@ -1,4 +1,4 @@
-export type ClientSite = 'REUNION' | 'MADAGASCAR';
+export type ClientSite = 'EST' | 'OUEST';
 
 /** @deprecated — utiliser le code dynamique depuis SecteurService */
 export type SecteurActivite = string;
@@ -73,7 +73,7 @@ export interface Client {
   customFluxTypes?: { key: string; label: string }[];
   directeur?: Responsable;
   responsable?: Responsable;
-  collaborateurMg?: Responsable;
+  collaborateurOuest?: Responsable;
   ficheIdentite?: FicheIdentite;
   fluxMensuels?: FluxMensuel[];
   fournisseurs?: Fournisseur[];

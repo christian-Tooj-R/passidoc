@@ -22,7 +22,7 @@ export enum ImputationRubrique {
  * Principe fondamental de ce module : aucun taux/plafond n'est codé en dur dans le moteur
  * de calcul (`moteur-calcul-paie.service.ts`). Tout passe par cette table, éditable depuis
  * l'admin, rattachée à un régime (pôle/pays) via `regimePaieCode` plutôt que par un
- * branchement conditionnel "if site === REUNION" dans le code.
+ * branchement conditionnel "if site === EST" dans le code.
  *
  * Les taux insérés automatiquement (`estPlaceholder = true`) sont des valeurs d'EXEMPLE non
  * vérifiées — voir Doc/MODULE_PAIE_NOTES.md avant toute utilisation en production réelle.
@@ -41,7 +41,7 @@ export class RubriquePaie {
   @Column()
   libelle: string;
 
-  /** 'REUNION' | 'MADAGASCAR' | 'TOUS' | tout autre code de régime créé par l'admin */
+  /** 'EST' | 'OUEST' | 'TOUS' | tout autre code de régime créé par l'admin */
   @Column({ default: 'TOUS' })
   regimePaieCode: string;
 

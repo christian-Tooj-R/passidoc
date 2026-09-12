@@ -32,7 +32,7 @@ async function seed() {
       firstName: 'Thomas',
       lastName: 'Admin',
       role: UserRole.ADMIN,
-      site: UserSite.REUNION,
+      site: UserSite.EST,
       timezone: 'Indian/Reunion',
       password: 'Admin2024!',
     },
@@ -41,7 +41,7 @@ async function seed() {
       firstName: 'Sophie',
       lastName: 'Martin',
       role: UserRole.EXPERT_COMPTABLE,
-      site: UserSite.REUNION,
+      site: UserSite.EST,
       timezone: 'Indian/Reunion',
       password: 'Expert2024!',
     },
@@ -50,7 +50,7 @@ async function seed() {
       firstName: 'Jean',
       lastName: 'Dupont',
       role: UserRole.COLLABORATEUR,
-      site: UserSite.REUNION,
+      site: UserSite.EST,
       timezone: 'Indian/Reunion',
       password: 'Collab2024!',
     },
@@ -59,7 +59,7 @@ async function seed() {
       firstName: 'Hery',
       lastName: 'Rakoto',
       role: UserRole.EXPERT_COMPTABLE,
-      site: UserSite.MADAGASCAR,
+      site: UserSite.OUEST,
       timezone: 'Indian/Antananarivo',
       password: 'Expert2024!',
     },
@@ -68,7 +68,7 @@ async function seed() {
       firstName: 'Marie',
       lastName: 'Lefevre',
       role: UserRole.COLLABORATEUR,
-      site: UserSite.REUNION,
+      site: UserSite.EST,
       timezone: 'Indian/Reunion',
       password: 'Marie2024!',
     },
@@ -77,7 +77,7 @@ async function seed() {
       firstName: 'Thomas',
       lastName: 'Berger',
       role: UserRole.EXPERT_COMPTABLE,
-      site: UserSite.REUNION,
+      site: UserSite.EST,
       timezone: 'Indian/Reunion',
       password: 'Thomas2024!',
     },
@@ -86,7 +86,7 @@ async function seed() {
       firstName: 'Romuald',
       lastName: 'Andriamaro',
       role: UserRole.ADMIN,
-      site: UserSite.MADAGASCAR,
+      site: UserSite.OUEST,
       timezone: 'Indian/Antananarivo',
       password: 'Romuald2024!',
     },
@@ -326,7 +326,7 @@ async function seed() {
   const clientsData = [
     {
       nom: 'Boulangerie Du Four à la Planche',
-      site: ClientSite.REUNION,
+      site: ClientSite.EST,
       responsable: marie,
       fiche: {
         raisonSociale: 'SARL Du Four à la Planche',
@@ -369,7 +369,7 @@ async function seed() {
     },
     {
       nom: 'Cabinet Médical Saint-Denis',
-      site: ClientSite.REUNION,
+      site: ClientSite.EST,
       responsable: marie,
       fiche: {
         raisonSociale: 'SCP Docteurs Renard & Moreau',
@@ -411,7 +411,7 @@ async function seed() {
     },
     {
       nom: 'Hôtel Le Lagon Bleu',
-      site: ClientSite.REUNION,
+      site: ClientSite.EST,
       responsable: thomas,
       fiche: {
         raisonSociale: 'SA Le Lagon Bleu',
@@ -451,7 +451,7 @@ async function seed() {
     },
     {
       nom: 'Epicerie Fine Randriantsoa',
-      site: ClientSite.MADAGASCAR,
+      site: ClientSite.OUEST,
       responsable: hery,
       fiche: {
         raisonSociale: 'SARL Randriantsoa Commerce',

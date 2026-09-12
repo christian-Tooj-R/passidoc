@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn } from 'typeorm';
 
-export enum SiteName { REUNION = 'REUNION', MADAGASCAR = 'MADAGASCAR' }
+export enum SiteName { EST = 'EST', OUEST = 'OUEST' }
 
 @Entity('site_locations')
 export class SiteLocation {

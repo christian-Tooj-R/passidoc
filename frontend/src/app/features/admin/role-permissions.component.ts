@@ -213,7 +213,7 @@ export class RolePermissionsComponent implements OnInit {
       { key: 'EXPERT_COMPTABLE',  label: 'Expert-comptable',                      icon: 'badge'              },
       { key: 'CHEF_ANTENNE',      label: "Chef d'antenne",                        icon: 'supervisor_account' },
       { key: 'CHEF_MISSION',      label: 'Chef de mission',                       icon: 'manage_accounts'    },
-      { key: 'GERANT_MADAGASCAR', label: `Gérant ${this.tenantSvc.poleLabel2()}`, icon: 'business'           },
+      { key: 'GERANT_OUEST', label: `Gérant ${this.tenantSvc.poleLabel2()}`, icon: 'business'           },
       { key: 'COLLABORATEUR',     label: 'Collaborateur',                         icon: 'person'             },
     ];
   }

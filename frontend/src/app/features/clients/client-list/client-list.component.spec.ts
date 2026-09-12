@@ -13,7 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
 
-const makeClient = (id: number, nom: string, site: 'REUNION' | 'MADAGASCAR', score: number) =>
+const makeClient = (id: number, nom: string, site: 'EST' | 'OUEST', score: number) =>
   ({ id, nom, site, santePassation: score, completude: score } as any);
 
 const newNotif$ = new Subject<any>();
@@ -28,10 +28,10 @@ const mockAuth = {
   canCreateDossier: vi.fn().mockReturnValue(true),
 };
 const mockTenant = {
-  poleFlag1:  vi.fn().mockReturnValue('🇷🇪'),
-  poleLabel1: vi.fn().mockReturnValue('Réunion'),
-  poleFlag2:  vi.fn().mockReturnValue('🇲🇬'),
-  poleLabel2: vi.fn().mockReturnValue('Madagascar'),
+  poleFlag1:  vi.fn().mockReturnValue('🔵'),
+  poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
+  poleFlag2:  vi.fn().mockReturnValue('🟠'),
+  poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
 };
 const mockNotifStream = { newNotif$ };
 const mockDialog  = { open: vi.fn().mockReturnValue({ afterClosed: () => of(null) }) };
@@ -110,7 +110,7 @@ describe('ClientListComponent', () => {
     });
 
     it('popule clients avec les données reçues', async () => {
-      const clients = [makeClient(1, 'SARL Test', 'REUNION', 80)];
+      const clients = [makeClient(1, 'SARL Test', 'EST', 80)];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
       expect(comp.clients()).toHaveLength(1);
@@ -146,9 +146,9 @@ describe('ClientListComponent', () => {
   describe('countByHealth', () => {
     it('compte les dossiers "ok" (score >= 80)', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 85),
-        makeClient(2, 'B', 'REUNION', 60),
-        makeClient(3, 'C', 'MADAGASCAR', 30),
+        makeClient(1, 'A', 'EST', 85),
+        makeClient(2, 'B', 'EST', 60),
+        makeClient(3, 'C', 'OUEST', 30),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -157,9 +157,9 @@ describe('ClientListComponent', () => {
 
     it('compte les dossiers "partial" (50 ≤ score < 80)', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 85),
-        makeClient(2, 'B', 'REUNION', 60),
-        makeClient(3, 'C', 'MADAGASCAR', 30),
+        makeClient(1, 'A', 'EST', 85),
+        makeClient(2, 'B', 'EST', 60),
+        makeClient(3, 'C', 'OUEST', 30),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -168,9 +168,9 @@ describe('ClientListComponent', () => {
 
     it('compte les dossiers "alert" (score < 50)', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 85),
-        makeClient(2, 'B', 'REUNION', 60),
-        makeClient(3, 'C', 'MADAGASCAR', 30),
+        makeClient(1, 'A', 'EST', 85),
+        makeClient(2, 'B', 'EST', 60),
+        makeClient(3, 'C', 'OUEST', 30),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -230,35 +230,35 @@ describe('ClientListComponent', () => {
 
     it('vaut 1 avec siteFilter actif', async () => {
       const { comp } = await createComponent();
-      comp.siteFilter.set('REUNION');
+      comp.siteFilter.set('EST');
       expect(comp.activeFilterCount()).toBe(1);
     });
 
     it('vaut 2 avec siteFilter + collabFilter', async () => {
       const { comp } = await createComponent();
-      comp.siteFilter.set('REUNION');
+      comp.siteFilter.set('EST');
       comp.collabFilter.set(42);
       expect(comp.activeFilterCount()).toBe(2);
     });
   });
 
   describe('filteredClients — filtres calculés', () => {
-    it('filtre par siteFilter REUNION', async () => {
+    it('filtre par siteFilter EST', async () => {
       const clients = [
-        makeClient(1, 'RE Client', 'REUNION', 80),
-        makeClient(2, 'MG Client', 'MADAGASCAR', 70),
+        makeClient(1, 'RE Client', 'EST', 80),
+        makeClient(2, 'MG Client', 'OUEST', 70),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
-      comp.siteFilter.set('REUNION');
+      comp.siteFilter.set('EST');
       expect(comp.filteredClients()).toHaveLength(1);
       expect(comp.filteredClients()[0].nom).toBe('RE Client');
     });
 
     it('filtre par healthFilter ok', async () => {
       const clients = [
-        makeClient(1, 'A', 'REUNION', 85),
-        makeClient(2, 'B', 'REUNION', 40),
+        makeClient(1, 'A', 'EST', 85),
+        makeClient(2, 'B', 'EST', 40),
       ];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -266,14 +266,14 @@ describe('ClientListComponent', () => {
       expect(comp.filteredClients()).toHaveLength(1);
     });
 
-    it('mesDossiers = true : ne montre que les clients où l\'user est responsable/directeur/collaborateurMg', async () => {
+    it('mesDossiers = true : ne montre que les clients où l\'user est responsable/directeur/collaborateurOuest', async () => {
       // currentUser.id = 1 (cf. mockAuth)
       const user1  = { id: 1,  firstName: 'Sophie', lastName: 'M' };
       const user99 = { id: 99, firstName: 'Jean',   lastName: 'D' };
       const clients = [
-        { ...makeClient(1, 'Mon cabinet',     'REUNION', 80), responsable: user1 },
-        { ...makeClient(2, 'Pas le mien',     'REUNION', 80), responsable: user99 },
-        { ...makeClient(3, 'Je suis directeur','REUNION', 80), directeur: user1 },
+        { ...makeClient(1, 'Mon cabinet',     'EST', 80), responsable: user1 },
+        { ...makeClient(2, 'Pas le mien',     'EST', 80), responsable: user99 },
+        { ...makeClient(3, 'Je suis directeur','EST', 80), directeur: user1 },
       ] as any[];
       mockClientsService.getAll.mockReturnValue(of(clients));
       const { comp } = await createComponent();
@@ -289,7 +289,7 @@ describe('ClientListComponent', () => {
   describe('resetFilters', () => {
     it('réinitialise tous les filtres', async () => {
       const { comp } = await createComponent();
-      comp.siteFilter.set('REUNION');
+      comp.siteFilter.set('EST');
       comp.healthFilter.set('ok');
       comp.mesDossiers.set(true);
       comp.resetFilters();

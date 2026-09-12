@@ -64,7 +64,7 @@ test.describe('Paie RH interne — parcours MVP1', () => {
         firstName: 'PaieRH',
         lastName: 'E2E',
         role: 'COLLABORATEUR',
-        site: 'REUNION',
+        site: 'EST',
       },
     });
     const body = await res.json();

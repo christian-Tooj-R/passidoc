@@ -10,7 +10,7 @@ const mockUser: Partial<User> = {
   firstName: 'Marie',
   lastName: 'Martin',
   role: UserRole.COLLABORATEUR,
-  site: UserSite.REUNION,
+  site: UserSite.EST,
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -57,7 +57,7 @@ describe('UsersService', () => {
           lastName: 'Test',
           password: 'password123',
           role: UserRole.COLLABORATEUR,
-          site: UserSite.REUNION,
+          site: UserSite.EST,
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -70,7 +70,7 @@ describe('UsersService', () => {
         lastName: 'User',
         password: 'password123',
         role: UserRole.COLLABORATEUR,
-        site: UserSite.REUNION,
+        site: UserSite.EST,
       });
       const savedUser = mockRepo.save.mock.calls[0][0];
       expect(savedUser.password).not.toBe('password123');

@@ -144,7 +144,7 @@ Les données ne quittent jamais le serveur du cabinet.
 | Score de passation | ❌ | ✅ |
 | Assistant IA dédié | ❌ | ✅ |
 | Export PDF note de passation | ❌ | ✅ |
-| Multi-sites Réunion + Madagascar | ❌ | ✅ |
+| Multi-pôles (EST / OUEST) | ❌ | ✅ |
 
 > Pappers = *"Qui est cette entreprise légalement ?"*
 > Passidoc = *"Tout ce que notre cabinet sait sur ce client"*

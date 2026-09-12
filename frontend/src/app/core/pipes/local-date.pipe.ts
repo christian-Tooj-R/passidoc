@@ -8,7 +8,10 @@ export class LocalDatePipe implements PipeTransform {
 
   transform(value: string | Date | null | undefined, format = 'dd/MM/yyyy HH:mm'): string {
     if (!value) return '—';
-    const tz = (this.auth.currentUser() as any)?.timezone || 'Indian/Reunion';
+    // Repli sur le fuseau du navigateur plutôt qu'un fuseau géographique codé en dur.
+    const tz = (this.auth.currentUser() as any)?.timezone
+      || Intl.DateTimeFormat().resolvedOptions().timeZone
+      || 'UTC';
     try {
       return formatInTimeZone(new Date(value), tz, format);
     } catch {

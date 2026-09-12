@@ -84,7 +84,7 @@ import { TenantService } from '../../core/services/tenant.service';
       <div class="sidebar__spacer"></div>
 
       <!-- ── Site indicator ────────────────────────── -->
-      <div class="site-chip" [class.site-mg]="auth.currentUser()?.site === 'MADAGASCAR'">
+      <div class="site-chip" [class.site-ouest]="auth.currentUser()?.site === 'OUEST'">
         <span class="site-dot"></span>
         {{ tenantSvc.poleLabel(auth.currentUser()?.site ?? '') }}
       </div>
@@ -289,7 +289,7 @@ import { TenantService } from '../../core/services/tenant.service';
       border: 1px solid #BFDBFE;
       font-size: 12px; font-weight: 600; color: #1D4ED8;
     }
-    .site-chip.site-mg { background: #F5F3FF; border-color: #DDD6FE; color: #7C3AED; }
+    .site-chip.site-ouest { background: #F5F3FF; border-color: #DDD6FE; color: #7C3AED; }
     .site-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .7; }
 
     /* ── Notifications ──────────────────────────────── */
