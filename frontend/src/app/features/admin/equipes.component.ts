@@ -120,8 +120,8 @@ interface CreateForm {
             }
           </div>
 
-          <!-- Gérant Madagascar -->
-          @let gm = gerantMadagascar(antenne);
+          <!-- Gérant du pôle -->
+          @let gm = gerantOuest(antenne);
           @if (gm) {
             <div class="section-row">
               <span class="section-title">Gérant {{ tenantSvc.poleLabel2() }}</span>
@@ -237,7 +237,7 @@ interface CreateForm {
                   </ul>
                 </li>
               }
-              <!-- Antennes Madagascar -->
+              <!-- Antennes -->
               @for (antenne of ['EST', 'OUEST']; track antenne) {
                 <li>
                   <div class="org-node org-node--antenne">
@@ -246,7 +246,7 @@ interface CreateForm {
                     <span class="org-count">{{ usersInAntenne(antenne).length }}</span>
                   </div>
                   @let ca = chefAntenne(antenne);
-                  @let gm = gerantMadagascar(antenne);
+                  @let gm = gerantOuest(antenne);
                   @let cms = chefsMission(antenne);
                   <ul>
                     @if (ca) {
@@ -611,7 +611,7 @@ interface CreateForm {
                     <span class="org-count">{{ usersInAntenne(antenne).length }}</span>
                   </div>
                   @let ca = chefAntenne(antenne);
-                  @let gm = gerantMadagascar(antenne);
+                  @let gm = gerantOuest(antenne);
                   @let cms = chefsMission(antenne);
                   <ul>
                     @if (ca) {
@@ -1652,7 +1652,7 @@ export class EquipesComponent implements OnInit, OnDestroy {
   chefAntenne(antenne: string): User | undefined {
     return this.users().find(u => u.role === 'CHEF_ANTENNE' && u.antenne === antenne && u.isActive);
   }
-  gerantMadagascar(antenne: string): User | undefined {
+  gerantOuest(antenne: string): User | undefined {
     return this.users().find(u => u.role === 'GERANT_OUEST' && u.antenne === antenne && u.isActive);
   }
   chefsMission(antenne: string): User[] {
