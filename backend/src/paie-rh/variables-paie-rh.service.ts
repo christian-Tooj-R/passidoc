@@ -211,6 +211,50 @@ export class VariablesPaieRhService {
   }
 
   /**
+   * Jours "justifiés" du mois (présence badgée + congé approuvé, tous types), synchronisés
+   * depuis la feuille d'activité (variables `PRESENCE`/`ABSENCE` de `ValeurActiviteRh`) —
+   * alimente le Nombre/Montant de la rubrique "Salaire de base" du moteur de calcul. Même
+   * principe que `synchroniserHeuresSup()` : rejoué à chaque calcul de bulletin, jamais une
+   * copie figée, et ne s'applique QUE si l'activité a déjà été calculée pour ce
+   * salarié/mois/année (sinon `null`, et le moteur retombe sur le calcul théorique — jours
+   * ouvrés du régime — pour ne rien casser tant que personne n'utilise l'écran Activité
+   * pour ce salarié).
+   *
+   * Compte PRESENCE + ABSENCE plutôt que PRESENCE seule : un congé approuvé (y compris
+   * intégralement payé, ex. congés payés) ne doit pas faire perdre sa journée de salaire —
+   * la ligne "Absences" existante (`synchroniserAbsences()`) reste seule responsable
+   * d'appliquer le taux de maintien propre à chaque type de congé. Seul un jour ni badgé ni
+   * couvert par un congé approuvé (absence non justifiée, oubli de badge) n'est donc plus
+   * payé — contrairement au calcul théorique précédent, insensible à la présence réelle.
+   */
+  async synchroniserJoursActivite(salarieId: number, mois: number, annee: number, tenantId: number): Promise<VariablePaieRh | null> {
+    const debut = `${annee}-${String(mois).padStart(2, '0')}-01`;
+    const finDuMois = new Date(annee, mois, 0);
+    const fin = `${annee}-${String(mois).padStart(2, '0')}-${String(finDuMois.getDate()).padStart(2, '0')}`;
+
+    const lignes = await this.activiteRepo
+      .createQueryBuilder('a')
+      .where('a.salarieId = :salarieId', { salarieId })
+      .andWhere('a.tenantId = :tenantId', { tenantId })
+      .andWhere("a.variableCode IN ('PRESENCE', 'ABSENCE')")
+      .andWhere('a.date >= :debut', { debut })
+      .andWhere('a.date <= :fin', { fin })
+      .getMany();
+
+    if (!lignes.length) return null;
+
+    const joursJustifies = round2(lignes.reduce((s, l) => s + Number(l.valeur), 0));
+
+    let variable = await this.repo.findOne({ where: { salarieId, mois, annee, tenantId } });
+    if (variable) {
+      variable.joursJustifiesActivite = joursJustifies;
+    } else {
+      variable = this.repo.create({ salarieId, mois, annee, tenantId, joursJustifiesActivite: joursJustifies });
+    }
+    return this.repo.save(variable);
+  }
+
+  /**
    * Vue globale "Activité" (~"Feuille d'activité" RADIAN) : pour chaque salarié dont le
    * contrat était en vigueur pendant la période, un résumé des variables déjà saisies/
    * synchronisées ce mois-ci. Le détail (feuille d'activité individuelle) reste le même

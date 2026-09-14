@@ -10,12 +10,12 @@ import { UpsertVariablePaieRhDto } from './dto/variable-paie-rh.dto';
 @ApiTags('Paie RH — Variables mensuelles')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/variables')
 export class VariablesPaieRhController {
   constructor(private service: VariablesPaieRhService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Créer ou mettre à jour les variables de paie du mois pour un salarié' })
   upsert(@Body() dto: UpsertVariablePaieRhDto, @Req() req: any) {
     return this.service.upsert(dto, req.user.tenantId, req.user.id);
@@ -40,14 +40,12 @@ export class VariablesPaieRhController {
   }
 
   @Post('activite/recalculer')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: "Recalculer l'activité (absences + acomptes) de tous les salariés de la période" })
   recalculerActivite(@Query('mois', ParseIntPipe) mois: number, @Query('annee', ParseIntPipe) annee: number, @Req() req: any) {
     return this.service.recalculerActivitePeriode(mois, annee, req.user.tenantId);
   }
 
   @Post('salarie/:salarieId/synchroniser-absences')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Resynchroniser les absences validées du mois depuis le circuit congés/absences' })
   synchroniserAbsences(
     @Param('salarieId', ParseIntPipe) salarieId: number,
@@ -59,7 +57,6 @@ export class VariablesPaieRhController {
   }
 
   @Post('salarie/:salarieId/synchroniser-acomptes')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Resynchroniser les acomptes validés du mois' })
   synchroniserAcomptes(
     @Param('salarieId', ParseIntPipe) salarieId: number,
@@ -71,7 +68,6 @@ export class VariablesPaieRhController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Supprimer les variables de paie du mois' })
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.service.remove(id, req.user.tenantId);

@@ -365,8 +365,7 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
 
   vider() {
     this.dateDebut = this.dateFin = this.collaborateurId = this.clientId = this.filterFacturable = this.recherche = '';
-    this.allRows.set([]);
-    this.page.set(0);
+    this.load();
   }
 
   prevPage() { if (this.page() > 0) this.page.update(p => p - 1); }

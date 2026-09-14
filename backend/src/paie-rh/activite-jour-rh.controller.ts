@@ -12,6 +12,7 @@ import type { GranulariteActivite } from './activite-jour-rh.service';
 @ApiTags("Paie RH — Feuille d'activité (journalière)")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/activite-jour')
 export class ActiviteJourRhController {
   constructor(private service: ActiviteJourRhService) {}
@@ -48,7 +49,6 @@ export class ActiviteJourRhController {
   }
 
   @Post('initialiser')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: "Initialiser les lignes d'activité du mois (toutes variables)" })
   initialiser(
     @Query('mois', ParseIntPipe) mois: number,
@@ -60,7 +60,6 @@ export class ActiviteJourRhController {
   }
 
   @Post('calculer')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: "Calculer les valeurs d'activité (depuis pointage + congés validés)" })
   calculer(
     @Query('mois', ParseIntPipe) mois: number,
@@ -73,7 +72,6 @@ export class ActiviteJourRhController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Corriger manuellement une valeur (protège la ligne du recalcul auto)' })
   modifier(@Param('id', ParseIntPipe) id: number, @Body('valeur') valeur: number, @Req() req: any) {
     return this.service.modifierValeur(id, Number(valeur), req.user.tenantId);

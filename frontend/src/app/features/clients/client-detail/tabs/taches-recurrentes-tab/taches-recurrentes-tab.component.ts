@@ -120,7 +120,7 @@ const SERVICES = ['COMPTA', 'SOCIAL', 'JURIDIQUE', 'ADMIN'];
 </div>
   `,
   styles: [`
-    .tr-tab { padding: 20px; max-width: 860px; }
+    .tr-tab { padding: 20px; }
     .tr-header { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; background: white; margin: -20px -20px 16px; padding: 10px 20px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
     .tr-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.1rem; font-weight: 600; }
 

@@ -10,6 +10,7 @@ import { BulletinsSalarieService } from './bulletins-salarie.service';
 @ApiTags('Paie RH — Bulletins')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/bulletins')
 export class BulletinsSalarieController {
   constructor(private service: BulletinsSalarieService) {}
@@ -55,7 +56,6 @@ export class BulletinsSalarieController {
   }
 
   @Post('generer')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Générer (et persister) le bulletin de salaire du mois' })
   generer(
     @Query('salarieId', ParseIntPipe) salarieId: number,
@@ -87,7 +87,6 @@ export class BulletinsSalarieController {
   }
 
   @Post(':id/paiement')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Enregistrer le paiement du bulletin (donnée informative uniquement)' })
   enregistrerPaiement(
     @Param('id', ParseIntPipe) id: number,
@@ -98,14 +97,12 @@ export class BulletinsSalarieController {
   }
 
   @Post(':id/dupliquer')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Générer un duplicata clairement identifié (BUL-007)' })
   dupliquer(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.service.dupliquer(id, req.user.tenantId);
   }
 
   @Post(':id/regularisation')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Générer un bulletin correctif/régularisation sans écraser l\'original (BUL-008)' })
   regularisation(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.service.genererRegularisation(id, req.user.tenantId);

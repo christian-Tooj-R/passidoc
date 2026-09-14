@@ -29,3 +29,20 @@ export function formatHeures(h: number): string {
   const min = Math.round((h - hrs) * 60);
   return `${hrs}h${String(min).padStart(2, '0')}`;
 }
+
+/** Convertit une durée décimale en "HH:MM", pour la valeur d'un `<input type="time">`. */
+export function toHHMM(h: number): string {
+  if (!h || h <= 0) return '';
+  const hrs = Math.floor(h);
+  const min = Math.round((h - hrs) * 60);
+  return `${String(hrs).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** Convertit la valeur "HH:MM" d'un `<input type="time">` en heures décimales, ou null si vide/invalide. */
+export function parseHHMM(input: string): number | null {
+  if (!input) return null;
+  const m = input.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const duree = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+  return duree > 0 ? duree : null;
+}

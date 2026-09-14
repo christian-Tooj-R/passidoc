@@ -81,6 +81,14 @@ export class BulletinSalarie {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   salaireBase: number;
 
+  /** Nombre de jours ayant servi au calcul de `salaireBase` ci-dessus, figé au moment de la
+   *  génération (immuable, comme le reste du snapshot) : jours "justifiés" (présence badgée
+   *  + congé approuvé) issus de la feuille d'activité si elle était calculée pour ce
+   *  salarié/mois à cet instant, sinon `null` (repli PDF sur les jours ouvrés théoriques du
+   *  régime — voir `MoteurCalculPaieRhService.calculer()` / `BulletinsSalarieService`). */
+  @Column({ type: 'decimal', precision: 6, scale: 2, nullable: true })
+  joursSalaireBase: number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalBrut: number;
 

@@ -95,6 +95,15 @@ export class VariablePaieRh {
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   tauxMajorationHeuresSup: number | null;
 
+  /** Jours "justifiés" du mois (présence badgée + congé approuvé, tous types), synchronisés
+   *  depuis la feuille d'activité (`ValeurActiviteRh`) via
+   *  `VariablesPaieRhService.synchroniserJoursActivite()` — alimente le Nombre/Montant de
+   *  la rubrique "Salaire de base" (`MoteurCalculPaieRhService.calculer()`). `null` tant que
+   *  l'activité n'a jamais été calculée pour ce salarié/mois : le moteur retombe alors sur
+   *  le calcul théorique (jours ouvrés du régime), comme avant cette synchronisation. */
+  @Column({ type: 'decimal', precision: 6, scale: 2, nullable: true })
+  joursJustifiesActivite: number | null;
+
   @Column({ type: 'json', nullable: true })
   primes: LignePaieLibreRh[] | null;
 

@@ -9,6 +9,7 @@ import {
 } from '../../../../core/services/saisie-temps.service';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { Client } from '../../../../core/models/client.model';
+import { parseHHMM } from '../../../../core/services/duree.util';
 
 const CATEGORIES_NF: { code: CategorieNonFacturable; label: string }[] = [
   { code: 'APPEL_CLIENT',     label: 'Appel client' },
@@ -17,24 +18,6 @@ const CATEGORIES_NF: { code: CategorieNonFacturable; label: string }[] = [
   { code: 'ADMINISTRATIF',    label: 'Administratif' },
   { code: 'AUTRE',            label: 'Autre' },
 ];
-
-/** Accepte "1h30", "1:30", "1.5" ou "1,5" → durée en heures décimales. */
-function parseDuree(input: string): number | null {
-  const s = input.trim().toLowerCase().replace(',', '.');
-  if (!s) return null;
-  const hMatch = s.match(/^(\d+)\s*h\s*(\d{0,2})$/);
-  if (hMatch) {
-    const h = parseInt(hMatch[1], 10);
-    const m = hMatch[2] ? parseInt(hMatch[2], 10) : 0;
-    return h + m / 60;
-  }
-  const hmMatch = s.match(/^(\d+):(\d{2})$/);
-  if (hmMatch) {
-    return parseInt(hmMatch[1], 10) + parseInt(hmMatch[2], 10) / 60;
-  }
-  const n = parseFloat(s);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
 
 @Component({
   selector: 'app-travail-saisie-ligne',
@@ -81,8 +64,7 @@ function parseDuree(input: string): number | null {
       </div>
       <div class="lf-field lf-field--duree">
         <label class="lf-label">Durée</label>
-        <input class="lf-input" [(ngModel)]="dureeInput" name="duree"
-               placeholder="1h30" required (blur)="validerDuree()" />
+        <input type="time" class="lf-input" [(ngModel)]="dureeInput" name="duree" required />
       </div>
     </div>
 
@@ -272,18 +254,10 @@ export class TravailSaisieLigneComponent implements OnInit, OnDestroy {
     });
   }
 
-  validerDuree() {
-    if (parseDuree(this.dureeInput) === null) {
-      this.error.set('Durée invalide — utilisez un format comme "1h30" ou "1.5"');
-    } else {
-      this.error.set('');
-    }
-  }
-
   submit() {
-    const duree = parseDuree(this.dureeInput);
+    const duree = parseHHMM(this.dureeInput);
     if (!this.date || duree === null) {
-      this.error.set('Durée invalide — utilisez un format comme "1h30" ou "1.5"');
+      this.error.set('Durée invalide — renseignez une durée (HH:MM).');
       return;
     }
     const dto: CreateSaisieTempsDto = {

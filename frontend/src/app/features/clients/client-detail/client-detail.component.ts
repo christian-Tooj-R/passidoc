@@ -31,14 +31,13 @@ import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
 import GalerieTabComponent from './tabs/galerie-tab/galerie-tab.component';
-import { PaieTabComponent } from './tabs/paie-tab/paie-tab.component';
 import { GlobalTimerIndicatorComponent } from '../../../shared/global-timer-indicator/global-timer-indicator.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
   | 'documents' | 'historique' | 'dossier-travail' | 'canvas'
-  | 'taches-recurrentes' | 'galerie' | 'paie';
+  | 'taches-recurrentes' | 'galerie';
 
 interface TabGroup {
   label: string;
@@ -73,7 +72,7 @@ interface TabGroup {
     HistoriqueTabComponent,
     AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
     DossierChatComponent, TachesRecurrentesTabComponent,
-    GalerieTabComponent, PaieTabComponent, GlobalTimerIndicatorComponent,
+    GalerieTabComponent, GlobalTimerIndicatorComponent,
   ],
   template: `
     @if (loading()) {
@@ -260,14 +259,48 @@ interface TabGroup {
             <!-- ── Hero cards ─────────────────────────── -->
             <div class="hero">
 
-              <!-- Card 1 : illustration secteur -->
+              <!-- Card 1 : illustration secteur (ou photo choisie depuis la galerie) -->
               <div class="hero-card hc-sector" [style.background]="getSectorConfig(client.secteurActivite).bg">
                 <div class="hc-sector__bar" [style.background]="getSectorConfig(client.secteurActivite).accent"></div>
-                <div class="hc-sector__deco">
-                  <div class="hc-sector__blob" [style.background]="getSectorConfig(client.secteurActivite).accent + '12'"></div>
-                  <div class="hc-sector__ring" [style.border-color]="getSectorConfig(client.secteurActivite).accent + '2A'"></div>
-                  <span class="hc-sector__emoji">{{ getSectorConfig(client.secteurActivite).emoji }}</span>
-                </div>
+                @if (client.logoUrl) {
+                  <img class="hc-sector__photo" [src]="resolvePhotoUrl(client.logoUrl)" [alt]="client.nom" />
+                } @else {
+                  <div class="hc-sector__deco">
+                    <div class="hc-sector__blob" [style.background]="getSectorConfig(client.secteurActivite).accent + '12'"></div>
+                    <div class="hc-sector__ring" [style.border-color]="getSectorConfig(client.secteurActivite).accent + '2A'"></div>
+                    <span class="hc-sector__emoji">{{ getSectorConfig(client.secteurActivite).emoji }}</span>
+                  </div>
+                }
+                @if (canEdit()) {
+                  <button class="hc-sector__photo-btn" matTooltip="Choisir une photo depuis la galerie"
+                          (click)="togglePhotoPicker($event)">
+                    <mat-icon>add_a_photo</mat-icon>
+                  </button>
+                  @if (client.logoUrl) {
+                    <button class="hc-sector__photo-btn hc-sector__photo-btn--remove" matTooltip="Retirer la photo"
+                            (click)="retirerPhotoCarte($event)">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  }
+                  @if (showPhotoPicker()) {
+                    <div class="hc-photo-picker" (click)="$event.stopPropagation()">
+                      <div class="hc-photo-picker__head">
+                        <span>Choisir depuis la galerie</span>
+                        <button class="hc-photo-picker__close" (click)="showPhotoPicker.set(false)"><mat-icon>close</mat-icon></button>
+                      </div>
+                      @if (client.ficheIdentite?.photos?.length) {
+                        <div class="hc-photo-picker__grid">
+                          @for (url of client.ficheIdentite!.photos; track url) {
+                            <img [src]="resolvePhotoUrl(url)" [class.active]="url === client.logoUrl"
+                                 (click)="choisirPhotoCarte(url)" alt="Photo galerie" />
+                          }
+                        </div>
+                      } @else {
+                        <p class="hc-photo-picker__empty">Aucune photo dans la galerie — ajoutez-en depuis l'onglet "Galerie".</p>
+                      }
+                    </div>
+                  }
+                }
                 <div class="hc-sector__body">
                   <span class="hc-sector__name">{{ client.nom }}</span>
                   <span class="hc-sector__pill" [style.background]="getSectorConfig(client.secteurActivite).accent + '18'"
@@ -493,7 +526,6 @@ interface TabGroup {
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
                   @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('paie')         { <app-paie-tab                [clientId]="client.id" /> }
                 }
               </div>
             </div>
@@ -717,6 +749,11 @@ interface TabGroup {
     .ch-save-btn  { margin-left: auto; flex-shrink: 0; }
     .ch-edit-btn  { margin-left: auto; flex-shrink: 0; }
     .ch-cancel-btn { margin-left: auto; flex-shrink: 0; }
+    /* Quand Annuler ET Enregistrer sont affichés ensemble, seul le 1er (Annuler) doit
+     * pousser le groupe à droite — sinon chaque margin-left: auto consomme sa propre part
+     * de l'espace libre du flex, créant un grand vide ENTRE les deux boutons plutôt qu'un
+     * seul groupe compact aligné à droite. */
+    .ch-cancel-btn + .ch-save-btn { margin-left: 0; }
     .ch-icon {
       width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -824,6 +861,58 @@ interface TabGroup {
       width: fit-content;
     }
     .hc-sector__pill mat-icon { font-size: 13px; width: 13px; height: 13px; }
+
+    /* Photo choisie depuis la galerie — remplace la décoration secteur */
+    .hc-sector__photo {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .hc-sector:has(.hc-sector__photo) .hc-sector__body {
+      background: linear-gradient(0deg, rgba(0,0,0,.62) 0%, rgba(0,0,0,.15) 70%, transparent 100%);
+    }
+    .hc-sector:has(.hc-sector__photo) .hc-sector__name { color: #fff; }
+    .hc-sector:has(.hc-sector__photo) .hc-sector__pill { background: rgba(255,255,255,.85) !important; }
+
+    .hc-sector__photo-btn {
+      position: absolute; top: 8px; right: 8px; z-index: 3;
+      width: 30px; height: 30px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,.45); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .hc-sector__photo-btn:hover { background: rgba(0,0,0,.65); }
+    .hc-sector__photo-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .hc-sector__photo-btn--remove { top: 42px; }
+    .hc-sector__photo-btn--remove:hover { background: rgba(220,38,38,.75); }
+
+    .hc-photo-picker {
+      position: absolute; top: 78px; right: 8px; z-index: 4;
+      width: 240px; max-height: 260px;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .hc-photo-picker__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; font-size: 12px; font-weight: 700; color: #1e293b;
+      border-bottom: 1px solid #eef0f4;
+    }
+    .hc-photo-picker__close {
+      border: none; background: none; cursor: pointer; color: #64748b;
+      display: flex; padding: 2px;
+    }
+    .hc-photo-picker__close mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .hc-photo-picker__grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      padding: 8px; overflow-y: auto;
+    }
+    .hc-photo-picker__grid img {
+      width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;
+      cursor: pointer; border: 2px solid transparent; transition: border-color .15s;
+    }
+    .hc-photo-picker__grid img:hover { border-color: #c7d2fe; }
+    .hc-photo-picker__grid img.active { border-color: #6366f1; }
+    .hc-photo-picker__empty { font-size: 12px; color: #64748b; padding: 12px; margin: 0; text-align: center; }
 
     /* Card 2 — ADN ring */
     .hc-adn {
@@ -1115,6 +1204,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   client: Client | null = null;
   loading = signal(true);
   activeTab = signal<TabId>('fiche');
+  showPhotoPicker = signal(false);
   recommandationsCIImportees = signal<string[]>([]);
   missionCIPrefill = signal<{ titre: string; type: string; description: string; arguments: string } | null>(null);
 
@@ -1161,13 +1251,6 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
         { id: 'galerie',    icon: 'photo_library',   label: 'Galerie' },
         { id: 'documents',  icon: 'attach_file',    label: 'Documents' },
         { id: 'historique', icon: 'history',         label: 'Historique' },
-      ],
-    },
-    {
-      label: 'RH & Paie',
-      icon: 'groups',
-      tabs: [
-        { id: 'paie', icon: 'payments', label: 'Paie' },
       ],
     },
   ];
@@ -1321,6 +1404,48 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     this.clientsService.uploadLogo(this.client.id, file).subscribe(updated => {
       this.client = { ...this.client!, logoUrl: updated.logoUrl };
     });
+  }
+
+  togglePhotoPicker(event: Event) {
+    event.stopPropagation();
+    this.showPhotoPicker.update((v) => !v);
+  }
+
+  /** Choisit une photo déjà présente dans la galerie comme photo de la carte 1 (logo) —
+   *  aucun nouvel upload, voir ClientsService.setLogoFromGallery(). */
+  choisirPhotoCarte(url: string) {
+    if (!this.client) return;
+    this.clientsService.setLogoFromGallery(this.client.id, url).subscribe({
+      next: (updated) => {
+        this.client = { ...this.client!, logoUrl: updated.logoUrl };
+        this.showPhotoPicker.set(false);
+      },
+      error: (e) => console.error('Impossible de définir cette photo', e),
+    });
+  }
+
+  /** Retire la photo de la carte 1 (repasse à l'illustration secteur par défaut) — ne
+   *  supprime pas la photo de la galerie elle-même, voir ClientsService.removeLogo(). */
+  retirerPhotoCarte(event: Event) {
+    event.stopPropagation();
+    if (!this.client) return;
+    this.clientsService.removeLogo(this.client.id).subscribe({
+      next: (updated) => { this.client = { ...this.client!, logoUrl: updated.logoUrl }; },
+      error: (e) => console.error('Impossible de retirer cette photo', e),
+    });
+  }
+
+  /** Même résolution d'URL que la galerie (`galerie-tab.component.ts`) : les photos
+   *  peuvent être servies en direct (stockage local) ou via le proxy de streaming MinIO. */
+  resolvePhotoUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('local://')) {
+      return `http://localhost:3000/uploads/${url.slice('local://'.length).replace(/\//g, '_')}`;
+    }
+    if (url.startsWith('http://localhost:3000')) {
+      return url;
+    }
+    return `http://localhost:3000/api/clients/${this.client?.id}/fiche/photos/stream?url=${encodeURIComponent(url)}`;
   }
 
   private readonly GROUP_STYLE_MAP: Record<string, { color: string; bg: string }> = {

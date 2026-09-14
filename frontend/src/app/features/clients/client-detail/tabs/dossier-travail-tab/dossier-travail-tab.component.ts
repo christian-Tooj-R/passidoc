@@ -198,7 +198,7 @@ interface CycleUI {
 </div>
   `,
   styles: [`
-    .dt-tab { padding: 24px; max-width: 1100px; }
+    .dt-tab { padding: 24px; }
 
     /* Header */
     .dt-header { display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 10; background: white; margin: -24px -24px 28px; padding: 10px 24px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,.04); }

@@ -6,10 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { Subject, takeUntil } from 'rxjs';
 import { TasksService, Task } from '../../../../core/services/tasks.service';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { UsersService } from '../../../../core/services/users.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Client } from '../../../../core/models/client.model';
 import { User } from '../../../../core/models/user.model';
 import { LocalDatePipe } from '../../../../core/pipes/local-date.pipe';
@@ -18,7 +20,7 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
 @Component({
   selector: 'app-travail-taches',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, LocalDatePipe],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, MatDatepickerModule, LocalDatePipe],
   template: `
 <div class="page">
 
@@ -106,6 +108,34 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
       <option value="false">Non</option>
     </select>
     <input class="fb-search" [(ngModel)]="filterSearch" (input)="applyFilters()" placeholder="🔍 Rechercher titre, client…" />
+
+    <!-- Filtre échéance (intervalle de dates) -->
+    <div class="fb-date-filter">
+      <span class="fb-cal-hidden">
+        <mat-date-range-input [rangePicker]="rangePicker">
+          <input matStartDate [(ngModel)]="filterDateStart" (dateChange)="onRangeChange()" placeholder="" />
+          <input matEndDate   [(ngModel)]="filterDateEnd"   (dateChange)="onRangeChange()" placeholder="" />
+        </mat-date-range-input>
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </span>
+      <button type="button" class="fb-cal-btn"
+              [class.fb-cal-btn--active]="filterDateStart || filterDateEnd"
+              (click)="rangePicker.open()"
+              matTooltip="Filtrer par échéance (intervalle de dates)">
+        <mat-icon>calendar_month</mat-icon>
+        @if (filterDateStart || filterDateEnd) {
+          <span class="fb-cal-range">
+            {{ filterDateStart | date:'dd/MM' }}{{ filterDateEnd ? ' → ' + (filterDateEnd | date:'dd/MM') : '' }}
+          </span>
+        }
+      </button>
+      @if (filterDateStart || filterDateEnd) {
+        <button type="button" class="fb-cal-clear" (click)="clearDateFilter()" matTooltip="Effacer le filtre date">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
     <button class="fb-btn-apply" (click)="applyFilters()">Appliquer</button>
     @if (hasActiveFilters()) {
       <button class="fb-btn-clear" (click)="clearFilters()">Effacer</button>
@@ -257,6 +287,22 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
     .fb-btn-apply:hover { background:#4f46e5; }
     .fb-btn-clear { height:36px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:7px; padding:0 14px; font-size:13px; cursor:pointer; transition:all .15s; }
     .fb-btn-clear:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+    .fb-date-filter { display:flex; align-items:center; gap:4px; }
+    .fb-cal-hidden { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
+    .fb-cal-btn {
+      height:36px; display:flex; align-items:center; gap:6px; border:1px solid #e2e8f0; border-radius:7px;
+      background:#fff; color:#374151; padding:0 10px; font-size:13px; cursor:pointer; transition:all .15s;
+    }
+    .fb-cal-btn:hover { background:#f1f5f9; }
+    .fb-cal-btn mat-icon { font-size:18px; width:18px; height:18px; }
+    .fb-cal-btn--active { border-color:#6366f1; color:#4338ca; background:#eef2ff; }
+    .fb-cal-range { font-weight:600; white-space:nowrap; }
+    .fb-cal-clear {
+      height:36px; width:36px; display:flex; align-items:center; justify-content:center;
+      border:1px solid #e2e8f0; border-radius:7px; background:#fff; color:#64748b; cursor:pointer;
+    }
+    .fb-cal-clear:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+    .fb-cal-clear mat-icon { font-size:16px; width:16px; height:16px; }
 
     /* Table toolbar */
     .table-toolbar { display:flex; align-items:center; gap:8px; padding:0 28px 10px; flex-shrink:0; }
@@ -334,6 +380,7 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
   private usersService   = inject(UsersService);
   private dialog         = inject(MatDialog);
   private router         = inject(Router);
+  private auth           = inject(AuthService);
   readonly timerSvc      = inject(TimerService);
   private _destroy$      = new Subject<void>();
 
@@ -350,6 +397,8 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
   filterAssigne   = '';
   filterFacturable= '';
   filterSearch    = '';
+  filterDateStart: Date | null = null;
+  filterDateEnd:   Date | null = null;
 
   ngOnInit() {
     this.tasksService.getAllGlobal().pipe(takeUntil(this._destroy$)).subscribe(tasks => {
@@ -385,17 +434,39 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
       const q = this.filterSearch.toLowerCase();
       tasks = tasks.filter(t => t.titre.toLowerCase().includes(q) || (t.client?.nom ?? '').toLowerCase().includes(q));
     }
+    // Filtre échéance : une tâche sans date d'échéance n'est jamais masquée par ce filtre.
+    if (this.filterDateStart) {
+      const debut = this.toISODate(this.filterDateStart);
+      tasks = tasks.filter(t => !t.dateEcheance || t.dateEcheance >= debut);
+    }
+    if (this.filterDateEnd) {
+      const fin = this.toISODate(this.filterDateEnd);
+      tasks = tasks.filter(t => !t.dateEcheance || t.dateEcheance <= fin);
+    }
     this.filteredTasks.set(tasks);
+  }
+
+  private toISODate(d: Date): string {
+    return d.toISOString().split('T')[0];
+  }
+
+  onRangeChange() { this.applyFilters(); }
+
+  clearDateFilter() {
+    this.filterDateStart = null;
+    this.filterDateEnd   = null;
+    this.applyFilters();
   }
 
   clearFilters() {
     this.filterStatut = this.filterPriorite = this.filterType = '';
     this.filterClient = this.filterAssigne = this.filterFacturable = this.filterSearch = '';
+    this.filterDateStart = this.filterDateEnd = null;
     this.applyFilters();
   }
 
   hasActiveFilters() {
-    return !!(this.filterStatut || this.filterPriorite || this.filterType || this.filterClient || this.filterAssigne || this.filterFacturable || this.filterSearch);
+    return !!(this.filterStatut || this.filterPriorite || this.filterType || this.filterClient || this.filterAssigne || this.filterFacturable || this.filterSearch || this.filterDateStart || this.filterDateEnd);
   }
 
   countByStatut(statut: string) { return this.allTasks().filter(t => t.statut === statut).length; }
@@ -435,8 +506,8 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
   openCreateDialog() {
     import('../../../tasks/tasks-global.component').then(m => {
       this.dialog.open((m as any).CreateTaskDialogComponent, {
-        width: '620px',
-        maxHeight: '92vh',
+        width: '600px',
+        maxWidth: '96vw',
         data: { clients: this.clients, users: this.users },
       }).afterClosed().subscribe((result: string) => {
         if (result === 'created') {
@@ -449,8 +520,20 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
     });
   }
 
-  openDetail(_task: Task) {
-    // Délègue au router — vue détail tâche à venir
+  openDetail(task: Task) {
+    import('../../../tasks/tasks-global.component').then(m => {
+      const ref = this.dialog.open((m as any).TaskDetailDialogComponent, {
+        width: '900px', maxWidth: '96vw',
+        data: {
+          task, users: this.users,
+          currentUserId: this.auth.currentUser()?.id,
+          currentUserIsAdmin: this.auth.isAdmin(),
+        },
+      });
+      ref.afterClosed().subscribe((result: string) => {
+        if (result === 'updated' || result === 'deleted') this.reload();
+      });
+    });
   }
 
   startTaskTimer(task: Task) {

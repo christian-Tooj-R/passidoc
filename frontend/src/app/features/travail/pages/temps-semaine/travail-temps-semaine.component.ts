@@ -10,6 +10,8 @@ import { UsersService } from '../../../../core/services/users.service';
 import { User } from '../../../../core/models/user.model';
 import { exportRowsToCsv } from '../../../../core/services/csv-export.util';
 import { formatHeures } from '../../../../core/services/duree.util';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
   selector: 'app-travail-temps-semaine',
@@ -27,9 +29,14 @@ import { formatHeures } from '../../../../core/services/duree.util';
         <p class="pg-sub">{{ filteredRows().length }} ligne(s) · semaine courante : S{{ currentWeek }}</p>
       </div>
     </div>
-    <button class="btn-export" (click)="exportCsv()" [disabled]="filteredRows().length === 0">
-      <mat-icon>download</mat-icon> Export CSV
-    </button>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportCsv()" [disabled]="filteredRows().length === 0">
+        <mat-icon>download</mat-icon> Export CSV
+      </button>
+      <button class="btn-export" (click)="exportPdf()" [disabled]="filteredRows().length === 0">
+        <mat-icon>picture_as_pdf</mat-icon> Export PDF
+      </button>
+    </div>
   </div>
 
   <!-- ── Filtres inline ── -->
@@ -158,6 +165,7 @@ import { formatHeures } from '../../../../core/services/duree.util';
     .pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
     .pg-sub { font-size:13px; color:#64748b; margin:2px 0 0; }
 
+    .header-actions { display:flex; align-items:center; gap:10px; }
     .btn-export { display:flex; align-items:center; gap:6px; padding:10px 20px; border-radius:9px; border:1.5px solid #bbf7d0; background:#fff; color:#15803d; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
     .btn-export mat-icon { font-size:16px; width:16px; height:16px; }
     .btn-export:hover:not(:disabled) { background:#f0fdf4; border-color:#86efac; box-shadow:0 2px 8px rgba(21,128,61,.15); }
@@ -307,6 +315,42 @@ export class TravailTempsSemaineComponent implements OnInit, OnDestroy {
       { header: 'Non fact. (h)',   value: r => r.nonFacturable?.toFixed(2) ?? '0' },
       { header: 'Total (h)',       value: r => r.total?.toFixed(2) ?? '0' },
     ], 'temps-semaine');
+  }
+
+  exportPdf() {
+    const rows = this.filteredRows();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(124, 58, 237);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Temps passés par semaine', 14, 12);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
+
+    autoTable(doc, {
+      startY: 24,
+      head: [['Semaine', 'Période', 'Collaborateur', 'Facturable (h)', 'Non fact. (h)', 'Total (h)', 'Ratio facturable']],
+      body: rows.map(r => [
+        `S${r.semaine} ${r.annee}`,
+        this.formatPeriode(r.periode),
+        r.collaborateur,
+        r.facturable?.toFixed(2) ?? '0',
+        r.nonFacturable?.toFixed(2) ?? '0',
+        r.total?.toFixed(2) ?? '0',
+        r.total ? `${((r.facturable / r.total) * 100).toFixed(0)}%` : '—',
+      ]),
+      headStyles: { fillColor: [124, 58, 237], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7.5 },
+      alternateRowStyles: { fillColor: [245, 243, 255] },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save('temps-semaine.pdf');
   }
 
   ratioLabel(r: any): string {

@@ -6,7 +6,7 @@ import {
   TypeTemps, CategorieNonFacturable, MissionCode, MISSION_CODES,
 } from '../../../core/services/saisie-temps.service';
 import { Client } from '../../../core/models/client.model';
-import { parseDuree, formatHeures } from '../../../core/services/duree.util';
+import { parseHHMM, toHHMM } from '../../../core/services/duree.util';
 
 const CATEGORIES_NF: { code: CategorieNonFacturable; label: string }[] = [
   { code: 'APPEL_CLIENT',     label: 'Appel client' },
@@ -54,8 +54,8 @@ export interface SaisieEditResult {
   template: `
 <div class="sef-panel">
   <div class="sef-hd">
-    <mat-icon>{{ mode === 'duplicate' ? 'content_copy' : 'edit' }}</mat-icon>
-    <span>{{ mode === 'duplicate' ? 'Dupliquer la saisie' : 'Modifier la saisie' }}</span>
+    <mat-icon>{{ mode === 'duplicate' ? 'content_copy' : mode === 'create' ? 'add' : 'edit' }}</mat-icon>
+    <span>{{ mode === 'duplicate' ? 'Dupliquer la saisie' : mode === 'create' ? 'Nouvelle saisie de temps' : 'Modifier la saisie' }}</span>
     <button type="button" class="sef-close" (click)="cancel.emit()">
       <mat-icon>close</mat-icon>
     </button>
@@ -87,8 +87,7 @@ export interface SaisieEditResult {
       </div>
       <div class="lf-field lf-field--duree">
         <label class="lf-label">Durée</label>
-        <input class="lf-input" [(ngModel)]="dureeInput" name="sefDuree"
-               placeholder="1h30" required (blur)="validerDuree()" />
+        <input type="time" class="lf-input" [(ngModel)]="dureeInput" name="sefDuree" required />
       </div>
     </div>
 
@@ -171,7 +170,7 @@ export interface SaisieEditResult {
 })
 export class SaisieEditFormComponent implements OnChanges {
   @Input() clients: Client[] = [];
-  @Input() mode: 'edit' | 'duplicate' = 'edit';
+  @Input() mode: 'edit' | 'duplicate' | 'create' = 'edit';
   @Input() seed: SaisieEditSeed | null = null;
   @Input() submitting = false;
   @Input() apiError = '';
@@ -199,7 +198,7 @@ export class SaisieEditFormComponent implements OnChanges {
       this.date        = s.date;
       this.clientId    = s.clientId ?? null;
       this.missionCode = (s.missionCode as MissionCode) ?? null;
-      this.dureeInput  = formatHeures(s.dureeHeures);
+      this.dureeInput  = toHHMM(s.dureeHeures);
       this.type        = s.type;
       this.categorie   = s.categorie ?? 'AUTRE';
       this.commentaire = s.commentaire ?? '';
@@ -209,16 +208,10 @@ export class SaisieEditFormComponent implements OnChanges {
     }
   }
 
-  validerDuree() {
-    this.localError = parseDuree(this.dureeInput) === null
-      ? 'Durée invalide — utilisez un format comme "1h30" ou "1.5"'
-      : '';
-  }
-
   submit() {
-    const duree = parseDuree(this.dureeInput);
+    const duree = parseHHMM(this.dureeInput);
     if (!this.date || duree === null) {
-      this.localError = 'Durée invalide — utilisez un format comme "1h30" ou "1.5"';
+      this.localError = 'Durée invalide — renseignez une durée (HH:MM).';
       return;
     }
     this.localError = '';

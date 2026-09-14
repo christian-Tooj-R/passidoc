@@ -69,8 +69,6 @@ export interface BudgetMission {
   heuresBudget: number;
 }
 
-export interface RapportRow { [key: string]: any; }
-
 export interface PlanningRow {
   collaborateurId: number;
   collaborateurNom: string;
@@ -221,10 +219,6 @@ export class SaisieTempsService {
   }
 
   // ── Nouvelles méthodes ──────────────────────────────────────────────────
-
-  getRapports(type: 'collaborateur' | 'client' | 'semaine', debut: string, fin: string): Observable<RapportRow[]> {
-    return this.http.get<RapportRow[]>(`${this.api}/rapports`, { params: { type, debut, fin } });
-  }
 
   getPlanning(debut: string, fin: string): Observable<PlanningRow[]> {
     return this.http.get<PlanningRow[]>(`${this.api}/planning`, { params: { debut, fin } });

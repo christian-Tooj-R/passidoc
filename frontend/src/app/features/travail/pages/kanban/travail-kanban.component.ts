@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Subject, takeUntil } from 'rxjs';
 import { TasksService, Task } from '../../../../core/services/tasks.service';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { UsersService } from '../../../../core/services/users.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Client } from '../../../../core/models/client.model';
 import { User } from '../../../../core/models/user.model';
 import { TimerService } from '../../../../core/services/saisie-temps.service';
@@ -32,7 +35,7 @@ const COLUMNS: KanbanColumn[] = [
 @Component({
   selector: 'app-travail-kanban',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatDialogModule, DragDropModule],
   template: `
 <div class="page">
 
@@ -76,7 +79,7 @@ const COLUMNS: KanbanColumn[] = [
   }
 
   <!-- ── Board Kanban ── -->
-  <div class="kanban-board">
+  <div class="kanban-board" cdkDropListGroup>
     @for (col of columns; track col.id) {
       <div class="kanban-col">
 
@@ -87,21 +90,28 @@ const COLUMNS: KanbanColumn[] = [
             <span class="col-label">{{ col.label }}</span>
           </div>
           <span class="col-count" [style.background]="col.bgColor" [style.color]="col.color">
-            {{ tasksForCol(col.id).length }}
+            {{ colTasks[col.id]?.length ?? 0 }}
           </span>
         </div>
 
         <!-- Zone de dépôt -->
         <div class="col-body"
-             [class.col-body--empty]="tasksForCol(col.id).length === 0"
-             (dragover)="onDragOver($event)"
-             (drop)="onDrop($event, col.id)">
+             [class.col-body--empty]="(colTasks[col.id]?.length ?? 0) === 0"
+             cdkDropList
+             [id]="col.id"
+             [cdkDropListData]="colTasks[col.id]"
+             [cdkDropListConnectedTo]="colIds"
+             (cdkDropListDropped)="onDrop($event, col.id)">
 
-          @for (task of tasksForCol(col.id); track task.id) {
+          @for (task of colTasks[col.id]; track task.id) {
             <div class="kanban-card"
-                 draggable="true"
-                 (dragstart)="onDragStart($event, task)"
+                 cdkDrag
                  [class.kanban-card--haute]="task.priorite === 'HAUTE'">
+
+              <!-- Poignée de glissement -->
+              <div class="card-drag-handle" cdkDragHandle matTooltip="Glisser pour changer le statut">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
 
               <!-- Priorité + type -->
               <div class="card-top">
@@ -155,11 +165,11 @@ const COLUMNS: KanbanColumn[] = [
               </div>
 
               <!-- Actions -->
-              <div class="card-actions">
-                <button class="card-act-btn" matTooltip="Voir détail">
+              <div class="card-actions" (click)="$event.stopPropagation()">
+                <button class="card-act-btn" matTooltip="Voir détail" (click)="openDetail(task)">
                   <mat-icon>open_in_new</mat-icon>
                 </button>
-                <button class="card-act-btn" matTooltip="Modifier">
+                <button class="card-act-btn" matTooltip="Modifier" (click)="openDetail(task)">
                   <mat-icon>edit</mat-icon>
                 </button>
                 @if (timerSvc.isRunning() && timerSvc.activeTaskCtx()?.taskId === task.id) {
@@ -177,10 +187,11 @@ const COLUMNS: KanbanColumn[] = [
                 }
               </div>
 
+              <div *cdkDragPlaceholder class="card-drag-placeholder"></div>
             </div>
           }
 
-          @if (tasksForCol(col.id).length === 0) {
+          @if ((colTasks[col.id]?.length ?? 0) === 0) {
             <div class="col-empty">
               <mat-icon>inbox</mat-icon>
               <span>Aucune tâche</span>
@@ -310,14 +321,31 @@ const COLUMNS: KanbanColumn[] = [
     /* Carte kanban */
     .kanban-card {
       background:#fff; border:1px solid #e8ecf0; border-radius:10px;
-      padding:11px 12px; cursor:grab;
+      padding:11px 12px 11px 28px;
       box-shadow:0 1px 3px rgba(0,0,0,.06);
       transition:box-shadow .15s, transform .12s;
       position:relative;
     }
-    .kanban-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
-    .kanban-card:active { cursor:grabbing; }
+    .kanban-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.1); }
     .kanban-card--haute { border-left:3px solid #ef4444; }
+
+    /* Poignée de glissement (CDK drag-drop) */
+    .card-drag-handle {
+      position:absolute; top:0; left:0; bottom:0; width:22px;
+      display:flex; align-items:center; justify-content:center;
+      color:#cbd5e1; cursor:grab;
+    }
+    .card-drag-handle:active { cursor:grabbing; }
+    .kanban-card:hover .card-drag-handle { color:#94a3b8; }
+    .card-drag-handle mat-icon { font-size:16px; width:16px; height:16px; }
+
+    /* Ghost affiché à l'emplacement d'origine pendant le glissement */
+    .card-drag-placeholder {
+      min-height:60px; border:2px dashed #a5f3fc; border-radius:10px; background:#ecfeff;
+    }
+    .cdk-drag-preview { box-shadow:0 8px 24px rgba(0,0,0,.18); border-radius:10px; }
+    .cdk-drag-animating { transition:transform 200ms cubic-bezier(0,0,0.2,1); }
+    .col-body.cdk-drop-list-dragging .kanban-card:not(.cdk-drag-placeholder) { transition:transform 200ms cubic-bezier(0,0,0.2,1); }
 
     .card-top { display:flex; align-items:center; gap:5px; margin-bottom:7px; flex-wrap:wrap; }
     .card-prio {
@@ -392,6 +420,8 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
   private tasksSvc  = inject(TasksService);
   private clientsSvc = inject(ClientsService);
   private usersSvc  = inject(UsersService);
+  private auth      = inject(AuthService);
+  private dialog    = inject(MatDialog);
   readonly timerSvc  = inject(TimerService);
   private _d$ = new Subject<void>();
 
@@ -400,12 +430,17 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
   clients: Client[] = [];
   users: User[]     = [];
   columns = COLUMNS;
+  readonly colIds = COLUMNS.map(c => c.id);
+
+  /** Un tableau MUTABLE par colonne — nécessaire pour le drag & drop CDK, qui réordonne/
+   *  transfère les tâches directement dans ces tableaux (moveItemInArray/transferArrayItem),
+   *  contrairement à un simple filtre recalculé (`tasksForCol()`), qui n'offre pas de
+   *  référence stable que CDK puisse manipuler. */
+  colTasks: Record<string, Task[]> = {};
 
   filterCollab = '';
   filterClient = '';
   filterPrio   = '';
-
-  private draggedTask: Task | null = null;
 
   ngOnInit() {
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
@@ -424,43 +459,61 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
         if (this.filterClient) filtered = filtered.filter(t => t.clientId     === +this.filterClient);
         if (this.filterPrio)   filtered = filtered.filter(t => t.priorite     === this.filterPrio);
         this.allTasks.set(filtered);
+        this.buildColumns();
         this.loading.set(false);
       },
-      error: () => { this.allTasks.set([]); this.loading.set(false); },
+      error: () => { this.allTasks.set([]); this.buildColumns(); this.loading.set(false); },
     });
   }
 
-  tasksForCol(colId: string): Task[] {
-    return this.allTasks().filter(t => (t.statut ?? 'A_FAIRE') === colId);
-  }
-
-  onDragStart(event: DragEvent, task: Task) {
-    this.draggedTask = task;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', String(task.id));
+  private buildColumns() {
+    const tasks = this.allTasks();
+    this.colTasks = {};
+    for (const col of this.columns) {
+      this.colTasks[col.id] = tasks.filter(t => (t.statut ?? 'A_FAIRE') === col.id);
     }
   }
 
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-  }
-
-  onDrop(event: DragEvent, newStatut: string) {
-    event.preventDefault();
-    if (!this.draggedTask || this.draggedTask.statut === newStatut) return;
-    const task = this.draggedTask;
-    this.draggedTask = null;
-    // Optimistic update
-    this.allTasks.update(tasks => tasks.map(t => t.id === task.id ? { ...t, statut: newStatut as any } : t));
-    this.tasksSvc.update(task.clientId, task.id, { statut: newStatut as any }).pipe(takeUntil(this._d$)).subscribe({
-      error: () => this.reload(), // rollback on error
+  onDrop(event: CdkDragDrop<Task[]>, targetStatut: string) {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+      return;
+    }
+    const task = event.previousContainer.data[event.previousIndex];
+    transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+    this.tasksSvc.update(task.clientId, task.id, { statut: targetStatut as any }).pipe(takeUntil(this._d$)).subscribe({
+      next: () => { task.statut = targetStatut as any; },
+      error: () => this.reload(), // rollback en cas d'échec serveur
     });
   }
 
-  newTask()            { /* TODO: ouvrir dialog création */ }
-  newTaskInCol(statut: string) { /* TODO: ouvrir dialog avec statut pré-rempli */ }
+  newTask() {
+    import('../../../tasks/tasks-global.component').then(m => {
+      const ref = this.dialog.open((m as any).CreateTaskDialogComponent, {
+        width: '600px', maxWidth: '96vw',
+        data: { clients: this.clients, users: this.users },
+      });
+      ref.afterClosed().subscribe((result: string) => { if (result === 'created') this.reload(); });
+    });
+  }
+
+  newTaskInCol(_statut: string) { this.newTask(); }
+
+  openDetail(task: Task) {
+    import('../../../tasks/tasks-global.component').then(m => {
+      const ref = this.dialog.open((m as any).TaskDetailDialogComponent, {
+        width: '900px', maxWidth: '96vw',
+        data: {
+          task, users: this.users,
+          currentUserId: this.auth.currentUser()?.id,
+          currentUserIsAdmin: this.auth.isAdmin(),
+        },
+      });
+      ref.afterClosed().subscribe((result: string) => {
+        if (result === 'updated' || result === 'deleted') this.reload();
+      });
+    });
+  }
 
   initials(nom: string): string {
     return nom.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();

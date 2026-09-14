@@ -5,6 +5,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../core/services/auth.service';
 
 interface NavItem { label: string; icon: string; route: string; }
 interface NavSection { title: string; items: NavItem[]; }
@@ -305,9 +306,12 @@ const NAV: NavSection[] = [
 })
 export class RhComponent implements OnInit, OnDestroy {
   router     = inject(Router);
+  private auth = inject(AuthService);
   entering   = signal(true);
   navLoading = signal(false);
-  readonly nav = NAV;
+  /** Section "Paie" (administration paie interne) réservée à l'ADMIN — les autres
+   *  salariés ne gardent que "Équipe" et "Espace personnel" (Mes bulletins). */
+  readonly nav = NAV.filter((section) => section.title !== 'Paie' || this.auth.currentUser()?.role === 'ADMIN');
   private _destroy$ = new Subject<void>();
 
   ngOnInit() {

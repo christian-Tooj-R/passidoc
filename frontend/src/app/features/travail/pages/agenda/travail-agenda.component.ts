@@ -6,6 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { SaisieTempsService, SaisieTemps } from '../../../../core/services/saisie-temps.service';
+import { ClientsService } from '../../../../core/services/clients.service';
+import { Client } from '../../../../core/models/client.model';
+import { SaisieEditFormComponent, SaisieEditSeed, SaisieEditResult } from '../../shared/saisie-edit-form.component';
 
 interface CalEvent {
   saisie: SaisieTemps;
@@ -30,7 +33,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 @Component({
   selector: 'app-travail-agenda',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, SaisieEditFormComponent],
   template: `
 <div class="page" (mouseup)="endSelect()" (mouseleave)="cancelSelect()">
 
@@ -50,6 +53,16 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
       <button class="nav-btn" (click)="prevPeriod()"><mat-icon>chevron_left</mat-icon></button>
       <span class="week-txt">{{ weekLabel() }}</span>
       <button class="nav-btn" (click)="nextPeriod()"><mat-icon>chevron_right</mat-icon></button>
+      <div class="nav-btn nav-btn--datepick" matTooltip="Aller à une date">
+        <mat-icon>calendar_month</mat-icon>
+        <input
+          type="date"
+          class="date-jump-input"
+          aria-label="Aller à une date"
+          [value]="jumpDateValue()"
+          (change)="irALaDate($any($event.target).value)"
+        />
+      </div>
       <button class="btn-today" (click)="goToday()">Aujourd'hui</button>
     </div>
 
@@ -180,23 +193,18 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     </div>
   }
 
-  <!-- ── Mini-form saisie créneau sélectionné ── -->
-  @if (showNewForm()) {
-    <div class="new-form-overlay" (click)="showNewForm.set(false)">
+  <!-- ── Formulaire saisie créneau sélectionné ── -->
+  @if (editing()) {
+    <div class="new-form-overlay" (click)="closeEdit()">
       <div class="new-form" (click)="$event.stopPropagation()">
-        <div class="new-form__hd">
-          <mat-icon>schedule</mat-icon>
-          <span>Nouvelle saisie de temps</span>
-          <button class="nf-close" (click)="showNewForm.set(false)"><mat-icon>close</mat-icon></button>
-        </div>
-        <div class="new-form__body">
-          <p class="nf-info">
-            <strong>{{ newFormDay }}</strong> · {{ newFormStart }} → {{ newFormEnd }}
-            ({{ newFormDuration }}h)
-          </p>
-          <p class="nf-hint">Rendez-vous dans <strong>Saisie des temps</strong> pour compléter et enregistrer cette entrée avec toutes les informations requises.</p>
-          <button class="nf-btn" (click)="showNewForm.set(false)">Fermer</button>
-        </div>
+        <app-saisie-edit-form
+          [clients]="clients"
+          mode="create"
+          [seed]="editSeed()"
+          [submitting]="saving()"
+          [apiError]="editError()"
+          (save)="onSaveEdit($event)"
+          (cancel)="closeEdit()" />
       </div>
     </div>
   }
@@ -232,6 +240,11 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .nav-btn:hover { background:#f1f5f9; }
     .nav-btn mat-icon { font-size:18px; width:18px; height:18px; }
+    .nav-btn--datepick { position:relative; overflow:hidden; }
+    .date-jump-input {
+      position:absolute; inset:0; width:100%; height:100%;
+      opacity:0; cursor:pointer; border:none; padding:0; margin:0;
+    }
     .week-txt { font-size:13px; font-weight:600; color:#374151; min-width:160px; text-align:center; }
     .btn-today {
       height:32px; padding:0 14px; border:1px solid #6366f1; border-radius:7px;
@@ -377,27 +390,14 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .new-form {
       background:#fff; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.25);
-      width:360px; overflow:hidden;
+      width:660px; max-width:92vw; max-height:90vh; overflow-y:auto;
     }
-    .new-form__hd {
-      display:flex; align-items:center; gap:10px; padding:16px 20px;
-      background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff;
-      font-size:14px; font-weight:700;
-    }
-    .new-form__hd mat-icon { font-size:18px; width:18px; height:18px; }
-    .nf-close { background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer; margin-left:auto; }
-    .nf-close mat-icon { font-size:18px; width:18px; height:18px; }
-    .new-form__body { padding:20px; }
-    .nf-info { font-size:14px; font-weight:700; color:#1e293b; margin:0 0 10px; }
-    .nf-hint { font-size:12.5px; color:#64748b; margin:0 0 16px; line-height:1.5; }
-    .nf-btn {
-      width:100%; padding:10px; border:none; border-radius:8px;
-      background:#6366f1; color:#fff; font-size:13px; font-weight:600; cursor:pointer;
-    }
+    .new-form app-saisie-edit-form ::ng-deep .sef-panel { margin:0; border:none; box-shadow:none; }
   `],
 })
 export class TravailAgendaComponent implements OnInit, OnDestroy {
   private saisiesSvc = inject(SaisieTempsService);
+  private clientsSvc = inject(ClientsService);
   private cdr = inject(ChangeDetectorRef);
   private _d$ = new Subject<void>();
 
@@ -406,12 +406,17 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
   loading    = signal(true);
   viewMode   = signal<'semaine' | 'jour'>('semaine');
   saisies    = signal<SaisieTemps[]>([]);
+  clients: Client[] = [];
 
   // Sélection
   selection  = signal<Selection | null>(null);
-  showNewForm = signal(false);
-  newFormDay = ''; newFormStart = ''; newFormEnd = ''; newFormDuration = 0;
   private isSelecting = false;
+
+  // Formulaire de saisie (créneau sélectionné ou "Nouveau temps")
+  editing   = signal(false);
+  editSeed  = signal<SaisieEditSeed | null>(null);
+  saving    = signal(false);
+  editError = signal('');
 
   // Indicateur "maintenant"
   nowTopPx = signal(-1);
@@ -474,6 +479,12 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
 
   totalWeekH = computed(() => this.saisies().reduce((a, s) => a + s.dureeHeures, 0));
 
+  /** Date affichée dans le sélecteur du bouton calendrier : le jour visible en vue "jour",
+   *  le lundi de la semaine visible en vue "semaine". */
+  jumpDateValue = computed(() => {
+    return this.viewMode() === 'jour' ? this.visibleDays()[0]?.date : this.weekDays()[0]?.date;
+  });
+
   selTop = computed(() => {
     const s = this.selection();
     if (!s) return 0;
@@ -501,6 +512,7 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     this.loadData();
     this.updateNowLine();
     interval(60000).pipe(takeUntil(this._d$)).subscribe(() => this.updateNowLine());
+    this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
   }
 
   private updateNowLine() {
@@ -601,12 +613,37 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     if (!s) return;
     const start = Math.min(s.startSlot, s.endSlot);
     const end   = Math.max(s.startSlot, s.endSlot);
-    this.newFormDay      = s.day;
-    this.newFormStart    = this.slotToTime(start);
-    this.newFormEnd      = this.slotToTime(end + 1);
-    this.newFormDuration = (end - start + 1) * 0.5;
+    const heureDebut = this.slotToTime(start);
+    const heureFin   = this.slotToTime(end + 1);
+    const dureeHeures = (end - start + 1) * 0.5;
     this.cancelSelect();
-    this.showNewForm.set(true);
+    this.openForm(s.day, dureeHeures, heureDebut, heureFin);
+  }
+
+  /** Ouvre le formulaire de saisie — soit pré-rempli depuis une sélection de créneau
+   *  (confirmSelection), soit vierge sur le jour courant (bouton "Nouveau temps"). */
+  private openForm(date: string, dureeHeures = 0, heureDebut: string | null = null, heureFin: string | null = null) {
+    this.editError.set('');
+    this.editSeed.set({
+      date, dureeHeures, heureDebut, heureFin,
+      clientId: null, missionCode: null, type: 'FACTURABLE', categorie: null, commentaire: null,
+    });
+    this.editing.set(true);
+  }
+
+  closeEdit() {
+    this.editing.set(false);
+    this.editSeed.set(null);
+    this.editError.set('');
+  }
+
+  onSaveEdit(result: SaisieEditResult) {
+    this.saving.set(true);
+    this.editError.set('');
+    this.saisiesSvc.create(result).pipe(takeUntil(this._d$)).subscribe({
+      next: () => { this.saving.set(false); this.closeEdit(); this.loadData(); },
+      error: () => { this.saving.set(false); this.editError.set('Erreur lors de l\'enregistrement — réessayez.'); },
+    });
   }
 
   setView(v: 'semaine' | 'jour') { this.viewMode.set(v); }
@@ -621,7 +658,34 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
   }
   goToday() { this.weekOffset.set(0); this.dayOffset.set(0); this.loadData(); }
 
-  onNewTemps() { this.showNewForm.set(true); }
+  /** Bascule directement sur une date choisie via le sélecteur calendrier (plutôt que de
+   *  cliquer semaine par semaine avec les chevrons) — recalcule weekOffset/dayOffset par
+   *  rapport à aujourd'hui, en cohérence avec les deux vues (semaine et jour). */
+  irALaDate(dateStr: string) {
+    if (!dateStr) return;
+    const cible = new Date(`${dateStr}T00:00:00`);
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+
+    const lundiDe = (d: Date) => {
+      const m = new Date(d);
+      m.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
+      m.setHours(0, 0, 0, 0);
+      return m;
+    };
+    const MS_JOUR = 24 * 60 * 60 * 1000;
+    const diffSemaines = Math.round((lundiDe(cible).getTime() - lundiDe(aujourdhui).getTime()) / (7 * MS_JOUR));
+    const diffJours = Math.round((cible.getTime() - aujourdhui.getTime()) / MS_JOUR);
+
+    this.weekOffset.set(diffSemaines);
+    this.dayOffset.set(diffJours);
+    this.loadData();
+  }
+
+  onNewTemps() {
+    const jour = this.viewMode() === 'jour' ? this.visibleDays()[0]?.date : this.weekDays().find(d => d.isToday)?.date;
+    this.openForm(jour ?? new Date().toISOString().split('T')[0]);
+  }
 
   ngOnDestroy() { this._d$.next(); this._d$.complete(); }
 }

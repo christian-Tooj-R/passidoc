@@ -104,6 +104,9 @@ export class CyclesPaieRhService {
     if (cycle.statut === StatutCyclePaieRh.CLOTURE) {
       throw new BadRequestException('Ce cycle est clôturé — impossible de recalculer.');
     }
+    if (cycle.statut === StatutCyclePaieRh.VALIDE) {
+      throw new BadRequestException('Ce cycle est validé — dévalidez-le avant de recalculer les bulletins.');
+    }
 
     const actifs = await this.contratsService.findTousActifs(tenantId);
     const bulletinsExistants = await this.bulletinsService.findByPeriode(mois, annee, tenantId);
@@ -138,6 +141,22 @@ export class CyclesPaieRhService {
     cycle.statut = StatutCyclePaieRh.VALIDE;
     cycle.dateValidation = new Date();
     cycle.valideParId = valideParId;
+    return this.repo.save(cycle);
+  }
+
+  /**
+   * Dévalidation : ramène un cycle VALIDÉ à CALCULÉ. Un cycle validé est verrouillé — plus
+   * aucun bulletin ne peut être (re)généré (`assertPeriodeOuverte`) — la dévalidation est le
+   * seul moyen de rouvrir le calcul avant la clôture définitive.
+   */
+  async devalider(mois: number, annee: number, tenantId: number): Promise<CyclePaieRh> {
+    const cycle = await this.findOne(mois, annee, tenantId);
+    if (cycle.statut !== StatutCyclePaieRh.VALIDE) {
+      throw new BadRequestException('Seul un cycle validé peut être dévalidé.');
+    }
+    cycle.statut = StatutCyclePaieRh.CALCULE;
+    cycle.dateValidation = null;
+    cycle.valideParId = null;
     return this.repo.save(cycle);
   }
 

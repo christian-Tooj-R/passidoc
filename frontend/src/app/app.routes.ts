@@ -84,30 +84,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/travail/pages/agenda/travail-agenda.component').then(m => m.TravailAgendaComponent),
       },
       {
-        path: 'planning',
-        loadComponent: () => import('./features/travail/pages/planning/travail-planning.component').then(m => m.TravailPlanningComponent),
-      },
-      {
-        path: 'feuille-temps',
-        loadComponent: () => import('./features/travail/pages/feuille-temps/travail-feuille-temps.component').then(m => m.TravailFeuilleTempsComponent),
-      },
-      {
-        path: 'budgets',
-        loadComponent: () => import('./features/travail/pages/budgets/travail-budgets.component').then(m => m.TravailBudgetsComponent),
-      },
-      {
-        path: 'rapports/productivite',
-        loadComponent: () => import('./features/travail/pages/rapports/travail-rapports-productivite.component').then(m => m.TravailRapportsProductiviteComponent),
-      },
-      {
-        path: 'rapports/clients',
-        loadComponent: () => import('./features/travail/pages/rapports/travail-rapports-clients.component').then(m => m.TravailRapportsClientsComponent),
-      },
-      {
-        path: 'rapports/alertes',
-        loadComponent: () => import('./features/travail/pages/rapports/travail-rapports-alertes.component').then(m => m.TravailRapportsAlertesComponent),
-      },
-      {
         path: 'kanban',
         loadComponent: () => import('./features/travail/pages/kanban/travail-kanban.component').then(m => m.TravailKanbanComponent),
       },
@@ -137,14 +113,20 @@ export const routes: Routes = [
       },
       {
         path: 'periode',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/paie-rh/periode-rh.component').then((m) => m.PeriodeRhComponent),
       },
       {
         path: 'activite',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/paie-rh/activite-rh.component').then((m) => m.ActiviteRhComponent),
       },
       {
         path: 'paie',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/paie-rh/paie-rh-hub.component').then((m) => m.PaieRhHubComponent),
       },
       {

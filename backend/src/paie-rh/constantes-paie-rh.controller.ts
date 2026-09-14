@@ -15,12 +15,12 @@ import { CreateConstantePaieRhDto, UpdateConstantePaieRhDto } from './dto/consta
 @ApiTags('Paie RH — Constantes (paramétrage)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/constantes')
 export class ConstantesPaieRhController {
   constructor(private service: ConstantesPaieRhService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Créer une constante de paie RH' })
   create(@Body() dto: CreateConstantePaieRhDto, @Req() req: any) {
     return this.service.create(dto, req.user.tenantId);
@@ -44,14 +44,12 @@ export class ConstantesPaieRhController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Modifier une constante de paie RH' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateConstantePaieRhDto, @Req() req: any) {
     return this.service.update(id, dto, req.user.tenantId);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Supprimer une constante de paie RH' })
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.service.remove(id, req.user.tenantId);

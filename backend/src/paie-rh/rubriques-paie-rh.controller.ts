@@ -15,12 +15,12 @@ import { CreateRubriquePaieRhDto, UpdateRubriquePaieRhDto } from './dto/rubrique
 @ApiTags('Paie RH — Rubriques (paramétrage)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/rubriques')
 export class RubriquesPaieRhController {
   constructor(private service: RubriquesPaieRhService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Créer une rubrique de paie RH' })
   create(@Body() dto: CreateRubriquePaieRhDto, @Req() req: any) {
     return this.service.create(dto, req.user.tenantId);
@@ -34,14 +34,12 @@ export class RubriquesPaieRhController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Modifier une rubrique de paie RH' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRubriquePaieRhDto, @Req() req: any) {
     return this.service.update(id, dto, req.user.tenantId);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Supprimer une rubrique de paie RH' })
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.service.remove(id, req.user.tenantId);

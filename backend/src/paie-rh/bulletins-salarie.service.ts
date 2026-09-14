@@ -75,6 +75,9 @@ export class BulletinsSalarieService {
     // (no-op si l'activité n'a jamais été calculée pour ce salarié/cette période — voir
     // VariablesPaieRhService.synchroniserHeuresSup()).
     await this.variablesService.synchroniserHeuresSup(salarieId, mois, annee, tenantId);
+    // Idem pour le Nombre/Montant de "Salaire de base" basé sur la présence réelle (no-op
+    // si l'activité n'a jamais été calculée — voir synchroniserJoursActivite()).
+    await this.variablesService.synchroniserJoursActivite(salarieId, mois, annee, tenantId);
 
     const variable = await this.variableRepo.findOne({ where: { salarieId, mois, annee, tenantId } });
     // Date de référence pour l'historisation des rubriques/constantes (voir
@@ -93,6 +96,11 @@ export class BulletinsSalarieService {
     if (cycle?.statut === StatutCyclePaieRh.CLOTURE) {
       throw new BadRequestException(
         `La période ${mois}/${annee} est clôturée — une paie clôturée est immuable (CDC §1). Utilisez une régularisation sur une période ultérieure.`,
+      );
+    }
+    if (cycle?.statut === StatutCyclePaieRh.VALIDE) {
+      throw new BadRequestException(
+        `Le cycle ${mois}/${annee} est validé — dévalidez-le avant de régénérer un bulletin.`,
       );
     }
   }
@@ -132,6 +140,7 @@ export class BulletinsSalarieService {
       annee,
       regimePaieCode: contrat.regimePaieCode,
       salaireBase: resultat.salaireBase,
+      joursSalaireBase: resultat.joursSalaireBase,
       totalBrut: resultat.totalBrut,
       totalCotisationsSalariales: resultat.totalCotisationsSalariales,
       totalCotisationsPatronales: resultat.totalCotisationsPatronales,
@@ -186,6 +195,7 @@ export class BulletinsSalarieService {
       variablePaieRhId: variable?.id ?? null,
       regimePaieCode: contrat.regimePaieCode,
       salaireBase: resultat.salaireBase,
+      joursSalaireBase: resultat.joursSalaireBase,
       totalBrut: resultat.totalBrut,
       totalCotisationsSalariales: resultat.totalCotisationsSalariales,
       totalCotisationsPatronales: resultat.totalCotisationsPatronales,
@@ -449,12 +459,26 @@ export class BulletinsSalarieService {
     // nouvelle notion, fusionnée depuis l'ancien ParametrePaieRh — voir
     // Doc/MODULE_PAIE_RH_NOTES.md) — voir moteur-calcul-paie-rh.service.ts.
     let horaireMensuel: number | null = null;
+    // "Nombre" de la ligne "Salaire de base" (~Sage) : jours ouvrés théoriques du mois, pas
+    // les jours calendaires — même constante JOURS_OUVRES_MOIS_DEFAUT que la valorisation
+    // des absences (variables-paie-rh.service.ts), repli sur son défaut (22) si absente.
+    let joursOuvresMois = 22;
     try {
       const constantesHoraire = await this.constantesService.findByRegime(bulletin.regimePaieCode || 'TOUS', bulletin.tenantId);
       horaireMensuel = resoudreConstante('HEURES_LEGALES_MOIS', constantesHoraire);
+      try {
+        joursOuvresMois = resoudreConstante('JOURS_OUVRES_MOIS_DEFAUT', constantesHoraire);
+      } catch {
+        // repli sur le défaut ci-dessus
+      }
     } catch {
       horaireMensuel = null;
     }
+    // Jours réellement utilisés pour calculer `bulletin.salaireBase` (figés au moment de la
+    // génération — voir `BulletinSalarie.joursSalaireBase`) ; repli sur les jours ouvrés
+    // théoriques ci-dessus pour les bulletins générés avant cette synchronisation, ou pour
+    // un salarié dont l'activité n'a jamais été calculée.
+    const joursSalaireBaseAffiche = bulletin.joursSalaireBase != null ? Number(bulletin.joursSalaireBase) : joursOuvresMois;
 
     // ── Congés — Acquis/Reste/Pris (best-effort, n'empêche jamais la génération du PDF).
     // Choix documenté (Doc/MODULE_PAIE_RH_NOTES.md) : agrégation sur le type CONGES_PAYES
@@ -526,81 +550,6 @@ export class BulletinsSalarieService {
     // ── Période ──
     const premierJour = new Date(bulletin.annee, bulletin.mois - 1, 1);
     const dernierJour = new Date(bulletin.annee, bulletin.mois, 0);
-    const nbJoursPeriode = dernierJour.getDate();
-
-    // ── Tableau principal — structure ~Sage à 3 groupes de colonnes : RUBRIQUE
-    // (N°/Désignation/Nb/Montant) | PART SALARIALE (Taux/Retenue) | PART PATRONALE
-    // (Taux/Retenue). Une 1ère ligne synthétique "Salaire de base" n'est PAS une
-    // RubriquePaieRh (elle vient de `contrat.salaireBase`/`bulletin.salaireBase`, géré à
-    // part par le moteur de calcul) — reconstituée ici pour l'affichage, avec un "Nb" =
-    // nombre de jours calendaires de la période (faute d'un concept "jours travaillés"
-    // distinct dans notre moteur — voir Doc/MODULE_PAIE_RH_NOTES.md).
-    const tableBody: any[] = [
-      [
-        { text: 'RUBRIQUE', bold: true, alignment: 'center', colSpan: 4 }, {}, {}, {},
-        { text: 'PART SALARIALE', bold: true, alignment: 'center', colSpan: 2 }, {},
-        { text: 'PART PATRONALE', bold: true, alignment: 'center', colSpan: 2 }, {},
-      ],
-      [
-        { text: 'N°', bold: true },
-        { text: 'Désignation', bold: true },
-        { text: 'Nb', bold: true, alignment: 'right' },
-        { text: 'Montant', bold: true, alignment: 'right' },
-        { text: 'Taux', bold: true, alignment: 'right' },
-        { text: 'Retenue', bold: true, alignment: 'right' },
-        { text: 'Taux', bold: true, alignment: 'right' },
-        { text: 'Retenue', bold: true, alignment: 'right' },
-      ],
-      [
-        '', 'Salaire de base',
-        { text: String(nbJoursPeriode), alignment: 'right' },
-        { text: fmt(bulletin.salaireBase), alignment: 'right' },
-        { text: '-', alignment: 'right' }, { text: '-', alignment: 'right' },
-        { text: '-', alignment: 'right' }, { text: '-', alignment: 'right' },
-      ],
-    ];
-    for (const l of [...lignesCotisations, ...lignesAutres]) {
-      tableBody.push([
-        l.code,
-        l.libelle,
-        { text: l.nombreSalarial != null ? String(l.nombreSalarial) : '-', alignment: 'right' },
-        { text: fmt(l.base), alignment: 'right' },
-        { text: l.tauxSalarial != null ? `${l.tauxSalarial}%` : '-', alignment: 'right' },
-        { text: fmt(l.montantSalarial), alignment: 'right' },
-        { text: l.tauxPatronal != null ? `${l.tauxPatronal}%` : '-', alignment: 'right' },
-        { text: fmt(l.montantPatronal), alignment: 'right' },
-      ]);
-    }
-
-    // ── Tableau de pied (cumuls ~Sage) — Cumuls | Sal.Br | Net.Imp | Ch.Sal | Ch.Pat. |
-    // Hrs trav. | Av.Nat. | NET. "Hrs trav." réutilise le même HEURES_LEGALES_MOIS que
-    // "Horaire" en en-tête (pas de suivi distinct des heures réellement travaillées dans
-    // notre moteur — voir Doc/MODULE_PAIE_RH_NOTES.md). La ligne "Fmg" (double devise
-    // historique malgache) de l'exemplaire d'origine n'est PAS reproduite (hors sujet).
-    const tableCumuls = {
-      table: {
-        widths: ['auto', '*', '*', '*', '*', '*', '*', '*'],
-        body: [
-          [
-            { text: 'Cumuls', bold: true }, { text: 'Sal. Br', bold: true, alignment: 'right' },
-            { text: 'Net. Imp', bold: true, alignment: 'right' }, { text: 'Ch. Sal', bold: true, alignment: 'right' },
-            { text: 'Ch. Pat.', bold: true, alignment: 'right' }, { text: 'Hrs trav.', bold: true, alignment: 'right' },
-            { text: 'Av. Nat.', bold: true, alignment: 'right' }, { text: 'NET', bold: true, alignment: 'right' },
-          ],
-          [
-            deviseLabel,
-            { text: fmt(bulletin.totalBrut), alignment: 'right' },
-            { text: fmt(bulletin.netImposable), alignment: 'right' },
-            { text: fmt(bulletin.totalCotisationsSalariales), alignment: 'right' },
-            { text: fmt(bulletin.totalCotisationsPatronales), alignment: 'right' },
-            { text: horaireMensuel != null ? String(horaireMensuel) : '-', alignment: 'right' },
-            { text: fmt(totalAvantagesNature), alignment: 'right' },
-            { text: fmt(bulletin.netAPayer), bold: true, alignment: 'right' },
-          ],
-        ],
-      },
-      margin: [0, 8, 0, 15],
-    };
 
     const titre = bulletin.estRegularisation ? 'BULLETIN DE SALAIRE — RÉGULARISATION' : 'BULLETIN DE SALAIRE';
     const versionLabel = bulletin.version > 1 ? ` — v${bulletin.version} (duplicata/correctif)` : '';
@@ -611,99 +560,180 @@ export class BulletinsSalarieService {
       .filter(Boolean)
       .join(' — ');
 
-    const champInfo = (label: string, valeur: string | number | null | undefined) => ({
-      stack: [
-        { text: label, fontSize: 7, color: '#666' },
-        { text: valeur != null && valeur !== '' ? String(valeur) : '-', fontSize: 9 },
-      ],
-      margin: [0, 0, 0, 6],
-    });
-
-    // ── Bloc "FICHE DE PAIE" — un seul tableau à bordures (grille ~Sage), au lieu de
-    // simples colonnes sans bordure : en-tête employeur/période, grille d'informations
-    // salarié (4 colonnes), puis congés + identité, le tout dans les mêmes bordures.
-    const ficheDePaieTable = {
-      table: {
-        widths: ['25%', '25%', '25%', '25%'],
-        body: [
-          [
-            {
-              colSpan: 2,
-              stack: [
-                { text: 'FICHE DE PAIE', bold: true, fontSize: 13, margin: [0, 0, 0, 4] },
-                { text: this.aRenseigner(tenantConfig?.nomSociete || null), bold: true },
-                { text: this.aRenseigner(tenantConfig?.adresse ?? null), fontSize: 8 },
-                { text: `N° Tél : ${this.aRenseigner(tenantConfig?.telephone ?? null)}`, fontSize: 8 },
-                { text: `N° immatriculation employeur : ${this.aRenseigner(tenantConfig?.numeroImmatriculationEmployeur ?? null)}`, fontSize: 8 },
-                { text: `N° RCS : ${this.aRenseigner(tenantConfig?.numeroRegistreCommerce ?? null)}`, fontSize: 8 },
-                { text: `N° NIF : ${this.aRenseigner(tenantConfig?.numeroIdentifiantFiscal ?? null)}`, fontSize: 8 },
-              ],
-              margin: [4, 4, 4, 4],
-            },
-            {},
-            {
-              colSpan: 2,
-              alignment: 'right',
-              stack: [
-                { text: titre, bold: true, fontSize: 12 },
-                { text: `${this.MOIS_LABEL[bulletin.mois - 1]} ${bulletin.annee}${versionLabel}`, fontSize: 9, margin: [0, 2, 0, 6] },
-                { text: `Période du : ${this.formatDate(premierJour)} au ${this.formatDate(dernierJour)}`, fontSize: 9, bold: true },
-              ],
-              margin: [4, 4, 4, 4],
-            },
-            {},
-          ],
-          [
-            champInfo('Matricule', salarie.matricule), champInfo('Niveau / Statut', salarie.statut),
-            champInfo('Ancienneté', this.formatDate(dateAnciennete)), champInfo('N° immatriculation sociale', salarie.numeroSS),
-          ],
-          [
-            champInfo('Horaire', horaireMensuel != null ? horaireMensuel : null), champInfo('Emploi occupé', salarie.poste),
-            champInfo(`Salaire (${deviseLabel})`, this.formatMontant(bulletin.salaireBase)), champInfo('Service', null),
-          ],
-          [
-            champInfo('Département', salarie.departement), champInfo('Enfant(s)', salarie.nbEnfantsCharge ?? 0),
-            { colSpan: 2, ...champInfo('Commentaire', null) }, {},
-          ],
-          [
-            {
-              colSpan: 2,
-              stack: [
-                { text: 'CONGÉS', bold: true, fontSize: 9, margin: [0, 4, 0, 3] },
-                { text: `Acquis : ${congesAcquis}   |   Reste : ${round2(congesAcquis - congesPris)}   |   Pris : ${congesPris}`, fontSize: 8 },
-                ...[0, 1, 2].map((i) => ({
-                  text: congesPeriode[i]
-                    ? `Congés : du ${this.formatDate(congesPeriode[i].debut)} au ${this.formatDate(congesPeriode[i].fin)}`
-                    : 'Congés : du ................ au ................',
-                  fontSize: 8, margin: [0, 1, 0, 0],
-                })),
-              ],
-              margin: [4, 4, 4, 4],
-            },
-            {},
-            {
-              colSpan: 2,
-              stack: [
-                { text: `${civilite} ${salarie.firstName} ${salarie.lastName}`.trim(), bold: true, fontSize: 9, margin: [0, 4, 0, 2] },
-                { text: adresseSalarie || '-', fontSize: 8 },
-              ],
-              margin: [4, 4, 4, 4],
-            },
-            {},
-          ],
+    /**
+     * Construit le contenu d'UN exemplaire complet du bulletin (tout ce qui apparaissait
+     * auparavant directement dans `docDefinition.content`). Appelée deux fois — un bulletin
+     * de paie s'imprime traditionnellement en double exemplaire : l'un reste dans les
+     * archives de l'entreprise, l'autre est remis au salarié. Chaque appel reconstruit ses
+     * propres objets (tableaux, cellules) plutôt que de réutiliser une même référence dans
+     * les deux moitiés de la page — pdfmake calcule/mute l'état de mise en page par nœud, un
+     * même objet rendu deux fois ne doit jamais être partagé par référence.
+     *
+     * Tailles resserrées (polices et largeurs de colonnes réduites) pour tenir dans une
+     * demi-page paysage — voir `docDefinition` plus bas (pageOrientation: 'landscape',
+     * chaque exemplaire dans une colonne à 49% de large).
+     */
+    const construireContenuExemplaire = (libelleExemplaire: string): any[] => {
+      const tableBody: any[] = [
+        [
+          { text: 'RUBRIQUE', bold: true, alignment: 'center', colSpan: 4 }, {}, {}, {},
+          { text: 'PART SALARIALE', bold: true, alignment: 'center', colSpan: 2 }, {},
+          { text: 'PART PATRONALE', bold: true, alignment: 'center', colSpan: 2 }, {},
         ],
-      },
-      margin: [0, 0, 0, 10],
-    };
+        [
+          { text: 'N°', bold: true },
+          { text: 'Désignation', bold: true },
+          { text: 'Nb', bold: true, alignment: 'right' },
+          { text: 'Montant', bold: true, alignment: 'right' },
+          { text: 'Taux', bold: true, alignment: 'right' },
+          { text: 'Retenue', bold: true, alignment: 'right' },
+          { text: 'Taux', bold: true, alignment: 'right' },
+          { text: 'Retenue', bold: true, alignment: 'right' },
+        ],
+        [
+          '', 'Salaire de base',
+          { text: String(joursSalaireBaseAffiche), alignment: 'right' },
+          { text: fmt(bulletin.salaireBase), alignment: 'right' },
+          { text: '-', alignment: 'right' }, { text: '-', alignment: 'right' },
+          { text: '-', alignment: 'right' }, { text: '-', alignment: 'right' },
+        ],
+      ];
+      for (const l of [...lignesCotisations, ...lignesAutres]) {
+        tableBody.push([
+          l.code,
+          l.libelle,
+          { text: l.nombreSalarial != null ? String(l.nombreSalarial) : '-', alignment: 'right' },
+          { text: fmt(l.base), alignment: 'right' },
+          { text: l.tauxSalarial != null ? `${l.tauxSalarial}%` : '-', alignment: 'right' },
+          { text: fmt(l.montantSalarial), alignment: 'right' },
+          { text: l.tauxPatronal != null ? `${l.tauxPatronal}%` : '-', alignment: 'right' },
+          { text: fmt(l.montantPatronal), alignment: 'right' },
+        ]);
+      }
 
-    const docDefinition: any = {
-      defaultStyle: { font: 'Helvetica', fontSize: 9 },
-      content: [
+      // ── Tableau de pied (cumuls ~Sage) — Cumuls | Sal.Br | Net.Imp | Ch.Sal | Ch.Pat. |
+      // Hrs trav. | Av.Nat. | NET. "Hrs trav." réutilise le même HEURES_LEGALES_MOIS que
+      // "Horaire" en en-tête (pas de suivi distinct des heures réellement travaillées dans
+      // notre moteur — voir Doc/MODULE_PAIE_RH_NOTES.md). La ligne "Fmg" (double devise
+      // historique malgache) de l'exemplaire d'origine n'est PAS reproduite (hors sujet).
+      const tableCumuls = {
+        table: {
+          widths: ['auto', '*', '*', '*', '*', '*', '*', '*'],
+          body: [
+            [
+              { text: 'Cumuls', bold: true }, { text: 'Sal. Br', bold: true, alignment: 'right' },
+              { text: 'Net. Imp', bold: true, alignment: 'right' }, { text: 'Ch. Sal', bold: true, alignment: 'right' },
+              { text: 'Ch. Pat.', bold: true, alignment: 'right' }, { text: 'Hrs trav.', bold: true, alignment: 'right' },
+              { text: 'Av. Nat.', bold: true, alignment: 'right' }, { text: 'NET', bold: true, alignment: 'right' },
+            ],
+            [
+              deviseLabel,
+              { text: fmt(bulletin.totalBrut), alignment: 'right' },
+              { text: fmt(bulletin.netImposable), alignment: 'right' },
+              { text: fmt(bulletin.totalCotisationsSalariales), alignment: 'right' },
+              { text: fmt(bulletin.totalCotisationsPatronales), alignment: 'right' },
+              { text: horaireMensuel != null ? String(horaireMensuel) : '-', alignment: 'right' },
+              { text: fmt(totalAvantagesNature), alignment: 'right' },
+              { text: fmt(bulletin.netAPayer), bold: true, alignment: 'right' },
+            ],
+          ],
+        },
+        fontSize: 7,
+        margin: [0, 5, 0, 8],
+      };
+
+      const champInfo = (label: string, valeur: string | number | null | undefined) => ({
+        stack: [
+          { text: label, fontSize: 6.5, color: '#666' },
+          { text: valeur != null && valeur !== '' ? String(valeur) : '-', fontSize: 8 },
+        ],
+        margin: [0, 0, 0, 3],
+      });
+
+      // ── Bloc "FICHE DE PAIE" — un seul tableau à bordures (grille ~Sage), au lieu de
+      // simples colonnes sans bordure : en-tête employeur/période, grille d'informations
+      // salarié (4 colonnes), puis congés + identité, le tout dans les mêmes bordures.
+      const ficheDePaieTable = {
+        table: {
+          widths: ['25%', '25%', '25%', '25%'],
+          body: [
+            [
+              {
+                colSpan: 2,
+                stack: [
+                  { text: 'FICHE DE PAIE', bold: true, fontSize: 11, margin: [0, 0, 0, 3] },
+                  { text: this.aRenseigner(tenantConfig?.nomSociete || null), bold: true, fontSize: 8 },
+                  { text: this.aRenseigner(tenantConfig?.adresse ?? null), fontSize: 7 },
+                  { text: `N° Tél : ${this.aRenseigner(tenantConfig?.telephone ?? null)}`, fontSize: 7 },
+                  { text: `N° immatriculation employeur : ${this.aRenseigner(tenantConfig?.numeroImmatriculationEmployeur ?? null)}`, fontSize: 7 },
+                  { text: `N° RCS : ${this.aRenseigner(tenantConfig?.numeroRegistreCommerce ?? null)}`, fontSize: 7 },
+                  { text: `N° NIF : ${this.aRenseigner(tenantConfig?.numeroIdentifiantFiscal ?? null)}`, fontSize: 7 },
+                ],
+                margin: [3, 3, 3, 3],
+              },
+              {},
+              {
+                colSpan: 2,
+                alignment: 'right',
+                stack: [
+                  { text: titre, bold: true, fontSize: 10 },
+                  { text: `${this.MOIS_LABEL[bulletin.mois - 1]} ${bulletin.annee}${versionLabel}`, fontSize: 8, margin: [0, 2, 0, 4] },
+                  { text: `Période du : ${this.formatDate(premierJour)} au ${this.formatDate(dernierJour)}`, fontSize: 8, bold: true },
+                ],
+                margin: [3, 3, 3, 3],
+              },
+              {},
+            ],
+            [
+              champInfo('Matricule', salarie.matricule), champInfo('Niveau / Statut', salarie.statut),
+              champInfo('Ancienneté', this.formatDate(dateAnciennete)), champInfo('N° immatriculation sociale', salarie.numeroSS),
+            ],
+            [
+              champInfo('Horaire', horaireMensuel != null ? horaireMensuel : null), champInfo('Emploi occupé', salarie.poste),
+              champInfo(`Salaire (${deviseLabel})`, this.formatMontant(bulletin.salaireBase)), champInfo('Service', null),
+            ],
+            [
+              champInfo('Département', salarie.departement), champInfo('Enfant(s)', salarie.nbEnfantsCharge ?? 0),
+              { colSpan: 2, ...champInfo('Commentaire', null) }, {},
+            ],
+            [
+              {
+                colSpan: 2,
+                stack: [
+                  { text: 'CONGÉS', bold: true, fontSize: 8, margin: [0, 3, 0, 2] },
+                  { text: `Acquis : ${congesAcquis}   |   Reste : ${round2(congesAcquis - congesPris)}   |   Pris : ${congesPris}`, fontSize: 7 },
+                  ...[0, 1, 2].map((i) => ({
+                    text: congesPeriode[i]
+                      ? `Congés : du ${this.formatDate(congesPeriode[i].debut)} au ${this.formatDate(congesPeriode[i].fin)}`
+                      : 'Congés : du ................ au ................',
+                    fontSize: 7, margin: [0, 1, 0, 0],
+                  })),
+                ],
+                margin: [3, 3, 3, 3],
+              },
+              {},
+              {
+                colSpan: 2,
+                stack: [
+                  { text: `${civilite} ${salarie.firstName} ${salarie.lastName}`.trim(), bold: true, fontSize: 8, margin: [0, 3, 0, 2] },
+                  { text: adresseSalarie || '-', fontSize: 7 },
+                ],
+                margin: [3, 3, 3, 3],
+              },
+              {},
+            ],
+          ],
+        },
+        margin: [0, 0, 0, 6],
+      };
+
+      return [
+        { text: libelleExemplaire, bold: true, fontSize: 8, color: '#555555', alignment: 'right', margin: [0, 0, 0, 3] },
         ficheDePaieTable,
-        { text: `Devise : ${deviseLabel}`, bold: true, fontSize: 9, margin: [0, 0, 0, 6] },
+        { text: `Devise : ${deviseLabel}`, bold: true, fontSize: 8, margin: [0, 0, 0, 4] },
         {
-          table: { widths: [58, '*', 25, 55, 30, 50, 30, 50], body: tableBody },
-          fontSize: 8,
+          table: { widths: [24, '*', 16, 46, 20, 42, 20, 42], body: tableBody },
+          fontSize: 7,
           // Grille verticale complète (séparateurs de colonnes + bordure extérieure) mais
           // SANS ligne horizontale entre chaque rubrique — seulement au-dessus (bordure
           // haute), entre les 2 lignes d'en-tête, sous l'en-tête, et en bas du tableau.
@@ -713,25 +743,44 @@ export class BulletinsSalarieService {
             hLineWidth: (i: number, node: any) => (i <= 2 || i === node.table.body.length ? 1 : 0),
             vLineWidth: () => 1,
           },
-          margin: [0, 0, 0, 4],
+          margin: [0, 0, 0, 3],
         },
         tableCumuls,
         bulletin.datePaiement
-          ? { text: `Paiement : ${bulletin.datePaiement} — ${bulletin.modePaiement || '-'}${bulletin.referencePaiement ? ` (réf. ${bulletin.referencePaiement})` : ''}`, fontSize: 8, margin: [0, 0, 0, 10] }
+          ? { text: `Paiement : ${bulletin.datePaiement} — ${bulletin.modePaiement || '-'}${bulletin.referencePaiement ? ` (réf. ${bulletin.referencePaiement})` : ''}`, fontSize: 7, margin: [0, 0, 0, 6] }
           : { text: '' },
         {
           text: 'Pour vous aider à faire valoir vos droits, conservez ce bulletin de paie sans limitation de durée.',
           bold: true,
-          fontSize: 8,
-          margin: [0, 6, 0, 20],
+          fontSize: 6.5,
+          margin: [0, 4, 0, 12],
         },
         {
           columns: [
-            { width: '50%', stack: [{ text: 'Employeur,', fontSize: 9 }, { text: '\n\n\n' }] },
-            { width: '50%', stack: [{ text: 'Employé,', fontSize: 9 }, { text: '\n\n\n' }] },
+            { width: '50%', stack: [{ text: 'Employeur,', fontSize: 7 }, { text: '\n\n' }] },
+            { width: '50%', stack: [{ text: 'Employé,', fontSize: 7 }, { text: '\n\n' }] },
           ],
         },
-        { text: `Généré le ${new Date().toLocaleDateString('fr-FR')}`, alignment: 'right', italics: true, fontSize: 8 },
+        { text: `Généré le ${new Date().toLocaleDateString('fr-FR')}`, alignment: 'right', italics: true, fontSize: 6.5 },
+      ];
+    };
+
+    // ── Page au format paysage : les 2 exemplaires (employeur / salarié) côte à côte,
+    // à découper. Chaque exemplaire est construit indépendamment (voir plus haut) — jamais
+    // le même objet de mise en page réutilisé deux fois.
+    const docDefinition: any = {
+      pageOrientation: 'landscape',
+      pageMargins: [24, 20, 24, 20],
+      defaultStyle: { font: 'Helvetica', fontSize: 8 },
+      content: [
+        {
+          columns: [
+            { width: '49%', stack: construireContenuExemplaire('EXEMPLAIRE EMPLOYEUR') },
+            // Repère de découpe entre les 2 exemplaires (ligne pointillée verticale).
+            { width: '2%', canvas: [{ type: 'line', x1: 5, y1: 0, x2: 5, y2: 500, lineWidth: 0.5, lineColor: '#AAAAAA', dash: { length: 3, space: 3 } }] },
+            { width: '49%', stack: construireContenuExemplaire('EXEMPLAIRE SALARIÉ') },
+          ],
+        },
       ],
     };
 

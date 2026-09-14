@@ -26,10 +26,6 @@ import { ToastService } from '../../../../core/services/toast.service';
         <p class="pg-sub">{{ filtered().length }} tâche(s) · {{ countActives() }} active(s)</p>
       </div>
     </div>
-    <button class="btn-generer" (click)="generer()" [disabled]="generating()">
-      <mat-icon>autorenew</mat-icon>
-      {{ generating() ? 'Génération…' : 'Générer maintenant' }}
-    </button>
   </div>
 
   <!-- ── Filtres inline ── -->
@@ -154,10 +150,6 @@ import { ToastService } from '../../../../core/services/toast.service';
     .pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
     .pg-sub { font-size:13px; color:#64748b; margin:2px 0 0; }
 
-    .btn-generer { display:flex; align-items:center; gap:7px; background:linear-gradient(135deg,#059669,#047857); color:#fff; border:none; padding:10px 20px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(5,150,105,.3); transition:all .2s; }
-    .btn-generer mat-icon { font-size:17px; width:17px; height:17px; }
-    .btn-generer:hover:not(:disabled) { box-shadow:0 6px 20px rgba(5,150,105,.45); }
-    .btn-generer:disabled { opacity:.6; cursor:not-allowed; }
 
     /* Filter bar */
     .filter-bar { display:flex; align-items:center; gap:10px; padding:18px 28px 0; flex-wrap:wrap; flex-shrink:0; }
@@ -222,7 +214,6 @@ export class TravailRecurrentesComponent implements OnInit, OnDestroy {
   private _d$        = new Subject<void>();
 
   loading    = signal(true);
-  generating = signal(false);
   all        = signal<TacheRecurrente[]>([]);
   filtered   = signal<TacheRecurrente[]>([]);
   clients: Client[] = [];
@@ -271,18 +262,6 @@ export class TravailRecurrentesComponent implements OnInit, OnDestroy {
       SEMESTRIELLE: 'Semestrielle', ANNUELLE: 'Annuelle',
     };
     return m[f] ?? f;
-  }
-
-  generer() {
-    this.generating.set(true);
-    this.svc.generer().subscribe({
-      next: r => {
-        this.generating.set(false);
-        this.toast.success(`${r.created} tâche(s) générée(s)`);
-        this.load();
-      },
-      error: () => { this.generating.set(false); this.toast.error('Erreur lors de la génération'); },
-    });
   }
 
   toggleActif(t: TacheRecurrente) {

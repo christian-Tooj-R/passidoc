@@ -63,4 +63,14 @@ export class ClientsService {
   deleteFichePhoto(clientId: number, photoUrl: string) {
     return this.http.delete<any>(`${environment.apiUrl}/clients/${clientId}/fiche/photos`, { body: { photoUrl } });
   }
+
+  /** Définit la photo de la 1ère carte (logo) à partir d'une photo déjà présente dans la galerie. */
+  setLogoFromGallery(clientId: number, photoUrl: string) {
+    return this.http.patch<any>(`${environment.apiUrl}/clients/${clientId}/logo-from-gallery`, { photoUrl });
+  }
+
+  /** Retire la photo de la 1ère carte (repasse à l'illustration secteur par défaut). */
+  removeLogo(clientId: number) {
+    return this.http.delete<any>(`${environment.apiUrl}/clients/${clientId}/logo`);
+  }
 }

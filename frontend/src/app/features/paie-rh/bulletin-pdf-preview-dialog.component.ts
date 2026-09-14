@@ -1,4 +1,4 @@
-import { Component, ElementRef, Inject, ViewChild, signal } from '@angular/core';
+import { Component, Inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -49,7 +49,6 @@ export interface BulletinPdfPreviewData {
       <div class="bpp-loading"><div class="spinner"></div><span>Chargement du PDF…</span></div>
     }
     <iframe
-      #pdfFrame
       class="bpp-iframe"
       [class.bpp-iframe--loaded]="loaded()"
       [src]="pdfUrl"
@@ -79,8 +78,6 @@ export interface BulletinPdfPreviewData {
   `],
 })
 export class BulletinPdfPreviewDialogComponent {
-  @ViewChild('pdfFrame') pdfFrame?: ElementRef<HTMLIFrameElement>;
-
   private objectUrl: string;
   pdfUrl: SafeResourceUrl;
   loaded = signal(false);
@@ -98,16 +95,41 @@ export class BulletinPdfPreviewDialogComponent {
     this.loaded.set(true);
   }
 
+  /**
+   * Imprime le PDF dans un NOUVEL ONGLET plutôt que via `iframe.contentWindow.print()`.
+   *
+   * Nécessaire pour Firefox : son lecteur PDF intégré (pdf.js) ne relaie pas correctement
+   * l'appel `print()` quand le PDF est affiché dans une iframe imbriquée — il imprime la
+   * coquille vide de la page plutôt que le contenu réel du PDF (page blanche, orientation
+   * portrait par défaut, au lieu du bulletin en paysage). En ouvrant le même blob comme
+   * document de premier niveau (nouvel onglet), pdf.js s'intègre normalement au print()
+   * du navigateur — comportement fiable sur Chrome et Firefox.
+   *
+   * ⚠️ `window.open(objectUrl, '_blank')` — objectUrl passé DIRECTEMENT comme URL de
+   * destination — échoue silencieusement sur Chromium (l'onglet reste sur "about:blank",
+   * vérifié empiriquement) : il faut d'abord ouvrir une fenêtre vide, PUIS naviguer cette
+   * référence vers le blob (`fenetre.location.href = ...`) pour que la navigation aboutisse
+   * réellement, tout en conservant une référence exploitable pour déclencher `print()`.
+   *
+   * ⚠️ Pas d'écouteur `load` sur `fenetre` : `window.open('', '_blank')` déclenche lui-même
+   * un premier `load` pour la page vierge "about:blank" AVANT que la navigation vers le
+   * blob ne démarre — un appel `print()` déclenché sur ce premier `load` interrompt la
+   * navigation en cours vers le PDF (vérifié empiriquement : l'onglet reste bloqué sur
+   * "about:blank"). Un simple délai, laissant le temps à la navigation blob de se terminer,
+   * est plus fiable ici.
+   */
   imprimer() {
-    const win = this.pdfFrame?.nativeElement.contentWindow;
-    if (!win) return;
-    try {
-      win.focus();
-      win.print();
-    } catch {
-      // best-effort : certains navigateurs restreignent print() sur un contenu cross-origin —
-      // sans objet ici (blob same-origin), gardé par sécurité pour ne jamais planter le dialogue.
-    }
+    const fenetre = window.open('', '_blank');
+    if (!fenetre) return; // popup bloqué — best-effort, l'utilisateur garde "Télécharger le PDF"
+    fenetre.location.href = this.objectUrl;
+    setTimeout(() => {
+      try {
+        fenetre.focus();
+        fenetre.print();
+      } catch {
+        // best-effort : ne doit jamais faire planter le dialogue de prévisualisation.
+      }
+    }, 400);
   }
 
   fermer() {

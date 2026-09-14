@@ -20,49 +20,7 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
   template: `
     <div class="tab">
 
-      @if (!editMode()) {
-        <!-- ── Vue lecture ───────────────────────────────── -->
-        <div class="section-title"><mat-icon>flag</mat-icon> Objectifs du client</div>
-        <div class="objectives-grid">
-          <div class="objective-card">
-            <div class="objective-card__header objective-card__header--blue">
-              <mat-icon>calendar_today</mat-icon><span>Dans les 12 prochains mois</span>
-            </div>
-            <div class="card-body"><p class="read-text">{{ form.get('objectifs12mois')?.value || '—' }}</p></div>
-          </div>
-          <div class="objective-card">
-            <div class="objective-card__header objective-card__header--indigo">
-              <mat-icon>timeline</mat-icon><span>Dans les 3 à 5 ans</span>
-            </div>
-            <div class="card-body"><p class="read-text">{{ form.get('objectifs3a5ans')?.value || '—' }}</p></div>
-          </div>
-          <div class="objective-card">
-            <div class="objective-card__header objective-card__header--purple">
-              <mat-icon>rocket_launch</mat-icon><span>Au-delà</span>
-            </div>
-            <div class="card-body"><p class="read-text">{{ form.get('objectifsLongTerme')?.value || '—' }}</p></div>
-          </div>
-        </div>
-
-        <div class="section-title" style="margin-top:12px"><mat-icon>handshake</mat-icon> Mission de l'expert-comptable</div>
-        <div class="read-row">
-          <div class="read-field"><span class="read-label">Client chez AFYM depuis</span><span class="read-value">{{ form.get('depuisQuand')?.value || '—' }}</span></div>
-          <div class="read-field"><span class="read-label">Qualité de la relation</span><span class="read-value">{{ form.get('qualiteRelation')?.value || '—' }}</span></div>
-        </div>
-        <div class="read-field full"><span class="read-label">Ce qu'attend le client</span><p class="read-text">{{ form.get('attentesClient')?.value || '—' }}</p></div>
-        <div class="read-field full"><span class="read-label">Axes d'amélioration</span><p class="read-text">{{ form.get('axesAmelioration')?.value || '—' }}</p></div>
-        <div class="read-field full"><span class="read-label">Recommandations faites</span><p class="read-text">{{ form.get('recommandationsFaites')?.value || '—' }}</p></div>
-
-        <div class="section-title" style="margin-top:12px"><mat-icon>groups</mat-icon> Qualité de la relation par pôle</div>
-        <div class="read-row">
-          <div class="read-field"><span class="read-label">Collaborateur en charge</span><p class="read-text">{{ form.get('relationCollaborateur')?.value || '—' }}</p></div>
-          <div class="read-field"><span class="read-label">Pôle social</span><p class="read-text">{{ form.get('relationPoleSocial')?.value || '—' }}</p></div>
-          <div class="read-field"><span class="read-label">Pôle juridique</span><p class="read-text">{{ form.get('relationPoleJuridique')?.value || '—' }}</p></div>
-          <div class="read-field"><span class="read-label">Directeur / EC</span><p class="read-text">{{ form.get('relationDirecteur')?.value || '—' }}</p></div>
-        </div>
-
-      } @else {
-        <!-- ── Vue édition ──────────────────────────────── -->
+        <!-- Toujours en édition — pas de vue lecture seule (voir Feedback session 2026-09-14). -->
         <form [formGroup]="form" class="tab-form">
           <!-- Objectifs -->
           <div class="section-title"><mat-icon>flag</mat-icon> Objectifs du client</div>
@@ -166,19 +124,10 @@ import { ObjectifsService } from '../../../../../core/services/objectifs.service
             </mat-form-field>
           </div>
         </form>
-      }
     </div>
   `,
   styles: [`
     :host { display: block; padding: 24px; }
-
-    /* ── Read view ─────────────────────────────────── */
-    .read-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin-bottom: 8px; }
-    .read-field { display: flex; flex-direction: column; gap: 3px; padding: 8px 0; }
-    .read-field.full { width: 100%; }
-    .read-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-    .read-value { font-size: 0.88rem; color: #1e293b; }
-    .read-text { font-size: 0.85rem; color: #374151; line-height: 1.7; white-space: pre-line; margin: 2px 0 0; }
 
     .tab-form { display: flex; flex-direction: column; gap: 0; }
 
@@ -255,9 +204,6 @@ export class ObjectifsTabComponent implements OnInit, OnChanges, OnDestroy {
   private toast = inject(ToastService);
   private tabSave = inject(TabSaveService);
 
-  editMode = signal(false);
-  private _snapshot: any = null;
-
   form = this.fb.group({
     objectifs12mois: [''],
     objectifs3a5ans: [''],
@@ -274,11 +220,8 @@ export class ObjectifsTabComponent implements OnInit, OnChanges, OnDestroy {
   });
 
   ngOnInit() {
-    this.tabSave.registerEditMode(
-      () => this.enterEdit(),
-      () => this.save(),
-      () => this.cancelEdit()
-    );
+    // Onglet toujours modifiable — pas de bascule lecture/édition (voir TabSaveService.register()).
+    this.tabSave.register(() => this.save());
     this.load();
   }
 
@@ -286,8 +229,6 @@ export class ObjectifsTabComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges) {
     if ((changes['exerciceId'] || changes['clientId']) && this.clientId != null && this.exerciceId != null) {
-      this.editMode.set(false);
-      this.tabSave.setEditing(false);
       this.load();
     }
   }
@@ -299,20 +240,7 @@ export class ObjectifsTabComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  enterEdit() {
-    this._snapshot = this.form.getRawValue();
-    this.editMode.set(true);
-    this.tabSave.setEditing(true);
-  }
-
-  cancelEdit() {
-    if (this._snapshot) this.form.patchValue(this._snapshot);
-    this.editMode.set(false);
-    this.tabSave.setEditing(false);
-  }
-
   integrerRecommandations() {
-    if (!this.editMode()) this.enterEdit();
     const existant = this.form.get('axesAmelioration')?.value ?? '';
     const nouvelles = this.recommandationsCIImportees.map((r, i) => `${i + 1}. ${r}`).join('\n');
     const valeur = existant.trim() ? `${existant.trim()}\n\n--- Recommandations CI ---\n${nouvelles}` : nouvelles;
@@ -325,8 +253,6 @@ export class ObjectifsTabComponent implements OnInit, OnChanges, OnDestroy {
     if (this.readonly) return;
     this.service.save(this.clientId, this.exerciceId, this.form.value).subscribe(() => {
       this.toast.success('Objectifs enregistrés');
-      this.editMode.set(false);
-      this.tabSave.setEditing(false);
     });
   }
 }

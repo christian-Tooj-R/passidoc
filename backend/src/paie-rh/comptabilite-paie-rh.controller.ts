@@ -10,7 +10,7 @@ import { ComptabilitePaieRhService } from './comptabilite-paie-rh.service';
 @ApiTags('Paie RH — Comptabilité (V1, export simple)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/comptabilite')
 export class ComptabilitePaieRhController {
   constructor(private service: ComptabilitePaieRhService) {}

@@ -166,7 +166,17 @@ export class ActiviteRhComponent implements OnInit {
   lignes = signal<ActivitePeriodeRh[]>([]);
 
   ngOnInit() {
-    this.reload();
+    // Comme dans le hub "Cycle mensuel" : on affiche par défaut la période actuellement
+    // ouverte (le cycle le plus récent non clôturé) plutôt que le mois/année calendaire du
+    // jour, qui peut ne correspondre à aucun cycle réel.
+    this.paieRh.findCycles().subscribe({
+      next: (cycles) => {
+        const enCours = cycles.find((c) => c.statut !== 'CLOTURE');
+        if (enCours) { this.mois = enCours.mois; this.annee = enCours.annee; }
+        this.reload();
+      },
+      error: () => this.reload(),
+    });
   }
 
   reload() {

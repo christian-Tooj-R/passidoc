@@ -9,6 +9,7 @@ import { CyclesPaieRhService } from './cycles-paie-rh.service';
 @ApiTags('Paie RH — Cycle mensuel')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/cycles')
 export class CyclesPaieRhController {
   constructor(private service: CyclesPaieRhService) {}
@@ -20,7 +21,6 @@ export class CyclesPaieRhController {
   }
 
   @Post('ouvrir')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Ouvrir (ou récupérer) le cycle de paie du mois' })
   ouvrir(@Query('mois', ParseIntPipe) mois: number, @Query('annee', ParseIntPipe) annee: number, @Req() req: any) {
     return this.service.ouvrir(mois, annee, req.user.tenantId);
@@ -39,7 +39,6 @@ export class CyclesPaieRhController {
   }
 
   @Post(':mois/:annee/calculer')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION)
   @ApiOperation({ summary: 'Calculer (générer) en masse les bulletins des salariés restants — `forcer=true` régénère aussi les bulletins existants non payés' })
   calculerTout(
     @Param('mois') mois: string,
@@ -51,14 +50,18 @@ export class CyclesPaieRhController {
   }
 
   @Post(':mois/:annee/valider')
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
   @ApiOperation({ summary: 'Valider le cycle (tous les bulletins doivent être générés)' })
   valider(@Param('mois') mois: string, @Param('annee') annee: string, @Req() req: any) {
     return this.service.valider(+mois, +annee, req.user.tenantId, req.user.id);
   }
 
+  @Post(':mois/:annee/devalider')
+  @ApiOperation({ summary: 'Dévalider le cycle (retour à CALCULÉ, pour permettre un recalcul)' })
+  devalider(@Param('mois') mois: string, @Param('annee') annee: string, @Req() req: any) {
+    return this.service.devalider(+mois, +annee, req.user.tenantId);
+  }
+
   @Post(':mois/:annee/cloturer')
-  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Clôturer le cycle (verrouille la période — immutabilité)' })
   cloturer(@Param('mois') mois: string, @Param('annee') annee: string, @Req() req: any) {
     return this.service.cloturer(+mois, +annee, req.user.tenantId);

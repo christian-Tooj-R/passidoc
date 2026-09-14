@@ -64,7 +64,7 @@ export type TypeCalculRubriqueRh =
   | 'BASE_X_TAUX' | 'BASE_DIV_NOMBRE' | 'NOMBRE_DIV_TAUX' | 'BASE_DIV_TAUX' | 'TOTALISATION';
 
 export const TYPE_CALCUL_RUBRIQUE_LABELS: Record<TypeCalculRubriqueRh, string> = {
-  MONTANT_FIXE: 'Montant pris tel quel',
+  MONTANT_FIXE: 'Base',
   NOMBRE_X_BASE: 'Nombre × Base',
   NOMBRE_X_BASE_X_TAUX: 'Nombre × Base × Taux',
   NOMBRE_X_TAUX: 'Nombre × Taux',
@@ -593,6 +593,10 @@ export class PaieRhService {
 
   validerCycle(mois: number, annee: number) {
     return this.http.post<CyclePaieRh>(`${this.base}/cycles/${mois}/${annee}/valider`, {});
+  }
+
+  devaliderCycle(mois: number, annee: number) {
+    return this.http.post<CyclePaieRh>(`${this.base}/cycles/${mois}/${annee}/devalider`, {});
   }
 
   cloturerCycle(mois: number, annee: number) {

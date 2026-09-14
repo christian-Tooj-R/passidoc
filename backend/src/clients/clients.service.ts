@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Readable } from 'stream';
@@ -254,6 +254,34 @@ export class ClientsService {
       const photos = [...(fiche.photos ?? []), url];
       await this.ficheRepo.update(fiche.id, { photos });
     }
+    return this.findOne(id);
+  }
+
+  /**
+   * Définit la photo affichée sur la 1ère carte du dossier (`Client.logoUrl`, déjà utilisé
+   * par l'avatar de la sidebar) à partir d'une photo DÉJÀ présente dans la galerie de la
+   * fiche identité — aucun nouvel upload, on réutilise l'URL existante (même bucket MinIO
+   * `passidoc-logos` que `uploadLogo`/`uploadFichePhoto`). Refusé si l'URL fournie ne fait
+   * pas partie des photos de la galerie de ce client (jamais confiance à une URL arbitraire
+   * envoyée par le client HTTP).
+   */
+  async setLogoFromGallery(id: number, photoUrl: string, currentUser: User): Promise<Client> {
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
+    const photos = client.ficheIdentite?.photos ?? [];
+    if (!photos.includes(photoUrl)) {
+      throw new BadRequestException('Cette photo ne fait pas partie de la galerie de ce client');
+    }
+    await this.repo.update(id, { logoUrl: photoUrl });
+    return this.findOne(id);
+  }
+
+  /** Retire la photo de la 1ère carte (repasse à l'illustration secteur par défaut) — ne
+   *  supprime pas la photo de la galerie elle-même, juste la référence sur `logoUrl`. */
+  async removeLogo(id: number, currentUser: User): Promise<Client> {
+    const client = await this.findOneForUser(id, currentUser);
+    this.checkEditAccess(client, currentUser);
+    await this.repo.update(id, { logoUrl: null as unknown as string });
     return this.findOne(id);
   }
 

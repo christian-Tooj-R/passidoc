@@ -31,6 +31,7 @@ import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { TimerService, SaisieTempsService, SaisieTemps, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
+import { parseHHMM, toHHMM } from '../../core/services/duree.util';
 
 interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolean; tasks: Task[]; }
 
@@ -538,7 +539,7 @@ export class SyntheseDialogComponent implements OnInit {
               </div>
               <div class="ct-field">
                 <div class="ct-section-label">Durée <span class="required">*</span></div>
-                <input class="ct-date-input" type="text" [(ngModel)]="tempsDureeRaw" placeholder="ex: 1h30" />
+                <input class="ct-date-input" type="time" [(ngModel)]="tempsDureeRaw" />
               </div>
             </div>
             <div class="ct-row">
@@ -797,20 +798,8 @@ export class CreateTaskDialogComponent {
     const [eh, em] = this.tempsHeureFin.split(':').map(Number);
     const diff = (eh + em / 60) - (sh + sm / 60);
     if (diff > 0 && !this.tempsDureeRaw) {
-      const hrs = Math.floor(diff);
-      const min = Math.round((diff - hrs) * 60);
-      this.tempsDureeRaw = min > 0 ? `${hrs}h${String(min).padStart(2,'0')}` : `${hrs}h`;
+      this.tempsDureeRaw = toHHMM(diff);
     }
-  }
-
-  private parseTemps(raw: string): number {
-    const s = raw.trim().toLowerCase();
-    const mH = s.match(/^(\d+(?:[.,]\d+)?)h(\d{0,2})$/);
-    if (mH) return parseFloat(mH[1].replace(',','.')) + (mH[2] ? parseInt(mH[2]) / 60 : 0);
-    const mMin = s.match(/^(\d+)min$/);
-    if (mMin) return parseInt(mMin[1]) / 60;
-    const num = parseFloat(s.replace(',','.'));
-    return isNaN(num) ? 0 : num;
   }
 
   create() {
@@ -838,7 +827,7 @@ export class CreateTaskDialogComponent {
       : this.tasksService.create(this.clientId!, payload);
 
     obs$.subscribe(() => {
-      const duree = this.parseTemps(this.tempsDureeRaw);
+      const duree = parseHHMM(this.tempsDureeRaw) ?? 0;
       const isNF = this.tempsType === 'NON_FACTURABLE';
       const canSave = duree > 0 && (!isNF || !!this.tempsCategorie);
       if (canSave) {
@@ -1986,6 +1975,34 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
           </button>
         </div>
 
+        <!-- Filtre date d'échéance (intervalle) — commun Kanban + Tableau -->
+        <div class="tl-date-filter">
+          <!-- Picker masqué, déclenché par le bouton icône -->
+          <span class="tl-cal-hidden">
+            <mat-date-range-input [rangePicker]="rangePicker">
+              <input matStartDate [(ngModel)]="filterDateStart" (dateChange)="onRangeChange()" placeholder="" />
+              <input matEndDate   [(ngModel)]="filterDateEnd"   (dateChange)="onRangeChange()" placeholder="" />
+            </mat-date-range-input>
+            <mat-date-range-picker #rangePicker></mat-date-range-picker>
+          </span>
+          <!-- Bouton calendrier -->
+          <button mat-icon-button class="tl-cal-btn"
+                  [class.tl-cal-btn--active]="filterDateStart || filterDateEnd"
+                  (click)="rangePicker.open()"
+                  matTooltip="Filtrer par date d'échéance (intervalle)">
+            <mat-icon>calendar_month</mat-icon>
+          </button>
+          <!-- Plage sélectionnée -->
+          @if (filterDateStart || filterDateEnd) {
+            <span class="tl-df-range">
+              {{ filterDateStart | date:'dd/MM' }}{{ filterDateEnd ? ' → ' + (filterDateEnd | date:'dd/MM') : '' }}
+            </span>
+            <button class="tl-df-clear" (click)="clearDateFilter()" matTooltip="Effacer le filtre date">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+
         <!-- Compteur -->
         <div class="filter-bar__count">
           <span class="filter-bar__num">{{ filteredTasks.length }}</span>
@@ -2150,33 +2167,6 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
               <span class="tl-time-lbl">Facturables / semaine</span>
             </div>
             <div class="tl-time-spacer"></div>
-            <!-- Filtre date échéance -->
-            <div class="tl-date-filter">
-              <!-- Picker masqué, déclenché par le bouton icône -->
-              <span class="tl-cal-hidden">
-                <mat-date-range-input [rangePicker]="rangePicker">
-                  <input matStartDate [(ngModel)]="filterDateStart" (dateChange)="onRangeChange()" placeholder="" />
-                  <input matEndDate   [(ngModel)]="filterDateEnd"   (dateChange)="onRangeChange()" placeholder="" />
-                </mat-date-range-input>
-                <mat-date-range-picker #rangePicker></mat-date-range-picker>
-              </span>
-              <!-- Bouton calendrier -->
-              <button mat-icon-button class="tl-cal-btn"
-                      [class.tl-cal-btn--active]="filterDateStart || filterDateEnd"
-                      (click)="rangePicker.open()"
-                      matTooltip="Filtrer par date d'échéance">
-                <mat-icon>calendar_month</mat-icon>
-              </button>
-              <!-- Plage sélectionnée -->
-              @if (filterDateStart || filterDateEnd) {
-                <span class="tl-df-range">
-                  {{ filterDateStart | date:'dd/MM' }}{{ filterDateEnd ? ' → ' + (filterDateEnd | date:'dd/MM') : '' }}
-                </span>
-                <button class="tl-df-clear" (click)="clearDateFilter()" matTooltip="Effacer le filtre date">
-                  <mat-icon>close</mat-icon>
-                </button>
-              }
-            </div>
           </div>
 
           <!-- Compteur résultats -->
@@ -2912,7 +2902,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   onRangeChange() {
     this.tableFilterDateDebut = this.filterDateStart ? this.toISODate(this.filterDateStart) : '';
     this.tableFilterDateFin   = this.filterDateEnd   ? this.toISODate(this.filterDateEnd)   : '';
-    this.tablePage = 1;
+    this.applyFilter();
   }
 
   clearDateFilter() {
@@ -2920,7 +2910,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
     this.filterDateEnd   = null;
     this.tableFilterDateDebut = '';
     this.tableFilterDateFin   = '';
-    this.tablePage = 1;
+    this.applyFilter();
   }
 
   private toISODate(d: Date): string {
@@ -2950,13 +2940,9 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   readonly Math = Math;
 
   get tableFilteredTasks(): Task[] {
+    // Le filtre date d'échéance est déjà appliqué à `filteredTasks` par `applyFilter()`
+    // (commun Kanban + Tableau) — seuls la recherche texte et le tri restent propres à la vue tableau.
     let list = [...this.filteredTasks];
-    if (this.tableFilterDateDebut) {
-      list = list.filter(t => !t.dateEcheance || t.dateEcheance >= this.tableFilterDateDebut);
-    }
-    if (this.tableFilterDateFin) {
-      list = list.filter(t => !t.dateEcheance || t.dateEcheance <= this.tableFilterDateFin);
-    }
     if (this.searchText.trim()) {
       const q = this.searchText.trim().toLowerCase();
       list = list.filter(t =>
@@ -3143,6 +3129,10 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
       if (this.filterAssigneeId && t.assignee?.id        !== this.filterAssigneeId) return false;
       if (this.filterType       && t.type                !== this.filterType)       return false;
       if (this.filterService    && t.serviceDestinataire !== this.filterService)    return false;
+      // Filtre date d'échéance : commun aux vues Kanban et Tableau — une tâche sans
+      // échéance n'est jamais masquée par ce filtre (choix existant, conservé).
+      if (this.tableFilterDateDebut && t.dateEcheance && t.dateEcheance < this.tableFilterDateDebut) return false;
+      if (this.tableFilterDateFin   && t.dateEcheance && t.dateEcheance > this.tableFilterDateFin)   return false;
       return true;
     });
     this.buildKanban();

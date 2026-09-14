@@ -50,7 +50,7 @@ test.describe('Navigation & sidebar', () => {
     await expect(page.locator('.tw-sidebar')).toBeVisible({ timeout: 8_000 });
 
     // Sections
-    for (const section of ['TÂCHES', 'TEMPS PASSÉS', 'PLANNING', 'BUDGETS', 'RAPPORTS']) {
+    for (const section of ['TÂCHES', 'TEMPS PASSÉS']) {
       await expect(page.locator('.tw-nav__section', { hasText: section }).first()).toBeVisible({ timeout: 3_000 });
     }
   });
@@ -62,9 +62,6 @@ test.describe('Navigation & sidebar', () => {
     const labels = [
       'Toutes les tâches', 'Vue Kanban', 'Tâches récurrentes',
       'Agenda réalisé', 'Par semaine', 'Par mois', 'Détail des temps',
-      'Planning équipe', 'Feuille de temps',
-      'Budget missions',
-      'Productivité', 'Par client', 'Alertes',
     ];
     for (const label of labels) {
       await expect(page.locator('.tw-nav__item', { hasText: label }).first())
@@ -247,135 +244,6 @@ test.describe('Agenda réalisé', () => {
     await page.locator('.btn-today').click();
     await page.waitForTimeout(500);
     await expect(page.locator('.cal-col--today')).toBeVisible({ timeout: 5_000 });
-  });
-
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PLANNING ÉQUIPE
-// ─────────────────────────────────────────────────────────────────────────────
-test.describe('Planning équipe', () => {
-
-  test('Page planning accessible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/planning');
-    await expect(page).toHaveURL(/\/travail\/planning/, { timeout: 8_000 });
-  });
-
-  test('Tableau planning avec colonnes jours présent', async ({ page }) => {
-    await loginAndGoto(page, '/travail/planning');
-    const hasTable = await page.locator('table, .planning-table').first().isVisible().catch(() => false);
-    const hasEmpty = await page.locator('.empty-state').isVisible().catch(() => false);
-    expect(hasTable || hasEmpty).toBeTruthy();
-  });
-
-  test('Navigation semaine planning fonctionne', async ({ page }) => {
-    await loginAndGoto(page, '/travail/planning');
-    await page.waitForSelector('.nav-btn', { timeout: 8_000 });
-    await expect(page.locator('.nav-btn').first()).toBeVisible();
-    await page.locator('.nav-btn').first().click();
-    await page.waitForTimeout(500);
-    // Ne pas crasher = test OK
-  });
-
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FEUILLE DE TEMPS
-// ─────────────────────────────────────────────────────────────────────────────
-test.describe('Feuille de temps', () => {
-
-  test('Page feuille-temps accessible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/feuille-temps');
-    await expect(page).toHaveURL(/\/travail\/feuille-temps/, { timeout: 8_000 });
-  });
-
-  test('Grille de saisie ou état vide visible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/feuille-temps');
-    const hasGrid  = await page.locator('.timesheet-table, table').first().isVisible().catch(() => false);
-    const hasEmpty = await page.locator('.empty-state').isVisible().catch(() => false);
-    expect(hasGrid || hasEmpty).toBeTruthy();
-  });
-
-  test('Bouton Enregistrer présent', async ({ page }) => {
-    await loginAndGoto(page, '/travail/feuille-temps');
-    const btn = page.locator('button', { hasText: /[Ee]nregistrer/ }).first();
-    await expect(btn).toBeVisible({ timeout: 5_000 });
-  });
-
-  test('Navigation semaine feuille-temps fonctionne', async ({ page }) => {
-    await loginAndGoto(page, '/travail/feuille-temps');
-    await page.waitForSelector('.nav-btn', { timeout: 8_000 });
-    await page.locator('.nav-btn').first().click();
-    await page.waitForTimeout(400);
-  });
-
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BUDGET MISSIONS
-// ─────────────────────────────────────────────────────────────────────────────
-test.describe('Budget missions', () => {
-
-  test('Page budgets accessible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/budgets');
-    await expect(page).toHaveURL(/\/travail\/budgets/, { timeout: 8_000 });
-  });
-
-  test('Tableau budgets ou état vide présent', async ({ page }) => {
-    await loginAndGoto(page, '/travail/budgets');
-    const ok = await page.locator('table, .empty-state').first().isVisible().catch(() => false);
-    expect(ok).toBeTruthy();
-  });
-
-  test('KPI cards budgets présentes', async ({ page }) => {
-    await loginAndGoto(page, '/travail/budgets');
-    const cards = page.locator('.kpi-card');
-    const count = await cards.count();
-    // Au moins 2 KPI ou page chargée sans crash
-    expect(count >= 0).toBeTruthy();
-  });
-
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RAPPORTS
-// ─────────────────────────────────────────────────────────────────────────────
-test.describe('Rapports', () => {
-
-  test('Rapport productivité accessible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/rapports/productivite');
-    await expect(page).toHaveURL(/\/travail\/rapports\/productivite/, { timeout: 8_000 });
-    await expect(page.locator('.tw-sidebar')).toBeVisible();
-  });
-
-  test('Rapport par client accessible', async ({ page }) => {
-    await loginAndGoto(page, '/travail/rapports/clients');
-    await expect(page).toHaveURL(/\/travail\/rapports\/clients/, { timeout: 8_000 });
-    await expect(page.locator('.tw-sidebar')).toBeVisible();
-  });
-
-  test('Alertes accessibles', async ({ page }) => {
-    await loginAndGoto(page, '/travail/rapports/alertes');
-    await expect(page).toHaveURL(/\/travail\/rapports\/alertes/, { timeout: 8_000 });
-    await expect(page.locator('.tw-sidebar')).toBeVisible();
-  });
-
-  test('Alertes — 3 sections visibles (retard / non assigné / inter-service)', async ({ page }) => {
-    await loginAndGoto(page, '/travail/rapports/alertes');
-    await page.waitForTimeout(3000);
-    // Au moins une section d'alerte présente
-    const sections = await page.locator('.alert-section').count();
-    expect(sections).toBeGreaterThanOrEqual(0); // 0 = pas de tâches, c'est OK
-    // Les 3 headers doivent être dans la page
-    const hasContent = await page.locator('.alert-section, .empty-state, h2, h3').first().isVisible().catch(() => false);
-    expect(hasContent).toBeTruthy();
-  });
-
-  test('Rapport productivité — filtres date présents', async ({ page }) => {
-    await loginAndGoto(page, '/travail/rapports/productivite');
-    const dateInputs = page.locator('input[type="date"]');
-    const count = await dateInputs.count();
-    expect(count).toBeGreaterThanOrEqual(1);
   });
 
 });

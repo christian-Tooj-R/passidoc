@@ -32,27 +32,6 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Détail des temps',    icon: 'manage_search',      route: '/travail/temps/detail'  },
     ],
   },
-  {
-    label: 'PLANNING',
-    items: [
-      { label: 'Planning équipe',     icon: 'groups',        route: '/travail/planning'          },
-      { label: 'Feuille de temps',    icon: 'table_chart',   route: '/travail/feuille-temps'     },
-    ],
-  },
-  {
-    label: 'BUDGETS',
-    items: [
-      { label: 'Budget missions',     icon: 'pie_chart',     route: '/travail/budgets'           },
-    ],
-  },
-  {
-    label: 'RAPPORTS',
-    items: [
-      { label: 'Productivité',        icon: 'trending_up',   route: '/travail/rapports/productivite' },
-      { label: 'Par client',          icon: 'business',      route: '/travail/rapports/clients'  },
-      { label: 'Alertes',             icon: 'notifications_active', route: '/travail/rapports/alertes' },
-    ],
-  },
 ];
 
 @Component({
@@ -486,7 +465,14 @@ export class TravailComponent implements OnInit, OnDestroy {
   }
 
   saveTimerEntry() {
-    if (this.timerStoppedH <= 0) { this.showTimerForm.set(false); return; }
+    // Le backend refuse toute saisie de moins de 15 min (`CreateSaisieTempsDto.dureeHeures`,
+    // `@Min(0.25)`) — on le vérifie ici pour donner un message clair plutôt que de fermer le
+    // formulaire en silence (durée à 0) ou de renvoyer une erreur générique après un aller-
+    // retour serveur inutile.
+    if (this.timerStoppedH < 0.25) {
+      this.timerSaveError.set('Durée trop courte (15 minutes minimum) — cette saisie n\'a pas été enregistrée.');
+      return;
+    }
     const dto: CreateSaisieTempsDto = {
       date:        new Date().toISOString().split('T')[0],
       dureeHeures: this.timerStoppedH,

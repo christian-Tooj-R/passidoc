@@ -11,6 +11,11 @@ import { resoudreConstante } from './constante-resolution.util';
 
 export interface ResultatCalculPaieRh {
   salaireBase: number;
+  /** Jours ayant servi au calcul de `salaireBase` — non-null uniquement si la feuille
+   *  d'activité a déjà été calculée pour ce salarié/mois (voir
+   *  `VariablesPaieRhService.synchroniserJoursActivite()`) ; `null` = calcul théorique
+   *  (jours ouvrés du régime), affiché tel quel sur le PDF en repli. */
+  joursSalaireBase: number | null;
   totalBrut: number;
   totalCotisationsSalariales: number;
   totalCotisationsPatronales: number;
@@ -82,7 +87,27 @@ export class MoteurCalculPaieRhService {
     // de démo ont quotiteTravail=100 (aucun changement de comportement visible), mais un
     // salarié à temps partiel doit voir son brut réellement réduit en proportion.
     const quotiteTravail = Number(contrat.quotiteTravail) || 100;
-    const salaireBase = round2((Number(contrat.salaireBase) || 0) * (quotiteTravail / 100));
+    const salaireBaseTheorique = round2((Number(contrat.salaireBase) || 0) * (quotiteTravail / 100));
+
+    // Nombre/Montant de "Salaire de base" basés sur la présence réelle (feuille d'activité)
+    // quand elle a été calculée pour ce salarié/mois (`joursJustifiesActivite` non-null —
+    // voir `VariablesPaieRhService.synchroniserJoursActivite()`) : jours présents (badge) +
+    // jours de congé approuvé, tous types. Un jour ni badgé ni couvert par un congé
+    // approuvé (absence non justifiée) n'est alors plus payé — la ligne "Absences"
+    // existante continue par ailleurs d'appliquer le taux de maintien propre à chaque type
+    // de congé, SANS changement, sur la base théorique ci-dessous (pas de double comptage :
+    // voir Doc/MODULE_PAIE_RH_NOTES.md). Repli sur le calcul théorique (jours ouvrés du
+    // régime) tant que l'activité n'a jamais été calculée pour ce salarié/mois.
+    const joursOuvresMois = this.getConstanteValeur(constantes, 'JOURS_OUVRES_MOIS_DEFAUT', 22);
+    let salaireBase = salaireBaseTheorique;
+    let joursSalaireBase: number | null = null;
+    if (variable?.joursJustifiesActivite != null && joursOuvresMois > 0) {
+      const salaireJournalier = salaireBaseTheorique / joursOuvresMois;
+      // Garde-fou : jamais plus que la référence théorique du mois, même si l'activité
+      // recense davantage de jours "justifiés" que de jours ouvrés (anomalie de saisie).
+      joursSalaireBase = Math.min(Number(variable.joursJustifiesActivite), joursOuvresMois);
+      salaireBase = round2(salaireJournalier * joursSalaireBase);
+    }
 
     const heuresSup = Number(variable?.heuresSupplementaires) || 0;
     const tauxMajorationHS =
@@ -91,9 +116,14 @@ export class MoteurCalculPaieRhService {
         : this.getConstanteValeur(constantes, 'TAUX_MAJORATION_HS_DEFAUT', 25);
     const heuresLegalesMois = this.getConstanteValeur(constantes, 'HEURES_LEGALES_MOIS', 151.67);
 
+    // Le taux horaire des heures sup reste basé sur la référence THÉORIQUE (temps plein
+    // proratisé quotité), jamais sur le salaire de base réduit par la présence du mois —
+    // sans quoi un salarié ayant eu des absences verrait son taux horaire d'heures sup
+    // diminuer, ce qui n'a pas de sens (le taux horaire contractuel ne varie pas selon les
+    // jours réellement travaillés).
     const montantHeuresSupplementaires =
       heuresSup > 0 && heuresLegalesMois > 0
-        ? round2((salaireBase / heuresLegalesMois) * (1 + tauxMajorationHS / 100) * heuresSup)
+        ? round2((salaireBaseTheorique / heuresLegalesMois) * (1 + tauxMajorationHS / 100) * heuresSup)
         : 0;
 
     const totalPrimesVariables = round2(sommeLignes(variable?.primes));
@@ -308,6 +338,7 @@ export class MoteurCalculPaieRhService {
 
     return {
       salaireBase: round2(salaireBase),
+      joursSalaireBase,
       totalBrut,
       totalCotisationsSalariales,
       totalCotisationsPatronales,

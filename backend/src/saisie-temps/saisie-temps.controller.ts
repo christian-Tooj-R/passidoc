@@ -39,17 +39,6 @@ export class SaisieTempsController {
     return this.service.findByTenant(req.user.tenantId, debut, fin);
   }
 
-  @Get('rapports')
-  @ApiOperation({ summary: 'Rapports pivot (collaborateur|client|semaine)' })
-  getRapports(
-    @Req() req: any,
-    @Query('type') type: 'collaborateur' | 'client' | 'semaine' = 'collaborateur',
-    @Query('debut') debut: string,
-    @Query('fin') fin: string,
-  ) {
-    return this.service.getRapports(type, debut, fin, req.user.tenantId);
-  }
-
   @Get('planning')
   @ApiOperation({ summary: 'Planning de charge hebdomadaire' })
   getPlanning(

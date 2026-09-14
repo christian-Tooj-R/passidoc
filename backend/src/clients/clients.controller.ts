@@ -134,6 +134,25 @@ export class ClientsController {
     return this.clientsService.uploadFichePhoto(id, file, req.user);
   }
 
+  @Patch(':id/logo-from-gallery')
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_OUEST)
+  @ApiOperation({ summary: 'Définir la photo de la 1ère carte (logo) à partir d\'une photo déjà présente dans la galerie' })
+  setLogoFromGallery(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('photoUrl') photoUrl: string,
+    @Req() req: any,
+  ) {
+    if (!photoUrl) throw new BadRequestException('photoUrl requis');
+    return this.clientsService.setLogoFromGallery(id, photoUrl, req.user);
+  }
+
+  @Delete(':id/logo')
+  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE, UserRole.CHEF_ANTENNE, UserRole.CHEF_MISSION, UserRole.COLLABORATEUR, UserRole.GERANT_OUEST)
+  @ApiOperation({ summary: 'Retirer la photo de la 1ère carte (logo) — repasse à l\'illustration secteur par défaut' })
+  removeLogo(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.clientsService.removeLogo(id, req.user);
+  }
+
   @Delete(':id/fiche/photos')
   @ApiOperation({ summary: 'Supprimer une photo de la galerie fiche identité' })
   deleteFichePhoto(

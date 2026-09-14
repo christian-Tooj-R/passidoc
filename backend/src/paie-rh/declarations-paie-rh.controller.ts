@@ -9,7 +9,7 @@ import { DeclarationsPaieRhService } from './declarations-paie-rh.service';
 @ApiTags('Paie RH — Déclarations (V1, récapitulatif)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+@Roles(UserRole.ADMIN)
 @Controller('paie-rh/declarations')
 export class DeclarationsPaieRhController {
   constructor(private service: DeclarationsPaieRhService) {}

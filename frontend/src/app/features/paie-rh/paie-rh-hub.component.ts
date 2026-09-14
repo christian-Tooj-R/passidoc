@@ -116,7 +116,7 @@ const ETAPES_CYCLE: Array<{ code: StatutCyclePaieRh; label: string }> = [
         @if (!cycle()) {
           <button mat-flat-button color="primary" (click)="ouvrirCycle()"><mat-icon>lock_open</mat-icon> Ouvrir la période</button>
         }
-        @if (cycle() && cycle()!.statut !== 'CLOTURE') {
+        @if (cycle() && cycle()!.statut !== 'CLOTURE' && cycle()!.statut !== 'VALIDE') {
           @if (nbBulletinsGeneres() < salaries().length) {
             <button mat-stroked-button (click)="calculerCycle()"><mat-icon>calculate</mat-icon> Calculer les bulletins restants</button>
           }
@@ -131,6 +131,10 @@ const ETAPES_CYCLE: Array<{ code: StatutCyclePaieRh; label: string }> = [
           <button mat-flat-button color="primary" (click)="validerCycle()"><mat-icon>check_circle</mat-icon> Valider le cycle</button>
         }
         @if (cycle() && cycle()!.statut === 'VALIDE') {
+          <button mat-stroked-button (click)="devaliderCycle()"
+                  matTooltip="Reverrouille le cycle en CALCULÉ pour pouvoir recalculer les bulletins">
+            <mat-icon>undo</mat-icon> Dévalider
+          </button>
           <button mat-flat-button color="warn" (click)="cloturerCycle()"><mat-icon>lock</mat-icon> Clôturer (verrouille la période)</button>
         }
       </div>
@@ -360,7 +364,17 @@ export class PaieRhHubComponent implements OnInit {
   /* ── Chargement ───────────────────────────────────────────────────────────── */
 
   ngOnInit() {
-    this.reloadCycle();
+    // Par défaut, on affiche le mois/année en cours d'exercice — la période actuellement
+    // ouverte/en cours (le cycle le plus récent non clôturé) — plutôt que le mois calendaire
+    // courant, qui peut ne correspondre à aucun cycle si l'équipe a du retard ou de l'avance.
+    this.paieRh.findCycles().subscribe({
+      next: (cycles) => {
+        const enCours = cycles.find((c) => c.statut !== 'CLOTURE');
+        if (enCours) { this.mois = enCours.mois; this.annee = enCours.annee; }
+        this.reloadCycle();
+      },
+      error: () => this.reloadCycle(),
+    });
   }
 
   reloadCycle() {
@@ -429,6 +443,14 @@ export class PaieRhHubComponent implements OnInit {
   validerCycle() {
     this.paieRh.validerCycle(this.mois, this.annee).subscribe({
       next: (c) => { this.cycle.set(c); this.snack.open('Cycle validé', undefined, { duration: 2500 }); },
+      error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3000 }),
+    });
+  }
+
+  devaliderCycle() {
+    if (!confirm('Dévalider le cycle pour pouvoir recalculer les bulletins — confirmer ?')) return;
+    this.paieRh.devaliderCycle(this.mois, this.annee).subscribe({
+      next: (c) => { this.cycle.set(c); this.snack.open('Cycle dévalidé', undefined, { duration: 2500 }); },
       error: (e) => this.snack.open(e?.error?.message || 'Erreur', undefined, { duration: 3000 }),
     });
   }
