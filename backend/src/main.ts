@@ -5,8 +5,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { runSalaireBaseMigrationIfNeeded } from './bootstrap-salaire-base-migration';
 
 async function bootstrap() {
+  await runSalaireBaseMigrationIfNeeded();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn', 'log'] });
 
   // Servir les fichiers uploadés localement (fallback MinIO non dispo)
