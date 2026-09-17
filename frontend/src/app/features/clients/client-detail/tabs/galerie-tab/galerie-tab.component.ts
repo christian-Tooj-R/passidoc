@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ClientsService } from '../../../../../core/services/clients.service';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-galerie-tab',
@@ -140,16 +141,18 @@ export default class GalerieTabComponent implements OnInit {
   uploading = signal(false);
   lightboxIndex = signal<number | null>(null);
 
+  private readonly apiOrigin = environment.apiUrl.replace(/\/api\/?$/, '');
+
   photoSrc(url: string): string {
     if (!url) return '';
     if (url.startsWith('local://')) {
-      return `http://localhost:3000/uploads/${url.slice('local://'.length).replace(/\//g, '_')}`;
+      return `${this.apiOrigin}/uploads/${url.slice('local://'.length).replace(/\//g, '_')}`;
     }
-    if (url.startsWith('http://localhost:3000')) {
+    if (url.startsWith(this.apiOrigin)) {
       return url;
     }
     // URL MinIO ou autre → passer par le proxy
-    return `http://localhost:3000/api/clients/${this.clientId}/fiche/photos/stream?url=${encodeURIComponent(url)}`;
+    return `${environment.apiUrl}/clients/${this.clientId}/fiche/photos/stream?url=${encodeURIComponent(url)}`;
   }
 
   openLightbox(index: number) { this.lightboxIndex.set(index); }

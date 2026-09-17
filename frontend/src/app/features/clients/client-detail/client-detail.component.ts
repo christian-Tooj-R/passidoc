@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, Renderer2, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../../../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -1437,15 +1438,17 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
 
   /** Même résolution d'URL que la galerie (`galerie-tab.component.ts`) : les photos
    *  peuvent être servies en direct (stockage local) ou via le proxy de streaming MinIO. */
+  private readonly apiOrigin = environment.apiUrl.replace(/\/api\/?$/, '');
+
   resolvePhotoUrl(url: string): string {
     if (!url) return '';
     if (url.startsWith('local://')) {
-      return `http://localhost:3000/uploads/${url.slice('local://'.length).replace(/\//g, '_')}`;
+      return `${this.apiOrigin}/uploads/${url.slice('local://'.length).replace(/\//g, '_')}`;
     }
-    if (url.startsWith('http://localhost:3000')) {
+    if (url.startsWith(this.apiOrigin)) {
       return url;
     }
-    return `http://localhost:3000/api/clients/${this.client?.id}/fiche/photos/stream?url=${encodeURIComponent(url)}`;
+    return `${environment.apiUrl}/clients/${this.client?.id}/fiche/photos/stream?url=${encodeURIComponent(url)}`;
   }
 
   private readonly GROUP_STYLE_MAP: Record<string, { color: string; bg: string }> = {
