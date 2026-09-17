@@ -207,6 +207,10 @@ import { SyntheseCloture, ClientSite } from '../../../../../core/models/client.m
               @if (s.pointsIS) { <p><strong>IS :</strong> {{ s.pointsIS }}</p> }
               @if (s.pointsEBE) { <p><strong>EBE :</strong> {{ s.pointsEBE }}</p> }
               @if (s.notesSynthese) { <p><strong>Synthèse :</strong> {{ s.notesSynthese }}</p> }
+              @if (s.commentaireFinancier) { <p><strong>Commentaire financier :</strong> {{ s.commentaireFinancier }}</p> }
+              @if (s.businessModel) { <p><strong>Business model :</strong> {{ s.businessModel }}</p> }
+              @if (s.strategieVente) { <p><strong>Stratégie de vente :</strong> {{ s.strategieVente }}</p> }
+              @if (s.canauxDistribution) { <p><strong>Canaux de distribution :</strong> {{ s.canauxDistribution }}</p> }
               @if (s.zonesExoneration?.length) {
                 <div class="detail-chips">
                   <strong>Exonérations :</strong>

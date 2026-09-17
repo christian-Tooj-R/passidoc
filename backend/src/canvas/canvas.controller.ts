@@ -2,6 +2,8 @@ import { Controller, Get, Patch, Param, Body, ParseIntPipe, UseGuards } from '@n
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CanvasService } from './canvas.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Canvas')
 @ApiBearerAuth()
@@ -19,7 +21,8 @@ export class CanvasController {
   update(
     @Param('clientId', ParseIntPipe) clientId: number,
     @Body() body: Record<string, string>,
+    @CurrentUser() user: User,
   ) {
-    return this.service.update(clientId, body);
+    return this.service.update(clientId, body, user);
   }
 }

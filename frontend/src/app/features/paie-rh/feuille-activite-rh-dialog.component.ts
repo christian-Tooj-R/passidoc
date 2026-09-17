@@ -88,7 +88,7 @@ const STATUT_LABELS: Record<string, string> = {
 
     @if (onglet() === 'journaliere') {
       <table class="far-table">
-        <thead><tr><th>Jour</th><th>Semaine</th><th>Variable</th><th>Valeur</th><th>Statut</th><th></th></tr></thead>
+        <thead><tr><th>Jour</th><th>Semaine</th><th>Variable</th><th>Valeur</th><th>Statut</th><th class="far-temps-saisi-th" matTooltip="Total des saisies de temps du module Travail ce jour-là — informatif, n'entre dans aucun calcul de paie">Temps saisi <mat-icon class="far-info-icon">info</mat-icon></th><th></th></tr></thead>
         <tbody>
           @for (l of grilleJournaliere(); track l.jour) {
             <tr>
@@ -103,6 +103,7 @@ const STATUT_LABELS: Record<string, string> = {
                 }
               </td>
               <td><span class="badge-statut" [attr.data-statut]="l.statut ?? 'AUCUNE'">{{ l.statut ? STATUT_LABELS[l.statut] : '—' }}</span></td>
+              <td class="far-temps-saisi-td">{{ tempsSaisiParJour()[l.jour] ?? 0 | number:'1.0-2' }} h</td>
               <td class="far-actions-cell">
                 @if (l.id) {
                   @if (editId() === l.id) {
@@ -115,7 +116,7 @@ const STATUT_LABELS: Record<string, string> = {
             </tr>
           }
           @if (!grilleJournaliere().length) {
-            <tr><td colspan="6" class="far-empty-row">Aucune donnée — cliquez sur "Initialiser" puis "Calculer".</td></tr>
+            <tr><td colspan="7" class="far-empty-row">Aucune donnée — cliquez sur "Initialiser" puis "Calculer".</td></tr>
           }
         </tbody>
       </table>
@@ -163,6 +164,9 @@ const STATUT_LABELS: Record<string, string> = {
     .badge-statut[data-statut="CALCULE"] { background: #DBEAFE; color: #1D4ED8; }
     .badge-statut[data-statut="MODIFIE_MANUEL"] { background: #FEF3C7; color: #92400E; }
     .badge-statut[data-statut="EN_ATTENTE"] { background: #F1F5F9; color: #64748B; }
+    .far-temps-saisi-th { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+    .far-info-icon { font-size: 13px; width: 13px; height: 13px; color: #94A3B8; }
+    .far-temps-saisi-td { color: #7C3AED; font-weight: 600; }
   `],
 })
 export class FeuilleActiviteRhDialogComponent implements OnInit {
@@ -180,6 +184,9 @@ export class FeuilleActiviteRhDialogComponent implements OnInit {
 
   grilleJournaliere = signal<LigneActiviteJourRh[]>([]);
   rollup = signal<LigneRollupActiviteRh[]>([]);
+  /** Temps saisi (module Travail) par jour, indexé par date — chargé une fois par mois,
+   *  indépendamment de la variable sélectionnée (purement informatif, voir tooltip). */
+  tempsSaisiParJour = signal<Record<string, number>>({});
 
   editId = signal<number | null>(null);
   editValeur = 0;
@@ -190,6 +197,9 @@ export class FeuilleActiviteRhDialogComponent implements OnInit {
     this.paieRh.findCatalogueActivite().subscribe((c) => {
       this.catalogue.set(c);
       this.reload();
+    });
+    this.paieRh.findTempsSaisiActivite(this.data.salarieId, this.data.mois, this.data.annee).subscribe((l) => {
+      this.tempsSaisiParJour.set(Object.fromEntries(l.map((x) => [x.jour, x.heures])));
     });
   }
 

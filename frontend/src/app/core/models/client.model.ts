@@ -205,6 +205,7 @@ export interface SyntheseCloture {
   pointsIS?: string;
   pointsEBE?: string;
   notesSynthese?: string;
+  commentaireFinancier?: string;
   businessModel?: string;
   strategieVente?: string;
   canauxDistribution?: string;

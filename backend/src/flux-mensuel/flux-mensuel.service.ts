@@ -5,6 +5,7 @@ import { FluxMensuel, StatutDepot, TypeFlux } from '../entities/flux-mensuel.ent
 import { ClientsService } from '../clients/clients.service';
 import { CreateFluxDto } from './dto/create-flux.dto';
 import { UpdateFluxDto } from './dto/update-flux.dto';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class FluxMensuelService {
@@ -13,7 +14,8 @@ export class FluxMensuelService {
     private clientsService: ClientsService,
   ) {}
 
-  async create(clientId: number, dto: CreateFluxDto) {
+  async create(clientId: number, dto: CreateFluxDto, currentUser: User) {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     const flux = this.repo.create({ ...dto, client: { id: clientId } });
     const saved = await this.repo.save(flux);
     return saved;
@@ -38,7 +40,8 @@ export class FluxMensuelService {
     });
   }
 
-  async update(id: number, clientId: number, dto: UpdateFluxDto) {
+  async update(id: number, clientId: number, dto: UpdateFluxDto, currentUser: User) {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     const flux = await this.repo.findOne({ where: { id, client: { id: clientId } } });
     if (!flux) throw new NotFoundException('Flux introuvable');
 
@@ -54,7 +57,8 @@ export class FluxMensuelService {
   }
 
   // Initialise tous les types × 12 mois de l'année comme MANQUANT (si pas déjà existants)
-  async initAnnee(clientId: number, annee: number) {
+  async initAnnee(clientId: number, annee: number, currentUser: User) {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     const types = Object.values(TypeFlux);
     const existing = await this.repo.find({ where: { client: { id: clientId } } });
     const toCreate: Partial<FluxMensuel>[] = [];
@@ -81,7 +85,8 @@ export class FluxMensuelService {
     });
   }
 
-  async remove(id: number, clientId: number) {
+  async remove(id: number, clientId: number, currentUser: User) {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     const flux = await this.repo.findOne({ where: { id, client: { id: clientId } } });
     if (!flux) throw new NotFoundException('Flux introuvable');
     await this.repo.delete(id);

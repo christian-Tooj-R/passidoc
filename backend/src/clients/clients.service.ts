@@ -123,6 +123,19 @@ export class ClientsService {
     throw new ForbiddenException('Vous n\'êtes pas assigné à ce dossier');
   }
 
+  /**
+   * Point d'entrée réutilisable par les autres modules rattachés à un dossier client
+   * (fiche identité, missions, fournisseurs, contrôle interne, canvas, flux mensuel,
+   * documents...) pour appliquer la MÊME règle d'autorisation que `ClientsController`
+   * sur leurs propres opérations d'écriture — sans ça, n'importe quel utilisateur du
+   * tenant peut modifier/supprimer les données de n'importe quel dossier, y compris
+   * ceux dont il n'est pas responsable.
+   */
+  async assertCanEdit(clientId: number, currentUser: User): Promise<void> {
+    const client = await this.findOneForUser(clientId, currentUser);
+    this.checkEditAccess(client, currentUser);
+  }
+
   async assignDirecteur(clientId: number, directeurId: number | null, currentUser: User) {
     const client = await this.findOne(clientId);
     await this.repo.update(clientId, { directeurId: directeurId as any });

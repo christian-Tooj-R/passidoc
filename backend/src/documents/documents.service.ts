@@ -5,6 +5,7 @@ import { Document, TypeDoc } from '../entities/document.entity';
 import { FluxMensuel, StatutDepot, TypeFlux } from '../entities/flux-mensuel.entity';
 import { MinioService } from '../storage/minio.service';
 import { User } from '../entities/user.entity';
+import { ClientsService } from '../clients/clients.service';
 
 const BUCKET = 'passidoc-documents';
 
@@ -17,6 +18,7 @@ export class DocumentsService {
     @InjectRepository(Document) private repo: Repository<Document>,
     @InjectRepository(FluxMensuel) private fluxRepo: Repository<FluxMensuel>,
     private minio: MinioService,
+    private clientsService: ClientsService,
   ) {}
 
   async upload(
@@ -25,6 +27,7 @@ export class DocumentsService {
     user: User,
     meta?: { typeDoc?: TypeDoc; periodeMois?: number; periodeAnnee?: number },
   ) {
+    await this.clientsService.assertCanEdit(clientId, user);
     const objectName = `clients/${clientId}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
     await this.minio.uploadFile(BUCKET, objectName, file.buffer, file.mimetype);
     const doc = this.repo.create({
@@ -66,7 +69,8 @@ export class DocumentsService {
     return { stream, doc };
   }
 
-  async remove(id: number, clientId: number) {
+  async remove(id: number, clientId: number, user: User) {
+    await this.clientsService.assertCanEdit(clientId, user);
     const doc = await this.findOne(id, clientId);
     const { typeDoc, periodeMois, periodeAnnee } = doc;
     await this.minio.deleteFile(BUCKET, doc.storagePath);

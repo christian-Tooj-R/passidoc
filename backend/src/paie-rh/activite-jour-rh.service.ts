@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ValeurActiviteRh, StatutValeurActiviteRh } from '../entities/valeur-activite-rh.entity';
 import { Pointage } from '../entities/pointage.entity';
 import { CongeAbsence, StatutConge } from '../entities/conge-absence.entity';
+import { SaisieTemps } from '../entities/saisie-temps.entity';
 import { ContratsTravailService } from './contrats-travail.service';
 import { ConstantesPaieRhService } from './constantes-paie-rh.service';
 import { resoudreConstante } from './constante-resolution.util';
@@ -50,6 +51,7 @@ export class ActiviteJourRhService {
     @InjectRepository(ValeurActiviteRh) private repo: Repository<ValeurActiviteRh>,
     @InjectRepository(Pointage) private pointageRepo: Repository<Pointage>,
     @InjectRepository(CongeAbsence) private congeRepo: Repository<CongeAbsence>,
+    @InjectRepository(SaisieTemps) private saisieTempsRepo: Repository<SaisieTemps>,
     private contratsService: ContratsTravailService,
     private constantesService: ConstantesPaieRhService,
   ) {}
@@ -76,6 +78,30 @@ export class ActiviteJourRhService {
         id: r?.id ?? null,
       };
     });
+  }
+
+  /**
+   * "Temps saisi" — total journalier des saisies de temps du module Travail (SaisieTemps,
+   * toutes missions/clients confondus) pour un salarié/mois. PUREMENT INFORMATIF : sert à
+   * comparer visuellement le temps facturable saisi à la présence réelle (pointage), sans
+   * jamais entrer dans le calcul de PRESENCE/HEURES_TRAVAILLEES/HEURES_SUP ni dans le moteur
+   * de paie — les deux systèmes (pointage légal vs temps facturable par mission) restent
+   * volontairement indépendants. Voir mémoire "Minuteur → feuille d'activité RH" (reporté le
+   * 2026-09-14, option 1 retenue le 2026-09-17 : colonne séparée, zéro risque paie).
+   */
+  async findTempsSaisiJournalier(
+    salarieId: number, mois: number, annee: number, tenantId: number,
+  ): Promise<Array<{ jour: string; heures: number }>> {
+    const jours = joursDuMois(mois, annee);
+    const saisies = await this.saisieTempsRepo.find({
+      where: { collaborateurId: salarieId, tenantId },
+    });
+    const parJour = new Map<string, number>();
+    for (const s of saisies) {
+      if (!jours.includes(s.date)) continue;
+      parJour.set(s.date, (parJour.get(s.date) ?? 0) + Number(s.dureeHeures));
+    }
+    return jours.map((jour) => ({ jour, heures: Math.round((parJour.get(jour) ?? 0) * 100) / 100 }));
   }
 
   /** Regroupement hebdomadaire/mensuel/annuel (~onglets Hebdomadaire/Mensuelle/Annuel). */

@@ -4,6 +4,8 @@ import { FluxMensuelService } from './flux-mensuel.service';
 import { CreateFluxDto } from './dto/create-flux.dto';
 import { UpdateFluxDto } from './dto/update-flux.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Alertes')
 @ApiBearerAuth()
@@ -28,8 +30,8 @@ export class FluxMensuelController {
 
   @Post()
   @ApiOperation({ summary: 'Ajouter un flux mensuel' })
-  create(@Param('clientId', ParseIntPipe) clientId: number, @Body() dto: CreateFluxDto) {
-    return this.service.create(clientId, dto);
+  create(@Param('clientId', ParseIntPipe) clientId: number, @Body() dto: CreateFluxDto, @CurrentUser() user: User) {
+    return this.service.create(clientId, dto, user);
   }
 
   @Get()
@@ -51,8 +53,9 @@ export class FluxMensuelController {
     @Param('clientId', ParseIntPipe) clientId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateFluxDto,
+    @CurrentUser() user: User,
   ) {
-    return this.service.update(id, clientId, dto);
+    return this.service.update(id, clientId, dto, user);
   }
 
   @Post('init-annee')
@@ -60,13 +63,14 @@ export class FluxMensuelController {
   initAnnee(
     @Param('clientId', ParseIntPipe) clientId: number,
     @Body('annee') annee: number,
+    @CurrentUser() user: User,
   ) {
-    return this.service.initAnnee(clientId, annee);
+    return this.service.initAnnee(clientId, annee, user);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Supprimer un flux' })
-  remove(@Param('clientId', ParseIntPipe) clientId: number, @Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id, clientId);
+  remove(@Param('clientId', ParseIntPipe) clientId: number, @Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
+    return this.service.remove(id, clientId, user);
   }
 }

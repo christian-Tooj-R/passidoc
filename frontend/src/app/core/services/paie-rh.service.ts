@@ -645,6 +645,13 @@ export class PaieRhService {
     );
   }
 
+  /** Temps saisi (module Travail) par jour — informatif, hors calcul de paie. */
+  findTempsSaisiActivite(salarieId: number, mois: number, annee: number) {
+    return this.http.get<{ jour: string; heures: number }[]>(
+      `${this.base}/activite-jour/salarie/${salarieId}/temps-saisi`, { params: { mois, annee } },
+    );
+  }
+
   findRollupActivite(salarieId: number, variableCode: string, granularite: GranulariteActivite, mois: number, annee: number) {
     return this.http.get<LigneRollupActiviteRh[]>(
       `${this.base}/activite-jour/salarie/${salarieId}/rollup`, { params: { variableCode, granularite, mois, annee } },

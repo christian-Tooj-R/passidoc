@@ -224,13 +224,16 @@ export class TasksService {
       updates.debutEnCours = null as any;
     }
 
-    // Chrono : entrée en EN_COURS + auto-pause des autres tâches EN_COURS
+    // Chrono : entrée en EN_COURS + auto-pause des autres tâches EN_COURS DU MÊME ASSIGNÉ
+    // (une personne ne peut avoir qu'une seule tâche "en cours" à la fois — ne doit jamais
+    // interrompre le travail d'un autre collaborateur sans rapport avec cette tâche).
     if (dto.statut === TaskStatut.EN_COURS && task.statut !== TaskStatut.EN_COURS) {
       updates.debutEnCours = now;
-      // Mettre en pause toute autre tâche EN_COURS du même tenant
-      const enCours = await this.repo.find({
-        where: { statut: TaskStatut.EN_COURS, tenantId: task.tenantId },
-      });
+      const enCours = task.assigneeId
+        ? await this.repo.find({
+            where: { statut: TaskStatut.EN_COURS, tenantId: task.tenantId, assigneeId: task.assigneeId },
+          })
+        : [];
       for (const other of enCours) {
         if (other.id === id) continue;
         const elapsed = other.debutEnCours

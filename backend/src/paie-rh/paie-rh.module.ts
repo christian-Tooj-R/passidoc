@@ -15,6 +15,7 @@ import { TenantConfig } from '../entities/tenant-config.entity';
 import { ValeurActiviteRh } from '../entities/valeur-activite-rh.entity';
 import { Pointage } from '../entities/pointage.entity';
 import { PausePointage } from '../entities/pause-pointage.entity';
+import { SaisieTemps } from '../entities/saisie-temps.entity';
 import { CongesAbsencesModule } from '../conges-absences/conges-absences.module';
 
 import { ContratsTravailService } from './contrats-travail.service';
@@ -55,7 +56,7 @@ import { ActiviteJourRhController } from './activite-jour-rh.controller';
     TypeOrmModule.forFeature([
       ContratTravail, RubriquePaieRh, ConstantePaieRh, VariablePaieRh,
       BulletinSalarie, CyclePaieRh, ExerciceRh, AcompteSalarie, User, CongeAbsence, TenantConfig,
-      ValeurActiviteRh, Pointage, PausePointage,
+      ValeurActiviteRh, Pointage, PausePointage, SaisieTemps,
     ]),
     // Nécessaire pour la génération PDF du bulletin (~Sage) : lecture des soldes de
     // congés (Acquis/Reste/Pris) et des congés pris sur la période — voir

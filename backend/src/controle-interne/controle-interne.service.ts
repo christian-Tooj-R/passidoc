@@ -3,12 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ControleInterne } from '../entities/controle-interne.entity';
 import { Exercice, ExerciceStatut } from '../entities/exercice.entity';
+import { User } from '../entities/user.entity';
+import { ClientsService } from '../clients/clients.service';
 
 @Injectable()
 export class ControleInterneService {
   constructor(
     @InjectRepository(ControleInterne) private repo: Repository<ControleInterne>,
     @InjectRepository(Exercice) private exerciceRepo: Repository<Exercice>,
+    private clientsService: ClientsService,
   ) {}
 
   async findByExercice(clientId: number, exerciceId: number): Promise<ControleInterne> {
@@ -20,7 +23,8 @@ export class ControleInterneService {
     return record;
   }
 
-  async upsert(clientId: number, exerciceId: number, data: Partial<ControleInterne>): Promise<ControleInterne> {
+  async upsert(clientId: number, exerciceId: number, data: Partial<ControleInterne>, currentUser: User): Promise<ControleInterne> {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     if (exerciceId > 0) {
       const exercice = await this.exerciceRepo.findOne({ where: { id: exerciceId } });
       if (!exercice) throw new NotFoundException('Exercice introuvable');
