@@ -526,7 +526,7 @@ interface TabGroup {
                   @case ('taches-recurrentes') { <app-taches-recurrentes-tab [clientId]="client.id" /> }
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
-                  @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (photosChanged)="onGalleryPhotosChanged($event)" /> }
                 }
               </div>
             </div>
@@ -1345,6 +1345,16 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
 
   onCustomFluxTypesChanged(types: { key: string; label: string }[]) {
     if (this.client) this.client = { ...this.client, customFluxTypes: types };
+  }
+
+  /** Reflète immédiatement les photos ajoutées/supprimées dans l'onglet Galerie sur le
+   *  sélecteur de photo de carte (`client.ficheIdentite.photos`), sans recharger la page. */
+  onGalleryPhotosChanged(photos: string[]) {
+    if (!this.client) return;
+    this.client = {
+      ...this.client,
+      ficheIdentite: this.client.ficheIdentite ? { ...this.client.ficheIdentite, photos } : this.client.ficheIdentite,
+    };
   }
 
   onFluxChanged(completude: number) {

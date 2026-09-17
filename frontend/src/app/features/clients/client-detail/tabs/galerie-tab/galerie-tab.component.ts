@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -132,6 +132,9 @@ import { environment } from '../../../../../../environments/environment';
 export default class GalerieTabComponent implements OnInit {
   @Input() clientId!: number;
   @Input() readonly = false;
+  /** Émis à chaque changement (upload/suppression) pour que le parent (sélecteur de photo
+   *  de carte) reflète la galerie à jour sans avoir besoin de recharger toute la page. */
+  @Output() photosChanged = new EventEmitter<string[]>();
 
   private clientsService = inject(ClientsService);
   private toast = inject(ToastService);
@@ -201,7 +204,9 @@ export default class GalerieTabComponent implements OnInit {
     this.uploading.set(true);
     this.clientsService.uploadFichePhoto(this.clientId, file).subscribe({
       next: (client: any) => {
-        this.photos.set(client.ficheIdentite?.photos ?? []);
+        const photos = client.ficheIdentite?.photos ?? [];
+        this.photos.set(photos);
+        this.photosChanged.emit(photos);
         this.uploading.set(false);
       },
       error: () => {
@@ -214,7 +219,11 @@ export default class GalerieTabComponent implements OnInit {
   deletePhoto(url: string, event: Event) {
     event.stopPropagation();
     this.clientsService.deleteFichePhoto(this.clientId, url).subscribe({
-      next: (client: any) => this.photos.set(client.ficheIdentite?.photos ?? []),
+      next: (client: any) => {
+        const photos = client.ficheIdentite?.photos ?? [];
+        this.photos.set(photos);
+        this.photosChanged.emit(photos);
+      },
       error: () => this.toast.error('Erreur lors de la suppression de la photo'),
     });
   }
