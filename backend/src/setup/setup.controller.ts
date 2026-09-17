@@ -39,6 +39,15 @@ export class SetupController {
     return this.setupService.activate(slug);
   }
 
+  @Get('diag-origine-comptes')
+  @ApiOperation({ summary: '⚠️ TEMPORAIRE — diagnostic ponctuel (requiert secret), à retirer après usage' })
+  async diagOrigineComptes(@Query('secret') secret: string, @Query('emails') emails: string) {
+    const expected = this.config.get<string>('RECOVER_SECRET');
+    if (!expected || secret !== expected) throw new ForbiddenException('Secret invalide');
+    const list = (emails || '').split(',').map((e) => e.trim()).filter(Boolean);
+    return this.setupService.diagOrigineComptes(list);
+  }
+
   @Get('recover')
   @ApiOperation({ summary: 'Récupère l\'email admin d\'un tenant (requiert secret)' })
   async recoverAdmin(@Query('secret') secret: string, @Req() req: Request & { tenantSlug?: string }) {
