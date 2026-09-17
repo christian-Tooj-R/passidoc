@@ -61,9 +61,13 @@ export interface ThemePrefs {
   reducedMotion:     boolean;
 }
 
-/** Clé localStorage par utilisateur (cache local pour éviter le flash) */
-const storageKey = (userId?: number | null) =>
-  userId ? `passidoc_theme_${userId}` : 'passidoc_theme_guest';
+/** Clé localStorage par utilisateur (cache local pour éviter le flash) — basée sur l'email
+ *  plutôt que l'ID numérique brut : après une réinitialisation complète de la base, les
+ *  séquences repartent de 1 et un tout nouveau compte peut hériter du même ID qu'un ancien
+ *  compte présent dans ce navigateur, ce qui lui ferait afficher le thème de l'ancien compte
+ *  avant même la synchronisation depuis le backend. */
+const storageKey = (email?: string | null) =>
+  email ? `passidoc_theme_${email.toLowerCase()}` : 'passidoc_theme_guest';
 
 const DEFAULTS: ThemePrefs = {
   sidebarThemeId:    'navy',
@@ -100,8 +104,9 @@ export class ThemeService {
   }
 
   load() {
-    const uid = this.auth.currentUser()?.id ?? null;
-    const key = storageKey(uid);
+    const user = this.auth.currentUser();
+    const uid  = user?.id ?? null;
+    const key  = storageKey(user?.email);
 
     // 1. Affichage immédiat depuis le cache localStorage (pas de flash)
     try {
@@ -138,14 +143,14 @@ export class ThemeService {
   }
 
   private save() {
-    const uid   = this.auth.currentUser()?.id ?? null;
+    const user  = this.auth.currentUser();
     const prefs = this.prefs();
 
     // Sauvegarde locale immédiate (UX réactive)
-    localStorage.setItem(storageKey(uid), JSON.stringify(prefs));
+    localStorage.setItem(storageKey(user?.email), JSON.stringify(prefs));
 
     // Persistance en base (cross-device)
-    if (uid) {
+    if (user?.id) {
       this.http.patch(this.api, prefs).subscribe();
     }
   }

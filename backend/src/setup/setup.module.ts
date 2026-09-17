@@ -6,9 +6,10 @@ import { User } from '../entities/user.entity';
 import { SetupService } from './setup.service';
 import { SetupController } from './setup.controller';
 import { SecteursModule } from '../secteurs/secteurs.module';
+import { RolePermissionsModule } from '../role-permissions/role-permissions.module';
 
 @Module({
-  imports: [ConfigModule, TypeOrmModule.forFeature([TenantConfig, User]), SecteursModule],
+  imports: [ConfigModule, TypeOrmModule.forFeature([TenantConfig, User]), SecteursModule, RolePermissionsModule],
   providers: [SetupService],
   controllers: [SetupController],
 })

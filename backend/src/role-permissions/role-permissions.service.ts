@@ -23,6 +23,13 @@ export class RolePermissionsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await this.seedIfEmpty();
+  }
+
+  /** Crée les lignes de permission par défaut manquantes — appelé au démarrage de l'appli
+   *  ET après un reset complet de la base (`SetupService.resetDatabase()`), puisque
+   *  `onModuleInit` ne se redéclenche pas suite à un reset déclenché en cours d'exécution. */
+  async seedIfEmpty(): Promise<void> {
     for (const [role, menuItems] of Object.entries(DEFAULTS)) {
       const exists = await this.repo.findOne({ where: { role } });
       if (!exists) await this.repo.save({ role, menuItems });

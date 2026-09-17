@@ -6,6 +6,7 @@ import { TenantConfig } from '../entities/tenant-config.entity';
 import { User, UserRole, UserSite } from '../entities/user.entity';
 import { SetupDto } from './setup.dto';
 import { SecteursService } from '../secteurs/secteurs.service';
+import { RolePermissionsService } from '../role-permissions/role-permissions.service';
 
 @Injectable()
 export class SetupService {
@@ -14,6 +15,7 @@ export class SetupService {
     @InjectRepository(User)         private userRepo:      Repository<User>,
     @InjectDataSource()             private dataSource:    DataSource,
     private                         secteursService:       SecteursService,
+    private                         rolePermissionsService: RolePermissionsService,
   ) {}
 
   async getStatus(slug?: string): Promise<{ configured: boolean }> {
@@ -137,8 +139,11 @@ export class SetupService {
     // Recrée toutes les tables à partir des entités enregistrées
     await this.dataSource.synchronize();
 
-    // Re-seeder les secteurs d'activité (onModuleInit ne se relance pas)
+    // Re-seeder les données de référence (onModuleInit ne se relance pas suite à un reset
+    // déclenché en cours d'exécution — sans ça, secteurs et permissions par rôle restent
+    // vides jusqu'au prochain redémarrage de l'appli).
     await this.secteursService.seedIfEmpty();
+    await this.rolePermissionsService.seedIfEmpty();
 
     return { message: 'Base de données réinitialisée — tous les tokens existants sont invalidés' };
   }
