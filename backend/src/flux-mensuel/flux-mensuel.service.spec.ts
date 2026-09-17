@@ -39,7 +39,8 @@ const mockRepo = {
   createQueryBuilder: jest.fn().mockReturnValue(mockQB),
 };
 
-const mockClientsService = {};
+const mockClientsService = { assertCanEdit: jest.fn().mockResolvedValue(undefined) };
+const mockUser = { id: 1, role: 'ADMIN' } as any;
 
 describe('FluxMensuelService', () => {
   let service: FluxMensuelService;
@@ -67,7 +68,7 @@ describe('FluxMensuelService', () => {
   describe('create', () => {
     it('accepte un type standard (RELEVE_BANCAIRE)', async () => {
       const dto = { type: 'RELEVE_BANCAIRE', mois: 3, annee: 2026, statut: StatutDepot.MANQUANT };
-      await service.create(42, dto as any);
+      await service.create(42, dto as any, mockUser);
       expect(mockRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'RELEVE_BANCAIRE', mois: 3, annee: 2026 }),
       );
@@ -75,14 +76,14 @@ describe('FluxMensuelService', () => {
 
     it('accepte un type personnalisé (CUSTOM_xxx)', async () => {
       const dto = { type: 'CUSTOM_RELEVE_CHARGES_1234567890', mois: 5, annee: 2026, statut: StatutDepot.MANQUANT };
-      await service.create(42, dto as any);
+      await service.create(42, dto as any, mockUser);
       expect(mockRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'CUSTOM_RELEVE_CHARGES_1234567890' }),
       );
     });
 
     it('associe le flux au bon client', async () => {
-      await service.create(99, { type: 'PAIE', mois: 1, annee: 2026 } as any);
+      await service.create(99, { type: 'PAIE', mois: 1, annee: 2026 } as any, mockUser);
       expect(mockRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ client: { id: 99 } }),
       );
@@ -113,7 +114,7 @@ describe('FluxMensuelService', () => {
   describe('update', () => {
     it('lève NotFoundException si le flux est introuvable', async () => {
       mockRepo.findOne.mockResolvedValue(null);
-      await expect(service.update(999, 42, { statut: StatutDepot.DEPOSE })).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, 42, { statut: StatutDepot.DEPOSE }, mockUser)).rejects.toThrow(NotFoundException);
     });
 
     it('renseigne dateDepot quand le statut passe à DEPOSE', async () => {
@@ -121,7 +122,7 @@ describe('FluxMensuelService', () => {
         .mockResolvedValueOnce(makeFlux({ dateDepot: null })) // premier appel : flux sans dateDepot
         .mockResolvedValueOnce(makeFlux({ statut: StatutDepot.DEPOSE, dateDepot: new Date() })); // second appel : après update
 
-      await service.update(1, 42, { statut: StatutDepot.DEPOSE });
+      await service.update(1, 42, { statut: StatutDepot.DEPOSE }, mockUser);
 
       const call = mockRepo.update.mock.calls[0];
       expect(call[1]).toMatchObject({ statut: StatutDepot.DEPOSE });
@@ -134,7 +135,7 @@ describe('FluxMensuelService', () => {
         .mockResolvedValueOnce(makeFlux({ dateDepot: existingDate }))
         .mockResolvedValueOnce(makeFlux({ dateDepot: existingDate }));
 
-      await service.update(1, 42, { statut: StatutDepot.DEPOSE });
+      await service.update(1, 42, { statut: StatutDepot.DEPOSE }, mockUser);
 
       const call = mockRepo.update.mock.calls[0];
       expect(call[1].dateDepot).toBeUndefined();
@@ -145,7 +146,7 @@ describe('FluxMensuelService', () => {
         .mockResolvedValueOnce(makeFlux())
         .mockResolvedValueOnce(makeFlux({ statut: StatutDepot.MANQUANT }));
 
-      await service.update(1, 42, { statut: StatutDepot.MANQUANT });
+      await service.update(1, 42, { statut: StatutDepot.MANQUANT }, mockUser);
 
       const call = mockRepo.update.mock.calls[0];
       expect(call[1].dateRelance).toBeInstanceOf(Date);
@@ -156,14 +157,14 @@ describe('FluxMensuelService', () => {
 
   describe('remove', () => {
     it('supprime le flux et retourne un message', async () => {
-      const result = await service.remove(1, 42);
+      const result = await service.remove(1, 42, mockUser);
       expect(mockRepo.delete).toHaveBeenCalledWith(1);
       expect(result.message).toContain('supprimé');
     });
 
     it('lève NotFoundException si le flux est introuvable', async () => {
       mockRepo.findOne.mockResolvedValue(null);
-      await expect(service.remove(999, 42)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(999, 42, mockUser)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -177,7 +178,7 @@ describe('FluxMensuelService', () => {
       mockRepo.findOne.mockResolvedValue(fluxCustom);
       mockQB.getMany.mockResolvedValue([fluxCustom]);
 
-      await service.create(42, { type: customType, mois: 6, annee: 2026, statut: StatutDepot.MANQUANT } as any);
+      await service.create(42, { type: customType, mois: 6, annee: 2026, statut: StatutDepot.MANQUANT } as any, mockUser);
       const liste = await service.findByClient(42, 2026);
 
       expect(liste.some(f => f.type === customType)).toBe(true);

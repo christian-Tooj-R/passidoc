@@ -35,6 +35,17 @@ export class ActiviteJourRhController {
     return this.service.findGrilleJournaliere(salarieId, variableCode, mois, annee, req.user.tenantId);
   }
 
+  @Get('salarie/:salarieId/temps-saisi')
+  @ApiOperation({ summary: "Temps saisi (module Travail) par jour — informatif, hors calcul paie" })
+  findTempsSaisi(
+    @Param('salarieId', ParseIntPipe) salarieId: number,
+    @Query('mois', ParseIntPipe) mois: number,
+    @Query('annee', ParseIntPipe) annee: number,
+    @Req() req: any,
+  ) {
+    return this.service.findTempsSaisiJournalier(salarieId, mois, annee, req.user.tenantId);
+  }
+
   @Get('salarie/:salarieId/rollup')
   @ApiOperation({ summary: 'Regroupement hebdomadaire/mensuel/annuel' })
   findRollup(

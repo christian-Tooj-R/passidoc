@@ -3,6 +3,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { FicheIdentiteService } from './fiche-identite.service';
 import { UpdateFicheIdentiteDto } from './dto/update-fiche-identite.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Fiche Identité')
 @ApiBearerAuth()
@@ -19,7 +21,11 @@ export class FicheIdentiteController {
 
   @Patch()
   @ApiOperation({ summary: 'Mettre à jour la fiche identité' })
-  update(@Param('clientId', ParseIntPipe) clientId: number, @Body() dto: UpdateFicheIdentiteDto) {
-    return this.service.update(clientId, dto);
+  update(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Body() dto: UpdateFicheIdentiteDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.service.update(clientId, dto, user);
   }
 }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { FicheIdentite } from '../entities/fiche-identite.entity';
 import { ClientsService } from '../clients/clients.service';
 import { UpdateFicheIdentiteDto } from './dto/update-fiche-identite.dto';
+import { User } from '../entities/user.entity';
 
 const JSON_COLUMNS: (keyof FicheIdentite)[] = [
   'actionnaires', 'honoraires', 'reseauxSociaux',
@@ -33,7 +34,8 @@ export class FicheIdentiteService {
     return parseJsonColumns(fiche);
   }
 
-  async update(clientId: number, dto: UpdateFicheIdentiteDto): Promise<FicheIdentite> {
+  async update(clientId: number, dto: UpdateFicheIdentiteDto, currentUser: User): Promise<FicheIdentite> {
+    await this.clientsService.assertCanEdit(clientId, currentUser);
     let fiche = await this.repo.findOne({ where: { client: { id: clientId } } });
     if (!fiche) {
       fiche = await this.repo.save(this.repo.create({ client: { id: clientId } as any }));

@@ -4,9 +4,10 @@ import { ControleInterne } from '../entities/controle-interne.entity';
 import { Exercice } from '../entities/exercice.entity';
 import { ControleInterneService } from './controle-interne.service';
 import { ControleInterneController } from './controle-interne.controller';
+import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ControleInterne, Exercice])],
+  imports: [TypeOrmModule.forFeature([ControleInterne, Exercice]), ClientsModule],
   providers: [ControleInterneService],
   controllers: [ControleInterneController],
   exports: [ControleInterneService],

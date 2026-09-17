@@ -67,7 +67,7 @@ export class DocumentsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Supprimer un document' })
-  remove(@Param('clientId', ParseIntPipe) clientId: number, @Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id, clientId);
+  remove(@Param('clientId', ParseIntPipe) clientId: number, @Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
+    return this.service.remove(id, clientId, user);
   }
 }

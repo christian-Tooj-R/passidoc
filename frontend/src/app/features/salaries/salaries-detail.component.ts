@@ -743,20 +743,13 @@ export class SalariesDetailComponent implements OnInit {
   loading      = signal(true);
   editVisible  = signal(false);
   saving       = signal(false);
-  savingRole   = signal(false);
   section      = signal<Section>('profil');
-  selectedRole = signal<any>('COLLABORATEUR');
   soldes       = signal<SoldeConge[]>([]);
   anneeConges  = signal(new Date().getFullYear());
 
   readonly typesContrat = TYPES_CONTRAT;
   readonly statutsPro   = STATUTS_PRO;
   readonly devises      = DEVISES;
-  readonly roles = [
-    { value: 'COLLABORATEUR',    label: 'Collaborateur',    desc: 'Accès standard',    bg: '#d1fae5', color: '#065f46' },
-    { value: 'EXPERT_COMPTABLE', label: 'Expert-comptable', desc: 'Gestion complète',  bg: '#dbeafe', color: '#1e40af' },
-    { value: 'ADMIN',            label: 'Administrateur',   desc: 'Accès total',       bg: '#fde8e8', color: '#991b1b' },
-  ];
 
   form = this.fb.group({
     firstName: [''], lastName: [''],
@@ -814,7 +807,7 @@ export class SalariesDetailComponent implements OnInit {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.svc.getOne(id).subscribe({
       next: c => {
-        this.collab.set(c); this.selectedRole.set(c.role); this.loading.set(false); this.loadConges();
+        this.collab.set(c); this.loading.set(false); this.loadConges();
         if (!this.canSeeConges() && this.section() === 'conges') this.section.set('profil');
         if (!this.canSeeContratPaie() && this.section() === 'contratPaie') this.section.set('profil');
         if (!this.canSeePaie() && this.profilTab() === 'paie') this.profilTab.set('identite');
@@ -844,15 +837,6 @@ export class SalariesDetailComponent implements OnInit {
     this.svc.updateRH(c.id, raw as any).subscribe({
       next: updated => { this.collab.set(updated); this.saving.set(false); this.closeEdit(); this.snack.open('Fiche mise à jour', undefined, { duration: 2500 }); },
       error: () => this.saving.set(false),
-    });
-  }
-
-  saveRole() {
-    const c = this.collab(); if (!c) return;
-    this.savingRole.set(true);
-    this.svc.updateRole(c.id, this.selectedRole()).subscribe({
-      next: updated => { this.collab.set(updated); this.savingRole.set(false); this.snack.open('Rôle mis à jour', undefined, { duration: 2500 }); },
-      error: () => this.savingRole.set(false),
     });
   }
 
