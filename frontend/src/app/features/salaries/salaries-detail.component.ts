@@ -221,23 +221,6 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
             <div class="field"><span class="f-label">N° immatriculation sociale</span><span class="f-val mono">{{ collab()!.numeroSS || '—' }}</span></div>
             <div class="field"><span class="f-label">N° fiscal</span><span class="f-val mono">{{ collab()!.numeroFiscal || '—' }}</span></div>
           </div>
-
-          @if (auth.isAdmin()) {
-          <div class="section-title mt"><mat-icon>admin_panel_settings</mat-icon> Rôle & permissions</div>
-          <div class="role-editor">
-            <mat-form-field appearance="outline" class="role-select">
-              <mat-label>Rôle</mat-label>
-              <mat-select [value]="selectedRole()" (selectionChange)="selectedRole.set($event.value)">
-                @for (r of roles; track r.value) {
-                  <mat-option [value]="r.value">{{ r.label }} — {{ r.desc }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <button mat-flat-button color="primary" [disabled]="savingRole() || selectedRole() === collab()!.role" (click)="saveRole()">
-              {{ savingRole() ? 'Enregistrement...' : 'Enregistrer le rôle' }}
-            </button>
-          </div>
-          }
         </div>
         }
 
@@ -701,10 +684,6 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     .section-title.mt { margin-top: 28px; }
     .section-title.sensitive-header { color: #b91c1c; mat-icon { color: #b91c1c; } }
 
-    /* Éditeur de rôle (Administratif, ADMIN uniquement) */
-    .role-editor { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-    .role-select { min-width: 320px; flex: 1; max-width: 420px; }
-
     /* Grille de champs */
     .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; }
     .span-2 { grid-column: span 2; }
@@ -755,7 +734,7 @@ export class SalariesDetailComponent implements OnInit {
   private cSvc   = inject(CongesAbsencesService);
   private snack  = inject(MatSnackBar);
   private fb     = inject(FormBuilder);
-  auth   = inject(AuthService);
+  private auth   = inject(AuthService);
   router         = inject(Router);
 
   tenantSvc    = inject(TenantService);
@@ -764,23 +743,13 @@ export class SalariesDetailComponent implements OnInit {
   loading      = signal(true);
   editVisible  = signal(false);
   saving       = signal(false);
-  savingRole   = signal(false);
   section      = signal<Section>('profil');
-  selectedRole = signal<any>('COLLABORATEUR');
   soldes       = signal<SoldeConge[]>([]);
   anneeConges  = signal(new Date().getFullYear());
 
   readonly typesContrat = TYPES_CONTRAT;
   readonly statutsPro   = STATUTS_PRO;
   readonly devises      = DEVISES;
-  readonly roles = [
-    { value: 'COLLABORATEUR',    label: 'Collaborateur',      desc: 'Accès standard',                bg: '#d1fae5', color: '#065f46' },
-    { value: 'CHEF_MISSION',     label: 'Chef de mission',    desc: 'Gestion des missions confiées', bg: '#e0e7ff', color: '#3730a3' },
-    { value: 'CHEF_ANTENNE',     label: "Chef d'antenne",     desc: "Gestion de l'antenne/pôle",     bg: '#ede9fe', color: '#5b21b6' },
-    { value: 'EXPERT_COMPTABLE', label: 'Expert-comptable',   desc: 'Gestion complète (hors paie)',  bg: '#dbeafe', color: '#1e40af' },
-    { value: 'GERANT_OUEST',     label: 'Gérant Pôle OUEST',  desc: 'Gérance du pôle OUEST',         bg: '#fef3c7', color: '#92400e' },
-    { value: 'ADMIN',            label: 'Administrateur',     desc: 'Accès total',                   bg: '#fde8e8', color: '#991b1b' },
-  ];
 
   form = this.fb.group({
     firstName: [''], lastName: [''],
@@ -838,7 +807,7 @@ export class SalariesDetailComponent implements OnInit {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.svc.getOne(id).subscribe({
       next: c => {
-        this.collab.set(c); this.selectedRole.set(c.role); this.loading.set(false); this.loadConges();
+        this.collab.set(c); this.loading.set(false); this.loadConges();
         if (!this.canSeeConges() && this.section() === 'conges') this.section.set('profil');
         if (!this.canSeeContratPaie() && this.section() === 'contratPaie') this.section.set('profil');
         if (!this.canSeePaie() && this.profilTab() === 'paie') this.profilTab.set('identite');
@@ -868,15 +837,6 @@ export class SalariesDetailComponent implements OnInit {
     this.svc.updateRH(c.id, raw as any).subscribe({
       next: updated => { this.collab.set(updated); this.saving.set(false); this.closeEdit(); this.snack.open('Fiche mise à jour', undefined, { duration: 2500 }); },
       error: () => this.saving.set(false),
-    });
-  }
-
-  saveRole() {
-    const c = this.collab(); if (!c) return;
-    this.savingRole.set(true);
-    this.svc.updateRole(c.id, this.selectedRole()).subscribe({
-      next: updated => { this.collab.set(updated); this.savingRole.set(false); this.snack.open('Rôle mis à jour', undefined, { duration: 2500 }); },
-      error: () => this.savingRole.set(false),
     });
   }
 

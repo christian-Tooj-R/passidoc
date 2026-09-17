@@ -93,8 +93,4 @@ export class SalariesService {
   updateRH(id: number, dto: UpdateRHDto) {
     return this.http.patch<Collaborateur>(`${this.api}/${id}/rh`, dto);
   }
-
-  updateRole(id: number, role: UserRole) {
-    return this.http.patch<Collaborateur>(`${this.api}/${id}`, { role });
-  }
 }
