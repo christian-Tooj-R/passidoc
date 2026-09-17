@@ -16,35 +16,6 @@ export class SetupService {
     private                         secteursService:       SecteursService,
   ) {}
 
-  /**
-   * ⚠️ TEMPORAIRE — diagnostic ponctuel demandé par l'utilisateur pour comprendre l'origine
-   * de comptes trouvés sur le tenant afym-audit-expertise (créés en dehors de tout /setup
-   * visible). À retirer une fois la vérification faite. Lecture seule, aucune écriture.
-   */
-  async diagOrigineComptes(emails: string[]): Promise<any> {
-    let tokens: any[] = [];
-    try {
-      tokens = await this.dataSource.query(
-        `SELECT email, code, "tenantId", "expiresAt", used, "createdAt"
-         FROM password_reset_token WHERE email = ANY($1) ORDER BY "createdAt" ASC`,
-        [emails],
-      );
-    } catch (e: any) {
-      tokens = [{ error: e.message }];
-    }
-    const tenants = await this.dataSource.query(
-      `SELECT id, slug, "nomSociete", "createdAt" FROM tenant_config ORDER BY id ASC`,
-    );
-    const usersRange = await this.dataSource.query(
-      `SELECT MIN(id) as min_id, MAX(id) as max_id, COUNT(*) as total FROM users`,
-    );
-    const usersDetail = await this.dataSource.query(
-      `SELECT id, email, "tenantId", "isActive", "createdAt", "updatedAt" FROM users WHERE email = ANY($1) ORDER BY id ASC`,
-      [emails],
-    );
-    return { tenants, usersRange: usersRange[0], usersDetail, verificationTokensFound: tokens };
-  }
-
   async getStatus(slug?: string): Promise<{ configured: boolean }> {
     if (!slug) return { configured: false };
     const config = await this.configRepo.findOne({ where: { slug } });
