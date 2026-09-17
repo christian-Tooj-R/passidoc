@@ -64,7 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
     </div>
 
     <!-- ── Timer widget ── -->
-    <div class="tw-timer" [class.tw-timer--running]="timerSvc.isRunning()">
+    <div class="tw-timer" [class.tw-timer--running]="timerSvc.isRunning()" [class.tw-timer--paused]="timerSvc.isPaused()">
 
       <!-- Contexte actif (tâche démarrée depuis une carte) -->
       @if (timerSvc.activeTaskCtx()) {
@@ -80,18 +80,28 @@ const NAV_SECTIONS: NavSection[] = [
       }
 
       <div class="tw-timer__display">
-        <mat-icon class="tw-timer__icon">{{ timerSvc.isRunning() ? 'timer' : 'timer_off' }}</mat-icon>
+        <mat-icon class="tw-timer__icon">{{ timerSvc.isRunning() ? 'timer' : (timerSvc.isPaused() ? 'pause_circle' : 'timer_off') }}</mat-icon>
         <span class="tw-timer__time">{{ timerSvc.displayTime$() }}</span>
       </div>
 
       <div class="tw-timer__btns">
-        @if (!timerSvc.isRunning()) {
-          <button class="tw-timer__btn tw-timer__btn--start" (click)="startTimer()">
-            <mat-icon>play_arrow</mat-icon> Démarrer
+        @if (timerSvc.isRunning()) {
+          <button class="tw-timer__btn tw-timer__btn--pause" (click)="pauseTimer()">
+            <mat-icon>pause</mat-icon> Pause
           </button>
-        } @else {
           <button class="tw-timer__btn tw-timer__btn--stop" (click)="stopTimer()">
             <mat-icon>stop</mat-icon> Arrêter & sauvegarder
+          </button>
+        } @else if (timerSvc.isPaused()) {
+          <button class="tw-timer__btn tw-timer__btn--start" (click)="resumeTimer()">
+            <mat-icon>play_arrow</mat-icon> Reprendre
+          </button>
+          <button class="tw-timer__btn tw-timer__btn--stop" (click)="stopTimer()">
+            <mat-icon>stop</mat-icon> Arrêter & sauvegarder
+          </button>
+        } @else {
+          <button class="tw-timer__btn tw-timer__btn--start" (click)="startTimer()">
+            <mat-icon>play_arrow</mat-icon> Démarrer
           </button>
         }
       </div>
@@ -263,6 +273,10 @@ const NAV_SECTIONS: NavSection[] = [
       border-color: rgba(239,68,68,.3);
       animation: timerPulse 2s ease-in-out infinite;
     }
+    .tw-timer--paused {
+      background: rgba(167,139,250,.15);
+      border-color: rgba(167,139,250,.35);
+    }
     @keyframes timerPulse {
       0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.3); }
       50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
@@ -277,17 +291,21 @@ const NAV_SECTIONS: NavSection[] = [
     .tw-timer__display { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .tw-timer__icon { color: rgba(255,255,255,.7); font-size: 20px; width: 20px; height: 20px; }
     .tw-timer--running .tw-timer__icon { color: #f87171; }
+    .tw-timer--paused .tw-timer__icon { color: #a78bfa; }
     .tw-timer__time { font-size: 18px; font-weight: 700; font-family: monospace; color: #fff; letter-spacing: 1px; }
     .tw-timer--running .tw-timer__time { color: #fca5a5; }
-    .tw-timer__btns { display: flex; gap: 6px; }
+    .tw-timer--paused .tw-timer__time { color: #c4b5fd; }
+    .tw-timer__btns { display: flex; flex-wrap: wrap; gap: 6px; }
     .tw-timer__btn {
-      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex: 1; min-width: 68px; display: flex; align-items: center; justify-content: center;
       gap: 4px; padding: 6px 8px; border: none; border-radius: 6px;
       font-size: 11px; font-weight: 600; cursor: pointer; transition: background .15s;
     }
     .tw-timer__btn mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .tw-timer__btn--start { background: rgba(99,102,241,.4); color: #c7d2fe; }
     .tw-timer__btn--start:hover { background: rgba(99,102,241,.6); }
+    .tw-timer__btn--pause { background: rgba(167,139,250,.35); color: #ddd6fe; }
+    .tw-timer__btn--pause:hover { background: rgba(167,139,250,.55); }
     .tw-timer__btn--stop  { background: rgba(239,68,68,.3); color: #fca5a5; }
     .tw-timer__btn--stop:hover  { background: rgba(239,68,68,.5); }
 
@@ -435,25 +453,36 @@ export class TravailComponent implements OnInit, OnDestroy {
   timerFormComment  = '';
   clients: Client[] = [];
 
-  startTimer() { this.timerSvc.start(); }
+  startTimer()  { this.timerSvc.start(); }
+  pauseTimer()  { this.timerSvc.pause(); }
+
+  resumeTimer() {
+    const ctx = this.timerSvc.activeTaskCtx();
+    if (ctx) this.timerSvc.startWithTask(ctx);
+    else this.timerSvc.resume();
+  }
 
   stopTimer() {
-    const ctx      = this.timerSvc.activeTaskCtx();
-    const startTs  = this.timerSvc.startedAt();
-    const endDate  = new Date();
+    const ctx        = this.timerSvc.activeTaskCtx();
+    const wasRunning = this.timerSvc.isRunning();
+    const startTs    = this.timerSvc.startedAt();      // null si le minuteur était en pause
+    const elapsedSec = this.timerSvc.elapsedSec();      // temps accumulé, valable pause ou non
+    const endDate    = new Date();
     this.timerSvc.stop();
 
-    this.timerStoppedEnd   = endDate.toTimeString().slice(0, 5);
-    this.timerStoppedStart = startTs ? new Date(startTs).toTimeString().slice(0, 5) : '';
+    this.timerStoppedEnd = endDate.toTimeString().slice(0, 5);
 
     // Durée dérivée des mêmes horaires (arrondis à la minute) que ceux affichés/enregistrés,
     // pour éviter tout écart entre "10:51 → 15:13" et la durée affichée.
-    if (startTs) {
+    if (wasRunning && startTs) {
+      this.timerStoppedStart = new Date(startTs).toTimeString().slice(0, 5);
       const startMin = Math.floor(startTs        / 60000) * 60000;
       const endMin   = Math.floor(endDate.getTime() / 60000) * 60000;
       this.timerStoppedH = Math.round(((endMin - startMin) / 3600000) * 100) / 100;
     } else {
-      this.timerStoppedH = 0;
+      // Arrêté directement depuis l'état "en pause" : on se base sur le temps déjà accumulé.
+      this.timerStoppedStart = new Date(endDate.getTime() - elapsedSec * 1000).toTimeString().slice(0, 5);
+      this.timerStoppedH = Math.round((elapsedSec / 3600) * 100) / 100;
     }
 
     this.timerFormClientId = ctx?.clientId ?? null;

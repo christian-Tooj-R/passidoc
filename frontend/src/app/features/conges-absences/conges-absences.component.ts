@@ -145,7 +145,7 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
               <span class="statut-badge statut-badge--{{ d.statut.toLowerCase() }}">{{ statutLabel(d.statut) }}</span>
             </span>
             <span class="col-actions">
-              @if (!isCollab && d.statut === 'EN_ATTENTE') {
+              @if (!selfOnly && d.statut === 'EN_ATTENTE') {
                 <button mat-icon-button class="btn-approve" matTooltip="Approuver" (click)="approuver(d)">
                   <mat-icon>check</mat-icon>
                 </button>
@@ -218,7 +218,7 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
     </div>
     <form [formGroup]="newForm" (ngSubmit)="submitNew()" class="drawer__body">
       <span class="drawer__section">Collaborateur</span>
-      @if (isCollab) {
+      @if (selfOnly) {
         <div class="collab-self">
           <span class="avatar-mini">{{ meName[0] }}</span>
           <span class="collab-self__name">{{ meName }}</span>
@@ -521,7 +521,8 @@ export class CongesAbsencesComponent implements OnInit {
     return this.allSoldes().filter(r => !q || r.name.toLowerCase().includes(q));
   });
 
-  get isCollab(): boolean { return this.auth.isCollaborateur(); }
+  /** Vue org complète réservée à l'ADMIN — tout autre profil ne voit/gère que ses propres congés. */
+  get selfOnly(): boolean { return !this.auth.isAdmin(); }
   get meId(): number | null { return this.auth.currentUser()?.id ?? null; }
   get meName(): string {
     const u = this.auth.currentUser();
@@ -553,7 +554,7 @@ export class CongesAbsencesComponent implements OnInit {
 
   load() {
     this.loading.set(true);
-    const demandes$ = this.isCollab
+    const demandes$ = this.selfOnly
       ? this.cSvc.mesDemandes(this.annee())
       : this.cSvc.findAll({ annee: this.annee() });
     demandes$.subscribe({
@@ -561,7 +562,7 @@ export class CongesAbsencesComponent implements OnInit {
       error: () => this.loading.set(false),
     });
     this.cSvc.getStats(this.annee()).subscribe(s => this.stats.set(s));
-    if (this.isCollab) {
+    if (this.selfOnly) {
       // Un collab ne voit que ses propres soldes
       const meId = this.meId!;
       const me = this.auth.currentUser()!;

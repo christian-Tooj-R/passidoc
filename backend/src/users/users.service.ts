@@ -211,7 +211,21 @@ export class UsersService {
     if (tenantId && user.tenantId && user.tenantId !== tenantId) {
       throw new ForbiddenException('Accès refusé');
     }
-    Object.assign(user, dto);
+    // Liste blanche explicite (jamais Object.assign direct) — le DTO n'étant pas une
+    // classe validée par class-validator, un Object.assign(user, dto) laisserait passer
+    // n'importe quelle propriété du corps de requête brut (ex: role, isActive, password).
+    const ALLOWED_KEYS = [
+      'firstName', 'lastName',
+      'dateNaissance', 'lieuNaissance', 'sexe', 'nationalite', 'situationMatrimoniale', 'nbEnfantsCharge',
+      'adresse', 'codePostal', 'ville', 'pays', 'telephone',
+      'site', 'poste', 'departement', 'typeContrat', 'dateEntree', 'dateFinContrat', 'dateSortie',
+      'statut', 'tempsTravail', 'heuresHebdo',
+      'matricule', 'numeroCIN', 'numeroSS', 'numeroFiscal',
+      'salaireBase', 'modePaiement', 'banque', 'iban', 'devise',
+    ] as const;
+    for (const key of ALLOWED_KEYS) {
+      if (key in dto) (user as any)[key] = (dto as any)[key];
+    }
     // Si une date de sortie est renseignée, désactiver le compte
     if (dto.dateSortie) user.isActive = false;
     if (dto.dateSortie === null) user.isActive = true;

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -21,24 +21,44 @@ export class ContratsTravailController {
     return this.service.create(dto, req.user.tenantId, req.user.id);
   }
 
+  /** ADMIN et EXPERT_COMPTABLE gèrent les contrats de tous ; un salarié ne consulte que le sien. */
+  private assertCanView(req: any, salarieId: number) {
+    const role = req.user?.role;
+    const privileged = role === UserRole.ADMIN || role === UserRole.EXPERT_COMPTABLE;
+    if (!privileged && req.user?.id !== salarieId) {
+      throw new ForbiddenException('Accès réservé à votre propre contrat');
+    }
+  }
+
   @Get()
   @ApiOperation({ summary: "Lister les contrats d'un salarié ou tous les contrats actifs" })
   find(@Req() req: any, @Query('salarieId') salarieId?: string, @Query('actifs') actifs?: string) {
-    if (salarieId) return this.service.findBySalarie(+salarieId, req.user.tenantId);
-    if (actifs === 'true') return this.service.findTousActifs(req.user.tenantId);
+    if (salarieId) {
+      this.assertCanView(req, +salarieId);
+      return this.service.findBySalarie(+salarieId, req.user.tenantId);
+    }
+    if (actifs === 'true') {
+      if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.EXPERT_COMPTABLE) {
+        throw new ForbiddenException("Accès réservé à l'administration RH");
+      }
+      return this.service.findTousActifs(req.user.tenantId);
+    }
     return [];
   }
 
   @Get('salarie/:salarieId/actif')
   @ApiOperation({ summary: 'Contrat actif courant d\'un salarié' })
   findActif(@Param('salarieId', ParseIntPipe) salarieId: number, @Req() req: any) {
+    this.assertCanView(req, salarieId);
     return this.service.findActifBySalarie(salarieId, req.user.tenantId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: "Détail d'un contrat" })
-  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.service.findOne(id, req.user.tenantId);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const contrat = await this.service.findOne(id, req.user.tenantId);
+    this.assertCanView(req, (contrat as any).salarieId);
+    return contrat;
   }
 
   @Patch(':id')

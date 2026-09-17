@@ -172,11 +172,17 @@ const COLUMNS: KanbanColumn[] = [
                 <button class="card-act-btn" matTooltip="Modifier" (click)="openDetail(task)">
                   <mat-icon>edit</mat-icon>
                 </button>
-                @if (timerSvc.isRunning() && timerSvc.activeTaskCtx()?.taskId === task.id) {
+                @if (timerSvc.activeTaskCtx()?.taskId === task.id && timerSvc.isRunning()) {
                   <button class="card-act-btn card-act-btn--timer-on"
-                          matTooltip="Minuteur en cours"
-                          disabled>
-                    <mat-icon>timer</mat-icon>
+                          matTooltip="Mettre en pause"
+                          (click)="pauseTaskTimer(task)">
+                    <mat-icon>pause_circle</mat-icon>
+                  </button>
+                } @else if (timerSvc.pausedTasks()[task.id]) {
+                  <button class="card-act-btn card-act-btn--timer-paused"
+                          matTooltip="Reprendre le minuteur"
+                          (click)="startTaskTimer(task)">
+                    <mat-icon>play_circle</mat-icon>
                   </button>
                 } @else {
                   <button class="card-act-btn"
@@ -413,6 +419,7 @@ const COLUMNS: KanbanColumn[] = [
     .card-act-btn:hover { background:#e0f2fe; color:#0891b2; }
     .card-act-btn mat-icon { font-size:13px; width:13px; height:13px; }
     .card-act-btn--timer-on { background:#fee2e2 !important; color:#ef4444 !important; animation:kpulse 1.5s ease-in-out infinite; }
+    .card-act-btn--timer-paused { background:#ede9fe !important; color:#7c3aed !important; }
     @keyframes kpulse { 0%,100%{opacity:1} 50%{opacity:.5} }
   `],
 })
@@ -530,12 +537,32 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
     return `${day}/${m}`;
   }
 
+  /** Démarre le minuteur sur cette tâche (ou reprend son temps s'il était en pause). Si une
+   *  AUTRE tâche était en cours, elle bascule automatiquement en "En pause" (Kanban + minuteur). */
   startTaskTimer(task: Task) {
-    this.timerSvc.startWithTask({
+    const { pausedPrevious } = this.timerSvc.startWithTask({
       taskId:    task.id,
-      clientId:  task.client?.id,
+      clientId:  task.clientId,
       clientNom: task.client?.nom,
       taskTitre: task.titre,
+    });
+    if (pausedPrevious) this.applyStatutRemote(pausedPrevious.taskId, pausedPrevious.clientId, 'EN_PAUSE');
+    if (task.statut !== 'EN_COURS') this.applyStatutRemote(task.id, task.clientId, 'EN_COURS');
+  }
+
+  pauseTaskTimer(task: Task) {
+    this.timerSvc.pause();
+    this.applyStatutRemote(task.id, task.clientId, 'EN_PAUSE');
+  }
+
+  private applyStatutRemote(taskId: number, clientId: number | undefined, statut: string) {
+    if (!clientId) return;
+    this.tasksSvc.update(clientId, taskId, { statut: statut as any }).pipe(takeUntil(this._d$)).subscribe({
+      next: () => {
+        const t = this.allTasks().find(x => x.id === taskId);
+        if (t) { t.statut = statut as any; this.buildColumns(); }
+      },
+      error: () => this.reload(),
     });
   }
 }

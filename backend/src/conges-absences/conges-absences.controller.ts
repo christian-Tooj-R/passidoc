@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Body, Param, Query,
-  UseGuards, Req, ParseIntPipe, HttpCode, Res,
+  UseGuards, Req, ParseIntPipe, HttpCode, Res, ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
@@ -85,8 +85,16 @@ export class CongesAbsencesController {
     @Query('statut') statut?: StatutConge,
     @Query('annee') annee?: string,
   ) {
+    let scopedUserId = userId ? Number(userId) : undefined;
+    // Vue complète réservée à l'ADMIN — tout autre profil ne peut voir que ses propres demandes.
+    if (req.user?.role !== UserRole.ADMIN) {
+      if (scopedUserId !== undefined && scopedUserId !== req.user.id) {
+        throw new ForbiddenException('Accès réservé à vos propres demandes');
+      }
+      scopedUserId = req.user.id;
+    }
     return this.svc.findAll({
-      userId: userId ? Number(userId) : undefined,
+      userId: scopedUserId,
       statut,
       annee: annee ? Number(annee) : undefined,
       tenantId: req.user?.tenantId,
@@ -142,7 +150,7 @@ export class CongesAbsencesController {
   @Patch(':id/approuver')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Approuver une demande' })
   approuver(
     @Param('id', ParseIntPipe) id: number,
@@ -155,7 +163,7 @@ export class CongesAbsencesController {
   @Patch(':id/refuser')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Refuser une demande' })
   refuser(
     @Param('id', ParseIntPipe) id: number,
@@ -178,19 +186,22 @@ export class CongesAbsencesController {
   @Get('soldes/:userId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
-  @ApiOperation({ summary: 'Soldes d\'un collaborateur' })
+  @ApiOperation({ summary: 'Soldes d\'un collaborateur (ADMIN, ou le collaborateur lui-même)' })
   getSoldes(
+    @Req() req: any,
     @Param('userId', ParseIntPipe) userId: number,
     @Query('annee') annee?: string,
   ) {
+    if (req.user?.role !== UserRole.ADMIN && req.user?.id !== userId) {
+      throw new ForbiddenException('Accès réservé à vos propres soldes');
+    }
     return this.svc.getSoldes(userId, annee ? Number(annee) : undefined);
   }
 
   @Patch('soldes/:userId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Mettre à jour le solde d\'un collaborateur' })
   updateSolde(
     @Req() req: any,

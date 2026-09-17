@@ -13,6 +13,7 @@ import {
   TypeConge, StatutConge, TYPE_CONGE_LABELS, TYPE_CONGE_COLORS,
 } from '../../core/services/conges-absences.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
+import { AuthService } from '../../core/services/auth.service';
 
 const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_LABELS).map(([v, l]) => ({ value: v as TypeConge, label: l }));
 
@@ -60,10 +61,12 @@ const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_L
               <span class="pending">{{ s.joursEnAttente | number:'1.1-1' }}j en attente</span>
             }
           </div>
+          @if (isAdmin) {
           <button mat-icon-button class="btn-edit-solde" matTooltip="Modifier le solde"
                   (click)="editSolde(s)">
             <mat-icon>edit</mat-icon>
           </button>
+          }
         </div>
       }
     }
@@ -140,7 +143,7 @@ const TYPES: { value: TypeConge; label: string }[] = Object.entries(TYPE_CONGE_L
                 <mat-icon>close</mat-icon>
               </button>
             }
-            @if (d.statut === 'EN_ATTENTE' || d.statut === 'APPROUVEE') {
+            @if (isAdmin && (d.statut === 'EN_ATTENTE' || d.statut === 'APPROUVEE')) {
               <div class="demande-actions">
                 @if (d.statut === 'EN_ATTENTE') {
                   <button mat-stroked-button class="btn-approve" (click)="approuver(d.id)">
@@ -277,6 +280,9 @@ export class SalariesCongesComponent implements OnInit {
   private svc   = inject(CongesAbsencesService);
   private snack = inject(MatSnackBar);
   private fb    = inject(FormBuilder);
+  private auth  = inject(AuthService);
+
+  get isAdmin(): boolean { return this.auth.isAdmin(); }
 
   annee           = signal(new Date().getFullYear());
   soldes          = signal<SoldeConge[]>([]);

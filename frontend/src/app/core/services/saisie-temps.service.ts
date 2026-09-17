@@ -86,23 +86,26 @@ export interface ActiveTaskCtx {
   taskTitre: string;
 }
 
+export type TimerStatus = 'idle' | 'running' | 'paused';
+
 @Injectable({ providedIn: 'root' })
 export class TimerService {
-  private readonly LS_KEY     = 'st_timer';
-  private readonly LS_CTX_KEY = 'st_timer_task_ctx';
+  private readonly LS_KEY        = 'st_timer';
+  private readonly LS_CTX_KEY    = 'st_timer_task_ctx';
+  private readonly LS_PAUSED_KEY = 'st_timer_paused_tasks';
 
-  isRunning      = signal(false);
-  startedAt      = signal<number | null>(null);   // timestamp ms
+  status         = signal<TimerStatus>('idle');
+  isRunning      = computed(() => this.status() === 'running');
+  isPaused       = computed(() => this.status() === 'paused');
+  startedAt      = signal<number | null>(null);   // timestamp ms — recalé à chaque reprise
   elapsedSec     = signal(0);
   activeTaskCtx  = signal<ActiveTaskCtx | null>(null);
+  /** Tâches actuellement en pause (temps accumulé conservé pour une reprise ultérieure),
+   *  indexées par taskId — permet de basculer le minuteur d'une tâche à l'autre sans perdre
+   *  le temps déjà passé sur celle qu'on quitte (lien Kanban : EN_COURS ⇄ EN_PAUSE). */
+  pausedTasks    = signal<Record<number, { elapsedSec: number; ctx: ActiveTaskCtx }>>({});
 
-  displayTime$ = computed(() => {
-    const s = this.elapsedSec();
-    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
-    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-    const ss = String(s % 60).padStart(2, '00');
-    return `${hh}:${mm}:${ss}`;
-  });
+  displayTime$ = computed(() => this._format(this.elapsedSec()));
 
   private _intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -110,38 +113,116 @@ export class TimerService {
     this._restore();
   }
 
+  /** Minuteur générique sans tâche liée (bouton "Démarrer" de la sidebar Travail). */
   start() {
-    const now = Date.now();
-    this.startedAt.set(now);
-    this.isRunning.set(true);
-    this._persist();
-    this._startTick();
+    if (this.status() === 'running' && this.activeTaskCtx()) {
+      // Un minuteur de tâche tournait : on le met en pause avant de démarrer le générique.
+      this._freezeAsPaused(this.activeTaskCtx()!);
+    }
+    this.activeTaskCtx.set(null);
+    this._persistCtx();
+    this._resumeFrom(0);
   }
 
-  startWithTask(ctx: ActiveTaskCtx) {
+  /**
+   * Démarre (ou reprend) le minuteur sur une tâche. Si une AUTRE tâche était en cours, elle
+   * bascule automatiquement en pause — son temps accumulé est conservé et elle repart d'où
+   * elle en était à la prochaine reprise. Renvoie le contexte de la tâche ainsi mise en pause
+   * (ou null) pour que l'appelant puisse répercuter le changement de statut Kanban côté API.
+   */
+  startWithTask(ctx: ActiveTaskCtx): { pausedPrevious: ActiveTaskCtx | null } {
+    const current = this.activeTaskCtx();
+
+    // Déjà la tâche active (en cours ou en pause) : simple reprise, on ne touche pas à
+    // pausedTasks pour éviter d'écraser le temps déjà accumulé par une valeur périmée.
+    if (current && current.taskId === ctx.taskId) {
+      if (this.status() === 'paused') this._resumeFrom(this.elapsedSec());
+      return { pausedPrevious: null };
+    }
+
+    let pausedPrevious: ActiveTaskCtx | null = null;
+    if (this.status() === 'running' && current) {
+      this._freezeAsPaused(current);
+      pausedPrevious = current;
+    }
+    const already = this.pausedTasks()[ctx.taskId];
+    const startSec = already ? already.elapsedSec : 0;
+    if (already) {
+      this.pausedTasks.update(m => { const n = { ...m }; delete n[ctx.taskId]; return n; });
+      this._persistPaused();
+    }
     this.activeTaskCtx.set(ctx);
-    try { localStorage.setItem(this.LS_CTX_KEY, JSON.stringify(ctx)); } catch {}
-    this.start();
+    this._persistCtx();
+    this._resumeFrom(startSec);
+    return { pausedPrevious };
   }
 
+  /** Met en pause le minuteur actif — conserve le temps déjà accumulé (ne le remet pas à zéro). */
+  pause() {
+    if (this.status() !== 'running') return;
+    const ctx = this.activeTaskCtx();
+    if (ctx) {
+      this._freezeAsPaused(ctx);
+    } else {
+      this._stopTick();
+      this.status.set('paused');
+      this.startedAt.set(null);
+      this._persist();
+    }
+  }
+
+  /** Reprend le minuteur actuellement en pause, à partir du temps déjà accumulé. */
+  resume() {
+    if (this.status() !== 'paused') return;
+    this._resumeFrom(this.elapsedSec());
+  }
+
+  /** Arrête définitivement et renvoie la durée en heures — comportement historique inchangé. */
   stop(): number {
     const elapsed = this.elapsedSec();
+    const ctx = this.activeTaskCtx();
     this._stopTick();
-    this.isRunning.set(false);
+    this.status.set('idle');
     this.startedAt.set(null);
     this.elapsedSec.set(0);
     this.activeTaskCtx.set(null);
+    if (ctx && this.pausedTasks()[ctx.taskId]) {
+      this.pausedTasks.update(m => { const n = { ...m }; delete n[ctx.taskId]; return n; });
+      this._persistPaused();
+    }
     this._clear();
     try { localStorage.removeItem(this.LS_CTX_KEY); } catch {}
     return elapsed / 3600;   // retourne les heures
   }
 
   get displayTime(): string {
-    const s = this.elapsedSec();
+    return this._format(this.elapsedSec());
+  }
+
+  private _format(s: number): string {
     const hh = String(Math.floor(s / 3600)).padStart(2, '0');
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
     return `${hh}:${mm}:${ss}`;
+  }
+
+  private _freezeAsPaused(ctx: ActiveTaskCtx) {
+    this._stopTick();
+    this.pausedTasks.update(m => ({ ...m, [ctx.taskId]: { elapsedSec: this.elapsedSec(), ctx } }));
+    this._persistPaused();
+    this.status.set('paused');
+    this.startedAt.set(null);
+    this._persist();
+  }
+
+  /** Redémarre le tick à partir d'un nombre de secondes déjà accumulées (0 pour un vrai départ). */
+  private _resumeFrom(sec: number) {
+    const now = Date.now();
+    this.elapsedSec.set(sec);
+    this.startedAt.set(now - sec * 1000);
+    this.status.set('running');
+    this._persist();
+    this._startTick();
   }
 
   private _startTick() {
@@ -161,8 +242,22 @@ export class TimerService {
 
   private _persist() {
     try {
-      localStorage.setItem(this.LS_KEY, JSON.stringify({ startedAt: this.startedAt() }));
+      localStorage.setItem(this.LS_KEY, JSON.stringify({
+        startedAt: this.startedAt(), status: this.status(), elapsedSec: this.elapsedSec(),
+      }));
     } catch {}
+  }
+
+  private _persistCtx() {
+    try {
+      const ctx = this.activeTaskCtx();
+      if (ctx) localStorage.setItem(this.LS_CTX_KEY, JSON.stringify(ctx));
+      else localStorage.removeItem(this.LS_CTX_KEY);
+    } catch {}
+  }
+
+  private _persistPaused() {
+    try { localStorage.setItem(this.LS_PAUSED_KEY, JSON.stringify(this.pausedTasks())); } catch {}
   }
 
   private _clear() {
@@ -172,16 +267,22 @@ export class TimerService {
   private _restore() {
     try {
       const raw = localStorage.getItem(this.LS_KEY);
-      if (!raw) return;
-      const { startedAt } = JSON.parse(raw) as { startedAt: number };
-      if (startedAt) {
-        this.startedAt.set(startedAt);
-        this.isRunning.set(true);
-        this.elapsedSec.set(Math.floor((Date.now() - startedAt) / 1000));
-        this._startTick();
+      if (raw) {
+        const parsed = JSON.parse(raw) as { startedAt: number | null; status?: TimerStatus; elapsedSec?: number };
+        if (parsed.status === 'paused') {
+          this.status.set('paused');
+          this.elapsedSec.set(parsed.elapsedSec ?? 0);
+        } else if (parsed.startedAt) {
+          this.status.set('running');
+          this.startedAt.set(parsed.startedAt);
+          this.elapsedSec.set(Math.floor((Date.now() - parsed.startedAt) / 1000));
+          this._startTick();
+        }
       }
       const rawCtx = localStorage.getItem(this.LS_CTX_KEY);
       if (rawCtx) this.activeTaskCtx.set(JSON.parse(rawCtx));
+      const rawPaused = localStorage.getItem(this.LS_PAUSED_KEY);
+      if (rawPaused) this.pausedTasks.set(JSON.parse(rawPaused));
     } catch {}
   }
 }

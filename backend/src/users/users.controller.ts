@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Req, HttpCode, Query, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -49,14 +49,25 @@ export class UsersController {
   @Get('salaries')
   @ApiOperation({ summary: 'Liste des collaborateurs (vue RH)' })
   @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
-  findSalaries(@Req() req: any, @Query('site') site?: string) {
-    return this.usersService.findSalaries(site, req.user?.tenantId);
+  async findSalaries(@Req() req: any, @Query('site') site?: string) {
+    const list = await this.usersService.findSalaries(site, req.user?.tenantId);
+    return list.map((u: any) => this.scopePaieFields(u, req.user));
   }
 
   @Get('salaries/:id')
   @ApiOperation({ summary: 'Détail d\'un collaborateur (vue RH)' })
-  findOneSalarie(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.usersService.findOne(id, req.user?.tenantId);
+  async findOneSalarie(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const u = await this.usersService.findOne(id, req.user?.tenantId);
+    return this.scopePaieFields(u, req.user);
+  }
+
+  /** Masque les champs de paie (salaire, banque, IBAN) pour tout profil autre que l'ADMIN
+   *  ou le collaborateur consultant sa propre fiche — évite l'exposition des salaires de
+   *  toute l'équipe à un simple collaborateur consultant l'annuaire RH. */
+  private scopePaieFields(u: any, requester: any) {
+    const canSeePaie = requester?.role === UserRole.ADMIN || requester?.id === u.id;
+    if (canSeePaie) return u;
+    return { ...u, salaireBase: null, modePaiement: null, banque: null, iban: null };
   }
 
   @Patch(':id/rh')
@@ -66,6 +77,12 @@ export class UsersController {
     @Body() dto: { poste?: string; typeContrat?: string; dateEntree?: string; dateSortie?: string; telephone?: string; firstName?: string; lastName?: string; site?: string },
     @Req() req: any,
   ) {
+    const role = req.user?.role;
+    const isSelf = req.user?.id === id;
+    const isManager = role === UserRole.ADMIN || role === UserRole.EXPERT_COMPTABLE || role === UserRole.CHEF_ANTENNE || role === UserRole.CHEF_MISSION;
+    if (!isSelf && !isManager) {
+      throw new ForbiddenException('Accès refusé');
+    }
     return this.usersService.updateRH(id, dto, req.user?.tenantId);
   }
 

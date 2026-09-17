@@ -72,6 +72,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     </div>
 
     <!-- Soldes rapides dans le header -->
+    @if (canSeeConges()) {
     <div class="emp-header__soldes">
       @for (s of soldesPrincipaux(); track s.typeConge) {
         <div class="solde-chip">
@@ -80,6 +81,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         </div>
       }
     </div>
+    }
 
     <!-- Actions -->
     <div class="emp-header__actions">
@@ -108,6 +110,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
       <mat-icon>person</mat-icon>
       <span>Fiche salarié</span>
     </button>
+    @if (canSeeConges()) {
     <button class="tab-item" [class.active]="section()==='conges'" (click)="loadConges(); section.set('conges')">
       <mat-icon>beach_access</mat-icon>
       <span>Congés & Absences</span>
@@ -115,14 +118,17 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         <span class="tab-badge">{{ enAttenteCount() }}</span>
       }
     </button>
+    }
     <button class="tab-item" [class.active]="section()==='documents'" (click)="section.set('documents')">
       <mat-icon>folder_open</mat-icon>
       <span>Documents</span>
     </button>
+    @if (canSeeContratPaie()) {
     <button class="tab-item" [class.active]="section()==='contratPaie'" (click)="section.set('contratPaie')">
       <mat-icon>payments</mat-icon>
       <span>Contrat & Paie</span>
     </button>
+    }
   </div>
 
   <!-- ══ Contenu principal ══ -->
@@ -145,9 +151,11 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         <button class="ptab" [class.active]="profilTab()==='admin'" (click)="profilTab.set('admin')">
           <mat-icon>assignment_ind</mat-icon><span>Administratif</span>
         </button>
+        @if (canSeePaie()) {
         <button class="ptab" [class.active]="profilTab()==='paie'" (click)="profilTab.set('paie')">
           <mat-icon>account_balance_wallet</mat-icon><span>Paie</span>
         </button>
+        }
       </div>
 
       <!-- Contenu des onglets -->
@@ -217,7 +225,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
         }
 
         <!-- ── Paie ── -->
-        @if (profilTab() === 'paie') {
+        @if (profilTab() === 'paie' && canSeePaie()) {
         <div class="tab-pane">
           <div class="section-title sensitive-header">
             <mat-icon>account_balance_wallet</mat-icon> Informations de paie
@@ -240,7 +248,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     }
 
     <!-- ═══ SECTION CONGÉS ═══ -->
-    @if (section() === 'conges') {
+    @if (section() === 'conges' && canSeeConges()) {
     <div class="content-area">
       <app-salaries-conges [userId]="collab()!.id" [userName]="collab()!.firstName + ' ' + collab()!.lastName" />
     </div>
@@ -257,7 +265,7 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
     }
 
     <!-- ═══ SECTION CONTRAT & PAIE (module Paie RH interne) ═══ -->
-    @if (section() === 'contratPaie') {
+    @if (section() === 'contratPaie' && canSeeContratPaie()) {
     <div class="content-area">
       <app-paie-rh-salarie-tab [userId]="collab()!.id" [userAntenne]="collab()!.antenne" [userDevise]="collab()!.devise" />
     </div>
@@ -795,17 +803,29 @@ export class SalariesDetailComponent implements OnInit {
     return this.auth.currentUser()?.id === this.collab()?.id;
   }
 
+  /** Infos sensibles (salaire, congés) — réservées à l'ADMIN ou au salarié lui-même. */
+  private isSelfView = computed(() => this.collab()?.id === this.auth.currentUser()?.id);
+  canSeePaie      = computed(() => this.auth.isAdmin() || this.isSelfView());
+  canSeeConges    = computed(() => this.auth.isAdmin() || this.isSelfView());
+  /** Contrat de travail : ADMIN, EXPERT_COMPTABLE (gestion des contrats) ou le salarié lui-même. */
+  canSeeContratPaie = computed(() => this.auth.isAdmin() || this.auth.isExpert() || this.isSelfView());
+
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.svc.getOne(id).subscribe({
-      next: c => { this.collab.set(c); this.selectedRole.set(c.role); this.loading.set(false); this.loadConges(); },
+      next: c => {
+        this.collab.set(c); this.selectedRole.set(c.role); this.loading.set(false); this.loadConges();
+        if (!this.canSeeConges() && this.section() === 'conges') this.section.set('profil');
+        if (!this.canSeeContratPaie() && this.section() === 'contratPaie') this.section.set('profil');
+        if (!this.canSeePaie() && this.profilTab() === 'paie') this.profilTab.set('identite');
+      },
       error: () => { this.loading.set(false); this.router.navigate(['/rh/salaries']); },
     });
   }
 
   loadConges() {
     const c = this.collab();
-    if (!c) return;
+    if (!c || !this.canSeeConges()) { this.soldes.set([]); return; }
     this.cSvc.getSoldes(c.id, this.anneeConges()).subscribe(s => this.soldes.set(s));
   }
 

@@ -1593,21 +1593,26 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
       }
       this.refreshTimer();
       this.timerInterval = setInterval(() => this.refreshTimer(), 1000);
-      // Démarrer le chrono global saisie-temps avec le contexte de cette tâche
-      if (!this.timerSvc.isRunning()) {
-        this.timerSvc.startWithTask({
-          taskId:    this.task.id,
-          clientId:  this.task.clientId,
-          clientNom: this.task.client?.nom,
-          taskTitre: this.task.titre,
-        });
-        this.toast.success('⏱ Chrono saisie-temps démarré');
-      }
+      // Démarre (ou reprend) le chrono global saisie-temps sur cette tâche — toute AUTRE
+      // tâche actuellement en cours bascule automatiquement en pause (temps conservé).
+      this.timerSvc.startWithTask({
+        taskId:    this.task.id,
+        clientId:  this.task.clientId,
+        clientNom: this.task.client?.nom,
+        taskTitre: this.task.titre,
+      });
+      this.toast.success('⏱ Chrono saisie-temps démarré');
     } else if (statut !== 'EN_COURS' && this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = undefined;
       this.liveTimerDisplay = '';
       this.task.debutEnCours = undefined;
+      // Si le minuteur global était lié à cette tâche, on le met en pause (temps conservé —
+      // reprise possible plus tard depuis le Kanban) plutôt que de le laisser tourner sur une
+      // tâche qui n'est plus affichée "en cours".
+      if (this.timerSvc.activeTaskCtx()?.taskId === this.task.id && this.timerSvc.isRunning()) {
+        this.timerSvc.pause();
+      }
     }
   }
 

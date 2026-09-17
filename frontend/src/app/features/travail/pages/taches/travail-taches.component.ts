@@ -229,11 +229,17 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
                 }
               </td>
               <td class="td-actions" (click)="$event.stopPropagation()">
-                @if (timerSvc.isRunning() && timerSvc.activeTaskCtx()?.taskId === task.id) {
+                @if (timerSvc.activeTaskCtx()?.taskId === task.id && timerSvc.isRunning()) {
                   <button class="btn-timer btn-timer--active"
-                          matTooltip="Minuteur en cours — arrêter dans la sidebar"
-                          disabled>
-                    <mat-icon>timer</mat-icon>
+                          matTooltip="Mettre en pause"
+                          (click)="pauseTaskTimer(task)">
+                    <mat-icon>pause_circle</mat-icon>
+                  </button>
+                } @else if (timerSvc.pausedTasks()[task.id]) {
+                  <button class="btn-timer"
+                          matTooltip="Reprendre le minuteur"
+                          (click)="startTaskTimer(task)">
+                    <mat-icon>play_circle</mat-icon>
                   </button>
                 } @else {
                   <button class="btn-timer"
@@ -537,11 +543,29 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
   }
 
   startTaskTimer(task: Task) {
-    this.timerSvc.startWithTask({
+    const { pausedPrevious } = this.timerSvc.startWithTask({
       taskId:    task.id,
-      clientId:  task.client?.id,
+      clientId:  task.clientId,
       clientNom: task.client?.nom,
       taskTitre: task.titre,
+    });
+    if (pausedPrevious) this.applyStatutRemote(pausedPrevious.taskId, pausedPrevious.clientId, 'EN_PAUSE');
+    if (task.statut !== 'EN_COURS') this.applyStatutRemote(task.id, task.clientId, 'EN_COURS');
+  }
+
+  pauseTaskTimer(task: Task) {
+    this.timerSvc.pause();
+    this.applyStatutRemote(task.id, task.clientId, 'EN_PAUSE');
+  }
+
+  private applyStatutRemote(taskId: number, clientId: number | undefined, statut: string) {
+    if (!clientId) return;
+    this.tasksService.update(clientId, taskId, { statut: statut as any }).pipe(takeUntil(this._destroy$)).subscribe({
+      next: () => {
+        const t = this.allTasks().find(x => x.id === taskId);
+        if (t) t.statut = statut as any;
+      },
+      error: () => this.reload(),
     });
   }
 }
