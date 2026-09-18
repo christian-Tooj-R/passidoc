@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
 import { ClientsService } from '../../../../core/services/clients.service';
@@ -14,13 +15,15 @@ import { User } from '../../../../core/models/user.model';
 import { exportRowsToCsv } from '../../../../core/services/csv-export.util';
 import { formatHeures } from '../../../../core/services/duree.util';
 import { SaisieEditFormComponent, SaisieEditSeed, SaisieEditResult } from '../../shared/saisie-edit-form.component';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PAGE_SIZE = 50;
 
 @Component({
   selector: 'app-travail-temps-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, SaisieEditFormComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDatepickerModule, SaisieEditFormComponent],
   template: `
 <div class="page">
 
@@ -33,9 +36,14 @@ const PAGE_SIZE = 50;
         <p class="pg-sub">{{ filteredRows().length }} saisie(s) · page {{ page() + 1 }}/{{ totalPages() }}</p>
       </div>
     </div>
-    <button class="btn-export" (click)="exportCsv()" [disabled]="filteredRows().length === 0">
-      <mat-icon>download</mat-icon> Export CSV
-    </button>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportCsv()" [disabled]="filteredRows().length === 0">
+        <mat-icon>download</mat-icon> Export CSV
+      </button>
+      <button class="btn-export" (click)="exportPdf()" [disabled]="filteredRows().length === 0">
+        <mat-icon>picture_as_pdf</mat-icon> Export PDF
+      </button>
+    </div>
   </div>
 
   <!-- ── Filtres inline ── -->
@@ -47,6 +55,17 @@ const PAGE_SIZE = 50;
     <div class="fb-field">
       <label class="fb-label">Jusqu'au</label>
       <input type="date" class="fb-input" [(ngModel)]="dateFin" />
+    </div>
+    <div class="fb-field">
+      <label class="fb-label">Période</label>
+      <button type="button" class="fb-cal-btn" matTooltip="Choisir une période sur un calendrier" (click)="rangePicker.open()">
+        <mat-icon>calendar_month</mat-icon>
+      </button>
+      <mat-date-range-input class="fb-range-hidden" [rangePicker]="rangePicker">
+        <input matStartDate [(ngModel)]="rangeStart" name="rangeStart" (dateChange)="onRangeChange()">
+        <input matEndDate   [(ngModel)]="rangeEnd"   name="rangeEnd"   (dateChange)="onRangeChange()">
+      </mat-date-range-input>
+      <mat-date-range-picker #rangePicker></mat-date-range-picker>
     </div>
     <div class="fb-field">
       <label class="fb-label">Collaborateur</label>
@@ -212,6 +231,7 @@ const PAGE_SIZE = 50;
     .pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
     .pg-sub { font-size:13px; color:#64748b; margin:2px 0 0; }
 
+    .header-actions { display:flex; align-items:center; gap:10px; }
     .btn-export { display:flex; align-items:center; gap:6px; padding:10px 20px; border-radius:9px; border:1.5px solid #bbf7d0; background:#fff; color:#15803d; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
     .btn-export mat-icon { font-size:16px; width:16px; height:16px; }
     .btn-export:hover:not(:disabled) { background:#f0fdf4; border-color:#86efac; box-shadow:0 2px 8px rgba(21,128,61,.15); }
@@ -219,7 +239,7 @@ const PAGE_SIZE = 50;
 
     /* Filter bar */
     .filter-bar { display:flex; align-items:flex-end; gap:12px; padding:18px 28px; flex-wrap:wrap; flex-shrink:0; background:#fff; margin:16px 28px 0; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,.06); border:1px solid #f1f5f9; }
-    .fb-field { display:flex; flex-direction:column; gap:4px; }
+    .fb-field { display:flex; flex-direction:column; gap:4px; position:relative; }
     .fb-field--grow { flex:1; min-width:180px; }
     .fb-label { font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; }
     .fb-input, .fb-select { height:36px; border:1px solid #e2e8f0; border-radius:7px; padding:0 10px; font-size:13px; background:#fff; color:#374151; outline:none; font-family:inherit; min-width:130px; }
@@ -229,6 +249,14 @@ const PAGE_SIZE = 50;
     .fb-btn-apply:hover { background:#4f46e5; }
     .fb-btn-clear { height:36px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:7px; padding:0 14px; font-size:13px; cursor:pointer; transition:all .15s; }
     .fb-btn-clear:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+    .fb-cal-btn {
+      height:36px; width:36px; border:1px solid #e2e8f0; border-radius:7px;
+      background:#fff; color:#6366f1; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; transition:all .15s;
+    }
+    .fb-cal-btn:hover { background:#eef2ff; border-color:#c7d2fe; }
+    .fb-cal-btn mat-icon { font-size:18px; width:18px; height:18px; }
+    .fb-range-hidden { position:absolute; width:0; height:0; overflow:hidden; opacity:0; pointer-events:none; }
 
     /* Totaux */
     .totaux-bar { display:flex; gap:14px; padding:16px 28px 0; flex-shrink:0; }
@@ -308,6 +336,10 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
   filterFacturable = '';
   recherche        = '';
 
+  // ── Sélecteur de période via calendrier (icône) ──
+  rangeStart: Date | null = null;
+  rangeEnd:   Date | null = null;
+
   // ── Édition / duplication ──
   editing   = signal(false);
   editMode  = signal<'edit' | 'duplicate'>('edit');
@@ -363,8 +395,25 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Appelé quand une borne (début ou fin) est choisie dans le calendrier de période —
+   *  on ne recharge qu'une fois les deux bornes définies. */
+  onRangeChange() {
+    if (!this.rangeStart || !this.rangeEnd) return;
+    this.dateDebut = this.toIso(this.rangeStart);
+    this.dateFin   = this.toIso(this.rangeEnd);
+    this.load();
+  }
+
+  private toIso(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   vider() {
     this.dateDebut = this.dateFin = this.collaborateurId = this.clientId = this.filterFacturable = this.recherche = '';
+    this.rangeStart = this.rangeEnd = null;
     this.load();
   }
 
@@ -453,5 +502,43 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
       { header: 'Type',          value: r => r.type },
       { header: 'Commentaire',   value: r => r.commentaire ?? '' },
     ], 'temps-detail');
+  }
+
+  exportPdf() {
+    const rows = this.filteredRows();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(8, 145, 178);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Détail des temps passés', 14, 12);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
+
+    autoTable(doc, {
+      startY: 24,
+      head: [['Date', 'Collaborateur', 'Client', 'Mission', 'Début', 'Fin', 'Durée (h)', 'Type', 'Commentaire']],
+      body: rows.map(r => [
+        this.formatDate(r.date),
+        r.collaborateur ?? '—',
+        r.client ?? '—',
+        r.missionCode ?? '—',
+        r.heureDebut ?? '—',
+        r.heureFin ?? '—',
+        r.dureeHeures?.toFixed(2) ?? '0',
+        r.type === 'FACTURABLE' ? 'Facturable' : 'Non fact.',
+        r.commentaire ?? '',
+      ]),
+      headStyles: { fillColor: [8, 145, 178], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7.5 },
+      alternateRowStyles: { fillColor: [236, 254, 255] },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save('temps-detail.pdf');
   }
 }

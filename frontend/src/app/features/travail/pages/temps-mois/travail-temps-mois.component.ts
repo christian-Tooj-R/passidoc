@@ -103,6 +103,7 @@ import autoTable from 'jspdf-autotable';
       <table class="data-table">
         <thead>
           <tr>
+            <th></th>
             <th>Mois</th>
             <th>Collaborateur</th>
             <th class="th-num th-green">Facturable</th>
@@ -113,7 +114,10 @@ import autoTable from 'jspdf-autotable';
         </thead>
         <tbody>
           @for (r of filteredRows(); track r.mois + r.collaborateur) {
-            <tr class="data-row">
+            <tr class="data-row" (click)="toggleExpand(rowKey(r))">
+              <td class="td-expand">
+                <mat-icon class="expand-icon" [class.expand-icon--open]="isExpanded(rowKey(r))">chevron_right</mat-icon>
+              </td>
               <td><span class="mois-badge">{{ r.mois }}</span></td>
               <td class="td-collab">{{ r.collaborateur }}</td>
               <td class="td-num td-fact">{{ formatH(r.facturable) }}</td>
@@ -128,11 +132,53 @@ import autoTable from 'jspdf-autotable';
                 }
               </td>
             </tr>
+            @if (isExpanded(rowKey(r))) {
+              <tr class="detail-row">
+                <td colspan="7">
+                  <table class="detail-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Mission</th>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th class="th-num">Durée</th>
+                        <th>Type</th>
+                        <th>Commentaire</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (s of r.saisies; track s.id) {
+                        <tr>
+                          <td>{{ formatDate(s.date) }}</td>
+                          <td>{{ s.client ?? '—' }}</td>
+                          <td>{{ s.missionCode ?? '—' }}</td>
+                          <td>{{ s.heureDebut ?? '—' }}</td>
+                          <td>{{ s.heureFin ?? '—' }}</td>
+                          <td class="td-num">{{ formatH(s.dureeHeures) }}</td>
+                          <td>
+                            @if (s.type === 'FACTURABLE') {
+                              <span class="badge-fact">✓ Facturable</span>
+                            } @else {
+                              <span class="badge-nf">✗ Non fact.</span>
+                            }
+                          </td>
+                          <td class="td-comment">{{ s.commentaire ?? '—' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="8" class="detail-empty">Aucune tâche</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            }
           }
         </tbody>
         <tfoot>
           <tr class="footer-row">
-            <td colspan="2"><strong>Total général</strong></td>
+            <td colspan="3"><strong>Total général</strong></td>
             <td class="td-num td-fact"><strong>{{ formatH(sumFacturable()) }}</strong></td>
             <td class="td-num td-nf"><strong>{{ formatH(sumNF()) }}</strong></td>
             <td class="td-num td-total"><strong>{{ formatH(sumFacturable() + sumNF()) }}</strong></td>
@@ -206,6 +252,24 @@ import autoTable from 'jspdf-autotable';
     .data-table tbody tr:nth-child(even) { background:#f8fafc; }
     .data-table tbody tr:hover { background:#eef2ff; }
     .data-table td { padding:10px 14px; color:#374151; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .data-row { cursor:pointer; }
+    .td-expand { width:28px; padding-right:0 !important; }
+    .expand-icon { font-size:18px; width:18px; height:18px; color:#94a3b8; transition:transform .15s; }
+    .expand-icon--open { transform:rotate(90deg); color:#d97706; }
+
+    /* Détail des tâches (ligne dépliée) */
+    .detail-row td { padding:0 14px 12px; background:#fffbeb; border-bottom:1px solid #f1f5f9; }
+    .detail-table { width:100%; border-collapse:collapse; font-size:12px; background:#fff; border:1px solid #fde68a; border-radius:8px; overflow:hidden; }
+    .detail-table thead { background:#fef3c7; }
+    .detail-table th { color:#92400e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:7px 10px; text-align:left; }
+    .detail-table td { padding:6px 10px; color:#475569; border-bottom:1px solid #f1f5f9; }
+    .detail-table tbody tr:last-child td { border-bottom:none; }
+    .detail-table tbody tr:hover { background:#fffbeb; }
+    .detail-table .th-num, .detail-table .td-num { text-align:right; }
+    .detail-empty { text-align:center; color:#94a3b8; padding:12px !important; }
+    .td-comment { color:#64748b; font-size:11.5px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .badge-fact { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#dcfce7; color:#15803d; }
+    .badge-nf   { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#fee2e2; color:#dc2626; }
 
     .td-collab { color:#475569; white-space:nowrap; }
     .td-num { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
@@ -239,6 +303,15 @@ export class TravailTempsMoisComponent implements OnInit, OnDestroy {
   dateFin         = '';
   collaborateurId = '';
   recherche       = '';
+
+  expandedKeys = signal<Set<string>>(new Set());
+  rowKey(r: any): string { return `${r.mois}__${r.collaborateur}`; }
+  isExpanded(key: string): boolean { return this.expandedKeys().has(key); }
+  toggleExpand(key: string) {
+    const s = new Set(this.expandedKeys());
+    if (s.has(key)) s.delete(key); else s.add(key);
+    this.expandedKeys.set(s);
+  }
 
   // Méthode normale (pas computed()) : "recherche" est liée par ngModel, pas un signal.
   filteredRows(): any[] {
@@ -281,17 +354,38 @@ export class TravailTempsMoisComponent implements OnInit, OnDestroy {
 
   formatH(h: number): string { return formatHeures(h); }
 
-  exportCsv() {
-    exportRowsToCsv(this.filteredRows(), [
-      { header: 'Mois',            value: r => r.mois },
-      { header: 'Année',           value: r => r.annee },
-      { header: 'Collaborateur',   value: r => r.collaborateur },
-      { header: 'Facturable (h)',  value: r => r.facturable?.toFixed(2) ?? '0' },
-      { header: 'Non fact. (h)',   value: r => r.nonFacturable?.toFixed(2) ?? '0' },
-      { header: 'Total (h)',       value: r => r.total?.toFixed(2) ?? '0' },
-    ], 'temps-mois');
+  formatDate(d: string): string {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
   }
 
+  /** Export CSV détaillé : une ligne par tâche (saisie), avec le mois/collaborateur
+   *  répétés sur chaque ligne — pour retrouver le détail sans repasser par l'écran. */
+  exportCsv() {
+    const flat: any[] = [];
+    for (const r of this.filteredRows()) {
+      for (const s of (r.saisies ?? [])) {
+        flat.push({ ...s, mois: r.mois, annee: r.annee, collaborateur: r.collaborateur });
+      }
+    }
+    exportRowsToCsv(flat, [
+      { header: 'Mois',          value: r => r.mois },
+      { header: 'Année',         value: r => r.annee },
+      { header: 'Collaborateur', value: r => r.collaborateur },
+      { header: 'Date',          value: r => this.formatDate(r.date) },
+      { header: 'Client',        value: r => r.client ?? '' },
+      { header: 'Mission',       value: r => r.missionCode ?? '' },
+      { header: 'Heure début',   value: r => r.heureDebut ?? '' },
+      { header: 'Heure fin',     value: r => r.heureFin ?? '' },
+      { header: 'Durée (h)',     value: r => r.dureeHeures?.toFixed(2) ?? '0' },
+      { header: 'Type',          value: r => r.type },
+      { header: 'Commentaire',   value: r => r.commentaire ?? '' },
+    ], 'temps-mois-detail');
+  }
+
+  /** Export PDF détaillé : pour chaque mois × collaborateur, une ligne d'en-tête (totaux)
+   *  suivie du détail de chaque tâche qui la compose. */
   exportPdf() {
     const rows = this.filteredRows();
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -302,28 +396,48 @@ export class TravailTempsMoisComponent implements OnInit, OnDestroy {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('Temps passés par mois', 14, 12);
+    doc.text('Temps passés par mois — détail des tâches', 14, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
 
+    const body: any[] = [];
+    const isHeaderRow: boolean[] = [];
+    for (const r of rows) {
+      body.push([
+        `${r.mois}`, r.collaborateur, '', '', '',
+        r.total?.toFixed(2) ?? '0',
+        '', `Facturable : ${r.facturable?.toFixed(2) ?? '0'}h · Non fact. : ${r.nonFacturable?.toFixed(2) ?? '0'}h`,
+      ]);
+      isHeaderRow.push(true);
+      for (const s of (r.saisies ?? [])) {
+        body.push([
+          this.formatDate(s.date), '', s.client ?? '—', s.missionCode ?? '—',
+          `${s.heureDebut ?? '—'}–${s.heureFin ?? '—'}`,
+          s.dureeHeures?.toFixed(2) ?? '0',
+          s.type === 'FACTURABLE' ? 'Facturable' : 'Non fact.',
+          s.commentaire ?? '',
+        ]);
+        isHeaderRow.push(false);
+      }
+    }
+
     autoTable(doc, {
       startY: 24,
-      head: [['Mois', 'Année', 'Collaborateur', 'Facturable (h)', 'Non fact. (h)', 'Total (h)']],
-      body: rows.map(r => [
-        r.mois,
-        r.annee,
-        r.collaborateur,
-        r.facturable?.toFixed(2) ?? '0',
-        r.nonFacturable?.toFixed(2) ?? '0',
-        r.total?.toFixed(2) ?? '0',
-      ]),
+      head: [['Date / Mois', 'Collaborateur', 'Client', 'Mission', 'Horaires', 'Durée (h)', 'Type', 'Commentaire']],
+      body,
       headStyles: { fillColor: [217, 119, 6], fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5 },
-      alternateRowStyles: { fillColor: [255, 251, 235] },
       margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.section === 'body' && isHeaderRow[data.row.index]) {
+          data.cell.styles.fillColor = [254, 243, 199];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [146, 64, 14];
+        }
+      },
     });
 
-    doc.save('temps-mois.pdf');
+    doc.save('temps-mois-detail.pdf');
   }
 }

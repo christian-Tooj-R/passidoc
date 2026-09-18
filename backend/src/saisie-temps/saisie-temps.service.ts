@@ -207,12 +207,13 @@ export class SaisieTempsService {
     }));
   }
 
-  /** Rapport agrégé par semaine ISO × collaborateur */
+  /** Rapport agrégé par semaine ISO × collaborateur — chaque groupe embarque aussi le
+   *  détail des saisies (tâches) qui le composent, pour affichage et export détaillés. */
   async getRapportSemaine(tenantId: number, dateDebut?: string, dateFin?: string, collaborateurId?: number): Promise<any[]> {
     const where: any = { tenantId };
     if (dateDebut && dateFin) where.date = Between(dateDebut, dateFin);
     if (collaborateurId) where.collaborateurId = collaborateurId;
-    const saisies = await this.repo.find({ where, relations: ['collaborateur'], order: { date: 'ASC' } });
+    const saisies = await this.repo.find({ where, relations: ['collaborateur', 'client'], order: { date: 'ASC' } });
     const map = new Map<string, any>();
     for (const s of saisies) {
       const isoWeek = this.getISOWeek(s.date);
@@ -222,22 +223,28 @@ export class SaisieTempsService {
         const [yr, wn] = isoWeek.split('-W');
         const lundi  = this.getMondayOfWeek(+yr, +wn);
         const vendredi = this.addDays(lundi, 4);
-        map.set(key, { isoWeek, semaine: +wn, annee: +yr, periode: `${lundi} → ${vendredi}`, collaborateur: collab, facturable: 0, nonFacturable: 0, total: 0 });
+        map.set(key, { isoWeek, semaine: +wn, annee: +yr, periode: `${lundi} → ${vendredi}`, collaborateur: collab, facturable: 0, nonFacturable: 0, total: 0, saisies: [] as any[] });
       }
       const e = map.get(key)!;
       if (s.type === TypeTemps.FACTURABLE) e.facturable += s.dureeHeures;
       else e.nonFacturable += s.dureeHeures;
       e.total += s.dureeHeures;
+      e.saisies.push({
+        id: s.id, date: s.date, client: s.client?.nom ?? null, missionCode: s.missionCode ?? null,
+        commentaire: s.commentaire ?? null, dureeHeures: s.dureeHeures, type: s.type,
+        heureDebut: s.heureDebut, heureFin: s.heureFin,
+      });
     }
     return Array.from(map.values());
   }
 
-  /** Rapport agrégé par mois × collaborateur */
+  /** Rapport agrégé par mois × collaborateur — chaque groupe embarque aussi le détail des
+   *  saisies (tâches) qui le composent, pour affichage et export détaillés. */
   async getRapportMois(tenantId: number, dateDebut?: string, dateFin?: string, collaborateurId?: number): Promise<any[]> {
     const where: any = { tenantId };
     if (dateDebut && dateFin) where.date = Between(dateDebut, dateFin);
     if (collaborateurId) where.collaborateurId = collaborateurId;
-    const saisies = await this.repo.find({ where, relations: ['collaborateur'], order: { date: 'ASC' } });
+    const saisies = await this.repo.find({ where, relations: ['collaborateur', 'client'], order: { date: 'ASC' } });
     const map = new Map<string, any>();
     const MOIS_FR = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     for (const s of saisies) {
@@ -245,12 +252,17 @@ export class SaisieTempsService {
       const collab   = s.collaborateur ? `${s.collaborateur.firstName} ${s.collaborateur.lastName}` : `#${s.collaborateurId}`;
       const key = `${yr}-${mo}__${s.collaborateurId}`;
       if (!map.has(key)) {
-        map.set(key, { mois: `${MOIS_FR[+mo]} ${yr}`, annee: +yr, moisNum: +mo, collaborateur: collab, facturable: 0, nonFacturable: 0, total: 0 });
+        map.set(key, { mois: `${MOIS_FR[+mo]} ${yr}`, annee: +yr, moisNum: +mo, collaborateur: collab, facturable: 0, nonFacturable: 0, total: 0, saisies: [] as any[] });
       }
       const e = map.get(key)!;
       if (s.type === TypeTemps.FACTURABLE) e.facturable += s.dureeHeures;
       else e.nonFacturable += s.dureeHeures;
       e.total += s.dureeHeures;
+      e.saisies.push({
+        id: s.id, date: s.date, client: s.client?.nom ?? null, missionCode: s.missionCode ?? null,
+        commentaire: s.commentaire ?? null, dureeHeures: s.dureeHeures, type: s.type,
+        heureDebut: s.heureDebut, heureFin: s.heureFin,
+      });
     }
     return Array.from(map.values());
   }

@@ -104,6 +104,7 @@ import autoTable from 'jspdf-autotable';
       <table class="data-table">
         <thead>
           <tr>
+            <th></th>
             <th>Semaine n°</th>
             <th>Période</th>
             <th>Collaborateur</th>
@@ -115,7 +116,10 @@ import autoTable from 'jspdf-autotable';
         </thead>
         <tbody>
           @for (r of filteredRows(); track r.isoWeek + r.collaborateur) {
-            <tr class="data-row" [class.row-current]="r.semaine === currentWeek">
+            <tr class="data-row" [class.row-current]="r.semaine === currentWeek" (click)="toggleExpand(rowKey(r))">
+              <td class="td-expand">
+                <mat-icon class="expand-icon" [class.expand-icon--open]="isExpanded(rowKey(r))">chevron_right</mat-icon>
+              </td>
               <td>
                 <span class="semaine-badge">S{{ r.semaine }}</span>
                 <span class="annee-label">{{ r.annee }}</span>
@@ -136,11 +140,53 @@ import autoTable from 'jspdf-autotable';
                 }
               </td>
             </tr>
+            @if (isExpanded(rowKey(r))) {
+              <tr class="detail-row">
+                <td colspan="8">
+                  <table class="detail-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Mission</th>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th class="th-num">Durée</th>
+                        <th>Type</th>
+                        <th>Commentaire</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (s of r.saisies; track s.id) {
+                        <tr>
+                          <td>{{ formatDate(s.date) }}</td>
+                          <td>{{ s.client ?? '—' }}</td>
+                          <td>{{ s.missionCode ?? '—' }}</td>
+                          <td>{{ s.heureDebut ?? '—' }}</td>
+                          <td>{{ s.heureFin ?? '—' }}</td>
+                          <td class="td-num">{{ formatH(s.dureeHeures) }}</td>
+                          <td>
+                            @if (s.type === 'FACTURABLE') {
+                              <span class="badge-fact">✓ Facturable</span>
+                            } @else {
+                              <span class="badge-nf">✗ Non fact.</span>
+                            }
+                          </td>
+                          <td class="td-comment">{{ s.commentaire ?? '—' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="8" class="detail-empty">Aucune tâche</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            }
           }
         </tbody>
         <tfoot>
           <tr class="footer-row">
-            <td colspan="3"><strong>Total général</strong></td>
+            <td colspan="4"><strong>Total général</strong></td>
             <td class="td-num td-fact"><strong>{{ formatH(sumFacturable()) }}</strong></td>
             <td class="td-num td-nf"><strong>{{ formatH(sumNF()) }}</strong></td>
             <td class="td-num td-total"><strong>{{ formatH(sumFacturable() + sumNF()) }}</strong></td>
@@ -215,6 +261,24 @@ import autoTable from 'jspdf-autotable';
     .data-table tbody tr:hover { background:#eef2ff; }
     .data-table td { padding:10px 14px; color:#374151; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
     .row-current { background:#faf5ff !important; }
+    .data-row { cursor:pointer; }
+    .td-expand { width:28px; padding-right:0 !important; }
+    .expand-icon { font-size:18px; width:18px; height:18px; color:#94a3b8; transition:transform .15s; }
+    .expand-icon--open { transform:rotate(90deg); color:#6366f1; }
+
+    /* Détail des tâches (ligne dépliée) */
+    .detail-row td { padding:0 14px 12px; background:#fafbff; border-bottom:1px solid #f1f5f9; }
+    .detail-table { width:100%; border-collapse:collapse; font-size:12px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; }
+    .detail-table thead { background:#eef2ff; }
+    .detail-table th { color:#4338ca; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:7px 10px; text-align:left; }
+    .detail-table td { padding:6px 10px; color:#475569; border-bottom:1px solid #f1f5f9; }
+    .detail-table tbody tr:last-child td { border-bottom:none; }
+    .detail-table tbody tr:hover { background:#f8fafc; }
+    .detail-table .th-num, .detail-table .td-num { text-align:right; }
+    .detail-empty { text-align:center; color:#94a3b8; padding:12px !important; }
+    .td-comment { color:#64748b; font-size:11.5px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .badge-fact { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#dcfce7; color:#15803d; }
+    .badge-nf   { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#fee2e2; color:#dc2626; }
 
     .td-periode { color:#64748b; font-size:11.5px; white-space:nowrap; }
     .td-collab  { color:#475569; white-space:nowrap; }
@@ -251,6 +315,15 @@ export class TravailTempsSemaineComponent implements OnInit, OnDestroy {
   dateFin         = '';
   collaborateurId = '';
   recherche       = '';
+
+  expandedKeys = signal<Set<string>>(new Set());
+  rowKey(r: any): string { return `${r.isoWeek}__${r.collaborateur}`; }
+  isExpanded(key: string): boolean { return this.expandedKeys().has(key); }
+  toggleExpand(key: string) {
+    const s = new Set(this.expandedKeys());
+    if (s.has(key)) s.delete(key); else s.add(key);
+    this.expandedKeys.set(s);
+  }
 
   // Méthode normale (pas computed()) : "recherche" est liée par ngModel, pas un signal.
   filteredRows(): any[] {
@@ -305,18 +378,39 @@ export class TravailTempsSemaineComponent implements OnInit, OnDestroy {
     return p.replace(/(\d{4}-\d{2}-\d{2})/g, (m) => { const [y,mo,d] = m.split('-'); return `${d}/${mo}/${y}`; });
   }
 
-  exportCsv() {
-    exportRowsToCsv(this.filteredRows(), [
-      { header: 'Semaine',         value: r => `S${r.semaine}` },
-      { header: 'Année',           value: r => r.annee },
-      { header: 'Période',         value: r => this.formatPeriode(r.periode) },
-      { header: 'Collaborateur',   value: r => r.collaborateur },
-      { header: 'Facturable (h)',  value: r => r.facturable?.toFixed(2) ?? '0' },
-      { header: 'Non fact. (h)',   value: r => r.nonFacturable?.toFixed(2) ?? '0' },
-      { header: 'Total (h)',       value: r => r.total?.toFixed(2) ?? '0' },
-    ], 'temps-semaine');
+  formatDate(d: string): string {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
   }
 
+  /** Export CSV détaillé : une ligne par tâche (saisie), avec la semaine/collaborateur
+   *  répétés sur chaque ligne — pour retrouver le détail sans repasser par l'écran. */
+  exportCsv() {
+    const flat: any[] = [];
+    for (const r of this.filteredRows()) {
+      for (const s of (r.saisies ?? [])) {
+        flat.push({ ...s, semaine: r.semaine, annee: r.annee, periode: this.formatPeriode(r.periode), collaborateur: r.collaborateur });
+      }
+    }
+    exportRowsToCsv(flat, [
+      { header: 'Semaine',       value: r => `S${r.semaine}` },
+      { header: 'Année',         value: r => r.annee },
+      { header: 'Période',       value: r => r.periode },
+      { header: 'Collaborateur', value: r => r.collaborateur },
+      { header: 'Date',          value: r => this.formatDate(r.date) },
+      { header: 'Client',        value: r => r.client ?? '' },
+      { header: 'Mission',       value: r => r.missionCode ?? '' },
+      { header: 'Heure début',   value: r => r.heureDebut ?? '' },
+      { header: 'Heure fin',     value: r => r.heureFin ?? '' },
+      { header: 'Durée (h)',     value: r => r.dureeHeures?.toFixed(2) ?? '0' },
+      { header: 'Type',          value: r => r.type },
+      { header: 'Commentaire',   value: r => r.commentaire ?? '' },
+    ], 'temps-semaine-detail');
+  }
+
+  /** Export PDF détaillé : pour chaque semaine × collaborateur, une ligne d'en-tête (totaux)
+   *  suivie du détail de chaque tâche qui la compose. */
   exportPdf() {
     const rows = this.filteredRows();
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -327,30 +421,50 @@ export class TravailTempsSemaineComponent implements OnInit, OnDestroy {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('Temps passés par semaine', 14, 12);
+    doc.text('Temps passés par semaine — détail des tâches', 14, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - 14, 12, { align: 'right' });
 
+    const body: any[] = [];
+    const isHeaderRow: boolean[] = [];
+    for (const r of rows) {
+      body.push([
+        `S${r.semaine} ${r.annee} — ${this.formatPeriode(r.periode)}`,
+        r.collaborateur, '', '', '',
+        r.total?.toFixed(2) ?? '0',
+        '', `Facturable : ${r.facturable?.toFixed(2) ?? '0'}h · Non fact. : ${r.nonFacturable?.toFixed(2) ?? '0'}h`,
+      ]);
+      isHeaderRow.push(true);
+      for (const s of (r.saisies ?? [])) {
+        body.push([
+          this.formatDate(s.date), '', s.client ?? '—', s.missionCode ?? '—',
+          `${s.heureDebut ?? '—'}–${s.heureFin ?? '—'}`,
+          s.dureeHeures?.toFixed(2) ?? '0',
+          s.type === 'FACTURABLE' ? 'Facturable' : 'Non fact.',
+          s.commentaire ?? '',
+        ]);
+        isHeaderRow.push(false);
+      }
+    }
+
     autoTable(doc, {
       startY: 24,
-      head: [['Semaine', 'Période', 'Collaborateur', 'Facturable (h)', 'Non fact. (h)', 'Total (h)', 'Ratio facturable']],
-      body: rows.map(r => [
-        `S${r.semaine} ${r.annee}`,
-        this.formatPeriode(r.periode),
-        r.collaborateur,
-        r.facturable?.toFixed(2) ?? '0',
-        r.nonFacturable?.toFixed(2) ?? '0',
-        r.total?.toFixed(2) ?? '0',
-        r.total ? `${((r.facturable / r.total) * 100).toFixed(0)}%` : '—',
-      ]),
+      head: [['Date / Semaine', 'Collaborateur', 'Client', 'Mission', 'Horaires', 'Durée (h)', 'Type', 'Commentaire']],
+      body,
       headStyles: { fillColor: [124, 58, 237], fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5 },
-      alternateRowStyles: { fillColor: [245, 243, 255] },
       margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.section === 'body' && isHeaderRow[data.row.index]) {
+          data.cell.styles.fillColor = [237, 233, 254];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [76, 29, 149];
+        }
+      },
     });
 
-    doc.save('temps-semaine.pdf');
+    doc.save('temps-semaine-detail.pdf');
   }
 
   ratioLabel(r: any): string {
