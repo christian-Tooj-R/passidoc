@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -98,7 +99,8 @@ import { Client } from '../../core/models/client.model';
           <th class="th-nom">Dossier</th>
           <th class="th-pole">Pôle</th>
           <th class="th-directeur">Directeur</th>
-          <th class="th-collab">Collaborateur</th>
+          <th class="th-collab">Collaborateur {{ tenantSvc.poleLabel1() }}</th>
+          <th class="th-collab">Collaborateur {{ tenantSvc.poleLabel2() }}</th>
           <th class="th-action"></th>
         </tr>
       </thead>
@@ -128,26 +130,38 @@ import { Client } from '../../core/models/client.model';
               <div class="assign-cell" [class.assign-cell--empty]="!c.directeur">
                 <mat-icon class="assign-icon">manage_accounts</mat-icon>
                 <select class="assign-select"
-                        [value]="c.directeur?.id ?? ''"
                         (change)="onDirecteurChange(c, $any($event.target).value)">
-                  <option value="">— Non assigné —</option>
+                  <option value="" [selected]="!c.directeur">— Non assigné —</option>
                   @for (u of assignableUsers; track u.id) {
-                    <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                    <option [value]="u.id" [selected]="c.directeur?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
                   }
                 </select>
               </div>
             </td>
 
-            <!-- Collaborateur -->
+            <!-- Collaborateur pôle EST -->
+            <td class="td-collab">
+              <div class="assign-cell" [class.assign-cell--empty]="!c.responsable">
+                <mat-icon class="assign-icon">person</mat-icon>
+                <select class="assign-select"
+                        (change)="onResponsableChange(c, $any($event.target).value)">
+                  <option value="" [selected]="!c.responsable">— Non assigné —</option>
+                  @for (u of assignableUsers; track u.id) {
+                    <option [value]="u.id" [selected]="c.responsable?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                  }
+                </select>
+              </div>
+            </td>
+
+            <!-- Collaborateur pôle OUEST -->
             <td class="td-collab">
               <div class="assign-cell" [class.assign-cell--empty]="!c.collaborateurOuest">
                 <mat-icon class="assign-icon">person</mat-icon>
                 <select class="assign-select"
-                        [value]="c.collaborateurOuest?.id ?? ''"
                         (change)="onCollabChange(c, $any($event.target).value)">
-                  <option value="">— Non assigné —</option>
+                  <option value="" [selected]="!c.collaborateurOuest">— Non assigné —</option>
                   @for (u of assignableUsers; track u.id) {
-                    <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                    <option [value]="u.id" [selected]="c.collaborateurOuest?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
                   }
                 </select>
               </div>
@@ -162,7 +176,7 @@ import { Client } from '../../core/models/client.model';
           </tr>
         } @empty {
           <tr>
-            <td colspan="5" class="td-empty">
+            <td colspan="6" class="td-empty">
               <mat-icon>search_off</mat-icon>
               <span>Aucun dossier trouvé</span>
             </td>
@@ -322,7 +336,7 @@ export class PortefeuillesComponent implements OnInit {
   }
 
   get noCollabCount(): number {
-    return this.allClients.filter(c => !c.collaborateurOuest).length;
+    return this.allClients.filter(c => c.site === 'EST' ? !c.responsable : !c.collaborateurOuest).length;
   }
 
   get filteredClients(): Client[] {
@@ -341,8 +355,17 @@ export class PortefeuillesComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.clientsSvc.getAll().subscribe(c => { this.allClients = c; });
-    this.usersSvc.getAssignable().subscribe(u => { this.assignableUsers = u; });
+    // Charger les deux en même temps : si les dossiers s'affichent avant que
+    // la liste des utilisateurs assignables soit prête, les <select> natifs
+    // se retrouvent sans <option> correspondante au moment où Angular fixe
+    // leur valeur, et restent bloqués sur "Non assigné" même après coup.
+    forkJoin({
+      clients: this.clientsSvc.getAll(),
+      users: this.usersSvc.getAssignable(),
+    }).subscribe(({ clients, users }) => {
+      this.assignableUsers = users;
+      this.allClients = clients;
+    });
   }
 
   onDirecteurChange(client: Client, value: string) {
@@ -350,6 +373,14 @@ export class PortefeuillesComponent implements OnInit {
     this.clientsSvc.assignDirecteur(client.id, id).subscribe(updated => {
       client.directeur = updated.directeur;
       this.toast.success(id ? 'Directeur assigné' : 'Directeur retiré');
+    });
+  }
+
+  onResponsableChange(client: Client, value: string) {
+    const id = value ? +value : null;
+    this.clientsSvc.assign(client.id, id).subscribe(updated => {
+      client.responsable = updated.responsable;
+      this.toast.success(id ? 'Collaborateur assigné' : 'Collaborateur retiré');
     });
   }
 

@@ -17,17 +17,14 @@ interface CalEvent {
   saisie: Partial<SaisieTemps>;
   topPx: number;
   heightPx: number;
+  leftPct: number;
+  widthPct: number;
   allDay: boolean;
-  colorClass: string;
-  label: string;
-}
-
-interface CalGroup {
-  key: string;
-  label: string;
   readonly: boolean;
-  saisies: Partial<SaisieTemps>[];
-  loading: boolean;
+  colorClass: string;
+  colorStyle: string | null;
+  label: string;
+  subLabel: string | null;
 }
 
 interface Selection {
@@ -97,7 +94,12 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     <span class="leg-item"><span class="leg-dot leg-green"></span> Facturable</span>
     <span class="leg-item"><span class="leg-dot leg-red"></span> Non facturable</span>
     <span class="leg-item"><span class="leg-dot leg-blue"></span> Autre</span>
-    <span class="leg-item"><span class="leg-dot leg-grey"></span> Occupé (collègue)</span>
+    @for (c of selectedColleaguesList(); track c.id) {
+      <span class="leg-item">
+        <span class="leg-dot" [style.background]="colorFor(c.id)"></span>
+        {{ c.firstName }} {{ c.lastName }}
+      </span>
+    }
     @if (selection()) {
       <span class="leg-sel">
         <mat-icon>touch_app</mat-icon>
@@ -141,6 +143,12 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
         @if (!colleaguesLoading() && colleagues().length === 0) {
           <div class="sidebar-empty">Aucun autre collègue.</div>
         }
+        @if (selectedColleaguesList().length > 0) {
+          <div class="sidebar-hint">
+            Les créneaux des collègues affichent le détail complet de leur tâche
+            (couleur dédiée par personne pour les différencier).
+          </div>
+        }
       </div>
     }
 
@@ -151,13 +159,13 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
       </div>
     } @else {
 
-      <!-- ── Grille calendrier (moi + collègues sélectionnés, côte à côte) ── -->
+      <!-- ── Grille calendrier : mes créneaux + ceux des collègues sélectionnés, superposés
+           (côte à côte UNIQUEMENT quand ils se chevauchent dans le temps) ── -->
       <div class="cal-wrap">
         <div class="cal-grid">
 
-          <!-- Colonne heures (unique, partagée par tous les groupes) -->
+          <!-- Colonne heures -->
           <div class="col-time">
-            <div class="hd-group-bar"></div>
             <div class="col-hd col-hd--time"></div>
             <div class="allday-hd"><span>Toute la journée</span></div>
             <div class="body-time">
@@ -169,94 +177,82 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
             </div>
           </div>
 
-          @for (group of calGroups(); track group.key; let firstGroup = $first) {
+          @for (day of visibleDays(); track day.date) {
+            <div class="cal-col" [class.cal-col--today]="day.isToday">
 
-            @if (!firstGroup) { <div class="cal-group-sep"></div> }
-
-            @for (day of visibleDays(); track day.date; let firstDay = $first) {
-              <div class="cal-col" [class.cal-col--today]="day.isToday" [class.cal-col--readonly]="group.readonly">
-
-                <!-- Bandeau nom du groupe (moi / collègue) — hauteur fixe sur toutes les
-                     colonnes pour garder l'alignement, texte affiché que sur le 1er jour -->
-                <div class="hd-group-bar">
-                  @if (firstDay) {
-                    <span class="hd-group-label" [class.hd-group-label--me]="!group.readonly">
-                      {{ group.label }}
-                      @if (group.loading) { <mat-icon class="spin hd-group-spin">refresh</mat-icon> }
-                    </span>
-                  }
-                </div>
-
-                <!-- Header -->
-                <div class="col-hd" [class.col-hd--today]="day.isToday">
-                  <div class="hd-name">{{ day.name }}</div>
-                  <div class="hd-num">{{ day.num }}</div>
-                  @if (!group.readonly) {
-                    <div class="hd-total" [class.hd-total--has]="day.totalH > 0">
-                      {{ day.totalH | number:'1.1-1' }}h
-                    </div>
-                  }
-                </div>
-
-                <!-- All-day -->
-                <div class="allday-zone">
-                  @for (ev of allDayForGroup(group, day.date); track $index) {
-                    <div class="allday-chip" [class]="ev.colorClass" [matTooltip]="ev.label">
-                      {{ ev.saisie.dureeHeures }}h · {{ ev.label | slice:0:18 }}
-                    </div>
-                  }
-                  @if (allDayForGroup(group, day.date).length === 0) { <div class="allday-empty"></div> }
-                </div>
-
-                <!-- Corps positionné -->
-                <div class="cal-body"
-                     [style.height]="bodyH + 'px'"
-                     (mousedown)="!group.readonly && startSelect($event, day.date)"
-                     (mousemove)="!group.readonly && moveSelect($event)"
-                     (mouseup)="!group.readonly && endSelect()">
-
-                  <!-- Grille slots -->
-                  @for (slot of timeSlots; track slot.index) {
-                    <div class="slot" [class.slot--hour]="slot.isHour"></div>
-                  }
-
-                  <!-- Indicateur temps courant (colonne today, groupe "moi" uniquement) -->
-                  @if (day.isToday && !group.readonly && nowTopPx() >= 0) {
-                    <div class="now-line" [style.top]="nowTopPx() + 'px'">
-                      <div class="now-dot"></div>
-                    </div>
-                  }
-
-                  <!-- Sélection en cours -->
-                  @if (!group.readonly && selection()?.day === day.date) {
-                    <div class="sel-block"
-                         [style.top]="selTop() + 'px'"
-                         [style.height]="selHeight() + 'px'">
-                      <span>{{ selLabel() }}</span>
-                    </div>
-                  }
-
-                  <!-- Événements -->
-                  @for (ev of positionedForGroup(group, day.date); track $index) {
-                    <div class="ev-block"
-                         [class]="ev.colorClass"
-                         [style.top]="ev.topPx + 'px'"
-                         [style.height]="ev.heightPx + 'px'"
-                         [matTooltip]="ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client!.nom : '')">
-                      <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}</div>
-                      <div class="ev-lbl">{{ ev.label }}</div>
-                      @if (!group.readonly && ev.saisie.client && ev.heightPx > 50) {
-                        <div class="ev-client">{{ ev.saisie.client!.nom }}</div>
-                      }
-                      @if (!group.readonly && ev.heightPx > 70) {
-                        <div class="ev-dur">{{ ev.saisie.dureeHeures }}h</div>
-                      }
-                    </div>
-                  }
-
+              <!-- Header -->
+              <div class="col-hd" [class.col-hd--today]="day.isToday">
+                <div class="hd-name">{{ day.name }}</div>
+                <div class="hd-num">{{ day.num }}</div>
+                <div class="hd-total" [class.hd-total--has]="day.totalH > 0">
+                  {{ day.totalH | number:'1.1-1' }}h
                 </div>
               </div>
-            }
+
+              <!-- All-day -->
+              <div class="allday-zone">
+                @for (ev of allDayForDay(day.date); track $index) {
+                  <div class="allday-chip" [class]="ev.colorClass" [style.background]="ev.colorStyle"
+                       [matTooltip]="tooltipFor(ev)">
+                    {{ ev.saisie.dureeHeures }}h · {{ (ev.readonly ? ev.label : ev.label) | slice:0:18 }}
+                  </div>
+                }
+                @if (allDayForDay(day.date).length === 0) { <div class="allday-empty"></div> }
+              </div>
+
+              <!-- Corps positionné -->
+              <div class="cal-body"
+                   [style.height]="bodyH + 'px'"
+                   (mousedown)="startSelect($event, day.date)"
+                   (mousemove)="moveSelect($event)"
+                   (mouseup)="endSelect()">
+
+                <!-- Grille slots -->
+                @for (slot of timeSlots; track slot.index) {
+                  <div class="slot" [class.slot--hour]="slot.isHour"></div>
+                }
+
+                <!-- Indicateur temps courant -->
+                @if (day.isToday && nowTopPx() >= 0) {
+                  <div class="now-line" [style.top]="nowTopPx() + 'px'">
+                    <div class="now-dot"></div>
+                  </div>
+                }
+
+                <!-- Sélection en cours -->
+                @if (selection()?.day === day.date) {
+                  <div class="sel-block"
+                       [style.top]="selTop() + 'px'"
+                       [style.height]="selHeight() + 'px'">
+                    <span>{{ selLabel() }}</span>
+                  </div>
+                }
+
+                <!-- Événements : les miens + ceux des collègues sélectionnés, positionnés
+                     côte à côte automatiquement dès qu'ils se chevauchent dans le temps -->
+                @for (ev of positionedForDay(day.date); track $index) {
+                  <div class="ev-block" [class.ev-colleague]="ev.readonly"
+                       [class]="ev.colorClass"
+                       [style.top]="ev.topPx + 'px'"
+                       [style.height]="ev.heightPx + 'px'"
+                       [style.left]="ev.leftPct + '%'"
+                       [style.width]="'calc(' + ev.widthPct + '% - 4px)'"
+                       [style.background]="ev.colorStyle"
+                       [matTooltip]="tooltipFor(ev)">
+                    <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}</div>
+                    @if (ev.readonly && ev.heightPx > 40) { <div class="ev-sub">{{ ev.subLabel }}</div> }
+                    <div class="ev-lbl">{{ ev.label }}</div>
+                    @if (ev.saisie.client && ev.heightPx > 50) {
+                      <div class="ev-client">{{ ev.saisie.client!.nom }}</div>
+                    }
+                    @if (ev.heightPx > 70) {
+                      <div class="ev-dur">{{ ev.saisie.dureeHeures }}h</div>
+                    }
+                  </div>
+                }
+
+              </div>
+            </div>
           }
         </div>
       </div>
@@ -343,11 +339,11 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
       font-size:12px; flex-wrap:wrap;
     }
     .leg-item { display:flex; align-items:center; gap:5px; color:#64748b; }
+    .leg-item em { font-style:normal; color:#94a3b8; }
     .leg-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
     .leg-green { background:#22c55e; }
     .leg-red   { background:#f87171; }
     .leg-blue  { background:#60a5fa; }
-    .leg-grey  { background:#94a3b8; }
     .leg-sel {
       display:flex; align-items:center; gap:8px;
       background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px;
@@ -403,6 +399,10 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
       display:flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; color:#94a3b8;
     }
     .sidebar-loading mat-icon { font-size:14px; width:14px; height:14px; }
+    .sidebar-hint {
+      margin:10px 14px 0; padding:8px 10px; background:#f8fafc; border-radius:8px;
+      font-size:11px; line-height:1.4; color:#94a3b8;
+    }
 
     /* ── Grille ── */
     .cal-wrap { flex:1; overflow:auto; }
@@ -427,26 +427,9 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .tl-slot--hour { border-bottom:1px solid #e2e8f0; }
 
-    /* Séparateur entre groupes de calendriers (moi / collègues) */
-    .cal-group-sep { flex:0 0 10px; background:#f1f5f9; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; }
-
     /* Colonnes jours */
-    .cal-col { display:flex; flex-direction:column; flex:1; border-right:1px solid #f1f5f9; min-width:90px; }
+    .cal-col { display:flex; flex-direction:column; flex:1; border-right:1px solid #f1f5f9; min-width:130px; }
     .cal-col--today { background:rgba(99,102,241,.015); }
-    .cal-col--readonly { background:#fafbfc; }
-
-    .hd-group-bar {
-      height:18px; flex-shrink:0; display:flex; align-items:center;
-      padding:0 6px; background:#f8fafc; border-bottom:1px solid #eef1f5; border-right:1px solid #e2e8f0;
-      position:sticky; top:0; z-index:21;
-    }
-    .hd-group-label {
-      font-size:9.5px; font-weight:700; color:#64748b;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
-      display:flex; align-items:center; gap:3px;
-    }
-    .hd-group-label--me { color:#6366f1; }
-    .hd-group-spin { font-size:10px !important; width:10px !important; height:10px !important; }
 
     .hd-name  { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:600; }
     .hd-num   { font-size:22px; font-weight:800; color:#0f172a; line-height:1; margin:2px 0; }
@@ -471,7 +454,6 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 
     /* Corps positionné */
     .cal-body { position:relative; flex:1; cursor:crosshair; }
-    .cal-col--readonly .cal-body { cursor:default; }
     .slot { height:44px; border-bottom:1px solid #f8f8f8; }
     .slot--hour { border-bottom:1px solid #e8ecf0; }
 
@@ -496,19 +478,21 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 
     /* Blocs événements */
     .ev-block {
-      position:absolute; left:3px; right:3px; border-radius:7px; padding:4px 7px;
+      position:absolute; border-radius:7px; padding:4px 7px;
       font-size:10.5px; color:#fff; overflow:hidden; cursor:pointer; z-index:2;
-      box-shadow:0 2px 8px rgba(0,0,0,.18); transition:filter .12s, transform .1s;
+      box-shadow:0 2px 8px rgba(0,0,0,.18); transition:filter .12s;
+      box-sizing:border-box;
     }
-    .ev-block:hover { filter:brightness(1.08); transform:scaleX(1.01); z-index:4; }
+    .ev-block:hover { filter:brightness(1.08); z-index:4; }
+    .ev-colleague { cursor:default; }
     .ev-facturable     { background:linear-gradient(135deg,#22c55e,#16a34a); }
     .ev-non-facturable { background:linear-gradient(135deg,#f87171,#dc2626); }
     .ev-autre          { background:linear-gradient(135deg,#60a5fa,#2563eb); }
-    .ev-occupe         { background:linear-gradient(135deg,#94a3b8,#64748b); cursor:default; }
     .ev-time   { font-size:9px; opacity:.85; font-weight:600; letter-spacing:.02em; }
     .ev-lbl    { font-weight:700; line-height:1.2; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ev-client { font-size:9.5px; opacity:.8; margin-top:2px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .ev-dur    { font-size:9px; opacity:.75; margin-top:2px; }
+    .ev-sub    { font-size:9px; opacity:.85; margin-top:1px; font-style:italic; }
 
     /* Mini-form overlay */
     .new-form-overlay {
@@ -622,27 +606,11 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     return u ? `${u.firstName} ${u.lastName}` : 'Moi';
   });
 
-  /** Groupes de calendriers affichés côte à côte : "moi" en premier, puis chaque collègue
-   *  actuellement coché dans la sidebar (façon "calendriers des contacts" Outlook). */
-  calGroups = computed<CalGroup[]>(() => {
-    const groups: CalGroup[] = [
-      { key: 'me', label: this.myLabel(), readonly: false, saisies: this.saisies(), loading: false },
-    ];
+  /** Collègues actuellement cochés dans la sidebar — utilisé pour la légende et le rendu. */
+  selectedColleaguesList = computed<User[]>(() => {
     const selected = this.selectedColleagueIds();
-    if (selected.size === 0) return groups;
-    const dataMap = this.colleagueSaisies();
-    const loadingMap = this.colleagueLoadingMap();
-    for (const c of this.colleagues()) {
-      if (!selected.has(c.id)) continue;
-      groups.push({
-        key: `c-${c.id}`,
-        label: `${c.firstName} ${c.lastName}`,
-        readonly: true,
-        saisies: dataMap[c.id] ?? [],
-        loading: !!loadingMap[c.id],
-      });
-    }
-    return groups;
+    if (selected.size === 0) return [];
+    return this.colleagues().filter(c => selected.has(c.id));
   });
 
   /** Date affichée dans le sélecteur du bouton calendrier : le jour visible en vue "jour",
@@ -677,7 +645,12 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadData();
     this.updateNowLine();
-    interval(60000).pipe(takeUntil(this._d$)).subscribe(() => this.updateNowLine());
+    interval(60000).pipe(takeUntil(this._d$)).subscribe(() => {
+      this.updateNowLine();
+      // Rafraîchit aussi les collègues affichés — au cas où une saisie vient d'être
+      // ajoutée pour l'un d'eux pendant que leur calendrier est déjà coché.
+      for (const id of this.selectedColleagueIds()) this.loadColleague(id);
+    });
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
 
     this.colleaguesLoading.set(true);
@@ -746,19 +719,81 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
       });
   }
 
-  allDayForGroup(group: CalGroup, date: string): CalEvent[] {
-    return group.saisies
-      .filter(s => (s.date === date || s.date?.startsWith(date)) && !s.heureDebut)
-      .map(s => this.toEv(s, true, group.readonly));
+  /** Toutes les saisies visibles ce jour-là : les miennes + celles des collègues cochés,
+   *  chacune taguée avec son "propriétaire" ('me' ou l'id du collègue). */
+  private allEventsForDay(date: string): { saisie: Partial<SaisieTemps>; owner: 'me' | number }[] {
+    const mine = this.saisies()
+      .filter(s => s.date === date || s.date?.startsWith(date))
+      .map(s => ({ saisie: s as Partial<SaisieTemps>, owner: 'me' as const }));
+    const dataMap = this.colleagueSaisies();
+    const colleagueEvents: { saisie: Partial<SaisieTemps>; owner: number }[] = [];
+    for (const id of this.selectedColleagueIds()) {
+      for (const s of dataMap[id] ?? []) {
+        if (s.date === date || s.date?.startsWith(date)) colleagueEvents.push({ saisie: s, owner: id });
+      }
+    }
+    return [...mine, ...colleagueEvents];
   }
 
-  positionedForGroup(group: CalGroup, date: string): CalEvent[] {
-    return group.saisies
-      .filter(s => (s.date === date || s.date?.startsWith(date)) && !!s.heureDebut)
-      .map(s => this.toEv(s, false, group.readonly));
+  allDayForDay(date: string): CalEvent[] {
+    return this.allEventsForDay(date)
+      .filter(e => !e.saisie.heureDebut)
+      .map(e => this.toEv(e.saisie, true, e.owner));
   }
 
-  private toEv(s: Partial<SaisieTemps>, allDay: boolean, readonlyGroup: boolean): CalEvent {
+  positionedForDay(date: string): CalEvent[] {
+    const timed = this.allEventsForDay(date)
+      .filter(e => !!e.saisie.heureDebut)
+      .map(e => this.toEv(e.saisie, false, e.owner));
+    return this.layoutEvents(timed);
+  }
+
+  /** Positionne côte à côte (largeur/décalage) les événements qui se chevauchent dans le
+   *  temps — algorithme classique par "clusters" (façon Google Calendar/Outlook), pour que
+   *  mes créneaux et ceux de plusieurs collègues affichés en même temps restent lisibles
+   *  au lieu de se superposer intégralement. */
+  private layoutEvents(events: CalEvent[]): CalEvent[] {
+    if (events.length <= 1) return events;
+    const withRange = events
+      .map(e => ({ e, start: e.topPx, end: e.topPx + e.heightPx }))
+      .sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+
+    const result: CalEvent[] = [];
+    let cluster: typeof withRange = [];
+    let clusterEnd = -Infinity;
+
+    const flush = () => {
+      if (!cluster.length) return;
+      const colEnds: number[] = [];
+      const placed: { item: typeof withRange[number]; col: number }[] = [];
+      for (const item of cluster) {
+        let col = colEnds.findIndex(end => end <= item.start);
+        if (col === -1) { colEnds.push(item.end); col = colEnds.length - 1; }
+        else { colEnds[col] = item.end; }
+        placed.push({ item, col });
+      }
+      const totalCols = colEnds.length;
+      for (const { item, col } of placed) {
+        result.push({ ...item.e, leftPct: (col / totalCols) * 100, widthPct: (1 / totalCols) * 100 });
+      }
+      cluster = [];
+    };
+
+    for (const item of withRange) {
+      if (!cluster.length || item.start < clusterEnd) {
+        cluster.push(item);
+        clusterEnd = Math.max(clusterEnd, item.end);
+      } else {
+        flush();
+        cluster = [item];
+        clusterEnd = item.end;
+      }
+    }
+    flush();
+    return result;
+  }
+
+  private toEv(s: Partial<SaisieTemps>, allDay: boolean, owner: 'me' | number): CalEvent {
     let topPx = 0;
     const dureeHeures = s.dureeHeures ?? 0;
     const heightPx = Math.max(SLOT_H * 0.6, dureeHeures * 2 * SLOT_H);
@@ -767,17 +802,30 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
       const startMin = h * 60 + (m ?? 0);
       topPx = Math.max(0, ((startMin - CAL_START * 60) / 30) * SLOT_H);
     }
-    // Vue collègue (façon Outlook) : jamais le détail, juste "Occupé(e)".
-    if (readonlyGroup) {
-      return { saisie: s, topPx, heightPx, allDay, colorClass: 'ev-occupe', label: 'Occupé(e)' };
+    const label = s.missionCode
+      ? `[${s.missionCode}] ${s.commentaire ?? ''}`
+      : s.commentaire ?? s.type ?? '—';
+    // Vue collègue : détail complet de la tâche, avec son nom en plus pour différencier
+    // les collègues affichés en même temps (couleur dédiée par personne).
+    if (owner !== 'me') {
+      const colleague = this.colleagues().find(c => c.id === owner);
+      const name = colleague ? `${colleague.firstName} ${colleague.lastName}` : 'Collègue';
+      return {
+        saisie: s, topPx, heightPx, allDay, readonly: true,
+        colorClass: 'ev-colleague', colorStyle: this.colorFor(owner),
+        label, subLabel: name,
+        leftPct: 0, widthPct: 100,
+      };
     }
     const colorClass = s.type === 'FACTURABLE'
       ? 'ev-facturable'
       : s.type === 'NON_FACTURABLE' ? 'ev-non-facturable' : 'ev-autre';
-    const label = s.missionCode
-      ? `[${s.missionCode}] ${s.commentaire ?? ''}`
-      : s.commentaire ?? s.type ?? '—';
-    return { saisie: s, topPx, heightPx, allDay, colorClass, label };
+    return { saisie: s, topPx, heightPx, allDay, readonly: false, colorClass, colorStyle: null, label, subLabel: null, leftPct: 0, widthPct: 100 };
+  }
+
+  tooltipFor(ev: CalEvent): string {
+    const base = ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client!.nom : '');
+    return ev.readonly ? `${ev.subLabel} — ${base}` : base;
   }
 
   fmt(t?: string): string { return t ? t.slice(0, 5) : ''; }

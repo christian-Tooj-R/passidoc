@@ -23,6 +23,7 @@ DOSSIERS CLIENTS (/clients)
 - Filtres : secteur d'activité, pôle géographique, recherche par nom.
 - Cards visuelles : emoji secteur, jauge de santé, nombre de flux en retard.
 - Clic sur un dossier → page détail avec onglets.
+- Gestion des secteurs d'activité (/secteurs, accessible à tous).
 
 DÉTAIL D'UN DOSSIER — ONGLETS :
 
@@ -110,7 +111,6 @@ NOTES (/notes)
 - Organigramme du cabinet : hiérarchie, rôles, sites.
 - Attribution des dossiers aux responsables.
 - Gestion des permissions par rôle (/permissions-roles, admin uniquement).
-- Gestion des secteurs d'activité (/admin/secteurs, admin uniquement).
 
 POINTAGE (/pointage)
 - Suivi des présences et absences.

@@ -60,10 +60,8 @@ export class SaisieTempsService {
 
   /**
    * Saisies d'UN collaborateur (soi-même par défaut, ou `collaborateurId` pour consulter le
-   * calendrier d'un collègue — cf. Agenda module Travail, façon "calendriers des contacts"
-   * Outlook). Pour tout collègue AUTRE que le demandeur, on ne renvoie jamais le détail
-   * (client, mission, commentaire) — uniquement de quoi positionner un bloc "occupé" :
-   * horaires, durée, type. Jamais un listing multi-collaborateurs non filtré ici.
+   * calendrier d'un collègue — cf. Agenda module Travail). Détail complet (client, mission,
+   * commentaire) y compris pour les collègues — même tenant uniquement.
    */
   async findByTenant(
     tenantId: number, requesterId: number, dateDebut?: string, dateFin?: string, collaborateurId?: number,
@@ -71,12 +69,7 @@ export class SaisieTempsService {
     const targetId = collaborateurId ?? requesterId;
     const where: any = { tenantId, collaborateurId: targetId };
     if (dateDebut && dateFin) where.date = Between(dateDebut, dateFin);
-    const saisies = await this.repo.find({ where, relations: ['client', 'collaborateur'], order: { date: 'DESC' } });
-    if (targetId === requesterId) return saisies;
-    return saisies.map((s) => ({
-      id: s.id, date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin,
-      dureeHeures: s.dureeHeures, type: s.type, collaborateurId: s.collaborateurId,
-    }));
+    return this.repo.find({ where, relations: ['client', 'collaborateur'], order: { date: 'DESC' } });
   }
 
   async totalJour(userId: number, date: string): Promise<number> {

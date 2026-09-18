@@ -485,7 +485,7 @@ export class SidebarComponent implements OnInit {
 
   private syncFromRoute(url: string) {
     if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
-    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles'))      this.activeModule.set('dossiers');
+    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles') || url.startsWith('/secteurs'))      this.activeModule.set('dossiers');
     else if (url.startsWith('/tasks') || url.startsWith('/travail'))  this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
@@ -516,6 +516,7 @@ export class SidebarComponent implements OnInit {
         groups: [{ label: '', items: [
           ...(this.canSeeMenu('clients')       ? [{ label: 'Tous les dossiers', route: '/clients',       icon: 'folder_open'   }] : []),
           ...(this.canSeeMenu('portefeuilles') && canPortef ? [{ label: 'Portefeuilles', route: '/portefeuilles', icon: 'account_tree' }] : []),
+          ...(this.canSeeMenu('clients')       ? [{ label: "Secteurs d'activité", route: '/secteurs',    icon: 'category'      }] : []),
         ]}],
       }] : []),
       ...(this.canSeeMenu('tasks') ? [{
@@ -556,7 +557,6 @@ export class SidebarComponent implements OnInit {
           { label: isAdmin ? 'Hiérarchie des équipes' : (this.auth.isChefAntenne() ? 'Mon antenne' : 'Mon équipe'), route: '/equipes', icon: 'people' },
           ...(this.auth.isAdmin() ? [
             { label: 'Permissions des rôles', route: '/permissions-roles', icon: 'security' },
-            { label: "Secteurs d'activité",   route: '/admin/secteurs',       icon: 'category'     },
           ] : []),
         ]}],
       }] : []),

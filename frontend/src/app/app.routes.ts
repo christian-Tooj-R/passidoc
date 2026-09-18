@@ -151,6 +151,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/clients/client-list/client-list.component').then((m) => m.ClientListComponent),
       },
       {
+        path: 'secteurs',
+        loadComponent: () => import('./features/admin/secteurs-admin.component').then((m) => m.SecteursAdminComponent),
+      },
+      {
         path: 'tasks',
         loadComponent: () => import('./features/tasks/tasks-global.component').then((m) => m.TasksGlobalComponent),
       },
@@ -187,12 +191,6 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
-      },
-      {
-        path: 'admin/secteurs',
-        canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
-        loadComponent: () => import('./features/admin/secteurs-admin.component').then((m) => m.SecteursAdminComponent),
       },
       {
         path: 'admin/pointage-config',

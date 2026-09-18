@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import {
   TypeTemps, CategorieNonFacturable, MissionCode, MISSION_CODES,
 } from '../../../core/services/saisie-temps.service';
@@ -50,7 +51,7 @@ export interface SaisieEditResult {
 @Component({
   selector: 'app-saisie-edit-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatAutocompleteModule],
   template: `
 <div class="sef-panel">
   <div class="sef-hd">
@@ -69,12 +70,15 @@ export interface SaisieEditResult {
       </div>
       <div class="lf-field lf-field--grow">
         <label class="lf-label">Client</label>
-        <select class="lf-input" [(ngModel)]="clientId" name="sefClientId">
-          <option [ngValue]="null">— Client (optionnel) —</option>
-          @for (c of clients; track c.id) {
-            <option [ngValue]="c.id">{{ c.nom }}</option>
+        <input class="lf-input" [(ngModel)]="clientSearch" name="sefClientSearch"
+               [matAutocomplete]="clientAuto" placeholder="— Client (optionnel) —"
+               (blur)="onClientBlur()" autocomplete="off" />
+        <mat-autocomplete #clientAuto="matAutocomplete" (optionSelected)="onClientSelected($event)">
+          <mat-option [value]="null">— Client (optionnel) —</mat-option>
+          @for (c of filteredClients; track c.id) {
+            <mat-option [value]="c.id">{{ c.nom }}</mat-option>
           }
-        </select>
+        </mat-autocomplete>
       </div>
       <div class="lf-field lf-field--grow">
         <label class="lf-label">Mission</label>
@@ -183,6 +187,7 @@ export class SaisieEditFormComponent implements OnChanges {
 
   date        = new Date().toISOString().split('T')[0];
   clientId: number | null = null;
+  clientSearch = '';
   missionCode: MissionCode | null = null;
   dureeInput  = '';
   type: TypeTemps = 'FACTURABLE';
@@ -206,6 +211,33 @@ export class SaisieEditFormComponent implements OnChanges {
       this.heureFin    = s.heureFin ?? '';
       this.localError  = '';
     }
+    if (changes['seed'] || changes['clients']) {
+      this.syncClientSearchFromId();
+    }
+  }
+
+  get filteredClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  onClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.clientId = event.option.value as number | null;
+    this.syncClientSearchFromId();
+  }
+
+  onClientBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncClientSearchFromId(), 200);
+  }
+
+  private syncClientSearchFromId() {
+    const c = this.clients.find(x => x.id === this.clientId);
+    this.clientSearch = c ? c.nom : '';
   }
 
   submit() {

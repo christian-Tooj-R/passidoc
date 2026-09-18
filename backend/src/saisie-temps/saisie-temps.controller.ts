@@ -34,7 +34,7 @@ export class SaisieTempsController {
   }
 
   @Get('tenant')
-  @ApiOperation({ summary: 'Saisies de temps — soi-même par défaut, ou un collègue précis via collaborateurId (vue "occupé/libre" façon Outlook, sans le détail client/mission/commentaire, pour tout collègue autre que soi-même)' })
+  @ApiOperation({ summary: 'Saisies de temps — soi-même par défaut, ou un collègue précis via collaborateurId (détail complet, y compris pour un collègue)' })
   findTenant(
     @Req() req: any,
     @Query('debut') debut?: string,
