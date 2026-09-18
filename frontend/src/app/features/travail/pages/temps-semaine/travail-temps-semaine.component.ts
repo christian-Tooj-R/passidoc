@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
+import { toLocalIso } from '../../../../core/services/date.util';
 import { UsersService } from '../../../../core/services/users.service';
 import { User } from '../../../../core/models/user.model';
 import { exportRowsToCsv } from '../../../../core/services/csv-export.util';
@@ -345,9 +346,9 @@ export class TravailTempsSemaineComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const now = new Date();
-    this.dateFin   = now.toISOString().split('T')[0];
+    this.dateFin   = toLocalIso(now);
     const debut = new Date(now); debut.setDate(debut.getDate() - 90);
-    this.dateDebut = debut.toISOString().split('T')[0];
+    this.dateDebut = toLocalIso(debut);
     this.usersSvc.getAll().pipe(takeUntil(this._d$)).subscribe(u => this.users = u);
     this.load();
   }

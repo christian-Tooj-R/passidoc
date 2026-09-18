@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
+import { toLocalIso } from '../../../../core/services/date.util';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -366,9 +367,9 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const now = new Date();
-    this.dateFin   = now.toISOString().split('T')[0];
+    this.dateFin   = toLocalIso(now);
     const debut = new Date(now); debut.setDate(debut.getDate() - 30);
-    this.dateDebut = debut.toISOString().split('T')[0];
+    this.dateDebut = toLocalIso(debut);
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
     this.usersSvc.getAll().pipe(takeUntil(this._d$)).subscribe(u => this.users = u);
     this.load();
@@ -399,16 +400,9 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
    *  on ne recharge qu'une fois les deux bornes définies. */
   onRangeChange() {
     if (!this.rangeStart || !this.rangeEnd) return;
-    this.dateDebut = this.toIso(this.rangeStart);
-    this.dateFin   = this.toIso(this.rangeEnd);
+    this.dateDebut = toLocalIso(this.rangeStart);
+    this.dateFin   = toLocalIso(this.rangeEnd);
     this.load();
-  }
-
-  private toIso(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
   }
 
   vider() {

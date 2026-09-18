@@ -8,6 +8,7 @@ import {
 } from '../../../core/services/saisie-temps.service';
 import { Client } from '../../../core/models/client.model';
 import { parseHHMM, toHHMM } from '../../../core/services/duree.util';
+import { toLocalIso } from '../../../core/services/date.util';
 
 const CATEGORIES_NF: { code: CategorieNonFacturable; label: string }[] = [
   { code: 'APPEL_CLIENT',     label: 'Appel client' },
@@ -185,7 +186,7 @@ export class SaisieEditFormComponent implements OnChanges {
   readonly missionCodes = MISSION_CODES;
   readonly categoriesNF = CATEGORIES_NF;
 
-  date        = new Date().toISOString().split('T')[0];
+  date        = toLocalIso(new Date());
   clientId: number | null = null;
   clientSearch = '';
   missionCode: MissionCode | null = null;

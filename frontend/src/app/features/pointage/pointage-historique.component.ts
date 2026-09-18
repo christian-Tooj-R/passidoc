@@ -8,6 +8,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { PointageService, Pointage } from '../../core/services/pointage.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TenantService } from '../../core/services/tenant.service';
+import { toLocalIso } from '../../core/services/date.util';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -243,13 +244,13 @@ export class PointageHistoriqueComponent implements OnInit {
   private auth = inject(AuthService);
   tenantSvc    = inject(TenantService);
 
-  readonly todayIso = new Date().toISOString().split('T')[0];
+  readonly todayIso = toLocalIso(new Date());
 
   loading = signal(true);
   vue     = signal<'moi' | 'equipe'>('moi');
 
-  dateFin   = new Date().toISOString().split('T')[0];
-  dateDebut = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; })();
+  dateFin   = toLocalIso(new Date());
+  dateDebut = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return toLocalIso(d); })();
   siteFiltre = '';
   recherche  = '';
 
@@ -259,16 +260,9 @@ export class PointageHistoriqueComponent implements OnInit {
 
   onRangeChange() {
     if (!this.rangeStart || !this.rangeEnd) return;
-    this.dateDebut = this.toIso(this.rangeStart);
-    this.dateFin   = this.toIso(this.rangeEnd);
+    this.dateDebut = toLocalIso(this.rangeStart);
+    this.dateFin   = toLocalIso(this.rangeEnd);
     this.load();
-  }
-
-  private toIso(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
   }
 
   private rowsMoi    = signal<HistoRow[]>([]);
@@ -342,8 +336,8 @@ export class PointageHistoriqueComponent implements OnInit {
   }
 
   vider() {
-    this.dateFin   = new Date().toISOString().split('T')[0];
-    this.dateDebut = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; })();
+    this.dateFin   = toLocalIso(new Date());
+    this.dateDebut = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return toLocalIso(d); })();
     this.rangeStart = this.rangeEnd = null;
     this.siteFiltre = '';
     this.recherche  = '';

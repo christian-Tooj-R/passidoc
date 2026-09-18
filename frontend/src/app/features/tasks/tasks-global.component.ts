@@ -12,6 +12,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastService } from '../../core/services/toast.service';
+import { toLocalIso } from '../../core/services/date.util';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -770,7 +771,7 @@ export class CreateTaskDialogComponent {
   tempsHeureDebut = '';
   tempsHeureFin = '';
   tempsDureeRaw = '';
-  tempsDate = new Date().toISOString().split('T')[0];
+  tempsDate = toLocalIso(new Date());
   readonly MISSIONS = MISSION_CODES;
 
   onAnyoneChange() {
@@ -2919,7 +2920,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   }
 
   private toISODate(d: Date): string {
-    return d.toISOString().split('T')[0];
+    return toLocalIso(d);
   }
 
   tasks: Task[] = [];
@@ -2995,7 +2996,7 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   }
 
   get monTotalAujourdhui(): number {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalIso(new Date());
     return this.mesSaisies.filter(s => s.date === today)
       .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
   }
@@ -3003,8 +3004,8 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   get monTotalSemaine(): number {
     const mon = this._lundiSemaine(new Date());
     const ven = new Date(mon); ven.setDate(ven.getDate() + 6);
-    const monStr = mon.toISOString().split('T')[0];
-    const venStr = ven.toISOString().split('T')[0];
+    const monStr = toLocalIso(mon);
+    const venStr = toLocalIso(ven);
     return this.mesSaisies.filter(s => s.date >= monStr && s.date <= venStr)
       .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
   }
@@ -3012,8 +3013,8 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   get monTotalFactSemaine(): number {
     const mon = this._lundiSemaine(new Date());
     const ven = new Date(mon); ven.setDate(ven.getDate() + 6);
-    const monStr = mon.toISOString().split('T')[0];
-    const venStr = ven.toISOString().split('T')[0];
+    const monStr = toLocalIso(mon);
+    const venStr = toLocalIso(ven);
     return this.mesSaisies.filter(s => s.date >= monStr && s.date <= venStr && s.type === 'FACTURABLE')
       .reduce((sum, s) => sum + (s.dureeHeures ?? 0), 0);
   }

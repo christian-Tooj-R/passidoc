@@ -12,6 +12,7 @@ import { UsersService } from '../../../../core/services/users.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { User } from '../../../../core/models/user.model';
 import { SaisieEditFormComponent, SaisieEditSeed, SaisieEditResult } from '../../shared/saisie-edit-form.component';
+import { toLocalIso } from '../../../../core/services/date.util';
 
 interface CalEvent {
   saisie: Partial<SaisieTemps>;
@@ -563,7 +564,7 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toLocalIso(d);
       const daySaisies = this.saisies().filter(s => s.date === dateStr || s.date?.startsWith(dateStr));
       const totalH = daySaisies.reduce((a, s) => a + s.dureeHeures, 0);
       const today = new Date();
@@ -583,7 +584,7 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     if (this.viewMode() === 'jour') {
       const base = new Date();
       base.setDate(base.getDate() + this.dayOffset());
-      const targetDate = base.toISOString().split('T')[0];
+      const targetDate = toLocalIso(base);
       const found = days.find(d => d.date === targetDate);
       return found ? [found] : [days[0]];
     }
@@ -948,7 +949,7 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
 
   onNewTemps() {
     const jour = this.viewMode() === 'jour' ? this.visibleDays()[0]?.date : this.weekDays().find(d => d.isToday)?.date;
-    this.openForm(jour ?? new Date().toISOString().split('T')[0]);
+    this.openForm(jour ?? toLocalIso(new Date()));
   }
 
   ngOnDestroy() { this._d$.next(); this._d$.complete(); }

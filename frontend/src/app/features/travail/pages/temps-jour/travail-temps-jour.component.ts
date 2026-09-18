@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
+import { toLocalIso } from '../../../../core/services/date.util';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -330,9 +331,9 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const now = new Date();
-    this.dateFin   = now.toISOString().split('T')[0];
+    this.dateFin   = toLocalIso(now);
     const debut = new Date(now); debut.setDate(debut.getDate() - 30);
-    this.dateDebut = debut.toISOString().split('T')[0];
+    this.dateDebut = toLocalIso(debut);
 
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
     this.usersSvc.getAll().pipe(takeUntil(this._d$)).subscribe(u => this.users = u);

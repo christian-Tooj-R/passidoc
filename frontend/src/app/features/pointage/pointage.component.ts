@@ -15,6 +15,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { GeoLocationService } from '../../core/services/geo-location.service';
 import { DataTableComponent, ColDirective, ColumnDef } from '../../shared/data-table/data-table.component';
 import { TenantService } from '../../core/services/tenant.service';
+import { toLocalIso, toLocalMonth } from '../../core/services/date.util';
 
 type GeoEtat = 'idle' | 'checking' | 'ok' | 'trop_loin' | 'refuse' | 'indisponible';
 
@@ -483,7 +484,7 @@ export class PointageComponent implements OnInit, OnDestroy {
   );
 
   joursPresentsMois = computed(() => {
-    const moisStr = new Date().toISOString().slice(0, 7);
+    const moisStr = toLocalMonth(new Date());
     return this.historique().filter(p => p.date.startsWith(moisStr)).length;
   });
 
@@ -511,7 +512,7 @@ export class PointageComponent implements OnInit, OnDestroy {
   dateAdmin = computed(() => {
     const d = new Date();
     d.setDate(d.getDate() + this.jourOffsetAdmin());
-    return d.toISOString().split('T')[0];
+    return toLocalIso(d);
   });
 
   isAdminAujourdhui = computed(() => this.jourOffsetAdmin() === 0);
@@ -670,7 +671,7 @@ export class PointageComponent implements OnInit, OnDestroy {
   }
 
   isToday(iso: string): boolean {
-    return iso === new Date().toISOString().split('T')[0];
+    return iso === toLocalIso(new Date());
   }
 
   // ── Données par employé ───────────────────────────────────────
@@ -888,13 +889,13 @@ export class PointageComponent implements OnInit, OnDestroy {
 
   semaine(): JourSemaine[] {
     const today    = new Date();
-    const todayIso = today.toISOString().split('T')[0];
+    const todayIso = toLocalIso(today);
     const { lundi } = this.bornesSemaine();
 
     return [0, 1, 2, 3, 4].map(i => {
       const d   = new Date(lundi);
       d.setDate(lundi.getDate() + i);
-      const iso     = d.toISOString().split('T')[0];
+      const iso     = toLocalIso(d);
       const isToday = iso === todayIso;
       const isFutur = d > today && !isToday;
       const p       = this.historique().find(h => h.date === iso) ?? null;

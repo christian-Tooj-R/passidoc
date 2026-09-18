@@ -10,6 +10,7 @@ import {
 import { ClientsService } from '../../../../core/services/clients.service';
 import { Client } from '../../../../core/models/client.model';
 import { parseHHMM } from '../../../../core/services/duree.util';
+import { toLocalIso } from '../../../../core/services/date.util';
 
 const CATEGORIES_NF: { code: CategorieNonFacturable; label: string }[] = [
   { code: 'APPEL_CLIENT',     label: 'Appel client' },
@@ -231,7 +232,7 @@ export class TravailSaisieLigneComponent implements OnInit, OnDestroy {
   rows    = signal<SaisieTemps[]>([]);
   clients: Client[] = [];
 
-  date        = new Date().toISOString().split('T')[0];
+  date        = toLocalIso(new Date());
   clientId: number | null = null;
   missionCode: MissionCode | null = null;
   dureeInput  = '';

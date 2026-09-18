@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TimerService, SaisieTempsService, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { Client } from '../../core/models/client.model';
+import { toLocalIso } from '../../core/services/date.util';
 
 interface NavSection { label: string; items: NavItem[]; }
 interface NavItem { label: string; icon: string; route: string; }
@@ -503,7 +504,7 @@ export class TravailComponent implements OnInit, OnDestroy {
       return;
     }
     const dto: CreateSaisieTempsDto = {
-      date:        new Date().toISOString().split('T')[0],
+      date:        toLocalIso(new Date()),
       dureeHeures: this.timerStoppedH,
       type:        this.timerFormType,
       missionCode: this.timerFormMission || undefined,
