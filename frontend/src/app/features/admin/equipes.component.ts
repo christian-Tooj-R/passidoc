@@ -721,7 +721,7 @@ interface CreateForm {
         <label>Rôle hiérarchique</label>
         <div class="select-wrap">
           <select [(ngModel)]="editForm()!.role" (ngModelChange)="onRoleChange()">
-            <option value="COLLABORATEUR">Collaborateur {{ tenantSvc.poleLabel2() }}</option>
+            <option value="COLLABORATEUR">Collaborateur</option>
             @if (editForm()!.antenne) {
               <option value="CHEF_MISSION">Chef de mission</option>
               <option value="CHEF_ANTENNE">Chef d'antenne</option>

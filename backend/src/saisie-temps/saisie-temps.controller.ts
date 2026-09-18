@@ -34,9 +34,17 @@ export class SaisieTempsController {
   }
 
   @Get('tenant')
-  @ApiOperation({ summary: 'Toutes les saisies du tenant (admin)' })
-  findTenant(@Req() req: any, @Query('debut') debut?: string, @Query('fin') fin?: string) {
-    return this.service.findByTenant(req.user.tenantId, debut, fin);
+  @ApiOperation({ summary: 'Saisies de temps — soi-même par défaut, ou un collègue précis via collaborateurId (vue "occupé/libre" façon Outlook, sans le détail client/mission/commentaire, pour tout collègue autre que soi-même)' })
+  findTenant(
+    @Req() req: any,
+    @Query('debut') debut?: string,
+    @Query('fin') fin?: string,
+    @Query('collaborateurId') collaborateurId?: string,
+  ) {
+    return this.service.findByTenant(
+      req.user.tenantId, req.user.id, debut, fin,
+      collaborateurId ? Number(collaborateurId) : undefined,
+    );
   }
 
   @Get('planning')

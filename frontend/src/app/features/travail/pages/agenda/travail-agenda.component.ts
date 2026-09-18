@@ -8,15 +8,26 @@ import { Subject, takeUntil, interval } from 'rxjs';
 import { SaisieTempsService, SaisieTemps } from '../../../../core/services/saisie-temps.service';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { Client } from '../../../../core/models/client.model';
+import { UsersService } from '../../../../core/services/users.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { User } from '../../../../core/models/user.model';
 import { SaisieEditFormComponent, SaisieEditSeed, SaisieEditResult } from '../../shared/saisie-edit-form.component';
 
 interface CalEvent {
-  saisie: SaisieTemps;
+  saisie: Partial<SaisieTemps>;
   topPx: number;
   heightPx: number;
   allDay: boolean;
   colorClass: string;
   label: string;
+}
+
+interface CalGroup {
+  key: string;
+  label: string;
+  readonly: boolean;
+  saisies: Partial<SaisieTemps>[];
+  loading: boolean;
 }
 
 interface Selection {
@@ -67,6 +78,10 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     </div>
 
     <div class="ag-header__right">
+      <button class="nav-btn nav-btn--collegues" [class.nav-btn--active]="sidebarOpen()"
+              matTooltip="Calendriers des collègues" (click)="sidebarOpen.set(!sidebarOpen())">
+        <mat-icon>people</mat-icon>
+      </button>
       <div class="view-toggle">
         <button [class.vt-active]="viewMode() === 'semaine'" (click)="setView('semaine')">Semaine</button>
         <button [class.vt-active]="viewMode() === 'jour'"    (click)="setView('jour')">Jour</button>
@@ -82,6 +97,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     <span class="leg-item"><span class="leg-dot leg-green"></span> Facturable</span>
     <span class="leg-item"><span class="leg-dot leg-red"></span> Non facturable</span>
     <span class="leg-item"><span class="leg-dot leg-blue"></span> Autre</span>
+    <span class="leg-item"><span class="leg-dot leg-grey"></span> Occupé (collègue)</span>
     @if (selection()) {
       <span class="leg-sel">
         <mat-icon>touch_app</mat-icon>
@@ -93,105 +109,159 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     <span class="leg-total">Total semaine : <strong>{{ totalWeekH() | number:'1.1-1' }}h</strong></span>
   </div>
 
-  @if (loading()) {
-    <div class="loading-state">
-      <mat-icon class="spin">refresh</mat-icon>
-      <span>Chargement de l'agenda…</span>
-    </div>
-  } @else {
+  <div class="ag-body">
 
-    <!-- ── Grille calendrier ── -->
-    <div class="cal-wrap">
-      <div class="cal-grid">
-
-        <!-- Colonne heures -->
-        <div class="col-time">
-          <div class="col-hd col-hd--time"></div>
-          <div class="allday-hd"><span>Toute la journée</span></div>
-          <div class="body-time">
-            @for (slot of timeSlots; track slot.index) {
-              <div class="tl-slot" [class.tl-slot--hour]="slot.isHour">
-                @if (slot.isHour) { <span>{{ slot.label }}</span> }
-              </div>
-            }
-          </div>
+    <!-- ── Sidebar "Calendriers des collègues" (façon Outlook) ── -->
+    @if (sidebarOpen()) {
+      <div class="ag-sidebar">
+        <div class="sidebar-hd">
+          <span>Calendriers</span>
+          <button class="sidebar-close" (click)="sidebarOpen.set(false)"><mat-icon>close</mat-icon></button>
         </div>
 
-        <!-- Colonnes jours -->
-        @for (day of visibleDays(); track day.date) {
-          <div class="cal-col" [class.cal-col--today]="day.isToday">
+        <div class="sidebar-section">Mon calendrier</div>
+        <label class="sidebar-item sidebar-item--me">
+          <input type="checkbox" checked disabled />
+          <span class="sidebar-dot" style="background:#6366f1"></span>
+          <span class="sidebar-name">{{ myLabel() }}</span>
+        </label>
 
-            <!-- Header -->
-            <div class="col-hd" [class.col-hd--today]="day.isToday">
-              <div class="hd-name">{{ day.name }}</div>
-              <div class="hd-num">{{ day.num }}</div>
-              <div class="hd-total" [class.hd-total--has]="day.totalH > 0">
-                {{ day.totalH | number:'1.1-1' }}h
-              </div>
-            </div>
-
-            <!-- All-day -->
-            <div class="allday-zone">
-              @for (ev of allDayFor(day.date); track ev.saisie.id) {
-                <div class="allday-chip" [class]="ev.colorClass" [matTooltip]="ev.label">
-                  {{ ev.saisie.dureeHeures }}h · {{ ev.label | slice:0:18 }}
-                </div>
-              }
-              @if (allDayFor(day.date).length === 0) { <div class="allday-empty"></div> }
-            </div>
-
-            <!-- Corps positionné -->
-            <div class="cal-body"
-                 [style.height]="bodyH + 'px'"
-                 (mousedown)="startSelect($event, day.date)"
-                 (mousemove)="moveSelect($event)"
-                 (mouseup)="endSelect()">
-
-              <!-- Grille slots -->
-              @for (slot of timeSlots; track slot.index) {
-                <div class="slot" [class.slot--hour]="slot.isHour"></div>
-              }
-
-              <!-- Indicateur temps courant (colonne today) -->
-              @if (day.isToday && nowTopPx() >= 0) {
-                <div class="now-line" [style.top]="nowTopPx() + 'px'">
-                  <div class="now-dot"></div>
-                </div>
-              }
-
-              <!-- Sélection en cours -->
-              @if (selection()?.day === day.date) {
-                <div class="sel-block"
-                     [style.top]="selTop() + 'px'"
-                     [style.height]="selHeight() + 'px'">
-                  <span>{{ selLabel() }}</span>
-                </div>
-              }
-
-              <!-- Événements -->
-              @for (ev of positionedFor(day.date); track ev.saisie.id) {
-                <div class="ev-block"
-                     [class]="ev.colorClass"
-                     [style.top]="ev.topPx + 'px'"
-                     [style.height]="ev.heightPx + 'px'"
-                     [matTooltip]="ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client.nom : '')">
-                  <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}</div>
-                  <div class="ev-lbl">{{ ev.label }}</div>
-                  @if (ev.saisie.client && ev.heightPx > 50) {
-                    <div class="ev-client">{{ ev.saisie.client.nom }}</div>
-                  }
-                  @if (ev.heightPx > 70) {
-                    <div class="ev-dur">{{ ev.saisie.dureeHeures }}h</div>
-                  }
-                </div>
-              }
-
-            </div>
-          </div>
+        <div class="sidebar-section">Calendriers des collègues</div>
+        @if (colleaguesLoading()) {
+          <div class="sidebar-loading"><mat-icon class="spin">refresh</mat-icon> Chargement…</div>
+        }
+        @for (c of colleagues(); track c.id) {
+          <label class="sidebar-item">
+            <input type="checkbox" [checked]="isSelected(c.id)" (change)="toggleColleague(c)" />
+            <span class="sidebar-dot" [style.background]="colorFor(c.id)"></span>
+            <span class="sidebar-name">{{ c.firstName }} {{ c.lastName }}</span>
+            @if (colleagueLoadingMap()[c.id]) { <mat-icon class="spin sidebar-item-spin">refresh</mat-icon> }
+          </label>
+        }
+        @if (!colleaguesLoading() && colleagues().length === 0) {
+          <div class="sidebar-empty">Aucun autre collègue.</div>
         }
       </div>
-    </div>
-  }
+    }
+
+    @if (loading()) {
+      <div class="loading-state">
+        <mat-icon class="spin">refresh</mat-icon>
+        <span>Chargement de l'agenda…</span>
+      </div>
+    } @else {
+
+      <!-- ── Grille calendrier (moi + collègues sélectionnés, côte à côte) ── -->
+      <div class="cal-wrap">
+        <div class="cal-grid">
+
+          <!-- Colonne heures (unique, partagée par tous les groupes) -->
+          <div class="col-time">
+            <div class="hd-group-bar"></div>
+            <div class="col-hd col-hd--time"></div>
+            <div class="allday-hd"><span>Toute la journée</span></div>
+            <div class="body-time">
+              @for (slot of timeSlots; track slot.index) {
+                <div class="tl-slot" [class.tl-slot--hour]="slot.isHour">
+                  @if (slot.isHour) { <span>{{ slot.label }}</span> }
+                </div>
+              }
+            </div>
+          </div>
+
+          @for (group of calGroups(); track group.key; let firstGroup = $first) {
+
+            @if (!firstGroup) { <div class="cal-group-sep"></div> }
+
+            @for (day of visibleDays(); track day.date; let firstDay = $first) {
+              <div class="cal-col" [class.cal-col--today]="day.isToday" [class.cal-col--readonly]="group.readonly">
+
+                <!-- Bandeau nom du groupe (moi / collègue) — hauteur fixe sur toutes les
+                     colonnes pour garder l'alignement, texte affiché que sur le 1er jour -->
+                <div class="hd-group-bar">
+                  @if (firstDay) {
+                    <span class="hd-group-label" [class.hd-group-label--me]="!group.readonly">
+                      {{ group.label }}
+                      @if (group.loading) { <mat-icon class="spin hd-group-spin">refresh</mat-icon> }
+                    </span>
+                  }
+                </div>
+
+                <!-- Header -->
+                <div class="col-hd" [class.col-hd--today]="day.isToday">
+                  <div class="hd-name">{{ day.name }}</div>
+                  <div class="hd-num">{{ day.num }}</div>
+                  @if (!group.readonly) {
+                    <div class="hd-total" [class.hd-total--has]="day.totalH > 0">
+                      {{ day.totalH | number:'1.1-1' }}h
+                    </div>
+                  }
+                </div>
+
+                <!-- All-day -->
+                <div class="allday-zone">
+                  @for (ev of allDayForGroup(group, day.date); track $index) {
+                    <div class="allday-chip" [class]="ev.colorClass" [matTooltip]="ev.label">
+                      {{ ev.saisie.dureeHeures }}h · {{ ev.label | slice:0:18 }}
+                    </div>
+                  }
+                  @if (allDayForGroup(group, day.date).length === 0) { <div class="allday-empty"></div> }
+                </div>
+
+                <!-- Corps positionné -->
+                <div class="cal-body"
+                     [style.height]="bodyH + 'px'"
+                     (mousedown)="!group.readonly && startSelect($event, day.date)"
+                     (mousemove)="!group.readonly && moveSelect($event)"
+                     (mouseup)="!group.readonly && endSelect()">
+
+                  <!-- Grille slots -->
+                  @for (slot of timeSlots; track slot.index) {
+                    <div class="slot" [class.slot--hour]="slot.isHour"></div>
+                  }
+
+                  <!-- Indicateur temps courant (colonne today, groupe "moi" uniquement) -->
+                  @if (day.isToday && !group.readonly && nowTopPx() >= 0) {
+                    <div class="now-line" [style.top]="nowTopPx() + 'px'">
+                      <div class="now-dot"></div>
+                    </div>
+                  }
+
+                  <!-- Sélection en cours -->
+                  @if (!group.readonly && selection()?.day === day.date) {
+                    <div class="sel-block"
+                         [style.top]="selTop() + 'px'"
+                         [style.height]="selHeight() + 'px'">
+                      <span>{{ selLabel() }}</span>
+                    </div>
+                  }
+
+                  <!-- Événements -->
+                  @for (ev of positionedForGroup(group, day.date); track $index) {
+                    <div class="ev-block"
+                         [class]="ev.colorClass"
+                         [style.top]="ev.topPx + 'px'"
+                         [style.height]="ev.heightPx + 'px'"
+                         [matTooltip]="ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client!.nom : '')">
+                      <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}</div>
+                      <div class="ev-lbl">{{ ev.label }}</div>
+                      @if (!group.readonly && ev.saisie.client && ev.heightPx > 50) {
+                        <div class="ev-client">{{ ev.saisie.client!.nom }}</div>
+                      }
+                      @if (!group.readonly && ev.heightPx > 70) {
+                        <div class="ev-dur">{{ ev.saisie.dureeHeures }}h</div>
+                      }
+                    </div>
+                  }
+
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  </div>
 
   <!-- ── Formulaire saisie créneau sélectionné ── -->
   @if (editing()) {
@@ -241,6 +311,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     .nav-btn:hover { background:#f1f5f9; }
     .nav-btn mat-icon { font-size:18px; width:18px; height:18px; }
     .nav-btn--datepick { position:relative; overflow:hidden; }
+    .nav-btn--collegues.nav-btn--active { background:#eef2ff; border-color:#6366f1; color:#6366f1; }
     .date-jump-input {
       position:absolute; inset:0; width:100%; height:100%;
       opacity:0; cursor:pointer; border:none; padding:0; margin:0;
@@ -276,6 +347,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     .leg-green { background:#22c55e; }
     .leg-red   { background:#f87171; }
     .leg-blue  { background:#60a5fa; }
+    .leg-grey  { background:#94a3b8; }
     .leg-sel {
       display:flex; align-items:center; gap:8px;
       background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px;
@@ -292,16 +364,52 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .leg-total { margin-left:auto; color:#374151; font-size:12px; }
 
-    .loading-state { display:flex; align-items:center; justify-content:center; gap:10px; padding:60px; color:#94a3b8; }
+    .loading-state { display:flex; align-items:center; justify-content:center; gap:10px; padding:60px; color:#94a3b8; flex:1; }
     .spin { animation:spin 1s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Corps (sidebar + grille) ── */
+    .ag-body { flex:1; display:flex; min-height:0; overflow:hidden; }
+
+    /* ── Sidebar collègues (façon Outlook) ── */
+    .ag-sidebar {
+      width:220px; flex-shrink:0; background:#fff; border-right:1px solid #e2e8f0;
+      display:flex; flex-direction:column; overflow-y:auto; padding:12px 0;
+    }
+    .sidebar-hd {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 14px 10px; font-size:12px; font-weight:700; color:#0f172a;
+      text-transform:uppercase; letter-spacing:.04em;
+    }
+    .sidebar-close { background:none; border:none; cursor:pointer; color:#94a3b8; display:flex; }
+    .sidebar-close mat-icon { font-size:16px; width:16px; height:16px; }
+    .sidebar-section {
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+      color:#94a3b8; padding:10px 14px 4px;
+    }
+    .sidebar-item {
+      display:flex; align-items:center; gap:9px; padding:6px 14px; cursor:pointer;
+      font-size:13px; color:#374151;
+    }
+    .sidebar-item:hover { background:#f8fafc; }
+    .sidebar-item--me { cursor:default; }
+    .sidebar-item--me:hover { background:none; }
+    .sidebar-item input[type="checkbox"] { accent-color:#6366f1; cursor:pointer; flex-shrink:0; }
+    .sidebar-item--me input[type="checkbox"] { cursor:default; }
+    .sidebar-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .sidebar-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-item-spin { font-size:13px !important; width:13px !important; height:13px !important; color:#94a3b8; }
+    .sidebar-loading, .sidebar-empty {
+      display:flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; color:#94a3b8;
+    }
+    .sidebar-loading mat-icon { font-size:14px; width:14px; height:14px; }
 
     /* ── Grille ── */
     .cal-wrap { flex:1; overflow:auto; }
     .cal-grid  { display:flex; min-width:600px; }
 
     /* Colonne heures */
-    .col-time { flex:0 0 52px; display:flex; flex-direction:column; }
+    .col-time { flex:0 0 52px; display:flex; flex-direction:column; position:sticky; left:0; z-index:21; background:#fff; }
     .col-hd   { height:72px; background:#fff; border-bottom:2px solid #e2e8f0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:sticky; top:0; z-index:20; flex-shrink:0; }
     .col-hd--time { border-right:1px solid #e2e8f0; }
     .col-hd--today { background:#eef2ff; border-bottom-color:#6366f1; }
@@ -319,9 +427,26 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .tl-slot--hour { border-bottom:1px solid #e2e8f0; }
 
+    /* Séparateur entre groupes de calendriers (moi / collègues) */
+    .cal-group-sep { flex:0 0 10px; background:#f1f5f9; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; }
+
     /* Colonnes jours */
     .cal-col { display:flex; flex-direction:column; flex:1; border-right:1px solid #f1f5f9; min-width:90px; }
     .cal-col--today { background:rgba(99,102,241,.015); }
+    .cal-col--readonly { background:#fafbfc; }
+
+    .hd-group-bar {
+      height:18px; flex-shrink:0; display:flex; align-items:center;
+      padding:0 6px; background:#f8fafc; border-bottom:1px solid #eef1f5; border-right:1px solid #e2e8f0;
+      position:sticky; top:0; z-index:21;
+    }
+    .hd-group-label {
+      font-size:9.5px; font-weight:700; color:#64748b;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+      display:flex; align-items:center; gap:3px;
+    }
+    .hd-group-label--me { color:#6366f1; }
+    .hd-group-spin { font-size:10px !important; width:10px !important; height:10px !important; }
 
     .hd-name  { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-weight:600; }
     .hd-num   { font-size:22px; font-weight:800; color:#0f172a; line-height:1; margin:2px 0; }
@@ -346,6 +471,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 
     /* Corps positionné */
     .cal-body { position:relative; flex:1; cursor:crosshair; }
+    .cal-col--readonly .cal-body { cursor:default; }
     .slot { height:44px; border-bottom:1px solid #f8f8f8; }
     .slot--hour { border-bottom:1px solid #e8ecf0; }
 
@@ -378,6 +504,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     .ev-facturable     { background:linear-gradient(135deg,#22c55e,#16a34a); }
     .ev-non-facturable { background:linear-gradient(135deg,#f87171,#dc2626); }
     .ev-autre          { background:linear-gradient(135deg,#60a5fa,#2563eb); }
+    .ev-occupe         { background:linear-gradient(135deg,#94a3b8,#64748b); cursor:default; }
     .ev-time   { font-size:9px; opacity:.85; font-weight:600; letter-spacing:.02em; }
     .ev-lbl    { font-weight:700; line-height:1.2; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ev-client { font-size:9.5px; opacity:.8; margin-top:2px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
@@ -398,6 +525,8 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 export class TravailAgendaComponent implements OnInit, OnDestroy {
   private saisiesSvc = inject(SaisieTempsService);
   private clientsSvc = inject(ClientsService);
+  private usersSvc   = inject(UsersService);
+  private auth       = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private _d$ = new Subject<void>();
 
@@ -407,6 +536,15 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
   viewMode   = signal<'semaine' | 'jour'>('semaine');
   saisies    = signal<SaisieTemps[]>([]);
   clients: Client[] = [];
+
+  // Collègues (façon "calendriers des contacts" Outlook)
+  sidebarOpen           = signal(false);
+  colleagues            = signal<User[]>([]);
+  colleaguesLoading     = signal(true);
+  selectedColleagueIds  = signal<Set<number>>(new Set());
+  colleagueSaisies      = signal<Record<number, Partial<SaisieTemps>[]>>({});
+  colleagueLoadingMap   = signal<Record<number, boolean>>({});
+  private readonly COLLEAGUE_COLORS = ['#f59e0b', '#10b981', '#ec4899', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16'];
 
   // Sélection
   selection  = signal<Selection | null>(null);
@@ -479,6 +617,34 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
 
   totalWeekH = computed(() => this.saisies().reduce((a, s) => a + s.dureeHeures, 0));
 
+  myLabel = computed(() => {
+    const u = this.auth.currentUser();
+    return u ? `${u.firstName} ${u.lastName}` : 'Moi';
+  });
+
+  /** Groupes de calendriers affichés côte à côte : "moi" en premier, puis chaque collègue
+   *  actuellement coché dans la sidebar (façon "calendriers des contacts" Outlook). */
+  calGroups = computed<CalGroup[]>(() => {
+    const groups: CalGroup[] = [
+      { key: 'me', label: this.myLabel(), readonly: false, saisies: this.saisies(), loading: false },
+    ];
+    const selected = this.selectedColleagueIds();
+    if (selected.size === 0) return groups;
+    const dataMap = this.colleagueSaisies();
+    const loadingMap = this.colleagueLoadingMap();
+    for (const c of this.colleagues()) {
+      if (!selected.has(c.id)) continue;
+      groups.push({
+        key: `c-${c.id}`,
+        label: `${c.firstName} ${c.lastName}`,
+        readonly: true,
+        saisies: dataMap[c.id] ?? [],
+        loading: !!loadingMap[c.id],
+      });
+    }
+    return groups;
+  });
+
   /** Date affichée dans le sélecteur du bouton calendrier : le jour visible en vue "jour",
    *  le lundi de la semaine visible en vue "semaine". */
   jumpDateValue = computed(() => {
@@ -513,6 +679,16 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     this.updateNowLine();
     interval(60000).pipe(takeUntil(this._d$)).subscribe(() => this.updateNowLine());
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
+
+    this.colleaguesLoading.set(true);
+    const myId = this.auth.currentUser()?.id;
+    this.usersSvc.getAll().pipe(takeUntil(this._d$)).subscribe({
+      next: users => {
+        this.colleagues.set(users.filter(u => u.id !== myId && u.isActive));
+        this.colleaguesLoading.set(false);
+      },
+      error: () => this.colleaguesLoading.set(false),
+    });
   }
 
   private updateNowLine() {
@@ -533,27 +709,67 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
         next: s => { this.saisies.set(s); this.loading.set(false); },
         error: () => this.loading.set(false),
       });
+    // Recharge aussi les collègues actuellement affichés, pour la nouvelle période visible.
+    for (const id of this.selectedColleagueIds()) this.loadColleague(id);
   }
 
-  allDayFor(date: string): CalEvent[] {
-    return this.saisies()
+  isSelected(id: number): boolean { return this.selectedColleagueIds().has(id); }
+
+  colorFor(id: number): string {
+    const idx = this.colleagues().findIndex(c => c.id === id);
+    return this.COLLEAGUE_COLORS[idx % this.COLLEAGUE_COLORS.length] ?? '#94a3b8';
+  }
+
+  toggleColleague(c: User) {
+    const sel = new Set(this.selectedColleagueIds());
+    if (sel.has(c.id)) {
+      sel.delete(c.id);
+      this.colleagueSaisies.update(m => { const n = { ...m }; delete n[c.id]; return n; });
+    } else {
+      sel.add(c.id);
+      this.loadColleague(c.id);
+    }
+    this.selectedColleagueIds.set(sel);
+  }
+
+  private loadColleague(id: number) {
+    const days = this.weekDays();
+    this.colleagueLoadingMap.update(m => ({ ...m, [id]: true }));
+    this.saisiesSvc.getTenant({ dateDebut: days[0].date, dateFin: days[6].date, collaborateurId: id })
+      .pipe(takeUntil(this._d$))
+      .subscribe({
+        next: s => {
+          this.colleagueSaisies.update(m => ({ ...m, [id]: s }));
+          this.colleagueLoadingMap.update(m => ({ ...m, [id]: false }));
+        },
+        error: () => this.colleagueLoadingMap.update(m => ({ ...m, [id]: false })),
+      });
+  }
+
+  allDayForGroup(group: CalGroup, date: string): CalEvent[] {
+    return group.saisies
       .filter(s => (s.date === date || s.date?.startsWith(date)) && !s.heureDebut)
-      .map(s => this.toEv(s, true));
+      .map(s => this.toEv(s, true, group.readonly));
   }
 
-  positionedFor(date: string): CalEvent[] {
-    return this.saisies()
+  positionedForGroup(group: CalGroup, date: string): CalEvent[] {
+    return group.saisies
       .filter(s => (s.date === date || s.date?.startsWith(date)) && !!s.heureDebut)
-      .map(s => this.toEv(s, false));
+      .map(s => this.toEv(s, false, group.readonly));
   }
 
-  private toEv(s: SaisieTemps, allDay: boolean): CalEvent {
+  private toEv(s: Partial<SaisieTemps>, allDay: boolean, readonlyGroup: boolean): CalEvent {
     let topPx = 0;
-    const heightPx = Math.max(SLOT_H * 0.6, s.dureeHeures * 2 * SLOT_H);
+    const dureeHeures = s.dureeHeures ?? 0;
+    const heightPx = Math.max(SLOT_H * 0.6, dureeHeures * 2 * SLOT_H);
     if (!allDay && s.heureDebut) {
       const [h, m] = s.heureDebut.split(':').map(Number);
       const startMin = h * 60 + (m ?? 0);
       topPx = Math.max(0, ((startMin - CAL_START * 60) / 30) * SLOT_H);
+    }
+    // Vue collègue (façon Outlook) : jamais le détail, juste "Occupé(e)".
+    if (readonlyGroup) {
+      return { saisie: s, topPx, heightPx, allDay, colorClass: 'ev-occupe', label: 'Occupé(e)' };
     }
     const colorClass = s.type === 'FACTURABLE'
       ? 'ev-facturable'

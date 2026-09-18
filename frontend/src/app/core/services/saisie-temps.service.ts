@@ -368,6 +368,7 @@ export class SaisieTempsService {
     const p: Record<string, string> = {};
     if (params.dateDebut)       p['debut']           = params.dateDebut;
     if (params.dateFin)         p['fin']             = params.dateFin;
+    if (params.collaborateurId) p['collaborateurId'] = String(params.collaborateurId);
     return this.http.get<SaisieTemps[]>(`${this.api}/tenant`, { params: p });
   }
 }
