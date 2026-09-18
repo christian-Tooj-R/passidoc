@@ -187,6 +187,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/pointage/pointage.component').then((m) => m.PointageComponent),
       },
       {
+        path: 'pointage/historique',
+        loadComponent: () => import('./features/pointage/pointage-historique.component').then((m) => m.PointageHistoriqueComponent),
+      },
+      {
         path: 'admin',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },

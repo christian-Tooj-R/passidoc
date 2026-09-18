@@ -166,26 +166,34 @@ export class PointageService {
     return users.map(u => ({ user: u, pointage: map.get(u.id) ?? null }));
   }
 
-  // ── Historique individuel (30 jours) ────────────────────────
-  async getHistorique(userId: number): Promise<Pointage[]> {
-    return this.repo.createQueryBuilder('p')
+  // ── Historique individuel — 30 derniers jours par défaut, ou plage explicite ──
+  async getHistorique(userId: number, dateDebut?: string, dateFin?: string): Promise<Pointage[]> {
+    const q = this.repo.createQueryBuilder('p')
       .leftJoinAndSelect('p.pauses', 'pp')
       .where('p.userId = :userId', { userId })
-      .orderBy('p.date', 'DESC')
-      .limit(30)
-      .getMany();
+      .orderBy('p.date', 'DESC');
+    if (dateDebut && dateFin) {
+      q.andWhere('p.date BETWEEN :dateDebut AND :dateFin', { dateDebut, dateFin });
+    } else {
+      q.limit(30);
+    }
+    return q.getMany();
   }
 
-  // ── Historique global admin (200 lignes) ────────────────────
-  async getHistoriqueAll(site?: string, tenantId?: number): Promise<(Pointage & { user: User })[]> {
+  // ── Historique global admin — 200 lignes par défaut, ou plage explicite ──
+  async getHistoriqueAll(site?: string, tenantId?: number, dateDebut?: string, dateFin?: string): Promise<(Pointage & { user: User })[]> {
     const q = this.repo.createQueryBuilder('p')
       .leftJoinAndSelect('p.user', 'u')
       .leftJoinAndSelect('p.pauses', 'pp')
       .orderBy('p.date', 'DESC')
-      .addOrderBy('p.heureArrivee', 'DESC')
-      .limit(200);
+      .addOrderBy('p.heureArrivee', 'DESC');
     if (site) q.andWhere('u.site = :site', { site });
     if (tenantId) q.andWhere('p.tenantId = :tenantId', { tenantId });
+    if (dateDebut && dateFin) {
+      q.andWhere('p.date BETWEEN :dateDebut AND :dateFin', { dateDebut, dateFin });
+    } else {
+      q.limit(200);
+    }
     return q.getMany() as any;
   }
 

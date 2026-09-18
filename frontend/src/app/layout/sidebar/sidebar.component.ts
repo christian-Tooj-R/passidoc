@@ -143,7 +143,7 @@ interface AppModule {
               @for (item of group.items; track item.route) {
                 <a [routerLink]="item.route"
                    routerLinkActive="active"
-                   [routerLinkActiveOptions]="{ exact: true, queryParams: 'ignored' }"
+                   [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
                    #rla="routerLinkActive"
                    class="panel-item"
                    [class.panel-item--active]="rla.isActive"
@@ -565,6 +565,7 @@ export class SidebarComponent implements OnInit {
         color: '#0F766E', activeBg: '#CCFBF1',
         groups: [{ label: '', items: [
           { label: 'Présences du jour', route: '/pointage', icon: 'fingerprint' },
+          { label: 'Historique', route: '/pointage/historique', icon: 'history' },
           ...(isAdmin ? [
             { label: 'Config. pointage', route: '/admin/pointage-config', icon: 'location_on' },
           ] : []),

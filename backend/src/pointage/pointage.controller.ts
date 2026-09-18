@@ -46,17 +46,26 @@ export class PointageController {
   }
 
   @Get('historique')
-  @ApiOperation({ summary: 'Historique des 30 derniers jours' })
-  getHistorique(@CurrentUser() user: User) {
-    return this.svc.getHistorique(user.id);
+  @ApiOperation({ summary: 'Historique de pointage — 30 derniers jours par défaut, ou plage dateDebut/dateFin' })
+  @ApiQuery({ name: 'dateDebut', required: false, example: '2026-05-01' })
+  @ApiQuery({ name: 'dateFin', required: false, example: '2026-05-31' })
+  getHistorique(@CurrentUser() user: User, @Query('dateDebut') dateDebut?: string, @Query('dateFin') dateFin?: string) {
+    return this.svc.getHistorique(user.id, dateDebut, dateFin);
   }
 
   @Get('historique/all')
   @Roles(UserRole.ADMIN, UserRole.EXPERT_COMPTABLE)
-  @ApiOperation({ summary: 'Historique global tous utilisateurs (admin/expert)' })
+  @ApiOperation({ summary: 'Historique global tous utilisateurs (admin/expert) — 200 dernières lignes par défaut, ou plage dateDebut/dateFin' })
   @ApiQuery({ name: 'site', required: false, enum: ['EST', 'OUEST'] })
-  getHistoriqueAll(@CurrentUser() user: User, @Query('site') site?: string) {
-    return this.svc.getHistoriqueAll(site, user.tenantId);
+  @ApiQuery({ name: 'dateDebut', required: false, example: '2026-05-01' })
+  @ApiQuery({ name: 'dateFin', required: false, example: '2026-05-31' })
+  getHistoriqueAll(
+    @CurrentUser() user: User,
+    @Query('site') site?: string,
+    @Query('dateDebut') dateDebut?: string,
+    @Query('dateFin') dateFin?: string,
+  ) {
+    return this.svc.getHistoriqueAll(site, user.tenantId, dateDebut, dateFin);
   }
 
   // ── Emplacement bureau ─────────────────────────────────────────

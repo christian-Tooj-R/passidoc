@@ -81,15 +81,20 @@ export class PointageService {
     return this.http.get<MonStatut>(`${this.api}/mon-statut`);
   }
 
-  getHistorique() {
-    return this.http.get<Pointage[]>(`${this.api}/historique`);
+  getHistorique(params?: { dateDebut?: string; dateFin?: string }) {
+    const p: Record<string, string> = {};
+    if (params?.dateDebut) p['dateDebut'] = params.dateDebut;
+    if (params?.dateFin)   p['dateFin']   = params.dateFin;
+    return this.http.get<Pointage[]>(`${this.api}/historique`, { params: p });
   }
 
-  getHistoriqueAll(site?: string) {
-    const params: Record<string, string> = {};
-    if (site) params['site'] = site;
+  getHistoriqueAll(params?: { site?: string; dateDebut?: string; dateFin?: string }) {
+    const p: Record<string, string> = {};
+    if (params?.site)      p['site']      = params.site;
+    if (params?.dateDebut) p['dateDebut'] = params.dateDebut;
+    if (params?.dateFin)   p['dateFin']   = params.dateFin;
     return this.http.get<(Pointage & { user: { firstName: string; lastName: string; site: string } })[]>(
-      `${this.api}/historique/all`, { params }
+      `${this.api}/historique/all`, { params: p }
     );
   }
 }
