@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { ToastService } from '../../core/services/toast.service';
 import { UsersService } from '../../core/services/users.service';
 import { ClientsService } from '../../core/services/clients.service';
@@ -22,7 +23,7 @@ import { Client } from '../../core/models/client.model';
   imports: [
     CommonModule, RouterLink, FormsModule,
     MatButtonModule, MatIconModule, MatSelectModule,
-    MatTooltipModule, MatFormFieldModule,
+    MatTooltipModule, MatFormFieldModule, MatAutocompleteModule,
   ],
   template: `
 <div class="page">
@@ -129,13 +130,15 @@ import { Client } from '../../core/models/client.model';
             <td class="td-directeur">
               <div class="assign-cell" [class.assign-cell--empty]="!c.directeur">
                 <mat-icon class="assign-icon">manage_accounts</mat-icon>
-                <select class="assign-select"
-                        (change)="onDirecteurChange(c, $any($event.target).value)">
-                  <option value="" [selected]="!c.directeur">— Non assigné —</option>
-                  @for (u of assignableUsers; track u.id) {
-                    <option [value]="u.id" [selected]="c.directeur?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                <input class="assign-select" [(ngModel)]="directeurSearchMap[c.id]" name="direSearch{{c.id}}"
+                       [matAutocomplete]="dirAuto" placeholder="— Non assigné —"
+                       (blur)="onDirecteurBlur(c)" autocomplete="off" />
+                <mat-autocomplete #dirAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onDirecteurSelected($event, c)">
+                  <mat-option [value]="null">— Non assigné —</mat-option>
+                  @for (u of filteredDirecteurUsers(c); track u.id) {
+                    <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                   }
-                </select>
+                </mat-autocomplete>
               </div>
             </td>
 
@@ -143,13 +146,15 @@ import { Client } from '../../core/models/client.model';
             <td class="td-collab">
               <div class="assign-cell" [class.assign-cell--empty]="!c.responsable">
                 <mat-icon class="assign-icon">person</mat-icon>
-                <select class="assign-select"
-                        (change)="onResponsableChange(c, $any($event.target).value)">
-                  <option value="" [selected]="!c.responsable">— Non assigné —</option>
-                  @for (u of assignableUsers; track u.id) {
-                    <option [value]="u.id" [selected]="c.responsable?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                <input class="assign-select" [(ngModel)]="responsableSearchMap[c.id]" name="respSearch{{c.id}}"
+                       [matAutocomplete]="respAuto" placeholder="— Non assigné —"
+                       (blur)="onResponsableBlur(c)" autocomplete="off" />
+                <mat-autocomplete #respAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onResponsableSelected($event, c)">
+                  <mat-option [value]="null">— Non assigné —</mat-option>
+                  @for (u of filteredResponsableUsers(c); track u.id) {
+                    <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                   }
-                </select>
+                </mat-autocomplete>
               </div>
             </td>
 
@@ -157,13 +162,15 @@ import { Client } from '../../core/models/client.model';
             <td class="td-collab">
               <div class="assign-cell" [class.assign-cell--empty]="!c.collaborateurOuest">
                 <mat-icon class="assign-icon">person</mat-icon>
-                <select class="assign-select"
-                        (change)="onCollabChange(c, $any($event.target).value)">
-                  <option value="" [selected]="!c.collaborateurOuest">— Non assigné —</option>
-                  @for (u of assignableUsers; track u.id) {
-                    <option [value]="u.id" [selected]="c.collaborateurOuest?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                <input class="assign-select" [(ngModel)]="collabSearchMap[c.id]" name="collabSearch{{c.id}}"
+                       [matAutocomplete]="collabAuto" placeholder="— Non assigné —"
+                       (blur)="onCollabBlur(c)" autocomplete="off" />
+                <mat-autocomplete #collabAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onCollabSelected($event, c)">
+                  <mat-option [value]="null">— Non assigné —</mat-option>
+                  @for (u of filteredCollabUsers(c); track u.id) {
+                    <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                   }
-                </select>
+                </mat-autocomplete>
               </div>
             </td>
 
@@ -331,6 +338,10 @@ export class PortefeuillesComponent implements OnInit {
   siteFilter: string | null = null;
   search = '';
 
+  directeurSearchMap: Record<number, string>   = {};
+  responsableSearchMap: Record<number, string> = {};
+  collabSearchMap: Record<number, string>      = {};
+
   get noDirecteurCount(): number {
     return this.allClients.filter(c => !c.directeur).length;
   }
@@ -365,13 +376,110 @@ export class PortefeuillesComponent implements OnInit {
     }).subscribe(({ clients, users }) => {
       this.assignableUsers = users;
       this.allClients = clients;
+      this.syncAllRowSearch();
     });
+  }
+
+  private userLabel(u: { firstName: string; lastName: string }): string {
+    return `${u.firstName} ${u.lastName}`;
+  }
+
+  /**
+   * [displayWith] des 3 <mat-autocomplete> par ligne : sans cette fonction,
+   * Angular Material écrit l'id brut (u.id) directement dans le champ au clic
+   * sur une option, avant que notre resync (onXSelected) ne corrige
+   * l'affichage — correctif qu'Angular peut ignorer silencieusement si la
+   * valeur finale est identique à celle déjà liée (ex. re-cliquer
+   * l'intervenant déjà assigné sur cette ligne).
+   */
+  userDisplayWith = (value: number | string | null): string => {
+    if (value == null) return '';
+    if (typeof value === 'number') {
+      const u = this.assignableUsers.find(x => x.id === value);
+      return u ? this.userLabel(u) : '';
+    }
+    return value;
+  };
+
+  private sortedAssignableUsers(): User[] {
+    return [...this.assignableUsers].sort((a, b) => this.userLabel(a).localeCompare(this.userLabel(b), 'fr', { sensitivity: 'base' }));
+  }
+
+  private filterAssignableUsers(term: string): User[] {
+    const sorted = this.sortedAssignableUsers();
+    const t = term.trim().toLowerCase();
+    if (!t) return sorted;
+    return sorted.filter(u => this.userLabel(u).toLowerCase().includes(t));
+  }
+
+  filteredDirecteurUsers(c: Client): User[] {
+    return this.filterAssignableUsers(this.directeurSearchMap[c.id] ?? '');
+  }
+
+  filteredResponsableUsers(c: Client): User[] {
+    return this.filterAssignableUsers(this.responsableSearchMap[c.id] ?? '');
+  }
+
+  filteredCollabUsers(c: Client): User[] {
+    return this.filterAssignableUsers(this.collabSearchMap[c.id] ?? '');
+  }
+
+  /** (Re)initialise les 3 champs de recherche de chaque ligne à partir des intervenants déjà assignés. */
+  private syncAllRowSearch() {
+    for (const c of this.allClients) {
+      this.directeurSearchMap[c.id]   = c.directeur ? this.userLabel(c.directeur) : '';
+      this.responsableSearchMap[c.id] = c.responsable ? this.userLabel(c.responsable) : '';
+      this.collabSearchMap[c.id]      = c.collaborateurOuest ? this.userLabel(c.collaborateurOuest) : '';
+    }
+  }
+
+  onDirecteurSelected(event: MatAutocompleteSelectedEvent, c: Client) {
+    const id = event.option.value as number | null;
+    const u = id != null ? this.assignableUsers.find(x => x.id === id) : undefined;
+    this.directeurSearchMap[c.id] = u ? this.userLabel(u) : '';
+    this.onDirecteurChange(c, id != null ? String(id) : '');
+  }
+
+  onDirecteurBlur(c: Client) {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => {
+      this.directeurSearchMap[c.id] = c.directeur ? this.userLabel(c.directeur) : '';
+    }, 200);
+  }
+
+  onResponsableSelected(event: MatAutocompleteSelectedEvent, c: Client) {
+    const id = event.option.value as number | null;
+    const u = id != null ? this.assignableUsers.find(x => x.id === id) : undefined;
+    this.responsableSearchMap[c.id] = u ? this.userLabel(u) : '';
+    this.onResponsableChange(c, id != null ? String(id) : '');
+  }
+
+  onResponsableBlur(c: Client) {
+    setTimeout(() => {
+      this.responsableSearchMap[c.id] = c.responsable ? this.userLabel(c.responsable) : '';
+    }, 200);
+  }
+
+  onCollabSelected(event: MatAutocompleteSelectedEvent, c: Client) {
+    const id = event.option.value as number | null;
+    const u = id != null ? this.assignableUsers.find(x => x.id === id) : undefined;
+    this.collabSearchMap[c.id] = u ? this.userLabel(u) : '';
+    this.onCollabChange(c, id != null ? String(id) : '');
+  }
+
+  onCollabBlur(c: Client) {
+    setTimeout(() => {
+      this.collabSearchMap[c.id] = c.collaborateurOuest ? this.userLabel(c.collaborateurOuest) : '';
+    }, 200);
   }
 
   onDirecteurChange(client: Client, value: string) {
     const id = value ? +value : null;
     this.clientsSvc.assignDirecteur(client.id, id).subscribe(updated => {
       client.directeur = updated.directeur;
+      this.directeurSearchMap[client.id] = client.directeur ? this.userLabel(client.directeur) : '';
       this.toast.success(id ? 'Directeur assigné' : 'Directeur retiré');
     });
   }
@@ -380,6 +488,7 @@ export class PortefeuillesComponent implements OnInit {
     const id = value ? +value : null;
     this.clientsSvc.assign(client.id, id).subscribe(updated => {
       client.responsable = updated.responsable;
+      this.responsableSearchMap[client.id] = client.responsable ? this.userLabel(client.responsable) : '';
       this.toast.success(id ? 'Collaborateur assigné' : 'Collaborateur retiré');
     });
   }
@@ -388,6 +497,7 @@ export class PortefeuillesComponent implements OnInit {
     const id = value ? +value : null;
     this.clientsSvc.assignOuest(client.id, id).subscribe(updated => {
       client.collaborateurOuest = updated.collaborateurOuest;
+      this.collabSearchMap[client.id] = client.collaborateurOuest ? this.userLabel(client.collaborateurOuest) : '';
       this.toast.success(id ? 'Collaborateur assigné' : 'Collaborateur retiré');
     });
   }

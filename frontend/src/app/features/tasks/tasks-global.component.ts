@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { ToastService } from '../../core/services/toast.service';
 import { toLocalIso } from '../../core/services/date.util';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -367,7 +368,7 @@ export class SyntheseDialogComponent implements OnInit {
   selector: 'app-create-task-dialog',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule,
-    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatTooltipModule, MatDialogModule],
+    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatTooltipModule, MatDialogModule],
   template: `
     <div class="ct-wrap">
       <!-- Header -->
@@ -412,12 +413,14 @@ export class SyntheseDialogComponent implements OnInit {
           <div class="ct-field">
             @if (!sansDossier) {
               <div class="ct-section-label">Dossier client <span class="required">*</span></div>
-              <select class="ct-select" [(ngModel)]="clientId">
-                <option [value]="null" disabled>— Sélectionner —</option>
-                @for (c of data.clients; track c.id) {
-                  <option [value]="c.id">{{ c.nom }}</option>
+              <input class="ct-select" [(ngModel)]="clientSearch" name="ctClientSearch"
+                     [matAutocomplete]="ctClientAuto" placeholder="— Sélectionner —"
+                     (blur)="onClientBlur()" autocomplete="off" />
+              <mat-autocomplete #ctClientAuto="matAutocomplete" (optionSelected)="onClientSelected($event)">
+                @for (c of filteredClients; track c.id) {
+                  <mat-option [value]="c.id">{{ c.nom }}</mat-option>
                 }
-              </select>
+              </mat-autocomplete>
             } @else {
               <div class="ct-sans-dossier-badge">
                 <mat-icon>folder_off</mat-icon>
@@ -428,12 +431,15 @@ export class SyntheseDialogComponent implements OnInit {
           <div class="ct-field">
             <div class="ct-section-label">Assigner à</div>
             @if (!anyoneCanTake) {
-              <select class="ct-select" [(ngModel)]="assigneeId">
-                <option [value]="null">— Non assignée —</option>
-                @for (u of data.users; track u.id) {
-                  <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+              <input class="ct-select" [(ngModel)]="assigneeSearch" name="ctAssigneeSearch"
+                     [matAutocomplete]="ctAssigneeAuto" placeholder="— Non assignée —"
+                     (blur)="onAssigneeBlur()" autocomplete="off" />
+              <mat-autocomplete #ctAssigneeAuto="matAutocomplete" (optionSelected)="onAssigneeSelected($event)">
+                <mat-option [value]="null">— Non assignée —</mat-option>
+                @for (u of filteredAssignees; track u.id) {
+                  <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                 }
-              </select>
+              </mat-autocomplete>
             } @else {
               <div class="ct-anyone-badge">
                 <mat-icon>group</mat-icon> Premier disponible
@@ -753,6 +759,8 @@ export class CreateTaskDialogComponent {
   selectedType = 'AUTRE';
   clientId: number | null = null;
   assigneeId: number | null = null;
+  clientSearch = '';
+  assigneeSearch = '';
   priorite = 'NORMALE';
   dateEcheance = '';
   anyoneCanTake = false;
@@ -776,10 +784,61 @@ export class CreateTaskDialogComponent {
 
   onAnyoneChange() {
     if (this.anyoneCanTake) this.assigneeId = null;
+    this.syncAssigneeSearchFromId();
   }
 
   onSansDossierChange() {
     if (this.sansDossier) this.clientId = null;
+    this.syncClientSearchFromId();
+  }
+
+  get filteredClients(): Client[] {
+    const sorted = [...this.data.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  onClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.clientId = event.option.value as number | null;
+    this.syncClientSearchFromId();
+  }
+
+  onClientBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncClientSearchFromId(), 200);
+  }
+
+  private syncClientSearchFromId() {
+    const c = this.data.clients.find(x => x.id === this.clientId);
+    this.clientSearch = c ? c.nom : '';
+  }
+
+  private userName(u: User): string {
+    return `${u.firstName} ${u.lastName}`;
+  }
+
+  get filteredAssignees(): User[] {
+    const sorted = [...this.data.users].sort((a, b) => this.userName(a).localeCompare(this.userName(b), 'fr', { sensitivity: 'base' }));
+    const term = this.assigneeSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.userName(u).toLowerCase().includes(term));
+  }
+
+  onAssigneeSelected(event: MatAutocompleteSelectedEvent) {
+    this.assigneeId = event.option.value as number | null;
+    this.syncAssigneeSearchFromId();
+  }
+
+  onAssigneeBlur() {
+    setTimeout(() => this.syncAssigneeSearchFromId(), 200);
+  }
+
+  private syncAssigneeSearchFromId() {
+    const u = this.data.users.find(x => x.id === this.assigneeId);
+    this.assigneeSearch = u ? this.userName(u) : '';
   }
 
   taskTypes = [
@@ -859,7 +918,7 @@ export class CreateTaskDialogComponent {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatTooltipModule, MatDialogModule, LocalDatePipe, OnlyNumbersDirective],
+    MatSelectModule, MatAutocompleteModule, MatTooltipModule, MatDialogModule, LocalDatePipe, OnlyNumbersDirective],
   template: `
     <div class="td-wrap">
       <!-- ── HEADER ── -->
@@ -1092,12 +1151,15 @@ export class CreateTaskDialogComponent {
           <div class="td-prop-group">
             <div class="td-prop-lbl">Assigné à</div>
             @if (canEdit) {
-              <select class="td-prop-select" [formControl]="assigneeCtrl">
-                <option [value]="null">— Non assignée —</option>
-                @for (u of data.users; track u.id) {
-                  <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+              <input class="td-prop-select" [(ngModel)]="assigneeSearch" name="tdAssigneeSearch"
+                     [matAutocomplete]="tdAssigneeAuto" placeholder="— Non assignée —"
+                     (blur)="onAssigneeBlur()" autocomplete="off" />
+              <mat-autocomplete #tdAssigneeAuto="matAutocomplete" (optionSelected)="onAssigneeSelected($event)">
+                <mat-option [value]="null">— Non assignée —</mat-option>
+                @for (u of filteredAssignees; track u.id) {
+                  <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                 }
-              </select>
+              </mat-autocomplete>
             } @else if (task.assignee) {
               <div class="td-user-badge">
                 <div class="td-av td-av--sm">{{ initials(task.assignee) }}</div>
@@ -1521,6 +1583,7 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   descriptionCtrl = this.fb.control(this.task.description ?? '');
   typeCtrl        = this.fb.control(this.task.type ?? 'AUTRE');
   assigneeCtrl    = this.fb.control(this.task.assignee?.id ?? null);
+  assigneeSearch  = '';
   echeanceCtrl    = this.fb.control(this.task.dateEcheance ? this.task.dateEcheance.substring(0, 10) : '');
   heuresSupCtrl   = this.fb.control(this.task.heuresSup ?? null);
   serviceDestCtrl = this.fb.control(this.task.serviceDestinataire ?? '');
@@ -1559,7 +1622,37 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
            this.currentStatut !== this._initialStatut || this.currentPrio !== this._initialPrio;
   }
 
+  private assigneeName(u: User): string {
+    return `${u.firstName} ${u.lastName}`;
+  }
+
+  get filteredAssignees(): User[] {
+    const sorted = [...this.data.users].sort((a, b) => this.assigneeName(a).localeCompare(this.assigneeName(b), 'fr', { sensitivity: 'base' }));
+    const term = this.assigneeSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.assigneeName(u).toLowerCase().includes(term));
+  }
+
+  onAssigneeSelected(event: MatAutocompleteSelectedEvent) {
+    this.assigneeCtrl.setValue(event.option.value);
+    this.assigneeCtrl.markAsDirty();
+    this.syncAssigneeSearchFromId();
+  }
+
+  onAssigneeBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncAssigneeSearchFromId(), 200);
+  }
+
+  private syncAssigneeSearchFromId() {
+    const u = this.data.users.find(x => x.id === this.assigneeCtrl.value);
+    this.assigneeSearch = u ? this.assigneeName(u) : '';
+  }
+
   ngOnInit() {
+    this.syncAssigneeSearchFromId();
     this.loadComments();
     this.loadSaisiesLiees();
     this.missionCodeEdit = (this.task as any).missionCode ?? '';
@@ -1861,7 +1954,7 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule, FormsModule,
     MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatTooltipModule, MatDialogModule,
+    MatInputModule, MatSelectModule, MatAutocompleteModule, MatTooltipModule, MatDialogModule,
     LocalDatePipe, DragDropModule, MatDatepickerModule,
   ],
   template: `
@@ -1906,27 +1999,31 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
           <!-- Dossier -->
           <label class="fchip fchip--select" [class.fchip--active]="filterClientId !== null">
             <mat-icon>folder_open</mat-icon>
-            <span>{{ filterClientId ? (getClientName(filterClientId)) : 'Dossier' }}</span>
+            <input class="fchip__input" [(ngModel)]="filterClientSearch" name="filterClientSearch"
+                   [matAutocomplete]="filterClientAuto" placeholder="Dossier"
+                   (blur)="onFilterClientBlur()" autocomplete="off" />
             <mat-icon class="fchip__caret">expand_more</mat-icon>
-            <select [(ngModel)]="filterClientId" (ngModelChange)="applyFilter()">
-              <option [ngValue]="null">Tous les dossiers</option>
-              @for (c of clients; track c.id) {
-                <option [ngValue]="c.id">{{ c.nom }}</option>
+            <mat-autocomplete #filterClientAuto="matAutocomplete" (optionSelected)="onFilterClientSelected($event)">
+              <mat-option [value]="null">Tous les dossiers</mat-option>
+              @for (c of filteredFilterClients; track c.id) {
+                <mat-option [value]="c.id">{{ c.nom }}</mat-option>
               }
-            </select>
+            </mat-autocomplete>
           </label>
 
           <!-- Assigné -->
           <label class="fchip fchip--select" [class.fchip--active]="filterAssigneeId !== null">
             <mat-icon>people</mat-icon>
-            <span>{{ filterAssigneeId ? getUserName(filterAssigneeId) : 'Assigné à' }}</span>
+            <input class="fchip__input" [(ngModel)]="filterAssigneeSearch" name="filterAssigneeSearch"
+                   [matAutocomplete]="filterAssigneeAuto" placeholder="Assigné à"
+                   (blur)="onFilterAssigneeBlur()" autocomplete="off" />
             <mat-icon class="fchip__caret">expand_more</mat-icon>
-            <select [(ngModel)]="filterAssigneeId" (ngModelChange)="applyFilter()">
-              <option [ngValue]="null">Tous</option>
-              @for (u of users; track u.id) {
-                <option [ngValue]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+            <mat-autocomplete #filterAssigneeAuto="matAutocomplete" (optionSelected)="onFilterAssigneeSelected($event)">
+              <mat-option [value]="null">Tous</mat-option>
+              @for (u of filteredFilterAssignees; track u.id) {
+                <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
               }
-            </select>
+            </mat-autocomplete>
           </label>
 
           <!-- Type -->
@@ -2451,6 +2548,14 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
       font-size: 13px;
     }
 
+    /* Champ de recherche filtrable remplaçant le select natif (dossier / assigné) */
+    .fchip__input {
+      border: none; background: transparent; outline: none; padding: 0; margin: 0;
+      font: inherit; font-weight: 600; color: inherit; cursor: pointer;
+      width: 90px; max-width: 140px;
+    }
+    .fchip__input::placeholder { color: inherit; opacity: .85; }
+
     /* Reset chip */
     .fchip--reset {
       border-color: #fca5a5; background: #fff1f2; color: #dc2626;
@@ -2931,6 +3036,8 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   mesTachesOnly = false;
   filterClientId: number | null = null;
   filterAssigneeId: number | null = null;
+  filterClientSearch = '';
+  filterAssigneeSearch = '';
   filterType: string | null = null;
   filterService: string | null = null;
 
@@ -3168,7 +3275,56 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   resetFilters() {
     this.mesTachesOnly = false;
     this.filterClientId = this.filterAssigneeId = this.filterType = this.filterService = null;
+    this.filterClientSearch = '';
+    this.filterAssigneeSearch = '';
     this.applyFilter();
+  }
+
+  get filteredFilterClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.filterClientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  onFilterClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterClientId = event.option.value as number | null;
+    this.syncFilterClientSearchFromId();
+    this.applyFilter();
+  }
+
+  onFilterClientBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncFilterClientSearchFromId(), 200);
+  }
+
+  private syncFilterClientSearchFromId() {
+    const c = this.clients.find(x => x.id === this.filterClientId);
+    this.filterClientSearch = c ? c.nom : '';
+  }
+
+  get filteredFilterAssignees(): User[] {
+    const sorted = [...this.users].sort((a, b) => this.getUserName(a.id).localeCompare(this.getUserName(b.id), 'fr', { sensitivity: 'base' }));
+    const term = this.filterAssigneeSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.getUserName(u.id).toLowerCase().includes(term));
+  }
+
+  onFilterAssigneeSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterAssigneeId = event.option.value as number | null;
+    this.syncFilterAssigneeSearchFromId();
+    this.applyFilter();
+  }
+
+  onFilterAssigneeBlur() {
+    setTimeout(() => this.syncFilterAssigneeSearchFromId(), 200);
+  }
+
+  private syncFilterAssigneeSearchFromId() {
+    const u = this.users.find(x => x.id === this.filterAssigneeId);
+    this.filterAssigneeSearch = u ? `${u.firstName} ${u.lastName}` : '';
   }
 
   getClientName(id: number): string {

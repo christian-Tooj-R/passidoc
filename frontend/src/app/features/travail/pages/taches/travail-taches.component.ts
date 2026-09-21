@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { Subject, takeUntil } from 'rxjs';
 import { TasksService, Task } from '../../../../core/services/tasks.service';
 import { ClientsService } from '../../../../core/services/clients.service';
@@ -20,7 +21,7 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
 @Component({
   selector: 'app-travail-taches',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, MatDatepickerModule, LocalDatePipe],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, MatDatepickerModule, MatAutocompleteModule, LocalDatePipe],
   template: `
 <div class="page">
 
@@ -90,18 +91,24 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
       <option value="DR">Dossier</option>
       <option value="AUTRE">Autre</option>
     </select>
-    <select class="fb-select" [(ngModel)]="filterClient" (change)="applyFilters()">
-      <option value="">Client — Tous</option>
-      @for (c of clients; track c.id) {
-        <option [value]="c.id">{{ c.nom }}</option>
+    <input class="fb-select" [(ngModel)]="clientSearch" name="filterClientSearch"
+           [matAutocomplete]="clientAuto" placeholder="Client — Tous"
+           (blur)="onClientBlur()" autocomplete="off" />
+    <mat-autocomplete #clientAuto="matAutocomplete" (optionSelected)="onClientSelected($event)">
+      <mat-option [value]="''">Client — Tous</mat-option>
+      @for (c of filteredClients; track c.id) {
+        <mat-option [value]="'' + c.id">{{ c.nom }}</mat-option>
       }
-    </select>
-    <select class="fb-select" [(ngModel)]="filterAssigne" (change)="applyFilters()">
-      <option value="">Assigné — Tous</option>
-      @for (u of users; track u.id) {
-        <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+    </mat-autocomplete>
+    <input class="fb-select" [(ngModel)]="assigneSearch" name="filterAssigneSearch"
+           [matAutocomplete]="assigneAuto" placeholder="Assigné — Tous"
+           (blur)="onAssigneBlur()" autocomplete="off" />
+    <mat-autocomplete #assigneAuto="matAutocomplete" (optionSelected)="onAssigneSelected($event)">
+      <mat-option [value]="''">Assigné — Tous</mat-option>
+      @for (u of filteredUsers; track u.id) {
+        <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
       }
-    </select>
+    </mat-autocomplete>
     <select class="fb-select" [(ngModel)]="filterFacturable" (change)="applyFilters()">
       <option value="">Facturable — Tous</option>
       <option value="true">Oui</option>
@@ -405,6 +412,55 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
   filterSearch    = '';
   filterDateStart: Date | null = null;
   filterDateEnd:   Date | null = null;
+  clientSearch    = '';
+  assigneSearch   = '';
+
+  get filteredClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  get filteredUsers(): User[] {
+    const sorted = [...this.users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' }));
+    const term = this.assigneSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(term));
+  }
+
+  onClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterClient = event.option.value;
+    this.syncClientSearchFromId();
+    this.applyFilters();
+  }
+
+  onClientBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de l'input, et s'il se
+    // réconcilie immédiatement, il écrase la sélection en cours avant que (optionSelected) n'ait
+    // eu le temps de s'appliquer. NE PAS OMETTRE CE DÉLAI.
+    setTimeout(() => this.syncClientSearchFromId(), 200);
+  }
+
+  private syncClientSearchFromId() {
+    const c = this.clients.find(x => String(x.id) === this.filterClient);
+    this.clientSearch = c ? c.nom : '';
+  }
+
+  onAssigneSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterAssigne = event.option.value;
+    this.syncAssigneSearchFromId();
+    this.applyFilters();
+  }
+
+  onAssigneBlur() {
+    setTimeout(() => this.syncAssigneSearchFromId(), 200);
+  }
+
+  private syncAssigneSearchFromId() {
+    const u = this.users.find(x => String(x.id) === this.filterAssigne);
+    this.assigneSearch = u ? `${u.firstName} ${u.lastName}` : '';
+  }
 
   ngOnInit() {
     this.tasksService.getAllGlobal().pipe(takeUntil(this._destroy$)).subscribe(tasks => {
@@ -468,6 +524,7 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
     this.filterStatut = this.filterPriorite = this.filterType = '';
     this.filterClient = this.filterAssigne = this.filterFacturable = this.filterSearch = '';
     this.filterDateStart = this.filterDateEnd = null;
+    this.clientSearch = this.assigneSearch = '';
     this.applyFilters();
   }
 

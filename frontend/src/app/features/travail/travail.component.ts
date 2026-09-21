@@ -6,6 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { TimerService, SaisieTempsService, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
 import { ClientsService } from '../../core/services/clients.service';
 import { Client } from '../../core/models/client.model';
@@ -38,7 +39,7 @@ const NAV_SECTIONS: NavSection[] = [
 @Component({
   selector: 'app-travail',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, RouterModule, RouterOutlet, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, DecimalPipe, RouterModule, RouterOutlet, MatIconModule, MatButtonModule, MatTooltipModule, MatAutocompleteModule],
   template: `
 @if (entering()) {
   <div class="tw-entry">
@@ -123,12 +124,15 @@ const NAV_SECTIONS: NavSection[] = [
           <strong>{{ timerStoppedH | number:'1.2-2' }}h</strong>
           <span class="tw-tsave__hhmm">{{ timerStoppedStart }} → {{ timerStoppedEnd }}</span>
         </div>
-        <select class="tw-tsave__sel" [(ngModel)]="timerFormClientId">
-          <option [ngValue]="null">— Client (optionnel) —</option>
-          @for (c of clients; track c.id) {
-            <option [ngValue]="c.id">{{ c.nom }}</option>
+        <input class="tw-tsave__sel" [(ngModel)]="timerFormClientSearch" name="timerFormClientSearch"
+               [matAutocomplete]="timerClientAuto" placeholder="— Client (optionnel) —"
+               (blur)="onTimerClientBlur()" autocomplete="off" />
+        <mat-autocomplete #timerClientAuto="matAutocomplete" [displayWith]="timerClientDisplayWith" (optionSelected)="onTimerClientSelected($event)">
+          <mat-option [value]="null">— Client (optionnel) —</mat-option>
+          @for (c of filteredTimerClients; track c.id) {
+            <mat-option [value]="c.id">{{ c.nom }}</mat-option>
           }
-        </select>
+        </mat-autocomplete>
         <select class="tw-tsave__sel" [(ngModel)]="timerFormMission">
           <option value="">— Mission (optionnel) —</option>
           @for (m of missionCodes; track m.code) {
@@ -449,6 +453,7 @@ export class TravailComponent implements OnInit, OnDestroy {
   timerStoppedStart = '';
   timerStoppedEnd   = '';
   timerFormClientId: number | null = null;
+  timerFormClientSearch = '';
   timerFormMission  = '';
   timerFormType: 'FACTURABLE' | 'NON_FACTURABLE' = 'FACTURABLE';
   timerFormComment  = '';
@@ -487,11 +492,53 @@ export class TravailComponent implements OnInit, OnDestroy {
     }
 
     this.timerFormClientId = ctx?.clientId ?? null;
+    this.syncTimerClientSearch();
     this.timerFormComment  = ctx?.taskTitre ?? '';
     this.timerFormMission  = '';
     this.timerFormType     = 'FACTURABLE';
     this.timerSaveError.set('');
     this.showTimerForm.set(true);
+  }
+
+  get filteredTimerClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.timerFormClientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  /**
+   * [displayWith] du <mat-autocomplete> Client : sans cette fonction, Angular
+   * Material écrit l'id brut directement dans le champ au clic sur une
+   * option, avant que notre resync (onTimerClientSelected) ne corrige
+   * l'affichage — correctif qu'Angular peut ignorer silencieusement si la
+   * valeur finale est identique à celle déjà liée (ex. re-cliquer le client
+   * déjà pré-rempli depuis le contexte de la tâche).
+   */
+  timerClientDisplayWith = (value: number | string | null): string => {
+    if (value == null) return '';
+    if (typeof value === 'number') {
+      const c = this.clients.find(x => x.id === value);
+      return c ? c.nom : '';
+    }
+    return value;
+  };
+
+  onTimerClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.timerFormClientId = event.option.value as number | null;
+    this.syncTimerClientSearch();
+  }
+
+  onTimerClientBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncTimerClientSearch(), 200);
+  }
+
+  private syncTimerClientSearch() {
+    const c = this.clients.find(x => x.id === this.timerFormClientId);
+    this.timerFormClientSearch = c ? c.nom : '';
   }
 
   saveTimerEntry() {
@@ -536,7 +583,7 @@ export class TravailComponent implements OnInit, OnDestroy {
       }
     });
     this.clientsSvc.getAll().pipe(takeUntil(this._destroy$)).subscribe({
-      next:  c => this.clients = c,
+      next:  c => { this.clients = c; this.syncTimerClientSearch(); },
       error: () => {},
     });
   }

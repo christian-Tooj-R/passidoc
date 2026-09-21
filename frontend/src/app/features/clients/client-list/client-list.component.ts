@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormControl } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRippleModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { Subscription, debounceTime } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
@@ -26,9 +27,10 @@ type ViewMode = 'grid' | 'list';
   selector: 'app-client-list',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, ReactiveFormsModule,
+    CommonModule, RouterLink, ReactiveFormsModule, FormsModule,
     MatButtonModule, MatIconModule, MatDialogModule,
     MatTooltipModule, MatRippleModule, MatSnackBarModule, MatProgressBarModule,
+    MatAutocompleteModule,
   ],
   template: `
     <div class="explorer">
@@ -158,13 +160,15 @@ type ViewMode = 'grid' | 'list';
                     <button class="iv-chip-x" (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
                   </span>
                 } @else {
-                  <select class="iv-select"
-                    (change)="setCollabFilter(+$any($event.target).value || null); $any($event.target).value = ''">
-                    <option value="">— Sélectionner un intervenant —</option>
-                    @for (u of uniqueCollabs(); track u.id) {
-                      <option [value]="u.id">{{ u.label }}</option>
+                  <input class="iv-select" [(ngModel)]="collabSearch" name="collabSearch"
+                         [matAutocomplete]="collabAuto" placeholder="— Sélectionner un intervenant —"
+                         (blur)="onCollabBlur()" autocomplete="off" />
+                  <mat-autocomplete #collabAuto="matAutocomplete" [displayWith]="collabDisplayWith" (optionSelected)="onCollabSelected($event)">
+                    <mat-option [value]="null">— Sélectionner un intervenant —</mat-option>
+                    @for (u of filteredCollabs; track u.id) {
+                      <mat-option [value]="u.id">{{ u.label }}</mat-option>
                     }
-                  </select>
+                  </mat-autocomplete>
                 }
               </div>
             </div>
@@ -912,6 +916,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   confirmDeleteId = signal<number | null>(null);
   deleting        = signal(false);
   showFilterPanel = signal(false);
+  collabSearch    = '';
 
   activeFilterCount = computed(() => {
     let count = 0;
@@ -945,6 +950,48 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const id = this.collabFilter();
     return id ? (this.uniqueCollabs().find(u => u.id === id)?.label ?? '') : '';
   });
+
+  /**
+   * [displayWith] du <mat-autocomplete> Intervenant : sans cette fonction,
+   * Angular Material écrit l'id brut directement dans le champ au clic sur
+   * une option, avant que notre resync (onCollabSelected) ne corrige
+   * l'affichage — correctif qu'Angular peut ignorer silencieusement si la
+   * valeur finale est identique à celle déjà liée.
+   */
+  collabDisplayWith = (value: number | string | null): string => {
+    if (value == null) return '';
+    if (typeof value === 'number') {
+      const item = this.uniqueCollabs().find(u => u.id === value);
+      return item ? item.label : '';
+    }
+    return value;
+  };
+
+  get filteredCollabs(): CollabOption[] {
+    const sorted = [...this.uniqueCollabs()].sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
+    const term = this.collabSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => u.label.toLowerCase().includes(term));
+  }
+
+  onCollabSelected(event: MatAutocompleteSelectedEvent) {
+    const id = event.option.value as number | null;
+    this.setCollabFilter(id);
+    this.syncCollabSearch();
+  }
+
+  onCollabBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncCollabSearch(), 200);
+  }
+
+  private syncCollabSearch() {
+    const id = this.collabFilter();
+    const item = this.uniqueCollabs().find(u => u.id === id);
+    this.collabSearch = item ? item.label : '';
+  }
 
   filteredClients = computed(() => {
     const s      = this.searchQuery().toLowerCase();
@@ -1103,7 +1150,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   toggleMesDossiers() {
     this.mesDossiers.update(v => !v);
-    if (!this.mesDossiers()) this.collabFilter.set(null);
+    if (!this.mesDossiers()) { this.collabFilter.set(null); this.collabSearch = ''; }
   }
   setCollabFilter(id: number | null) {
     this.collabFilter.set(id);
@@ -1112,6 +1159,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   resetFilters() {
     this.collabFilter.set(null);
+    this.collabSearch = '';
     this.fonctionFilter.set('');
     this.siteFilter.set('');
     this.healthFilter.set('');

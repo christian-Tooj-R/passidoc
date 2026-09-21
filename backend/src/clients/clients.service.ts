@@ -169,10 +169,10 @@ export class ClientsService {
     return { message: 'Dossier archivé' };
   }
 
-  async assign(clientId: number, responsableId: number, actorId: number) {
+  async assign(clientId: number, responsableId: number | null, actorId: number) {
     const client = await this.findOne(clientId);
-    await this.repo.update(clientId, { responsable: { id: responsableId } });
-    if (responsableId !== actorId) {
+    await this.repo.update(clientId, { responsableId: responsableId as any });
+    if (responsableId && responsableId !== actorId) {
       await this.notifications.emit(responsableId, {
         type: 'CLIENT_ASSIGNED',
         message: `Le dossier "${client.nom}" vous a été assigné`,

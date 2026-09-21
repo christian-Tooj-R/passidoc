@@ -72,7 +72,7 @@ export class ClientsController {
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Assigner un responsable (pôle EST) à un dossier (ADMIN uniquement)' })
-  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number, @Req() req: any) {
+  assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number | null, @Req() req: any) {
     return this.clientsService.assign(id, responsableId, req.user.id);
   }
 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
 import { toLocalIso } from '../../../../core/services/date.util';
@@ -16,7 +17,7 @@ import autoTable from 'jspdf-autotable';
 @Component({
   selector: 'app-travail-temps-mois',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatAutocompleteModule],
   template: `
 <div class="page">
 
@@ -51,12 +52,15 @@ import autoTable from 'jspdf-autotable';
     </div>
     <div class="fb-field">
       <label class="fb-label">Collaborateur</label>
-      <select class="fb-select" [(ngModel)]="collaborateurId">
-        <option value="">Tous</option>
-        @for (u of users; track u.id) {
-          <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+      <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
+             [matAutocomplete]="collabAuto" placeholder="Tous"
+             (blur)="onCollaborateurBlur()" autocomplete="off" />
+      <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
+        <mat-option [value]="''">Tous</mat-option>
+        @for (u of filteredUsers; track u.id) {
+          <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
         }
-      </select>
+      </mat-autocomplete>
     </div>
     <div class="fb-field fb-field--grow">
       <label class="fb-label">Recherche</label>
@@ -304,6 +308,31 @@ export class TravailTempsMoisComponent implements OnInit, OnDestroy {
   dateFin         = '';
   collaborateurId = '';
   recherche       = '';
+  collaborateurSearch = '';
+
+  get filteredUsers(): User[] {
+    const sorted = [...this.users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' }));
+    const term = this.collaborateurSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(term));
+  }
+
+  onCollaborateurSelected(event: MatAutocompleteSelectedEvent) {
+    this.collaborateurId = event.option.value;
+    this.syncCollaborateurSearchFromId();
+  }
+
+  onCollaborateurBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de l'input, et s'il se
+    // réconcilie immédiatement, il écrase la sélection en cours avant que (optionSelected) n'ait
+    // eu le temps de s'appliquer. NE PAS OMETTRE CE DÉLAI.
+    setTimeout(() => this.syncCollaborateurSearchFromId(), 200);
+  }
+
+  private syncCollaborateurSearchFromId() {
+    const u = this.users.find(x => String(x.id) === this.collaborateurId);
+    this.collaborateurSearch = u ? `${u.firstName} ${u.lastName}` : '';
+  }
 
   expandedKeys = signal<Set<string>>(new Set());
   rowKey(r: any): string { return `${r.mois}__${r.collaborateur}`; }
@@ -347,7 +376,7 @@ export class TravailTempsMoisComponent implements OnInit, OnDestroy {
     });
   }
 
-  vider() { this.dateDebut = this.dateFin = this.collaborateurId = this.recherche = ''; this.rows.set([]); }
+  vider() { this.dateDebut = this.dateFin = this.collaborateurId = this.recherche = this.collaborateurSearch = ''; this.rows.set([]); }
 
   sumFacturable() { return this.filteredRows().reduce((a, r) => a + r.facturable, 0); }
   sumNF()         { return this.filteredRows().reduce((a, r) => a + r.nonFacturable, 0); }

@@ -6,6 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { ClientsService } from '../../../core/services/clients.service';
 import { ExerciceService } from '../../../core/services/exercice.service';
@@ -65,7 +66,7 @@ interface TabGroup {
   ],
   imports: [
     CommonModule, FormsModule, RouterLink,
-    MatButtonModule, MatIconModule, MatTooltipModule,
+    MatButtonModule, MatIconModule, MatTooltipModule, MatAutocompleteModule,
     FicheIdentiteTabComponent, FluxMensuelTabComponent,
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
@@ -414,35 +415,41 @@ interface TabGroup {
                     <!-- Mode édition -->
                     <div class="hc-interv__row hc-interv__row--inline">
                       <span class="hc-interv__fonc">Directeur</span>
-                      <select class="hc-interv__select"
-                              (change)="onAssignDirecteur($any($event.target).value || null)">
-                        <option value="" [selected]="!client.directeur">— Non assigné —</option>
-                        @for (u of allUsers(); track u.id) {
-                          <option [value]="u.id" [selected]="client.directeur?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                      <input class="hc-interv__select" [(ngModel)]="directeurSearch" name="directeurSearch"
+                             [matAutocomplete]="directeurAuto" placeholder="— Non assigné —"
+                             (blur)="onDirecteurBlur()" autocomplete="off" />
+                      <mat-autocomplete #directeurAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onDirecteurSelected($event)">
+                        <mat-option [value]="null">— Non assigné —</mat-option>
+                        @for (u of filteredDirecteurUsers; track u.id) {
+                          <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                         }
-                      </select>
+                      </mat-autocomplete>
                     </div>
 
                     <div class="hc-interv__row hc-interv__row--inline">
                       <span class="hc-interv__fonc">{{ tenantSvc.poleLabel1() }}</span>
-                      <select class="hc-interv__select"
-                              (change)="onAssignRun($any($event.target).value || null)">
-                        <option value="" [selected]="!client.responsable">— Non assigné —</option>
-                        @for (u of allUsers(); track u.id) {
-                          <option [value]="u.id" [selected]="client.responsable?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                      <input class="hc-interv__select" [(ngModel)]="responsableSearch" name="responsableSearch"
+                             [matAutocomplete]="responsableAuto" placeholder="— Non assigné —"
+                             (blur)="onResponsableBlur()" autocomplete="off" />
+                      <mat-autocomplete #responsableAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onResponsableSelected($event)">
+                        <mat-option [value]="null">— Non assigné —</mat-option>
+                        @for (u of filteredResponsableUsers; track u.id) {
+                          <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                         }
-                      </select>
+                      </mat-autocomplete>
                     </div>
 
                     <div class="hc-interv__row hc-interv__row--inline">
                       <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
-                      <select class="hc-interv__select"
-                              (change)="onAssignMg($any($event.target).value || null)">
-                        <option value="" [selected]="!client.collaborateurOuest">— Non assigné —</option>
-                        @for (u of allUsers(); track u.id) {
-                          <option [value]="u.id" [selected]="client.collaborateurOuest?.id === u.id">{{ u.firstName }} {{ u.lastName }}</option>
+                      <input class="hc-interv__select" [(ngModel)]="collaborateurOuestSearch" name="collaborateurOuestSearch"
+                             [matAutocomplete]="ouestAuto" placeholder="— Non assigné —"
+                             (blur)="onOuestBlur()" autocomplete="off" />
+                      <mat-autocomplete #ouestAuto="matAutocomplete" [displayWith]="userDisplayWith" (optionSelected)="onOuestSelected($event)">
+                        <mat-option [value]="null">— Non assigné —</mat-option>
+                        @for (u of filteredOuestUsers; track u.id) {
+                          <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
                         }
-                      </select>
+                      </mat-autocomplete>
                     </div>
                   }
                 </div>
@@ -1272,6 +1279,13 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   allUsers         = signal<User[]>([]);
   editIntervenants = signal(false);
 
+  directeurId: number | null = null;
+  directeurSearch = '';
+  responsableId: number | null = null;
+  responsableSearch = '';
+  collaborateurOuestId: number | null = null;
+  collaborateurOuestSearch = '';
+
   private renderer = inject(Renderer2);
 
   constructor(
@@ -1297,6 +1311,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const start = Date.now();
     this.clientsService.getOne(id).subscribe(c => {
       this.client = c;
+      this.syncAssignFieldsFromClient();
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, 800 - elapsed);
       setTimeout(() => this.loading.set(false), remaining);
@@ -1306,7 +1321,113 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
       const courant = list.find(e => e.statut === 'OUVERT') ?? list[0] ?? null;
       this.exerciceCourant.set(courant);
     });
-    this.users.getAll().subscribe(list => this.allUsers.set(list));
+    this.users.getAll().subscribe(list => { this.allUsers.set(list); this.syncAssignFieldsFromClient(); });
+  }
+
+  private userLabel(u: User): string {
+    return `${u.firstName} ${u.lastName}`;
+  }
+
+  /**
+   * Passé en [displayWith] aux 3 <mat-autocomplete> intervenants : sans cette
+   * fonction, Angular Material écrit directement l'id brut (u.id, ex. "5")
+   * dans le champ au moment du clic sur une option — AVANT que notre propre
+   * syncXSearchFromId() ne corrige l'affichage — et ce correctif peut être
+   * silencieusement ignoré par Angular si la valeur finale est identique à
+   * celle déjà liée (ex. re-cliquer l'intervenant déjà assigné). displayWith
+   * résout systématiquement la valeur brute (id) OU la chaîne de recherche
+   * déjà résolue (passée telle quelle) en texte affichable, en amont.
+   */
+  userDisplayWith = (value: number | string | null): string => {
+    if (value == null) return '';
+    if (typeof value === 'number') {
+      const u = this.allUsers().find(x => x.id === value);
+      return u ? this.userLabel(u) : '';
+    }
+    return value;
+  };
+
+  private sortedUsers(): User[] {
+    return [...this.allUsers()].sort((a, b) => this.userLabel(a).localeCompare(this.userLabel(b), 'fr', { sensitivity: 'base' }));
+  }
+
+  get filteredDirecteurUsers(): User[] {
+    const sorted = this.sortedUsers();
+    const term = this.directeurSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.userLabel(u).toLowerCase().includes(term));
+  }
+
+  get filteredResponsableUsers(): User[] {
+    const sorted = this.sortedUsers();
+    const term = this.responsableSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.userLabel(u).toLowerCase().includes(term));
+  }
+
+  get filteredOuestUsers(): User[] {
+    const sorted = this.sortedUsers();
+    const term = this.collaborateurOuestSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => this.userLabel(u).toLowerCase().includes(term));
+  }
+
+  /** Resynchronise les 3 ids d'intervenants et leurs champs de recherche depuis le client courant. */
+  private syncAssignFieldsFromClient() {
+    this.directeurId           = this.client?.directeur?.id ?? null;
+    this.responsableId         = this.client?.responsable?.id ?? null;
+    this.collaborateurOuestId  = this.client?.collaborateurOuest?.id ?? null;
+    this.syncDirecteurSearch();
+    this.syncResponsableSearch();
+    this.syncOuestSearch();
+  }
+
+  private syncDirecteurSearch() {
+    const u = this.allUsers().find(x => x.id === this.directeurId);
+    this.directeurSearch = u ? this.userLabel(u) : '';
+  }
+
+  private syncResponsableSearch() {
+    const u = this.allUsers().find(x => x.id === this.responsableId);
+    this.responsableSearch = u ? this.userLabel(u) : '';
+  }
+
+  private syncOuestSearch() {
+    const u = this.allUsers().find(x => x.id === this.collaborateurOuestId);
+    this.collaborateurOuestSearch = u ? this.userLabel(u) : '';
+  }
+
+  onDirecteurSelected(event: MatAutocompleteSelectedEvent) {
+    this.directeurId = event.option.value as number | null;
+    this.syncDirecteurSearch();
+    this.onAssignDirecteur(this.directeurId != null ? String(this.directeurId) : null);
+  }
+
+  onDirecteurBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de
+    // l'input, et s'il se réconcilie immédiatement, il écrase la sélection
+    // en cours avant que (optionSelected) n'ait eu le temps de s'appliquer.
+    setTimeout(() => this.syncDirecteurSearch(), 200);
+  }
+
+  onResponsableSelected(event: MatAutocompleteSelectedEvent) {
+    this.responsableId = event.option.value as number | null;
+    this.syncResponsableSearch();
+    this.onAssignRun(this.responsableId != null ? String(this.responsableId) : null);
+  }
+
+  onResponsableBlur() {
+    setTimeout(() => this.syncResponsableSearch(), 200);
+  }
+
+  onOuestSelected(event: MatAutocompleteSelectedEvent) {
+    this.collaborateurOuestId = event.option.value as number | null;
+    this.syncOuestSearch();
+    this.onAssignMg(this.collaborateurOuestId != null ? String(this.collaborateurOuestId) : null);
+  }
+
+  onOuestBlur() {
+    setTimeout(() => this.syncOuestSearch(), 200);
   }
 
   onAssignDirecteur(val: string | null) {
@@ -1314,8 +1435,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const id = this.client.id;
     const userId = val ? Number(val) : null;
     this.clientsService.assignDirecteur(id, userId).subscribe({
-      next: c => { this.client = c; },
-      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+      next: c => { this.client = c; this.syncAssignFieldsFromClient(); },
+      error: () => this.clientsService.getOne(id).subscribe(c => { this.client = c; this.syncAssignFieldsFromClient(); }),
     });
   }
 
@@ -1324,8 +1445,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const id = this.client.id;
     const userId = val ? Number(val) : null;
     this.clientsService.assign(id, userId).subscribe({
-      next: c => { this.client = c; },
-      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+      next: c => { this.client = c; this.syncAssignFieldsFromClient(); },
+      error: () => this.clientsService.getOne(id).subscribe(c => { this.client = c; this.syncAssignFieldsFromClient(); }),
     });
   }
 
@@ -1334,8 +1455,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const id = this.client.id;
     const userId = val ? Number(val) : null;
     this.clientsService.assignOuest(id, userId).subscribe({
-      next: c => { this.client = c; },
-      error: () => this.clientsService.getOne(id).subscribe(c => this.client = c),
+      next: c => { this.client = c; this.syncAssignFieldsFromClient(); },
+      error: () => this.clientsService.getOne(id).subscribe(c => { this.client = c; this.syncAssignFieldsFromClient(); }),
     });
   }
 

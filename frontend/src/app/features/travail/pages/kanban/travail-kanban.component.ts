@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Subject, takeUntil } from 'rxjs';
 import { TasksService, Task } from '../../../../core/services/tasks.service';
@@ -35,7 +36,7 @@ const COLUMNS: KanbanColumn[] = [
 @Component({
   selector: 'app-travail-kanban',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatDialogModule, DragDropModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatDialogModule, MatAutocompleteModule, DragDropModule],
   template: `
 <div class="page">
 
@@ -49,18 +50,24 @@ const COLUMNS: KanbanColumn[] = [
       </div>
     </div>
     <div class="header-actions">
-      <select class="hdr-select" [(ngModel)]="filterCollab" (change)="reload()">
-        <option value="">Tous les collaborateurs</option>
-        @for (u of users; track u.id) {
-          <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+      <input class="hdr-select" [(ngModel)]="collabSearch" name="filterCollabSearch"
+             [matAutocomplete]="collabAuto" placeholder="Tous les collaborateurs"
+             (blur)="onCollabBlur()" autocomplete="off" />
+      <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollabSelected($event)">
+        <mat-option [value]="''">Tous les collaborateurs</mat-option>
+        @for (u of filteredUsers; track u.id) {
+          <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
         }
-      </select>
-      <select class="hdr-select" [(ngModel)]="filterClient" (change)="reload()">
-        <option value="">Tous les clients</option>
-        @for (c of clients; track c.id) {
-          <option [value]="c.id">{{ c.nom }}</option>
+      </mat-autocomplete>
+      <input class="hdr-select" [(ngModel)]="clientSearch" name="filterClientSearch"
+             [matAutocomplete]="clientAuto" placeholder="Tous les clients"
+             (blur)="onClientBlur()" autocomplete="off" />
+      <mat-autocomplete #clientAuto="matAutocomplete" (optionSelected)="onClientSelected($event)">
+        <mat-option [value]="''">Tous les clients</mat-option>
+        @for (c of filteredClients; track c.id) {
+          <mat-option [value]="'' + c.id">{{ c.nom }}</mat-option>
         }
-      </select>
+      </mat-autocomplete>
       <select class="hdr-select" [(ngModel)]="filterPrio" (change)="reload()">
         <option value="">Toutes priorités</option>
         <option value="HAUTE">Haute</option>
@@ -448,6 +455,55 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
   filterCollab = '';
   filterClient = '';
   filterPrio   = '';
+  collabSearch = '';
+  clientSearch = '';
+
+  get filteredUsers(): User[] {
+    const sorted = [...this.users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' }));
+    const term = this.collabSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(term));
+  }
+
+  get filteredClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  onCollabSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterCollab = event.option.value;
+    this.syncCollabSearchFromId();
+    this.reload();
+  }
+
+  onCollabBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de l'input, et s'il se
+    // réconcilie immédiatement, il écrase la sélection en cours avant que (optionSelected) n'ait
+    // eu le temps de s'appliquer. NE PAS OMETTRE CE DÉLAI.
+    setTimeout(() => this.syncCollabSearchFromId(), 200);
+  }
+
+  private syncCollabSearchFromId() {
+    const u = this.users.find(x => String(x.id) === this.filterCollab);
+    this.collabSearch = u ? `${u.firstName} ${u.lastName}` : '';
+  }
+
+  onClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.filterClient = event.option.value;
+    this.syncClientSearchFromId();
+    this.reload();
+  }
+
+  onClientBlur() {
+    setTimeout(() => this.syncClientSearchFromId(), 200);
+  }
+
+  private syncClientSearchFromId() {
+    const c = this.clients.find(x => String(x.id) === this.filterClient);
+    this.clientSearch = c ? c.nom : '';
+  }
 
   ngOnInit() {
     this.clientsSvc.getAll().pipe(takeUntil(this._d$)).subscribe(c => this.clients = c);
