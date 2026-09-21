@@ -542,12 +542,8 @@ export class TravailComponent implements OnInit, OnDestroy {
   }
 
   saveTimerEntry() {
-    // Le backend refuse toute saisie de moins de 15 min (`CreateSaisieTempsDto.dureeHeures`,
-    // `@Min(0.25)`) — on le vérifie ici pour donner un message clair plutôt que de fermer le
-    // formulaire en silence (durée à 0) ou de renvoyer une erreur générique après un aller-
-    // retour serveur inutile.
-    if (this.timerStoppedH < 0.25) {
-      this.timerSaveError.set('Durée trop courte (15 minutes minimum) — cette saisie n\'a pas été enregistrée.');
+    if (this.timerStoppedH <= 0) {
+      this.timerSaveError.set('La minuterie n\'a pas tourné assez longtemps — cette saisie n\'a pas été enregistrée.');
       return;
     }
     const dto: CreateSaisieTempsDto = {

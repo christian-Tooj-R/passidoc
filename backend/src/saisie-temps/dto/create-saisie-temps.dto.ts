@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { TypeTemps, CategorieNonFacturable } from '../../entities/saisie-temps.entity';
 
 export class CreateSaisieTempsDto {
@@ -6,7 +6,7 @@ export class CreateSaisieTempsDto {
   date: string;
 
   @IsNumber()
-  @Min(0.25)
+  @IsPositive()
   dureeHeures: number;
 
   @IsEnum(TypeTemps)
