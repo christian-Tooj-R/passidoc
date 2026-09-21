@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
 import { toLocalIso } from '../../../../core/services/date.util';
@@ -24,7 +25,7 @@ const PAGE_SIZE = 50;
 @Component({
   selector: 'app-travail-temps-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDatepickerModule, SaisieEditFormComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDatepickerModule, MatAutocompleteModule, SaisieEditFormComponent],
   template: `
 <div class="page">
 
@@ -68,23 +69,31 @@ const PAGE_SIZE = 50;
       </mat-date-range-input>
       <mat-date-range-picker #rangePicker></mat-date-range-picker>
     </div>
-    <div class="fb-field">
-      <label class="fb-label">Collaborateur</label>
-      <select class="fb-select" [(ngModel)]="collaborateurId">
-        <option value="">Tous</option>
-        @for (u of users; track u.id) {
-          <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
-        }
-      </select>
-    </div>
+    @if (authSvc.isAdmin()) {
+      <div class="fb-field">
+        <label class="fb-label">Collaborateur</label>
+        <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
+               [matAutocomplete]="collabAuto" placeholder="Tous"
+               (blur)="onCollaborateurBlur()" autocomplete="off" />
+        <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
+          <mat-option [value]="''">Tous</mat-option>
+          @for (u of filteredUsers; track u.id) {
+            <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
+          }
+        </mat-autocomplete>
+      </div>
+    }
     <div class="fb-field">
       <label class="fb-label">Client</label>
-      <select class="fb-select" [(ngModel)]="clientId">
-        <option value="">Tous</option>
-        @for (c of clients; track c.id) {
-          <option [value]="c.id">{{ c.nom }}</option>
+      <input class="fb-select" [(ngModel)]="clientSearch" name="clientSearch"
+             [matAutocomplete]="clientAuto" placeholder="Tous"
+             (blur)="onClientBlur()" autocomplete="off" />
+      <mat-autocomplete #clientAuto="matAutocomplete" (optionSelected)="onClientSelected($event)">
+        <mat-option [value]="''">Tous</mat-option>
+        @for (c of filteredClients; track c.id) {
+          <mat-option [value]="'' + c.id">{{ c.nom }}</mat-option>
         }
-      </select>
+      </mat-autocomplete>
     </div>
     <div class="fb-field">
       <label class="fb-label">Facturable</label>
@@ -321,7 +330,7 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
   private svc        = inject(SaisieTempsService);
   private clientsSvc = inject(ClientsService);
   private usersSvc   = inject(UsersService);
-  private authSvc    = inject(AuthService);
+  authSvc    = inject(AuthService);
   private _d$        = new Subject<void>();
 
   loading  = signal(true);
@@ -336,6 +345,53 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
   clientId         = '';
   filterFacturable = '';
   recherche        = '';
+  collaborateurSearch = '';
+  clientSearch        = '';
+
+  get filteredUsers(): User[] {
+    const sorted = [...this.users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' }));
+    const term = this.collaborateurSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(term));
+  }
+
+  get filteredClients(): Client[] {
+    const sorted = [...this.clients].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return sorted;
+    return sorted.filter(c => c.nom.toLowerCase().includes(term));
+  }
+
+  onCollaborateurSelected(event: MatAutocompleteSelectedEvent) {
+    this.collaborateurId = event.option.value;
+    this.syncCollaborateurSearchFromId();
+  }
+
+  onCollaborateurBlur() {
+    // Délai volontaire : un clic sur une option déclenche aussi le blur de l'input, et s'il se
+    // réconcilie immédiatement, il écrase la sélection en cours avant que (optionSelected) n'ait
+    // eu le temps de s'appliquer. NE PAS OMETTRE CE DÉLAI.
+    setTimeout(() => this.syncCollaborateurSearchFromId(), 200);
+  }
+
+  private syncCollaborateurSearchFromId() {
+    const u = this.users.find(x => String(x.id) === this.collaborateurId);
+    this.collaborateurSearch = u ? `${u.firstName} ${u.lastName}` : '';
+  }
+
+  onClientSelected(event: MatAutocompleteSelectedEvent) {
+    this.clientId = event.option.value;
+    this.syncClientSearchFromId();
+  }
+
+  onClientBlur() {
+    setTimeout(() => this.syncClientSearchFromId(), 200);
+  }
+
+  private syncClientSearchFromId() {
+    const c = this.clients.find(x => String(x.id) === this.clientId);
+    this.clientSearch = c ? c.nom : '';
+  }
 
   // ── Sélecteur de période via calendrier (icône) ──
   rangeStart: Date | null = null;
@@ -407,6 +463,7 @@ export class TravailTempsDetailComponent implements OnInit, OnDestroy {
 
   vider() {
     this.dateDebut = this.dateFin = this.collaborateurId = this.clientId = this.filterFacturable = this.recherche = '';
+    this.collaborateurSearch = this.clientSearch = '';
     this.rangeStart = this.rangeEnd = null;
     this.load();
   }

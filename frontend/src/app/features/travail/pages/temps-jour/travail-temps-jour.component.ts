@@ -49,18 +49,20 @@ const PAGE_SIZES = [25, 50, 100];
       <label class="fb-label">Jusqu'au</label>
       <input type="date" class="fb-input" [(ngModel)]="dateFin" />
     </div>
-    <div class="fb-field">
-      <label class="fb-label">Collaborateur</label>
-      <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
-             [matAutocomplete]="collabAuto" placeholder="Tous"
-             (blur)="onCollaborateurBlur()" autocomplete="off" />
-      <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
-        <mat-option [value]="''">Tous</mat-option>
-        @for (u of filteredUsers; track u.id) {
-          <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
-        }
-      </mat-autocomplete>
-    </div>
+    @if (authSvc.isAdmin()) {
+      <div class="fb-field">
+        <label class="fb-label">Collaborateur</label>
+        <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
+               [matAutocomplete]="collabAuto" placeholder="Tous"
+               (blur)="onCollaborateurBlur()" autocomplete="off" />
+        <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
+          <mat-option [value]="''">Tous</mat-option>
+          @for (u of filteredUsers; track u.id) {
+            <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
+          }
+        </mat-autocomplete>
+      </div>
+    }
     <div class="fb-field">
       <label class="fb-label">Client</label>
       <input class="fb-select" [(ngModel)]="clientSearch" name="clientSearch"
@@ -293,7 +295,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
   private svc        = inject(SaisieTempsService);
   private clientsSvc = inject(ClientsService);
   private usersSvc    = inject(UsersService);
-  private authSvc    = inject(AuthService);
+  authSvc    = inject(AuthService);
   private _d$        = new Subject<void>();
 
   loading = signal(true);

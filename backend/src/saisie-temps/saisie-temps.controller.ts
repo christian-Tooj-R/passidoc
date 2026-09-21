@@ -94,8 +94,21 @@ export class SaisieTempsController {
     return this.service.remove(id, req.user.id);
   }
 
+  /**
+   * Un non-ADMIN ne peut jamais voir les temps de quelqu'un d'autre via ces rapports —
+   * on ignore tout collaborateurId fourni par le client et on force le sien. Politique
+   * identique à celle déjà appliquée aux données RH sensibles (salaire, congés) :
+   * ADMIN voit tout, tout le monde d'autre ne voit que soi-même.
+   */
+  private scopedCollaborateurId(req: any, requested?: string): number | undefined {
+    if (req.user.role === UserRole.ADMIN) {
+      return requested ? +requested : undefined;
+    }
+    return req.user.id;
+  }
+
   @Get('rapport/jour')
-  @ApiOperation({ summary: 'Rapport des temps passés par jour' })
+  @ApiOperation({ summary: 'Rapport des temps passés par jour — soi-même par défaut, tout le monde réservé à ADMIN' })
   getRapportJour(
     @Req() req: any,
     @Query('dateDebut') dateDebut?: string,
@@ -105,13 +118,13 @@ export class SaisieTempsController {
   ) {
     return this.service.getRapportJour(
       req.user.tenantId, dateDebut, dateFin,
-      collaborateurId ? +collaborateurId : undefined,
+      this.scopedCollaborateurId(req, collaborateurId),
       clientId ? +clientId : undefined,
     );
   }
 
   @Get('rapport/semaine')
-  @ApiOperation({ summary: 'Rapport des temps passés agrégé par semaine' })
+  @ApiOperation({ summary: 'Rapport des temps passés agrégé par semaine — soi-même par défaut, tout le monde réservé à ADMIN' })
   getRapportSemaine(
     @Req() req: any,
     @Query('dateDebut') dateDebut?: string,
@@ -120,12 +133,12 @@ export class SaisieTempsController {
   ) {
     return this.service.getRapportSemaine(
       req.user.tenantId, dateDebut, dateFin,
-      collaborateurId ? +collaborateurId : undefined,
+      this.scopedCollaborateurId(req, collaborateurId),
     );
   }
 
   @Get('rapport/mois')
-  @ApiOperation({ summary: 'Rapport des temps passés agrégé par mois' })
+  @ApiOperation({ summary: 'Rapport des temps passés agrégé par mois — soi-même par défaut, tout le monde réservé à ADMIN' })
   getRapportMois(
     @Req() req: any,
     @Query('dateDebut') dateDebut?: string,
@@ -134,7 +147,7 @@ export class SaisieTempsController {
   ) {
     return this.service.getRapportMois(
       req.user.tenantId, dateDebut, dateFin,
-      collaborateurId ? +collaborateurId : undefined,
+      this.scopedCollaborateurId(req, collaborateurId),
     );
   }
 

@@ -8,6 +8,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { SaisieTempsService } from '../../../../core/services/saisie-temps.service';
 import { toLocalIso } from '../../../../core/services/date.util';
 import { UsersService } from '../../../../core/services/users.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { User } from '../../../../core/models/user.model';
 import { exportRowsToCsv } from '../../../../core/services/csv-export.util';
 import { formatHeures } from '../../../../core/services/duree.util';
@@ -50,18 +51,20 @@ import autoTable from 'jspdf-autotable';
       <label class="fb-label">Jusqu'au</label>
       <input type="date" class="fb-input" [(ngModel)]="dateFin" />
     </div>
-    <div class="fb-field">
-      <label class="fb-label">Collaborateur</label>
-      <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
-             [matAutocomplete]="collabAuto" placeholder="Tous"
-             (blur)="onCollaborateurBlur()" autocomplete="off" />
-      <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
-        <mat-option [value]="''">Tous</mat-option>
-        @for (u of filteredUsers; track u.id) {
-          <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
-        }
-      </mat-autocomplete>
-    </div>
+    @if (authSvc.isAdmin()) {
+      <div class="fb-field">
+        <label class="fb-label">Collaborateur</label>
+        <input class="fb-select" [(ngModel)]="collaborateurSearch" name="collaborateurSearch"
+               [matAutocomplete]="collabAuto" placeholder="Tous"
+               (blur)="onCollaborateurBlur()" autocomplete="off" />
+        <mat-autocomplete #collabAuto="matAutocomplete" (optionSelected)="onCollaborateurSelected($event)">
+          <mat-option [value]="''">Tous</mat-option>
+          @for (u of filteredUsers; track u.id) {
+            <mat-option [value]="'' + u.id">{{ u.firstName }} {{ u.lastName }}</mat-option>
+          }
+        </mat-autocomplete>
+      </div>
+    }
     <div class="fb-field fb-field--grow">
       <label class="fb-label">Recherche</label>
       <input class="fb-input" style="width:100%" [(ngModel)]="recherche" placeholder="Collaborateur, mois…" />
@@ -298,6 +301,7 @@ import autoTable from 'jspdf-autotable';
 export class TravailTempsMoisComponent implements OnInit, OnDestroy {
   private svc      = inject(SaisieTempsService);
   private usersSvc = inject(UsersService);
+  authSvc  = inject(AuthService);
   private _d$      = new Subject<void>();
 
   loading = signal(true);
