@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 import { SaisieTempsService } from './saisie-temps.service';
+import { SaisieTempsScheduler } from './saisie-temps.scheduler';
 import { CreateSaisieTempsDto } from './dto/create-saisie-temps.dto';
 import { UpdateSaisieTempsDto } from './dto/update-saisie-temps.dto';
 
@@ -13,7 +14,10 @@ import { UpdateSaisieTempsDto } from './dto/update-saisie-temps.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('saisies-temps')
 export class SaisieTempsController {
-  constructor(private service: SaisieTempsService) {}
+  constructor(
+    private service: SaisieTempsService,
+    private scheduler: SaisieTempsScheduler,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Enregistrer une saisie de temps' })
@@ -157,5 +161,16 @@ export class SaisieTempsController {
   @ApiOperation({ summary: '[Admin] Lister les incohérences pointage/saisie détectées' })
   getIncoherences(@Req() req: any) {
     return this.service.getIncoherences(req.user.tenantId);
+  }
+
+  @Post('admin/alerte-heures-hebdo')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: '[Admin] Déclencher manuellement l\'alerte hebdomadaire heures insuffisantes (semaine donnée ou dernière semaine écoulée)' })
+  declencherAlerteHeuresHebdo(@Body() body?: { dateDebut?: string; dateFin?: string }) {
+    if (body?.dateDebut && body?.dateFin) {
+      return this.scheduler.verifierSemaine(body.dateDebut, body.dateFin).then(alertes => ({ alertes }));
+    }
+    return this.scheduler.alerterHeuresHebdomadaires().then(alertes => ({ alertes }));
   }
 }
