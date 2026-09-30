@@ -154,7 +154,7 @@ export class HelpService {
 
   constructor(private config: ConfigService) {
     this.groq = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
-    this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.1-8b-instant';
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
   async chatStream(messages: { role: string; content: string }[], res: Response) {
@@ -170,6 +170,7 @@ export class HelpService {
         stream: true,
         max_tokens: 1024,
         temperature: 0.3,
+        reasoning_effort: 'low',
       });
 
       for await (const chunk of stream) {

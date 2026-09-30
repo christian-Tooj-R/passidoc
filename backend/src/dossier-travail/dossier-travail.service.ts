@@ -38,7 +38,7 @@ export class DossierTravailService {
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
-    this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.1-8b-instant';
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
   /** Retourne le dossier de travail pour un exercice (le crée si absent). */
@@ -142,6 +142,7 @@ ${dossier?.noteSynthese || '(non renseignée)'}
     const stream = await this.groq.chat.completions.create({
       model: this.model,
       stream: true,
+      reasoning_effort: 'low',
       messages: [
         { role: 'system', content: context },
         { role: 'user',   content: question },

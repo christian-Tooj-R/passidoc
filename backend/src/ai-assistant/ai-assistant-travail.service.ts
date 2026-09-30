@@ -33,7 +33,7 @@ export class AiAssistantTravailService {
     private config: ConfigService,
   ) {
     this.groq = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
-    this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
   private toISODate(d: Date): string {
@@ -130,6 +130,7 @@ export class AiAssistantTravailService {
         stream: true,
         max_tokens: 1024,
         temperature: 0.3,
+        reasoning_effort: 'low',
       });
 
       for await (const chunk of stream) {

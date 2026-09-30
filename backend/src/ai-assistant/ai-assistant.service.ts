@@ -24,7 +24,7 @@ export class AiAssistantService {
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
-    this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
   private async getTenantLabels(tenantId: number | null): Promise<{ pole1: string; pole2: string }> {
@@ -142,6 +142,7 @@ export class AiAssistantService {
         stream: true,
         max_tokens: 1024,
         temperature: 0.3,
+        reasoning_effort: 'low',
       });
 
       for await (const chunk of stream) {

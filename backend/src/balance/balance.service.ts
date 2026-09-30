@@ -32,7 +32,7 @@ export class BalanceService {
     private config: ConfigService,
   ) {
     this.groq = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
-    this.model = config.get<string>('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
   async getByAnnee(clientId: number, annee: number, tenantId?: number): Promise<MoisBalance[]> {
@@ -184,6 +184,7 @@ Réponds directement en français, sans titres ni puces, de façon professionnel
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 500,
         temperature: 0.3,
+        reasoning_effort: 'low',
       });
       const analyse = completion.choices[0]?.message?.content ?? 'Analyse indisponible.';
 
