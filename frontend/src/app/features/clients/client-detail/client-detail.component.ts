@@ -1308,6 +1308,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    const tab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
+    if (tab) this.activeTab.set(tab);
     const start = Date.now();
     this.clientsService.getOne(id).subscribe(c => {
       this.client = c;

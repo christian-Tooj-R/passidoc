@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy, computed, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, signal, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -8,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/services/auth.service';
 import { AlertesService } from '../../core/services/alertes.service';
 import { NotificationStreamService, TaskNotification } from '../../core/services/notification-stream.service';
+import { SearchService, SearchResult } from '../../core/services/search.service';
 import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicator/global-timer-indicator.component';
 
 @Component({
@@ -21,13 +24,45 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
     <header class="topbar">
 
       <!-- ── Recherche globale ───────────────────── -->
-      <div class="search-bar" [class.search-bar--focused]="searchFocused">
-        <mat-icon class="search-bar__icon">search</mat-icon>
-        <input class="search-bar__input"
-               type="text"
-               placeholder="Rechercher client, dossier, document…"
-               (focus)="searchFocused = true"
-               (blur)="searchFocused = false" />
+      <div class="search-bar-wrap">
+        <div class="search-bar" [class.search-bar--focused]="searchFocused">
+          <mat-icon class="search-bar__icon">search</mat-icon>
+          <input class="search-bar__input"
+                 type="text"
+                 placeholder="Rechercher client, dossier, document…"
+                 [value]="searchTerm()"
+                 (input)="onSearchInput($event)"
+                 (focus)="onSearchFocus()" />
+          @if (searchTerm()) {
+            <button class="search-bar__clear" (click)="clearSearch()" aria-label="Effacer">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+
+        @if (searchOpen()) {
+          <div class="search-panel">
+            @if (searchLoading()) {
+              <div class="search-empty"><mat-icon class="spin">refresh</mat-icon> Recherche…</div>
+            } @else if (searchTerm().trim().length < 2) {
+              <div class="search-empty">Tapez au moins 2 caractères…</div>
+            } @else if (searchResults().length === 0) {
+              <div class="search-empty"><mat-icon>search_off</mat-icon> Aucun résultat pour « {{ searchTerm() }} »</div>
+            } @else {
+              @for (r of searchResults(); track r.type + '-' + r.id) {
+                <div class="search-result" (click)="goToResult(r)">
+                  <span class="search-result__icon" [class.doc]="r.type === 'document'">
+                    <mat-icon>{{ r.type === 'client' ? 'folder_shared' : 'description' }}</mat-icon>
+                  </span>
+                  <div class="search-result__body">
+                    <div class="search-result__title">{{ r.titre }}</div>
+                    @if (r.sousTitre) { <div class="search-result__sub">{{ r.sousTitre }}</div> }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        }
       </div>
 
       <!-- ── Right ────────────────────────────────── -->
@@ -167,9 +202,9 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
     .topbar__right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
     /* ── Recherche globale ───────────────────────── */
+    .search-bar-wrap { flex: 1; max-width: 520px; position: relative; }
     .search-bar {
-      flex: 1;
-      max-width: 520px;
+      width: 100%;
       display: flex; align-items: center; gap: 10px;
       height: 34px;
       background: #F1F5F9;
@@ -178,6 +213,7 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
       padding: 0 12px;
       transition: border-color .18s, background .18s, box-shadow .18s;
       cursor: text;
+      box-sizing: border-box;
     }
     .search-bar--focused {
       background: #fff;
@@ -193,8 +229,53 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
       flex: 1; border: none; background: transparent; outline: none;
       font-size: 13.5px; font-family: 'Inter', sans-serif;
       color: #1A1F36;
+      min-width: 0;
     }
     .search-bar__input::placeholder { color: #94A3B8; }
+    .search-bar__clear {
+      border: none; background: none; cursor: pointer; padding: 2px;
+      display: flex; align-items: center; color: #94A3B8; flex-shrink: 0;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+    .search-bar__clear:hover { color: #475569; }
+
+    .search-panel {
+      position: absolute;
+      top: calc(100% + 8px); left: 0; right: 0;
+      background: #FFFBFE;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25), 0 8px 12px 6px rgba(0,0,0,.12);
+      z-index: 1000;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 6px;
+    }
+    .search-empty {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px 12px; color: #94A3B8; font-size: 13px;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+    .search-empty .spin { animation: search-spin 1s linear infinite; }
+    @keyframes search-spin { to { transform: rotate(360deg); } }
+    .search-result {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 10px; cursor: pointer;
+      transition: background .12s;
+    }
+    .search-result:hover { background: #F1F5F9; }
+    .search-result__icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #EEF2FF; color: #6366F1;
+      mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    }
+    .search-result__icon.doc { background: #F0FDF4; color: #16A34A; }
+    .search-result__body { min-width: 0; flex: 1; }
+    .search-result__title {
+      font-size: 13px; font-weight: 600; color: #1A1F36;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .search-result__sub { font-size: 11.5px; color: #94A3B8; }
 
     /* ── MD3 Icon buttons ────────────────────────── */
     .icon-btn {
@@ -290,6 +371,8 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
     .notif-task_assigned   { background: #E6FBF7; color: #0E9E83; }
     .notif-client_assigned { background: #EEF0F8; color: #162351; }
     .notif-team_assigned   { background: #F5F3FF; color: #7C3AED; }
+    .notif-heures_hebdo_insuffisantes,
+    .notif-heures_hebdo_insuffisantes_equipe { background: #FFFBEB; color: #D97706; }
     .alert-icon            { background: #FFFBEB; color: #D97706; }
 
     .bell-body { flex: 1; min-width: 0; }
@@ -364,10 +447,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
   bellOpen     = false;
   searchFocused = false;
 
+  searchTerm    = signal('');
+  searchOpen    = signal(false);
+  searchLoading = signal(false);
+  searchResults = signal<SearchResult[]>([]);
+  private search$ = new Subject<string>();
+
   constructor(
     public auth: AuthService,
     public alertes: AlertesService,
     public notifStream: NotificationStreamService,
+    private searchSvc: SearchService,
     private router: Router,
     private elRef: ElementRef,
   ) {}
@@ -377,6 +467,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.alertes.startPolling();
     this.notifStream.connect();
+
+    this.search$.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      switchMap(q => {
+        if (q.trim().length < 2) return of<SearchResult[]>([]);
+        this.searchLoading.set(true);
+        return this.searchSvc.search(q);
+      }),
+    ).subscribe({
+      next: results => { this.searchResults.set(results); this.searchLoading.set(false); },
+      error: () => { this.searchResults.set([]); this.searchLoading.set(false); },
+    });
   }
 
   ngOnDestroy() {
@@ -384,9 +487,41 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.notifStream.disconnect();
   }
 
+  onSearchFocus() {
+    this.searchFocused = true;
+    this.searchOpen.set(true);
+  }
+
+  onSearchInput(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchTerm.set(value);
+    this.searchOpen.set(true);
+    this.search$.next(value);
+  }
+
+  clearSearch() {
+    this.searchTerm.set('');
+    this.searchResults.set([]);
+  }
+
+  goToResult(r: SearchResult) {
+    this.searchOpen.set(false);
+    this.searchFocused = false;
+    this.clearSearch();
+    if (r.type === 'client') {
+      this.router.navigate(['/clients', r.id]);
+    } else {
+      this.router.navigate(['/clients', r.clientId], { queryParams: { tab: 'documents' } });
+    }
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (!this.elRef.nativeElement.contains(event.target)) this.bellOpen = false;
+    if (!this.elRef.nativeElement.contains(event.target)) {
+      this.bellOpen = false;
+      this.searchOpen.set(false);
+      this.searchFocused = false;
+    }
   }
 
   toggleBell(event: MouseEvent) {
@@ -400,6 +535,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     n.read = true;
     if (n.type === 'TEAM_ASSIGNED') {
       this.router.navigate(['/equipes']);
+    } else if (n.type === 'HEURES_HEBDO_INSUFFISANTES' || n.type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') {
+      this.router.navigate(['/travail/temps/semaine']);
     } else if (n.clientId) {
       const queryParams = n.type === 'TASK_ASSIGNED' ? { tab: 'tasks' } : {};
       this.router.navigate(['/clients', n.clientId], { queryParams });
@@ -414,6 +551,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   typeIcon(type: string): string {
     if (type === 'TEAM_ASSIGNED')   return 'people';
     if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
+    if (type === 'HEURES_HEBDO_INSUFFISANTES' || type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') return 'schedule';
     return 'task_alt';
   }
 
