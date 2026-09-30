@@ -12,6 +12,10 @@ export interface TenantConfig {
   couleurPrimaire?: string;
   isConfigured: boolean;
 
+  /** Circuit de validation des congés : si true, le référent direct d'un collaborateur
+   *  peut lui aussi approuver/refuser ses demandes (en plus d'ADMIN, toujours autorisé). */
+  congesValidationParReferent?: boolean;
+
   /** Mentions légales employeur — module Paie RH interne (bulletin de salaire ~Sage).
    *  Nullable/vides tant que la direction ne les a pas renseignées. */
   adresse?: string | null;

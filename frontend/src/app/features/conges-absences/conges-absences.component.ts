@@ -145,7 +145,7 @@ type SoldeRow = { userId: number; name: string; initials: string; soldes: Record
               <span class="statut-badge statut-badge--{{ d.statut.toLowerCase() }}">{{ statutLabel(d.statut) }}</span>
             </span>
             <span class="col-actions">
-              @if (!selfOnly && d.statut === 'EN_ATTENTE') {
+              @if ((!selfOnly || d.userId !== meId) && d.statut === 'EN_ATTENTE') {
                 <button mat-icon-button class="btn-approve" matTooltip="Approuver" (click)="approuver(d)">
                   <mat-icon>check</mat-icon>
                 </button>
@@ -554,10 +554,10 @@ export class CongesAbsencesComponent implements OnInit {
 
   load() {
     this.loading.set(true);
-    const demandes$ = this.selfOnly
-      ? this.cSvc.mesDemandes(this.annee())
-      : this.cSvc.findAll({ annee: this.annee() });
-    demandes$.subscribe({
+    // Toujours findAll() (sans filtre userId) : le backend décide seul de la portée
+    // (soi-même, ou soi-même + équipe directe si le circuit "validation par référent"
+    // est activé pour le tenant) — évite de dupliquer cette logique côté front.
+    this.cSvc.findAll({ annee: this.annee() }).subscribe({
       next: d => { this.demandes.set(d); this.loading.set(false); },
       error: () => this.loading.set(false),
     });

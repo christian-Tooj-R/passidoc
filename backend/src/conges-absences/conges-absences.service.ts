@@ -7,6 +7,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { CongeAbsence, TypeConge, StatutConge } from '../entities/conge-absence.entity';
 import { SoldeConge } from '../entities/solde-conge.entity';
 import { User, UserRole } from '../entities/user.entity';
+import { TenantConfig } from '../entities/tenant-config.entity';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -26,9 +27,10 @@ export class CongesAbsencesService {
   };
 
   constructor(
-    @InjectRepository(CongeAbsence) private congeRepo: Repository<CongeAbsence>,
-    @InjectRepository(SoldeConge)   private soldeRepo: Repository<SoldeConge>,
-    @InjectRepository(User)         private userRepo: Repository<User>,
+    @InjectRepository(CongeAbsence)  private congeRepo: Repository<CongeAbsence>,
+    @InjectRepository(SoldeConge)    private soldeRepo: Repository<SoldeConge>,
+    @InjectRepository(User)          private userRepo: Repository<User>,
+    @InjectRepository(TenantConfig)  private tenantConfigRepo: Repository<TenantConfig>,
     private readonly mailSvc:   MailService,
     private readonly jwtSvc:    JwtService,
     private readonly config:    ConfigService,
@@ -37,13 +39,14 @@ export class CongesAbsencesService {
 
   /* ── Demandes ──────────────────────────────────────────────── */
 
-  async findAll(filters?: { userId?: number; statut?: StatutConge; annee?: number; tenantId?: number }) {
+  async findAll(filters?: { userId?: number; userIds?: number[]; statut?: StatutConge; annee?: number; tenantId?: number }) {
     const qb = this.congeRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.user', 'u')
       .orderBy('c.dateDebut', 'DESC');
 
     if (filters?.tenantId) qb.andWhere('c.tenantId = :tenantId', { tenantId: filters.tenantId });
     if (filters?.userId) qb.andWhere('c.userId = :userId', { userId: filters.userId });
+    else if (filters?.userIds?.length) qb.andWhere('c.userId IN (:...userIds)', { userIds: filters.userIds });
     if (filters?.statut) qb.andWhere('c.statut = :statut', { statut: filters.statut });
     if (filters?.annee) {
       qb.andWhere('EXTRACT(YEAR FROM c."dateDebut") = :annee', { annee: filters.annee });
@@ -51,6 +54,53 @@ export class CongesAbsencesService {
 
     const conges = await qb.getMany();
     return conges.map(c => this.safeConge(c));
+  }
+
+  /**
+   * Liste des demandes visibles par l'utilisateur courant, selon le circuit de validation :
+   * ADMIN voit tout ; sinon, self-only par défaut, ou self + équipe directe (referentId) si
+   * `congesValidationParReferent` est activé pour le tenant.
+   */
+  async findAllScoped(
+    currentUser: User,
+    filters: { userId?: number; statut?: StatutConge; annee?: number },
+  ) {
+    if (currentUser.role === UserRole.ADMIN) {
+      return this.findAll({ ...filters, tenantId: currentUser.tenantId });
+    }
+
+    const referentActif = await this.isValidationParReferentActive(currentUser.tenantId);
+    if (!referentActif) {
+      if (filters.userId !== undefined && filters.userId !== currentUser.id) {
+        throw new ForbiddenException('Accès réservé à vos propres demandes');
+      }
+      return this.findAll({ userId: currentUser.id, statut: filters.statut, annee: filters.annee, tenantId: currentUser.tenantId });
+    }
+
+    const equipe = await this.userRepo.find({ where: { referentId: currentUser.id } });
+    const idsAutorises = [currentUser.id, ...equipe.map(u => u.id)];
+    if (filters.userId !== undefined) {
+      if (!idsAutorises.includes(filters.userId)) {
+        throw new ForbiddenException('Accès réservé à vos propres demandes et à celles de votre équipe');
+      }
+      return this.findAll({ userId: filters.userId, statut: filters.statut, annee: filters.annee, tenantId: currentUser.tenantId });
+    }
+    return this.findAll({ userIds: idsAutorises, statut: filters.statut, annee: filters.annee, tenantId: currentUser.tenantId });
+  }
+
+  private async isValidationParReferentActive(tenantId?: number): Promise<boolean> {
+    if (!tenantId) return false;
+    const config = await this.tenantConfigRepo.findOne({ where: { id: tenantId } });
+    return !!config?.congesValidationParReferent;
+  }
+
+  /** Un non-ADMIN ne peut approuver/refuser que s'il est le référent direct du demandeur
+   *  ET que le circuit "validation par référent" est activé pour le tenant. */
+  private async peutValider(conge: CongeAbsence, currentUser: User): Promise<boolean> {
+    if (currentUser.role === UserRole.ADMIN) return true;
+    if (!(await this.isValidationParReferentActive(currentUser.tenantId))) return false;
+    const demandeur = await this.userRepo.findOne({ where: { id: conge.userId } });
+    return demandeur?.referentId === currentUser.id;
   }
 
   async findOne(id: number) {
@@ -105,14 +155,17 @@ export class CongesAbsencesService {
     return this.findOne(saved.id);
   }
 
-  async approuver(id: number, approbateurId: number, commentaire?: string) {
+  async approuver(id: number, currentUser: User, commentaire?: string) {
     const conge = await this.congeRepo.findOne({ where: { id } });
     if (!conge) throw new NotFoundException('Demande introuvable');
     if (conge.statut !== StatutConge.EN_ATTENTE) throw new BadRequestException('Demande déjà traitée');
+    if (!(await this.peutValider(conge, currentUser))) {
+      throw new ForbiddenException('Vous n\'êtes pas autorisé à valider cette demande');
+    }
 
     await this.congeRepo.update(id, {
       statut: StatutConge.APPROUVEE,
-      approbateurId,
+      approbateurId: currentUser.id,
       dateApprobation: new Date().toISOString().split('T')[0],
       commentaireRH: commentaire ?? null,
     });
@@ -138,14 +191,17 @@ export class CongesAbsencesService {
     return congeApprouve;
   }
 
-  async refuser(id: number, approbateurId: number, commentaire?: string) {
+  async refuser(id: number, currentUser: User, commentaire?: string) {
     const conge = await this.congeRepo.findOne({ where: { id } });
     if (!conge) throw new NotFoundException('Demande introuvable');
     if (conge.statut !== StatutConge.EN_ATTENTE) throw new BadRequestException('Demande déjà traitée');
+    if (!(await this.peutValider(conge, currentUser))) {
+      throw new ForbiddenException('Vous n\'êtes pas autorisé à valider cette demande');
+    }
 
     await this.congeRepo.update(id, {
       statut: StatutConge.REFUSEE,
-      approbateurId,
+      approbateurId: currentUser.id,
       dateApprobation: new Date().toISOString().split('T')[0],
       commentaireRH: commentaire ?? null,
     });
@@ -306,11 +362,20 @@ export class CongesAbsencesService {
       return { statut: conge.statut, message: 'Demande déjà traitée' };
     }
 
+    // Le lien email est envoyé au référent direct du demandeur — on retrouve ce même
+    // utilisateur ici pour repasser par la même vérification d'autorisation (peutValider)
+    // que le bouton in-app, plutôt que de contourner le circuit de validation configuré.
+    const demandeur = await this.userRepo.findOne({ where: { id: conge.userId } });
+    const validateur = demandeur?.referentId
+      ? await this.userRepo.findOne({ where: { id: demandeur.referentId } })
+      : null;
+    if (!validateur) throw new ForbiddenException('Aucun responsable habilité trouvé pour cette demande');
+
     if (action === 'approuver') {
-      await this.approuver(congeId, 0, 'Approuvé via email');
+      await this.approuver(congeId, validateur, 'Approuvé via email');
       return { statut: StatutConge.APPROUVEE, message: 'Demande approuvée' };
     } else {
-      await this.refuser(congeId, 0, 'Refusé via email');
+      await this.refuser(congeId, validateur, 'Refusé via email');
       return { statut: StatutConge.REFUSEE, message: 'Demande refusée' };
     }
   }

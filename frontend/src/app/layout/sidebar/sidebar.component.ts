@@ -490,6 +490,7 @@ export class SidebarComponent implements OnInit {
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
     else if (url.startsWith('/admin/pointage-config'))                            this.activeModule.set('pointage');
+    else if (url.startsWith('/admin/conges-config'))                              this.activeModule.set('rh');
     else if (url.startsWith('/equipes') || url.startsWith('/permissions-roles') || url.startsWith('/admin'))  this.activeModule.set('equipe');
     else if (url.startsWith('/pointage'))                                         this.activeModule.set('pointage');
     else if (url.startsWith('/rh') || url.startsWith('/salaries') || url.startsWith('/conges')) this.activeModule.set('rh');
@@ -575,6 +576,9 @@ export class SidebarComponent implements OnInit {
         id: 'rh' as ModuleId, icon: 'manage_accounts', label: 'RH', color: '#7C3AED', activeBg: '#EDE9FE', groups: [{ label: '', items: [
             { label: 'Salariés',          route: '/rh/salaries', icon: 'badge'         },
             { label: 'Congés & absences', route: '/rh/conges',   icon: 'event_available' },
+            ...(isAdmin ? [
+              { label: 'Config. congés', route: '/admin/conges-config', icon: 'rule' },
+            ] : []),
           ],
         }],
       },

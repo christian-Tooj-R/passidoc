@@ -85,19 +85,10 @@ export class CongesAbsencesController {
     @Query('statut') statut?: StatutConge,
     @Query('annee') annee?: string,
   ) {
-    let scopedUserId = userId ? Number(userId) : undefined;
-    // Vue complète réservée à l'ADMIN — tout autre profil ne peut voir que ses propres demandes.
-    if (req.user?.role !== UserRole.ADMIN) {
-      if (scopedUserId !== undefined && scopedUserId !== req.user.id) {
-        throw new ForbiddenException('Accès réservé à vos propres demandes');
-      }
-      scopedUserId = req.user.id;
-    }
-    return this.svc.findAll({
-      userId: scopedUserId,
+    return this.svc.findAllScoped(req.user, {
+      userId: userId ? Number(userId) : undefined,
       statut,
       annee: annee ? Number(annee) : undefined,
-      tenantId: req.user?.tenantId,
     });
   }
 
@@ -149,28 +140,26 @@ export class CongesAbsencesController {
 
   @Patch(':id/approuver')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Approuver une demande' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Approuver une demande (ADMIN, ou le référent direct si le circuit le permet)' })
   approuver(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
     @Body('commentaire') commentaire?: string,
   ) {
-    return this.svc.approuver(id, req.user.id, commentaire);
+    return this.svc.approuver(id, req.user, commentaire);
   }
 
   @Patch(':id/refuser')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Refuser une demande' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Refuser une demande (ADMIN, ou le référent direct si le circuit le permet)' })
   refuser(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
     @Body('commentaire') commentaire?: string,
   ) {
-    return this.svc.refuser(id, req.user.id, commentaire);
+    return this.svc.refuser(id, req.user, commentaire);
   }
 
   @Patch(':id/annuler')

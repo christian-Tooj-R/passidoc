@@ -203,6 +203,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/pointage-config.component').then((m) => m.PointageConfigComponent),
       },
       {
+        path: 'admin/conges-config',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('./features/admin/conges-config.component').then((m) => m.CongesConfigComponent),
+      },
+      {
         path: 'personnalisation',
         loadComponent: () => import('./features/admin/personnalisation.component').then((m) => m.PersonnalisationComponent),
       },

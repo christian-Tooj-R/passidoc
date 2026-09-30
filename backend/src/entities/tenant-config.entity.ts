@@ -41,6 +41,16 @@ export class TenantConfig {
   @Column({ default: false })
   isConfigured: boolean;
 
+  /**
+   * Circuit de validation des congés : si `true`, le référent direct (`User.referentId`)
+   * d'un collaborateur peut lui aussi approuver/refuser ses demandes (en plus d'ADMIN,
+   * toujours autorisé) — voir aussi le canal email déjà existant qui utilisait déjà cette
+   * même logique de référent sans passer par ce réglage. Si `false` (défaut) : seul ADMIN
+   * valide, comportement historique inchangé.
+   */
+  @Column({ default: false })
+  congesValidationParReferent: boolean;
+
   /* ── Mentions légales employeur (bulletin de salaire — module Paie RH interne) ──────
    * Ajoutées pour la refonte ~Sage du bulletin de salaire (voir
    * Doc/MODULE_PAIE_RH_NOTES.md, section "Refonte du bulletin de salaire (~Sage)").
