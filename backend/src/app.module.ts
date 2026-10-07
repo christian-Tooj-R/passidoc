@@ -48,6 +48,7 @@ import { PaieModule } from './paie/paie.module';
 import { PaieRhModule } from './paie-rh/paie-rh.module';
 import { TenantModule } from './tenant/tenant.module';
 import { SearchModule } from './search/search.module';
+import { BackupModule } from './backup/backup.module';
 import { TenantMiddleware } from './tenant/tenant.middleware';
 import { TenantConfig } from './entities/tenant-config.entity';
 
@@ -131,6 +132,7 @@ import { TenantConfig } from './entities/tenant-config.entity';
     PaieRhModule,
     TenantModule,
     SearchModule,
+    BackupModule,
     TypeOrmModule.forFeature([TenantConfig]),
   ],
   controllers: [AppController],
