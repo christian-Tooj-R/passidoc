@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import type { Response } from 'express';
 
@@ -79,7 +80,10 @@ const EXPORT_ORDER = [
 export class BackupService {
   private readonly logger = new Logger(BackupService.name);
 
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private dataSource: DataSource,
+    private config: ConfigService,
+  ) {}
 
   /**
    * Exporte toutes les données du tenant courant en un fichier .sql (INSERT
@@ -110,22 +114,7 @@ export class BackupService {
       .filter((t: string) => !knownTables.has(t));
 
     for (const table of EXPORT_ORDER) {
-      let whereSql: string | null = null;
-      let params: any[] = [];
-      if (table === 'tenant_config') {
-        whereSql = 'id = $1';
-        params = [tenantId];
-      } else if (DIRECT_TENANT_TABLES.includes(table)) {
-        whereSql = '"tenantId" = $1';
-        params = [tenantId];
-      } else if (INDIRECT_SCOPE[table]) {
-        whereSql = INDIRECT_SCOPE[table];
-        params = [tenantId];
-      } else if (GLOBAL_TABLES.includes(table)) {
-        whereSql = null;
-        params = [];
-      }
-
+      const { whereSql, params } = this.getScope(table, tenantId);
       const count = await this.dumpTable(table, whereSql, params, write, selfRefUpdates);
       this.logger.log(`[Export SQL] ${table} : ${count} ligne(s)`);
     }
@@ -144,6 +133,93 @@ export class BackupService {
 
     write('\nCOMMIT;\n');
     res.end();
+  }
+
+  private getScope(table: string, tenantId: number): { whereSql: string | null; params: any[] } {
+    if (table === 'tenant_config') return { whereSql: 'id = $1', params: [tenantId] };
+    if (DIRECT_TENANT_TABLES.includes(table)) return { whereSql: '"tenantId" = $1', params: [tenantId] };
+    if (INDIRECT_SCOPE[table]) return { whereSql: INDIRECT_SCOPE[table], params: [tenantId] };
+    return { whereSql: null, params: [] };
+  }
+
+  /**
+   * Clone les données du tenant directement dans une AUTRE base Postgres
+   * (ex: migration vers une nouvelle instance avant expiration de l'hébergement
+   * gratuit) — sans fichier intermédiaire. Crée le schéma sur la cible (via
+   * TypeORM synchronize, mêmes entités que l'app) puis copie les données avec
+   * la même portée tenant et le même ordre de dépendances que exportSql.
+   *
+   * ssl.rejectUnauthorized=false : même réglage que la connexion principale
+   * de l'app (app.module.ts) — nécessaire pour les certificats Postgres
+   * fournis par Render.
+   */
+  async cloneToTarget(tenantId: number, targetUrl: string): Promise<{ tables: Record<string, number>; unknownTables: string[] }> {
+    const useSSL = this.config.get<string>('NODE_ENV') === 'production';
+    const targetDataSource = new DataSource({
+      type: 'postgres',
+      url: targetUrl,
+      ssl: useSSL ? { rejectUnauthorized: false } : false,
+      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      synchronize: true,
+      connectTimeoutMS: 15000,
+      extra: { connectionTimeoutMillis: 15000, idleTimeoutMillis: 30000 },
+    });
+
+    await targetDataSource.initialize();
+    this.logger.log('[Clone] Schéma créé/vérifié sur la base cible');
+
+    const tables: Record<string, number> = {};
+    const selfRefUpdates: { id: number; referentId: number }[] = [];
+
+    try {
+      const allTables = await this.dataSource.query(
+        `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+      );
+      const knownTables = new Set(['tenant_config', ...DIRECT_TENANT_TABLES, ...Object.keys(INDIRECT_SCOPE), ...GLOBAL_TABLES]);
+      const unknownTables: string[] = allTables
+        .map((t: any) => t.tablename)
+        .filter((t: string) => !knownTables.has(t));
+
+      for (const table of EXPORT_ORDER) {
+        const { whereSql, params } = this.getScope(table, tenantId);
+        const sql = whereSql ? `SELECT * FROM "${table}" WHERE ${whereSql}` : `SELECT * FROM "${table}"`;
+        const rows = await this.dataSource.query(sql, params);
+        tables[table] = rows.length;
+        if (!rows.length) continue;
+
+        const columns = Object.keys(rows[0]);
+        const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+        const insertSql = `INSERT INTO "${table}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`;
+
+        for (const row of rows) {
+          if (table === 'users' && row.referentId != null) {
+            selfRefUpdates.push({ id: row.id, referentId: row.referentId });
+          }
+          const values = columns.map(c => {
+            if (table === 'users' && c === 'referentId') return null;
+            const v = row[c];
+            if (v !== null && typeof v === 'object' && !(v instanceof Date)) return JSON.stringify(v);
+            return v;
+          });
+          await targetDataSource.query(insertSql, values);
+        }
+
+        if (columns.includes('id')) {
+          await targetDataSource.query(
+            `SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 1), true)`,
+          );
+        }
+        this.logger.log(`[Clone] ${table} : ${rows.length} ligne(s)`);
+      }
+
+      for (const u of selfRefUpdates) {
+        await targetDataSource.query(`UPDATE users SET "referentId" = $1 WHERE id = $2`, [u.referentId, u.id]);
+      }
+
+      return { tables, unknownTables };
+    } finally {
+      await targetDataSource.destroy();
+    }
   }
 
   private async dumpTable(

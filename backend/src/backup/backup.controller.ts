@@ -49,11 +49,47 @@ export class BackupController {
     @Query('tenantId') tenantIdParam: string | undefined,
     @Res() res: Response,
   ) {
+    this.checkBackupSecret(secret);
+    const tenantId = await this.resolveTenantId(slug, tenantIdParam);
+    await this.streamExport(tenantId, res);
+  }
+
+  /**
+   * Clone les données du tenant directement dans une autre base Postgres,
+   * sans fichier intermédiaire — pratique pour migrer avant l'expiration
+   * d'un hébergement gratuit. La base cible est désignée par la variable
+   * d'environnement MIGRATION_TARGET_URL (jamais transmise sur le réseau),
+   * à configurer sur Render avant d'appeler cette route.
+   */
+  @Get('clone-to-target-secret')
+  @Public()
+  @ApiOperation({ summary: 'Clone les données du tenant vers MIGRATION_TARGET_URL — requiert ?secret= et ?slug= ou ?tenantId=' })
+  @ApiQuery({ name: 'secret', required: true })
+  @ApiQuery({ name: 'slug', required: false })
+  @ApiQuery({ name: 'tenantId', required: false })
+  async cloneToTargetBySecret(
+    @Query('secret') secret: string,
+    @Query('slug') slug: string | undefined,
+    @Query('tenantId') tenantIdParam: string | undefined,
+  ) {
+    this.checkBackupSecret(secret);
+    const tenantId = await this.resolveTenantId(slug, tenantIdParam);
+
+    const targetUrl = this.config.get<string>('MIGRATION_TARGET_URL');
+    if (!targetUrl) throw new ForbiddenException('MIGRATION_TARGET_URL non configuré');
+
+    const result = await this.service.cloneToTarget(tenantId, targetUrl);
+    return result;
+  }
+
+  private checkBackupSecret(secret: string) {
     const expected = this.config.get<string>('BACKUP_SECRET');
     if (!expected || !secret || secret !== expected) {
       throw new ForbiddenException('Secret invalide');
     }
+  }
 
+  private async resolveTenantId(slug: string | undefined, tenantIdParam: string | undefined): Promise<number> {
     let tenantId: number | undefined;
     if (tenantIdParam) {
       tenantId = Number(tenantIdParam);
@@ -63,8 +99,7 @@ export class BackupController {
       tenantId = tenant.id;
     }
     if (!tenantId) throw new ForbiddenException('Précisez ?slug= ou ?tenantId=');
-
-    await this.streamExport(tenantId, res);
+    return tenantId;
   }
 
   private async streamExport(tenantId: number, res: Response) {
