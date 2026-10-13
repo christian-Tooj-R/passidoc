@@ -14,7 +14,7 @@ const DIRECT_TENANT_TABLES = [
   'incoherences_pointage', 'paie_bulletins', 'paie_employes_clients',
   'paie_parametres', 'paie_rh_acomptes', 'paie_rh_activite_jour',
   'paie_rh_bulletins', 'paie_rh_constantes', 'paie_rh_contrats',
-  'paie_rh_cycles', 'paie_rh_parametres', 'paie_rh_rubriques',
+  'paie_rh_cycles', 'paie_rh_rubriques',
   'paie_rh_variables', 'paie_rubriques', 'paie_variables_mensuelles',
   'password_reset_token', 'pointages', 'saisies_temps', 'secteurs',
   'soldes_conges', 'taches_recurrentes', 'tasks', 'users',
@@ -71,7 +71,7 @@ const EXPORT_ORDER = [
   'notifications', 'password_reset_token', 'paie_bulletins', 'paie_parametres',
   'paie_rh_acomptes', 'paie_rh_activite_jour', 'paie_rh_bulletins',
   'paie_rh_constantes', 'paie_rh_contrats', 'paie_rh_cycles',
-  'paie_rh_parametres', 'paie_rh_rubriques', 'paie_rh_variables',
+  'paie_rh_rubriques', 'paie_rh_variables',
   'paie_rubriques', 'paie_variables_mensuelles',
   'cycles_revision', 'espace_docs', 'pause_pointages', 'task_comments',
 ];
@@ -108,12 +108,17 @@ export class BackupService {
     const allTables = await this.dataSource.query(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
     );
+    const existingTables = new Set(allTables.map((t: any) => t.tablename));
     const knownTables = new Set(['tenant_config', ...DIRECT_TENANT_TABLES, ...Object.keys(INDIRECT_SCOPE), ...GLOBAL_TABLES]);
     const unknownTables: string[] = allTables
       .map((t: any) => t.tablename)
       .filter((t: string) => !knownTables.has(t));
 
     for (const table of EXPORT_ORDER) {
+      if (!existingTables.has(table)) {
+        this.logger.warn(`[Export SQL] ${table} : absente du schéma source, ignorée`);
+        continue;
+      }
       const { whereSql, params } = this.getScope(table, tenantId);
       const count = await this.dumpTable(table, whereSql, params, write, selfRefUpdates);
       this.logger.log(`[Export SQL] ${table} : ${count} ligne(s)`);
@@ -175,12 +180,17 @@ export class BackupService {
       const allTables = await this.dataSource.query(
         `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
       );
+      const existingTables = new Set(allTables.map((t: any) => t.tablename));
       const knownTables = new Set(['tenant_config', ...DIRECT_TENANT_TABLES, ...Object.keys(INDIRECT_SCOPE), ...GLOBAL_TABLES]);
       const unknownTables: string[] = allTables
         .map((t: any) => t.tablename)
         .filter((t: string) => !knownTables.has(t));
 
       for (const table of EXPORT_ORDER) {
+        if (!existingTables.has(table)) {
+          this.logger.warn(`[Clone] ${table} : absente du schéma source, ignorée`);
+          continue;
+        }
         const { whereSql, params } = this.getScope(table, tenantId);
         const sql = whereSql ? `SELECT * FROM "${table}" WHERE ${whereSql}` : `SELECT * FROM "${table}"`;
         const rows = await this.dataSource.query(sql, params);
