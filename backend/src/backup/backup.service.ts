@@ -189,7 +189,7 @@ export class BackupService {
 
         const columns = Object.keys(rows[0]);
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-        const insertSql = `INSERT INTO "${table}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`;
+        const insertSql = `INSERT INTO "${table}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`;
 
         for (const row of rows) {
           if (table === 'users' && row.referentId != null) {
