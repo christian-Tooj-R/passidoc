@@ -6,11 +6,9 @@ import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { runSalaireBaseMigrationIfNeeded } from './bootstrap-salaire-base-migration';
-import { runTenant1RestoreIfNeeded } from './bootstrap-tenant1-restore';
 
 async function bootstrap() {
   await runSalaireBaseMigrationIfNeeded();
-  await runTenant1RestoreIfNeeded();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn', 'log'] });
 
   // Servir les fichiers uploadés localement (fallback MinIO non dispo)
