@@ -14,6 +14,7 @@
  *    · DocumentsTabComponent
  */
 
+import { TabSaveService } from '../../../core/services/tab-save.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -73,7 +74,7 @@ const mockTenant      = {
   poleFlag: vi.fn().mockReturnValue('🇷🇪'),
   poleLabel: vi.fn().mockReturnValue('Réunion'),
   poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
-  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'), intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
 };
 const mockToast      = { success: vi.fn(), error: vi.fn() };
 const mockConfirm    = { confirm: vi.fn().mockReturnValue(of(true)) };
@@ -332,10 +333,10 @@ async function createDocumentsTab(readonly: boolean) {
 describe('FicheIdentiteTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('bouton Enregistrer désactivé quand readonly=true', async () => {
+  it("pas de bouton Enregistrer quand readonly=true (masqué, plus seulement désactivé)", async () => {
     const fix = await createFicheTab(true);
     const btn = fix.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(true);
+    expect(btn).toBeNull();
   });
 
   it('bouton Enregistrer actif quand readonly=false', async () => {
@@ -387,12 +388,12 @@ describe('FluxMensuelTabComponent — readonly', () => {
 describe('SyntheseTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('bouton Enregistrer désactivé quand readonly=true', async () => {
+  it('pas de bouton Enregistrer quand readonly=true, même formulaire ouvert', async () => {
     const fix = await createSyntheseTab(true);
     fix.componentInstance.showForm = true;
     fix.detectChanges();
     const btn = fix.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(true);
+    expect(btn).toBeNull();
   });
 
   it('bouton Enregistrer actif quand readonly=false et formulaire valide', async () => {
@@ -409,10 +410,10 @@ describe('SyntheseTabComponent — readonly', () => {
 describe('MissionsTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('bouton "Ajouter une mission" désactivé quand readonly=true', async () => {
+  it('pas de bouton "Ajouter une mission" quand readonly=true', async () => {
     const fix = await createMissionsTab(true);
-    const btn = fix.nativeElement.querySelector('button[color="primary"]') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(true);
+    const libelles = [...fix.nativeElement.querySelectorAll('button')].map((b: Element) => b.textContent ?? '');
+    expect(libelles.some(t => t.includes('Ajouter une mission'))).toBe(false);
   });
 
   it('bouton "Ajouter une mission" actif quand readonly=false', async () => {
@@ -435,16 +436,21 @@ describe('MissionsTabComponent — readonly', () => {
 describe('CanvasTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('bouton Enregistrer désactivé quand readonly=true', async () => {
-    const fix = await createCanvasTab(true);
-    const btn = fix.nativeElement.querySelector('.cv-save-btn') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(true);
+  // L'enregistrement du canvas passe par l'en-tête du dossier (TabSaveService, mode
+  // Modifier/Enregistrer) — en-tête lui-même masqué quand l'utilisateur ne peut pas éditer.
+  it("n'a pas de bouton d'enregistrement interne, en lecture seule comme en édition", async () => {
+    for (const readonly of [true, false]) {
+      TestBed.resetTestingModule();
+      const fix = await createCanvasTab(readonly);
+      expect(fix.nativeElement.querySelector('.cv-save-btn')).toBeNull();
+    }
   });
 
-  it('bouton Enregistrer actif quand readonly=false', async () => {
+  it("délègue Modifier / Enregistrer à l'en-tête du dossier", async () => {
     const fix = await createCanvasTab(false);
-    const btn = fix.nativeElement.querySelector('.cv-save-btn') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(false);
+    const tabSave = TestBed.inject(TabSaveService);
+    expect(tabSave.hasToggle()).toBe(true);
+    expect(fix.componentInstance.editMode()).toBe(false);
   });
 });
 
@@ -473,16 +479,14 @@ describe('FournisseursTabComponent — readonly', () => {
 describe('DocumentsTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('le label d\'import a la classe disabled quand readonly=true', async () => {
+  it("pas de bouton d'import quand readonly=true", async () => {
     const fix = await createDocumentsTab(true);
-    const label = fix.nativeElement.querySelector('.upload-btn') as HTMLElement | null;
-    expect(label?.classList.contains('upload-btn--disabled')).toBe(true);
+    expect(fix.nativeElement.querySelector('.upload-btn')).toBeNull();
   });
 
-  it('le label d\'import n\'a pas la classe disabled quand readonly=false', async () => {
+  it("bouton d'import présent quand readonly=false", async () => {
     const fix = await createDocumentsTab(false);
-    const label = fix.nativeElement.querySelector('.upload-btn') as HTMLElement | null;
-    expect(label?.classList.contains('upload-btn--disabled')).toBe(false);
+    expect(fix.nativeElement.querySelector('.upload-btn')).not.toBeNull();
   });
 
   it('le @Input readonly est bien pris en compte', async () => {

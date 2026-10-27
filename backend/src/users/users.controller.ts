@@ -67,7 +67,7 @@ export class UsersController {
   private scopePaieFields(u: any, requester: any) {
     const canSeePaie = requester?.role === UserRole.ADMIN || requester?.id === u.id;
     if (canSeePaie) return u;
-    return { ...u, salaireBase: null, modePaiement: null, banque: null, iban: null };
+    return { ...u, salaireBase: null, modePaiement: null, banque: null, iban: null, prixVenteHoraire: null };
   }
 
   @Patch(':id/rh')
@@ -117,6 +117,18 @@ export class UsersController {
     @Req() req: any,
   ) {
     return this.usersService.setReferent(id, referentId, req.user.id);
+  }
+
+  @Patch(':id/prix-vente')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "[Admin] Prix de vente horaire du collaborateur (valorisation « PV Col » des temps)" })
+  updatePrixVente(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { prixVenteHoraire: number | null },
+    @Req() req: any,
+  ) {
+    const v = body?.prixVenteHoraire;
+    return this.usersService.updatePrixVente(id, v === null || v === undefined || (v as any) === '' ? null : Number(v), req.user.tenantId);
   }
 
   @Get(':id')

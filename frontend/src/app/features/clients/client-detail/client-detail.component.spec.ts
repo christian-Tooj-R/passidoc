@@ -14,9 +14,11 @@ import { UsersService } from '../../../core/services/users.service';
 
 const mockClients  = { getOne: vi.fn().mockReturnValue(of(null)), getById: vi.fn().mockReturnValue(of(null)), update: vi.fn().mockReturnValue(of({})), delete: vi.fn().mockReturnValue(of({})), assign: vi.fn().mockReturnValue(of({})), assignDirecteur: vi.fn().mockReturnValue(of({})), assignOuest: vi.fn().mockReturnValue(of({})), exportPdf: vi.fn().mockReturnValue(of(new Blob())), uploadLogo: vi.fn().mockReturnValue(of(null)) };
 const mockExercice = { list: vi.fn().mockReturnValue(of([])), create: vi.fn().mockReturnValue(of({})), cloturer: vi.fn().mockReturnValue(of({})) };
-const mockAuth     = { currentUser: vi.fn().mockReturnValue({ id: 1, role: 'COLLABORATEUR' }), isAdmin: vi.fn().mockReturnValue(false), hasFullVisibility: vi.fn().mockReturnValue(false), canCreateDossier: vi.fn().mockReturnValue(true) };
-const mockTenant   = { poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'), poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), poleFlag: vi.fn(), poleLabel: vi.fn() };
+const mockAuth     = { currentUser: vi.fn().mockReturnValue({ id: 1, role: 'COLLABORATEUR' }), isAdmin: vi.fn().mockReturnValue(false), isExpert: vi.fn().mockReturnValue(false), hasFullVisibility: vi.fn().mockReturnValue(false), canCreateDossier: vi.fn().mockReturnValue(true) };
+const mockTenant   = { poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'), poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'), intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'), poleFlag: vi.fn(), poleLabel: vi.fn() };
 const mockUsers    = { getAll: vi.fn().mockReturnValue(of([])), getAssignable: vi.fn().mockReturnValue(of([])) };
+
+let ongletDemande: string | null = null;
 
 async function createComponent() {
   await TestBed.configureTestingModule({
@@ -31,7 +33,10 @@ async function createComponent() {
       { provide: AuthService,     useValue: mockAuth },
       { provide: TenantService,   useValue: mockTenant },
       { provide: UsersService,    useValue: mockUsers },
-      { provide: ActivatedRoute,  useValue: { snapshot: { paramMap: { get: vi.fn().mockReturnValue('1') } } } },
+      { provide: ActivatedRoute,  useValue: { snapshot: {
+        paramMap: { get: vi.fn().mockReturnValue('1') },
+        queryParamMap: { get: vi.fn((k: string) => (k === 'tab' ? ongletDemande : null)) },
+      } } },
     ],
   }).compileComponents();
 
@@ -44,6 +49,7 @@ async function createComponent() {
 describe('ClientDetailComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ongletDemande = null;
     mockClients.getById.mockReturnValue(of(null));
     mockExercice.list.mockReturnValue(of([]));
     mockUsers.getAssignable.mockReturnValue(of([]));
@@ -74,5 +80,17 @@ describe('ClientDetailComponent', () => {
     const { comp } = await createComponent();
     comp.activeTab.set('synthese');
     expect(comp.activeTab()).toBe('synthese');
+  });
+
+  it("ouvre l'onglet demandé par ?tab= (lien depuis la page Rentabilité)", async () => {
+    ongletDemande = 'rentabilite';
+    const { comp } = await createComponent();
+    expect(comp.activeTab()).toBe('rentabilite');
+  });
+
+  it('propose l’onglet Rentabilité dans le groupe Comptabilité', async () => {
+    const { comp } = await createComponent();
+    const compta = comp.TAB_GROUPS.find(g => g.label === 'Comptabilité')!;
+    expect(compta.tabs.map(t => t.id)).toContain('rentabilite');
   });
 });

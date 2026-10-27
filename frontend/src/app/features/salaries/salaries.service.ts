@@ -49,6 +49,8 @@ export interface Collaborateur {
   numeroFiscal: string | null;
   // Paie
   salaireBase: number | null;
+  /** Prix de vente horaire (« PV Col » du rapport des temps) — ADMIN uniquement. */
+  prixVenteHoraire?: number | string | null;
   modePaiement: string | null;
   banque: string | null;
   iban: string | null;
@@ -92,5 +94,10 @@ export class SalariesService {
 
   updateRH(id: number, dto: UpdateRHDto) {
     return this.http.patch<Collaborateur>(`${this.api}/${id}/rh`, dto);
+  }
+
+  /** ADMIN : prix de vente horaire ; les saisies sans taux figé reçoivent l'ancien tarif. */
+  updatePrixVente(id: number, prixVenteHoraire: number | null) {
+    return this.http.patch<Collaborateur>(`${this.api}/${id}/prix-vente`, { prixVenteHoraire });
   }
 }

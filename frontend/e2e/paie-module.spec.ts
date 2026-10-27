@@ -28,7 +28,11 @@ async function getFirstClientId(page: any, token: string): Promise<number> {
   return clients[0].id;
 }
 
-test.describe('Module Paie — employés clients', () => {
+// ⚠️ Ignoré : l'onglet « Paie » (groupe « RH & Paie ») des dossiers clients a été retiré du
+// détail dossier au commit 81b4a55 (« accès Paie réservé ADMIN ») ; le module backend `paie`
+// (employés des clients) existe toujours mais n'a plus d'écran. À réactiver si l'onglet revient,
+// à supprimer sinon.
+test.describe.skip('Module Paie — employés clients', () => {
   test('Parcours complet : créer un employé, saisir les variables, générer le bulletin', async ({ page }) => {
     const { access_token } = await login(page);
     const clientId = await getFirstClientId(page, access_token);

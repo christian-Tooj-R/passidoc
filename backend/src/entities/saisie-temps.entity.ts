@@ -58,6 +58,22 @@ export class SaisieTemps {
   @Column({ type: 'varchar', length: 5, nullable: true })
   heureFin: string;
 
+  /** Affaire = exercice comptable du dossier, au format Tempolia « C2026-09 » (exercice clos
+   *  en 09/2026). Attribuée automatiquement à la création (cf. saisie-temps/affaire.util.ts),
+   *  puis modifiable — figée ensuite pour que la clôture d'un exercice ne déplace pas
+   *  rétroactivement les temps d'une affaire à l'autre. Null si la saisie n'a pas de client. */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  affaire: string | null;
+
+  /** Prix de vente horaire du collaborateur FIGÉ au moment de la saisie (valorisation
+   *  « PV Col ») — un changement de tarif ultérieur ne revalorise pas l'historique. */
+  @Column({ type: 'float', nullable: true })
+  tauxHoraire: number | null;
+
+  /** Pôle de travail (cahier v2 #5) : EST | OUEST | HORS_BUREAU — défaut = site du collaborateur. */
+  @Column({ type: 'varchar', length: 12, nullable: true })
+  lieuTravail: string | null;
+
   @Column({ default: false })
   isLocked: boolean;
 

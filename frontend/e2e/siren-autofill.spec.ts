@@ -101,6 +101,8 @@ test.describe('Auto-remplissage SIREN → Forme juridique', () => {
 
   test('saisir un SIREN valide auto-remplit la forme juridique', async ({ page }) => {
     await gotoFicheIdentite(page);
+    // La fiche s'ouvre en lecture : passer en édition via « Modifier » (en-tête du dossier)
+    await page.locator('.ch-edit-btn').click();
 
     const sirenInput = page.locator('input[formcontrolname="siren"]');
     await expect(sirenInput).toBeVisible({ timeout: 8000 });

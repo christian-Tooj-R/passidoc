@@ -1,3 +1,4 @@
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -37,7 +38,7 @@ const mockAuth    = {
 };
 const mockTenant  = {
   poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
-  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'), intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
   poleFlag: vi.fn(), poleLabel: vi.fn(),
 };
 const mockToast   = { success: vi.fn(), error: vi.fn() };
@@ -69,6 +70,7 @@ async function createComponent() {
       provideHttpClientTesting(),
       provideRouter([]),
       provideAnimations(),
+      provideNativeDateAdapter(), // fourni par app.config.ts dans l'appli (sélecteur de période)
       { provide: TasksService,              useValue: mockTasks },
       { provide: ClientsService,            useValue: mockClients },
       { provide: UsersService,              useValue: mockUsers },

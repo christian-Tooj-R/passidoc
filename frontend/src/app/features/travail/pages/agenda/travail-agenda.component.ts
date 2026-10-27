@@ -6,6 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { SaisieTempsService, SaisieTemps } from '../../../../core/services/saisie-temps.service';
+import { LIEUX_TRAVAIL, LieuTravail, lieuTravail } from '../../../../core/models/lieu-travail';
+import { TenantService } from '../../../../core/services/tenant.service';
 import { ClientsService } from '../../../../core/services/clients.service';
 import { Client } from '../../../../core/models/client.model';
 import { UsersService } from '../../../../core/services/users.service';
@@ -26,6 +28,8 @@ interface CalEvent {
   colorStyle: string | null;
   label: string;
   subLabel: string | null;
+  /** Pôle de travail (cahier v2 #5) : bandeau coloré sur l'entrée. */
+  lieu: { code: LieuTravail; couleur: string; label: string } | null;
 }
 
 interface Selection {
@@ -87,6 +91,36 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
       <button class="btn-new" (click)="onNewTemps()">
         <mat-icon>add</mat-icon> Nouveau temps
       </button>
+    </div>
+  </div>
+
+  <!-- ── Filtres : pôle de travail + recherche (cahier v2 #5) ── -->
+  <div class="ag-filters">
+    <div class="lieu-filter" role="group" aria-label="Filtrer par pôle de travail">
+      <button type="button" class="lieu-chip" [class.lieu-chip--on]="filtreLieu() === ''" (click)="filtreLieu.set('')">Tous les pôles</button>
+      @for (l of lieux; track l.code) {
+        <button type="button" class="lieu-chip lieu-chip--{{ l.code }}" [class.lieu-chip--on]="filtreLieu() === l.code"
+                [style.--lieu]="l.couleur" (click)="filtreLieu.set(filtreLieu() === l.code ? '' : l.code)">
+          <span class="lieu-dot" [style.background]="l.couleur"></span>{{ libelleLieu(l.code) }}
+        </button>
+      }
+    </div>
+    <div class="ag-search">
+      <mat-icon>search</mat-icon>
+      <input type="search" placeholder="Rechercher : client, libellé, mission…" aria-label="Rechercher dans l'agenda"
+             [value]="recherche()" (input)="recherche.set($any($event.target).value)" />
+    </div>
+    <div class="lieu-split" matTooltip="Répartition des heures affichées cette semaine par pôle de travail">
+      <span class="lieu-split__lbl">Semaine par pôle</span>
+      <div class="lieu-split__bar">
+        @for (r of repartitionSemaine(); track r.code) {
+          <span class="lieu-split__seg" [style.width.%]="r.part" [style.background]="r.couleur"></span>
+        }
+      </div>
+      @for (r of repartitionSemaine(); track r.code) {
+        <span class="lieu-split__val"><span class="lieu-dot" [style.background]="r.couleur"></span>{{ r.label }} <strong>{{ r.heures | number:'1.0-1' }}h</strong></span>
+      }
+      @if (!repartitionSemaine().length) { <span class="lieu-split__val">Aucune saisie</span> }
     </div>
   </div>
 
@@ -188,12 +222,22 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
                 <div class="hd-total" [class.hd-total--has]="day.totalH > 0">
                   {{ day.totalH | number:'1.1-1' }}h
                 </div>
+                @if (repartitionJour(day.date); as rep) {
+                  @if (rep.length) {
+                    <div class="hd-lieux" [matTooltip]="libelleRepartition(rep)">
+                      @for (r of rep; track r.code) {
+                        <span class="hd-lieu" [style.background]="r.fond" [style.color]="r.texte">{{ r.court }} {{ r.heures | number:'1.0-1' }}h</span>
+                      }
+                    </div>
+                  }
+                }
               </div>
 
               <!-- All-day -->
               <div class="allday-zone">
                 @for (ev of allDayForDay(day.date); track $index) {
                   <div class="allday-chip" [class]="ev.colorClass" [style.background]="ev.colorStyle"
+                       [style.border-left]="ev.lieu ? '4px solid ' + ev.lieu.couleur : null"
                        [matTooltip]="tooltipFor(ev)">
                     {{ ev.saisie.dureeHeures }}h · {{ (ev.readonly ? ev.label : ev.label) | slice:0:18 }}
                   </div>
@@ -240,7 +284,10 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
                        [style.width]="'calc(' + ev.widthPct + '% - 4px)'"
                        [style.background]="ev.colorStyle"
                        [matTooltip]="tooltipFor(ev)">
-                    <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}</div>
+                    @if (ev.lieu) { <div class="ev-lieu" [style.background]="ev.lieu.couleur"></div> }
+                    <div class="ev-time">{{ fmt(ev.saisie.heureDebut) }}–{{ fmt(ev.saisie.heureFin) }}
+                      @if (ev.lieu && ev.heightPx > 30) { <span class="ev-lieu-tag">{{ ev.lieu.label }}</span> }
+                    </div>
                     @if (ev.readonly && ev.heightPx > 40) { <div class="ev-sub">{{ ev.subLabel }}</div> }
                     <div class="ev-lbl">{{ ev.label }}</div>
                     @if (ev.saisie.client && ev.heightPx > 50) {
@@ -361,6 +408,34 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
     }
     .leg-total { margin-left:auto; color:#374151; font-size:12px; }
 
+    /* ── Pôle de travail (cahier v2 #5) ── */
+    .ag-filters {
+      display:flex; align-items:center; gap:14px; padding:8px 20px; flex-wrap:wrap;
+      background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; font-size:12px;
+    }
+    .lieu-filter { display:flex; gap:6px; flex-wrap:wrap; }
+    .lieu-chip {
+      display:flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:14px;
+      border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:12px; font-weight:600; cursor:pointer;
+    }
+    .lieu-chip:hover { border-color:#cbd5e1; background:#f8fafc; }
+    .lieu-chip--on, .lieu-chip--on:hover { background:var(--lieu, #0f172a); border-color:var(--lieu, #0f172a); color:#fff; }
+    .lieu-chip--OUEST.lieu-chip--on { color:#422006; }
+    .lieu-chip--on .lieu-dot { background:#fff !important; }
+    .lieu-dot { width:9px; height:9px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .ag-search { display:flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid #e2e8f0; border-radius:8px; min-width:240px; flex:0 1 320px; }
+    .ag-search mat-icon { font-size:16px; width:16px; height:16px; color:#94a3b8; }
+    .ag-search input { border:none; outline:none; font:inherit; font-size:12.5px; flex:1; min-width:0; background:transparent; color:#0f172a; }
+    .lieu-split { display:flex; align-items:center; gap:10px; margin-left:auto; color:#475569; flex-wrap:wrap; }
+    .lieu-split__lbl { font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px; letter-spacing:.05em; }
+    .lieu-split__bar { display:flex; width:120px; height:8px; border-radius:4px; overflow:hidden; background:#f1f5f9; }
+    .lieu-split__seg { height:100%; }
+    .lieu-split__val { display:flex; align-items:center; gap:4px; white-space:nowrap; }
+    .hd-lieux { display:flex; flex-wrap:wrap; justify-content:center; gap:2px; margin-top:3px; }
+    .hd-lieu { font-size:9px; font-weight:700; border-radius:6px; padding:0 5px; line-height:15px; white-space:nowrap; }
+    .ev-lieu { position:absolute; left:0; right:0; top:0; height:4px; }
+    .ev-lieu-tag { margin-left:4px; font-size:8.5px; font-weight:700; background:rgba(255,255,255,.25); border-radius:3px; padding:0 4px; letter-spacing:.02em; }
+
     .loading-state { display:flex; align-items:center; justify-content:center; gap:10px; padding:60px; color:#94a3b8; flex:1; }
     .spin { animation:spin 1s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -411,7 +486,7 @@ const SLOTS = (CAL_END - CAL_START) * 2; // 28 slots
 
     /* Colonne heures */
     .col-time { flex:0 0 52px; display:flex; flex-direction:column; position:sticky; left:0; z-index:21; background:#fff; }
-    .col-hd   { height:72px; background:#fff; border-bottom:2px solid #e2e8f0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:sticky; top:0; z-index:20; flex-shrink:0; }
+    .col-hd   { height:86px; background:#fff; border-bottom:2px solid #e2e8f0; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:sticky; top:0; z-index:20; flex-shrink:0; }
     .col-hd--time { border-right:1px solid #e2e8f0; }
     .col-hd--today { background:#eef2ff; border-bottom-color:#6366f1; }
     .allday-hd {
@@ -530,6 +605,12 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
   colleagueSaisies      = signal<Record<number, Partial<SaisieTemps>[]>>({});
   colleagueLoadingMap   = signal<Record<number, boolean>>({});
   private readonly COLLEAGUE_COLORS = ['#f59e0b', '#10b981', '#ec4899', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16'];
+
+  // Pôle de travail (cahier v2 #5) : filtre, recherche et répartition
+  readonly lieux = LIEUX_TRAVAIL;
+  private tenantSvc = inject(TenantService);
+  filtreLieu = signal<LieuTravail | ''>('');
+  recherche  = signal('');
 
   // Sélection
   selection  = signal<Selection | null>(null);
@@ -720,8 +801,55 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
       });
   }
 
+  libelleLieu(code?: string | null): string {
+    if (code === 'HORS_BUREAU') return 'Hors bureau';
+    return code === 'EST' || code === 'OUEST' ? this.tenantSvc.poleLabel(code) : 'Non précisé';
+  }
+
+  /** Pôle d'une saisie : celui enregistré, à défaut le site de son auteur. */
+  private lieuDe(s: Partial<SaisieTemps>, owner: 'me' | number): LieuTravail {
+    if (s.lieuTravail) return s.lieuTravail;
+    const site = owner === 'me' ? this.auth.currentUser()?.site : this.colleagues().find(c => c.id === owner)?.site;
+    return site === 'OUEST' ? 'OUEST' : 'EST';
+  }
+
+  /** Filtres de la barre : pôle de travail et recherche libre (client, libellé, mission, collègue). */
+  private passeFiltres(s: Partial<SaisieTemps>, owner: 'me' | number): boolean {
+    const lieu = this.filtreLieu();
+    if (lieu && this.lieuDe(s, owner) !== lieu) return false;
+    const q = this.recherche().trim().toLowerCase();
+    if (!q) return true;
+    const collegue = owner === 'me' ? null : this.colleagues().find(c => c.id === owner);
+    return [s.commentaire, s.client?.nom, s.missionCode, collegue && `${collegue.firstName} ${collegue.lastName}`]
+      .some(t => t?.toLowerCase().includes(q));
+  }
+
+  /** Heures par pôle pour une liste de saisies, dans l'ordre Est / Ouest / Hors bureau. */
+  private repartition(events: { saisie: Partial<SaisieTemps>; owner: 'me' | number }[]) {
+    const total = events.reduce((a, e) => a + (e.saisie.dureeHeures ?? 0), 0);
+    return LIEUX_TRAVAIL.map(l => {
+      const heures = events.filter(e => this.lieuDe(e.saisie, e.owner) === l.code).reduce((a, e) => a + (e.saisie.dureeHeures ?? 0), 0);
+      return {
+        code: l.code, couleur: l.couleur, fond: l.fond, texte: l.texte, heures,
+        label: this.libelleLieu(l.code),
+        court: l.code === 'HORS_BUREAU' ? 'Hors' : l.code === 'EST' ? 'Est' : 'Ouest',
+        part: total ? (heures / total) * 100 : 0,
+      };
+    }).filter(r => r.heures > 0);
+  }
+
+  /** Où ont travaillé, ce jour-là, les personnes affichées (moi + collègues cochés). */
+  repartitionJour(date: string) { return this.repartition(this.allEventsForDay(date)); }
+
+  /** Répartition de la charge de la semaine entre les pôles (vue directeur : cocher l'équipe). */
+  repartitionSemaine = computed(() => this.repartition(this.weekDays().flatMap(d => this.allEventsForDay(d.date))));
+
+  libelleRepartition(rep: { label: string; heures: number }[]): string {
+    return rep.map(r => `${r.label} : ${Math.round(r.heures * 10) / 10} h`).join(' · ');
+  }
+
   /** Toutes les saisies visibles ce jour-là : les miennes + celles des collègues cochés,
-   *  chacune taguée avec son "propriétaire" ('me' ou l'id du collègue). */
+   *  chacune taguée avec son "propriétaire" ('me' ou l'id du collègue), après filtres. */
   private allEventsForDay(date: string): { saisie: Partial<SaisieTemps>; owner: 'me' | number }[] {
     const mine = this.saisies()
       .filter(s => s.date === date || s.date?.startsWith(date))
@@ -733,7 +861,7 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
         if (s.date === date || s.date?.startsWith(date)) colleagueEvents.push({ saisie: s, owner: id });
       }
     }
-    return [...mine, ...colleagueEvents];
+    return [...mine, ...colleagueEvents].filter(e => this.passeFiltres(e.saisie, e.owner));
   }
 
   allDayForDay(date: string): CalEvent[] {
@@ -806,6 +934,8 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     const label = s.missionCode
       ? `[${s.missionCode}] ${s.commentaire ?? ''}`
       : s.commentaire ?? s.type ?? '—';
+    const l = lieuTravail(this.lieuDe(s, owner))!;
+    const lieu = { code: l.code, couleur: l.couleur, label: this.libelleLieu(l.code) };
     // Vue collègue : détail complet de la tâche, avec son nom en plus pour différencier
     // les collègues affichés en même temps (couleur dédiée par personne).
     if (owner !== 'me') {
@@ -814,18 +944,18 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
       return {
         saisie: s, topPx, heightPx, allDay, readonly: true,
         colorClass: 'ev-colleague', colorStyle: this.colorFor(owner),
-        label, subLabel: name,
+        label, subLabel: name, lieu,
         leftPct: 0, widthPct: 100,
       };
     }
     const colorClass = s.type === 'FACTURABLE'
       ? 'ev-facturable'
       : s.type === 'NON_FACTURABLE' ? 'ev-non-facturable' : 'ev-autre';
-    return { saisie: s, topPx, heightPx, allDay, readonly: false, colorClass, colorStyle: null, label, subLabel: null, leftPct: 0, widthPct: 100 };
+    return { saisie: s, topPx, heightPx, allDay, readonly: false, colorClass, colorStyle: null, label, subLabel: null, lieu, leftPct: 0, widthPct: 100 };
   }
 
   tooltipFor(ev: CalEvent): string {
-    const base = ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client!.nom : '');
+    const base = ev.label + (ev.saisie.client ? ' · ' + ev.saisie.client!.nom : '') + (ev.lieu ? ` · ${ev.lieu.label}` : '');
     return ev.readonly ? `${ev.subLabel} — ${base}` : base;
   }
 
@@ -907,7 +1037,10 @@ export class TravailAgendaComponent implements OnInit, OnDestroy {
     this.editError.set('');
     this.saisiesSvc.create(result).pipe(takeUntil(this._d$)).subscribe({
       next: () => { this.saving.set(false); this.closeEdit(); this.loadData(); },
-      error: () => { this.saving.set(false); this.editError.set('Erreur lors de l\'enregistrement — réessayez.'); },
+      error: (err) => {
+        this.saving.set(false);
+        this.editError.set(err?.error?.message || 'Erreur lors de l\'enregistrement — réessayez.');
+      },
     });
   }
 

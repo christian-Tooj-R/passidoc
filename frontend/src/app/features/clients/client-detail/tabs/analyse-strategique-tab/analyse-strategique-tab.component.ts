@@ -219,7 +219,10 @@ export class AnalyseStrategiqueTabComponent implements OnInit, OnChanges, OnDest
   ngOnDestroy() { this.tabSave.clear(); }
 
   ngOnChanges(changes: SimpleChanges) {
-    if ((changes['exerciceId'] || changes['clientId']) && this.clientId != null && this.exerciceId != null) {
+    // Premier passage : ngOnInit charge déjà — recharger ici doublait la requête
+    // (deux fiches créées côté serveur par l'ancienne lecture « get-or-create »).
+    const change = changes['exerciceId'] ?? changes['clientId'];
+    if (change && !change.firstChange && this.clientId != null && this.exerciceId != null) {
       this.editMode.set(false);
       this.tabSave.setEditing(false);
       this.load();

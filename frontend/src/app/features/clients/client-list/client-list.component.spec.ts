@@ -13,8 +13,11 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { NotificationStreamService } from '../../../core/services/notification-stream.service';
 
-const makeClient = (id: number, nom: string, site: 'EST' | 'OUEST', score: number) =>
-  ({ id, nom, site, santePassation: score, completude: score } as any);
+const makeClient = (id: number, nom: string, site: 'EST' | 'OUEST', score: number, honorairesCompta?: number) =>
+  ({
+    id, nom, site, santePassation: score, completude: score, createdAt: `2026-01-${String(id).padStart(2, '0')}`,
+    ficheIdentite: honorairesCompta !== undefined ? { honoraires: { comptables: honorairesCompta } } : undefined,
+  } as any);
 
 const newNotif$ = new Subject<any>();
 
@@ -25,6 +28,7 @@ const mockClientsService = {
 const mockAuth = {
   currentUser: vi.fn().mockReturnValue({ id: 1, firstName: 'Sophie' }),
   isAdmin: vi.fn().mockReturnValue(false),
+  isExpert: vi.fn().mockReturnValue(false),
   canCreateDossier: vi.fn().mockReturnValue(true),
 };
 const mockTenant = {
@@ -32,6 +36,8 @@ const mockTenant = {
   poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
   poleFlag2:  vi.fn().mockReturnValue('🟠'),
   poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'),
+  intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
 };
 const mockNotifStream = { newNotif$ };
 const mockDialog  = { open: vi.fn().mockReturnValue({ afterClosed: () => of(null) }) };
@@ -63,6 +69,7 @@ async function createComponent() {
 describe('ClientListComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem('clients_tranches_honoraires');
     mockClientsService.getAll.mockReturnValue(of([]));
   });
 
@@ -72,9 +79,9 @@ describe('ClientListComponent', () => {
   });
 
   describe('signaux initiaux', () => {
-    it('sortKey est "nom" par défaut', async () => {
+    it('sortKey est "date" (ordre de création) par défaut', async () => {
       const { comp } = await createComponent();
-      expect(comp.sortKey()).toBe('nom');
+      expect(comp.sortKey()).toBe('date');
     });
 
     it('sortDir est "asc" par défaut', async () => {
@@ -131,7 +138,7 @@ describe('ClientListComponent', () => {
 
     it('inverse la direction si même clé', async () => {
       const { comp } = await createComponent();
-      comp.setSort('nom'); // déjà 'nom' → inverse
+      comp.setSort('date'); // déjà 'date' → inverse
       expect(comp.sortDir()).toBe('desc');
     });
 
@@ -283,6 +290,74 @@ describe('ClientListComponent', () => {
       expect(result.map((c: any) => c.nom)).toContain('Mon cabinet');
       expect(result.map((c: any) => c.nom)).toContain('Je suis directeur');
       expect(result.map((c: any) => c.nom)).not.toContain('Pas le mien');
+    });
+  });
+
+  describe('honoraires comptables (cahier v2 #4)', () => {
+    const portefeuille = () => [
+      makeClient(1, 'Petit', 'EST', 80, 800),
+      makeClient(2, 'Moyen', 'EST', 80, 3000),
+      makeClient(3, 'Gros', 'OUEST', 80, 12000),
+      makeClient(4, 'Sans honoraires', 'EST', 80),
+      makeClient(5, 'Pile 5000', 'EST', 80, 5000),
+    ];
+
+    it('lit les honoraires comptables de la fiche identité', async () => {
+      mockClientsService.getAll.mockReturnValue(of(portefeuille()));
+      const { comp } = await createComponent();
+      expect(comp.honoraires(comp.clients()[2])).toBe(12000);
+      expect(comp.honoraires(comp.clients()[3])).toBeNull();
+    });
+
+    it('trie du plus gros au plus petit au premier clic, sans honoraires en dernier', async () => {
+      mockClientsService.getAll.mockReturnValue(of(portefeuille()));
+      const { comp } = await createComponent();
+      comp.setSort('honoraires');
+      expect(comp.sortDir()).toBe('desc');
+      expect(comp.filteredClients().map((c: any) => c.nom)).toEqual(['Gros', 'Pile 5000', 'Moyen', 'Petit', 'Sans honoraires']);
+      comp.setSort('honoraires');
+      expect(comp.filteredClients().map((c: any) => c.nom)).toEqual(['Petit', 'Moyen', 'Pile 5000', 'Gros', 'Sans honoraires']);
+    });
+
+    it('filtre par tranche (bornes incluses dans la tranche du milieu)', async () => {
+      mockClientsService.getAll.mockReturnValue(of(portefeuille()));
+      const { comp } = await createComponent();
+      expect(comp.countByTranche('bas')).toBe(1);
+      expect(comp.countByTranche('moyen')).toBe(2);
+      expect(comp.countByTranche('haut')).toBe(1);
+      expect(comp.countByTranche('nr')).toBe(1);
+      comp.honorairesFilter.set('moyen');
+      expect(comp.filteredClients().map((c: any) => c.nom).sort()).toEqual(['Moyen', 'Pile 5000']);
+      expect(comp.activeFilterCount()).toBe(1);
+    });
+
+    it('applique des bornes de tranches personnalisées et les mémorise', async () => {
+      mockClientsService.getAll.mockReturnValue(of(portefeuille()));
+      const { comp } = await createComponent();
+      comp.setSeuils(2000, 10000);
+      comp.honorairesFilter.set('bas');
+      expect(comp.filteredClients().map((c: any) => c.nom)).toEqual(['Petit']);
+      expect(comp.libelleTranche('moyen')).toContain('2');
+      expect(JSON.parse(localStorage.getItem('clients_tranches_honoraires')!)).toEqual({ bas: 2000, haut: 10000 });
+
+      TestBed.resetTestingModule();
+      const { comp: rechargee } = await createComponent();
+      expect(rechargee.seuilBas()).toBe(2000);
+      expect(rechargee.seuilHaut()).toBe(10000);
+    });
+
+    it('ne laisse pas la borne haute passer sous la borne basse', async () => {
+      const { comp } = await createComponent();
+      comp.setSeuils(6000, 1000);
+      expect(comp.seuilBas()).toBe(6000);
+      expect(comp.seuilHaut()).toBe(6000);
+    });
+
+    it('resetFilters vide aussi le filtre honoraires', async () => {
+      const { comp } = await createComponent();
+      comp.honorairesFilter.set('haut');
+      comp.resetFilters();
+      expect(comp.honorairesFilter()).toBe('');
     });
   });
 

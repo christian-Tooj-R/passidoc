@@ -19,7 +19,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const API_URL = 'http://localhost:3000/api';
-const APP_URL = 'http://localhost:4202';
+const APP_URL = process.env['BASE_URL'] ?? 'http://localhost:4200'; // même port que playwright.config.ts
 const TENANT  = 'afym';
 const EMAIL   = 'admin@admin.com';
 const PASS    = 'Admin2024!';
@@ -44,7 +44,7 @@ async function loginAfym(page: Page): Promise<{ token: string; api: APIRequestCo
     data: { latitude: null, longitude: null, action: 'ENTREE' },
   }).catch(() => {});
 
-  await page.goto(`${APP_URL}/login?tenant=${TENANT}`);
+  await page.goto(`${APP_URL}/auth/login?tenant=${TENANT}`);
   await page.waitForLoadState('domcontentloaded');
   await page.evaluate(({ token, user, tenant }) => {
     localStorage.setItem('token', token);
@@ -69,6 +69,11 @@ async function openNewTaskDialog(page: Page) {
   await page.waitForTimeout(800);
   await page.locator('button', { hasText: /nouvelle tâche/i }).click();
   await expect(page.locator('.ct-wrap')).toBeVisible({ timeout: 5_000 });
+}
+
+/** Champ « Durée » de la section Temps passé du dialogue de création de tâche. */
+function dureeTache(page: Page) {
+  return page.locator('.ct-temps-section .ct-field').filter({ hasText: 'Durée' }).locator('input[type="time"]');
 }
 
 // ─── Suite ─────────────────────────────────────────────────────────────────────
@@ -128,12 +133,13 @@ test.describe('TACHE-09 — Dialog "Nouvelle tâche" avec section Temps passé',
     // Remplir titre
     await page.locator('.ct-title-input').fill('Test tâche facturable E2E');
 
-    // Choisir un client
-    const clientSelect = page.locator('.ct-select').first();
-    await clientSelect.selectOption({ index: 1 });
+    // Choisir un client (champ à autocomplétion)
+    const client = page.locator('input[name="ctClientSearch"]');
+    await client.click();
+    await page.locator('.cdk-overlay-pane mat-option').nth(1).click();
 
-    // Section Temps : Facturable (par défaut), remplir durée
-    await page.locator('input[placeholder*="1h30"]').fill('2h');
+    // Section Temps : Facturable (par défaut), durée au format HH:MM (<input type="time">)
+    await dureeTache(page).fill('02:00');
 
     // Créer
     await page.locator('.ct-btn-create').click();
@@ -157,8 +163,8 @@ test.describe('TACHE-09 — Dialog "Nouvelle tâche" avec section Temps passé',
     const catSelect = page.locator('.ct-temps-section select').first();
     await catSelect.selectOption('REUNION_INTERNE');
 
-    // Durée
-    await page.locator('input[placeholder*="1h30"]').fill('1h');
+    // Durée (<input type="time">)
+    await dureeTache(page).fill('01:00');
 
     await page.locator('.ct-btn-create').click();
     await waitForToast(page, /saisie enregistrée/i);
@@ -174,7 +180,8 @@ test.describe('TACHE-09 — Dialog détail de tâche enrichi', () => {
     // Cliquer sur la première carte Kanban (.task-card)
     const firstCard = page.locator('.task-card').first();
     await firstCard.waitFor({ timeout: 10_000 });
-    await firstCard.click();
+    // Cliquer le titre : le centre de la carte peut tomber sur le lien du dossier client
+    await firstCard.locator('.card-title').click();
     await expect(page.locator('.td-wrap')).toBeVisible({ timeout: 6_000 });
   }
 
@@ -261,91 +268,59 @@ test.describe('TACHE-09 — Dialog détail de tâche enrichi', () => {
   });
 });
 
-test.describe('TACHE-08b — Page Saisie des temps — vues et filtres', () => {
+// L'ancienne page /saisie-temps (onglets Semaine / Agenda / Détail) n'est plus routée :
+// ses vues vivent désormais dans le module Travail (Agenda réalisé, Par semaine, Détail des temps).
+test.describe('TACHE-08b — Module Travail — vues et filtres des temps', () => {
 
-  test('ST-A : les 3 boutons de vue sont présents (Semaine / Agenda / Détail)', async ({ page }) => {
+  test('ST-A : les vues Agenda / Par semaine / Détail sont dans la navigation', async ({ page }) => {
     await loginAfym(page);
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
-
-    await expect(page.locator('.st-page')).toBeVisible();
-
-    // Boutons de vue dans la topbar
-    await expect(page.locator('button', { hasText: /semaine/i }).first()).toBeVisible();
-    await expect(page.locator('button', { hasText: /agenda/i })).toBeVisible();
-    await expect(page.locator('button', { hasText: /détail/i })).toBeVisible();
-  });
-
-  test('ST-A2 : cliquer "Agenda" affiche la grille calendrier', async ({ page }) => {
-    await loginAfym(page);
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
-
-    await page.locator('button', { hasText: /agenda/i }).click();
-    await page.waitForTimeout(400);
-
-    await expect(page.locator('.st-calendar-view')).toBeVisible();
-  });
-
-  test('ST-A3 : cliquer "Détail" affiche le tableau avec entête', async ({ page }) => {
-    await loginAfym(page);
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
-
-    await page.locator('button', { hasText: /détail/i }).click();
-    await page.waitForTimeout(400);
-
-    await expect(page.locator('.st-detail-view')).toBeVisible();
-    // Table présente
-    await expect(page.locator('.st-detail-view table, .st-detail-view .st-table')).toBeVisible();
-  });
-
-  test('ST-B : Vue Détail — la recherche filtre les résultats', async ({ page }) => {
-    await loginAfym(page);
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
-
-    await page.locator('button', { hasText: /détail/i }).click();
-    await page.waitForTimeout(400);
-
-    // Compter les lignes avant filtre
-    const rows = page.locator('.st-detail-view tbody tr, .st-table tbody tr');
-    const countBefore = await rows.count();
-
-    // Chercher quelque chose d'improbable pour vider la table
-    const searchInput = page.locator('input[placeholder*="recherche"], input[placeholder*="Recherche"], .st-search-input').first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('XXXXXXNOTFOUND');
-      await page.waitForTimeout(400);
-      const countAfter = await rows.count();
-      expect(countAfter).toBeLessThanOrEqual(countBefore);
-    } else {
-      // Si pas de champ recherche visible, vérifier que la table existe
-      expect(await page.locator('.st-detail-view').isVisible()).toBe(true);
+    await page.goto(`${APP_URL}/travail/saisie?tenant=${TENANT}`);
+    await expect(page.locator('.tw-sidebar')).toBeVisible({ timeout: 10_000 });
+    for (const label of ['Agenda réalisé', 'Par semaine', 'Détail des temps']) {
+      await expect(page.locator('.tw-nav__item', { hasText: label }).first()).toBeVisible();
     }
   });
 
-  test('ST-B2 : Vue Semaine — filtre "NF" filtre les non-facturables', async ({ page }) => {
+  test('ST-A2 : « Agenda réalisé » affiche la semaine et sa navigation', async ({ page }) => {
     await loginAfym(page);
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
+    await page.goto(`${APP_URL}/travail/saisie?tenant=${TENANT}`);
+    await page.locator('.tw-nav__item', { hasText: 'Agenda réalisé' }).first().click();
+    await expect(page.locator('.ag-title')).toHaveText('Agenda réalisé', { timeout: 10_000 });
+    const semaine = page.locator('.week-txt');
+    const avant = await semaine.textContent();
+    await page.locator('.ag-header__center .nav-btn').first().click();
+    await expect(semaine).not.toHaveText(avant ?? '');
+    await page.locator('.btn-today').click();
+    await expect(semaine).toHaveText(avant ?? '');
+  });
 
-    // Vue Semaine (par défaut)
-    await expect(page.locator('.st-page')).toBeVisible();
+  test('ST-A3 : « Détail des temps » affiche le rapport et ses paramètres', async ({ page }) => {
+    await loginAfym(page);
+    await page.goto(`${APP_URL}/travail/saisie?tenant=${TENANT}`);
+    await page.locator('.tw-nav__item', { hasText: 'Détail des temps' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Détail des temps passés' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.params')).toBeVisible();
+    await expect(page.locator('.report table.data-table thead, .report .empty-state').first()).toBeVisible({ timeout: 10_000 });
+  });
 
-    // Filtres Tous / Fact. / NF
-    await expect(page.locator('.st-filter-btn', { hasText: /tous/i })).toBeVisible();
-    const nfBtn = page.locator('.st-filter-btn', { hasText: /nf|non fact/i });
-    await expect(nfBtn).toBeVisible();
+  test('ST-B : Détail — la recherche filtre les résultats', async ({ page }) => {
+    await loginAfym(page);
+    await page.goto(`${APP_URL}/travail/temps/detail?tenant=${TENANT}`);
+    await expect(page.locator('.params')).toBeVisible({ timeout: 10_000 });
+    await page.locator('.params input[placeholder*="Libellé" i]').fill('XXXXXXNOTFOUND');
+    await expect(page.locator('.report .empty-state')).toContainText('Aucun temps pour ces critères');
+    await expect(page.locator('tr.data-row')).toHaveCount(0);
+  });
 
-    // Cliquer NF
-    await nfBtn.click();
-    await page.waitForTimeout(300);
-    await expect(nfBtn).toHaveClass(/active/);
+  test('ST-B2 : Détail — ne garder que le non facturable', async ({ page }) => {
+    await loginAfym(page);
+    await page.goto(`${APP_URL}/travail/temps/detail?tenant=${TENANT}`);
+    await expect(page.locator('.params')).toBeVisible({ timeout: 10_000 });
+    await page.locator('.seg__btn--FACTURABLE').click();
+    await page.locator('.seg__btn--ABSENCE').click();
+    await expect(page.locator('.seg__btn--FACTURABLE')).not.toHaveClass(/seg__btn--on/);
+    await expect(page.locator('.seg__btn--NON_FACTURABLE')).toHaveClass(/seg__btn--on/);
+    const presences = await page.locator('tr.data-row .pres').allTextContents();
+    expect(presences.every(p => p.includes('non facturable'))).toBe(true);
   });
 });

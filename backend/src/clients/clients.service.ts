@@ -318,14 +318,14 @@ export class ClientsService {
 }
 
 /** Calcule annee + dateOuverture + dateCloture à partir de "MM-DD" */
-export function computeExercice(dateClotureExercice: string): { annee: number; dateOuverture: string; dateCloture: string } {
-  const today = new Date();
+export function computeExercice(dateClotureExercice: string, today: Date = new Date()): { annee: number; dateOuverture: string; dateCloture: string } {
   const [month, day] = dateClotureExercice.split('-').map(Number);
   const clotureThisYear = new Date(today.getFullYear(), month - 1, day);
   const annee = today <= clotureThisYear ? today.getFullYear() : today.getFullYear() + 1;
   const dateCloture = `${annee}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const prevCloture = new Date(annee - 1, month - 1, day);
-  prevCloture.setDate(prevCloture.getDate() + 1);
+  // Lendemain de la clôture précédente, calculé en UTC : `toISOString()` d'une date locale
+  // décalait l'ouverture d'un jour en arrière sur un serveur en UTC+3/+4 (31/12 au lieu du 01/01).
+  const prevCloture = new Date(Date.UTC(annee - 1, month - 1, day + 1));
   const dateOuverture = prevCloture.toISOString().split('T')[0];
   return { annee, dateOuverture, dateCloture };
 }

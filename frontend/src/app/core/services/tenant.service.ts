@@ -20,6 +20,9 @@ export class TenantService {
   readonly poleLabel2  = computed(() => this._config()?.poleLabel2  ?? 'Pôle OUEST');
   readonly poleFlag1   = computed(() => this._config()?.poleFlag1   ?? '🔵');
   readonly poleFlag2   = computed(() => this._config()?.poleFlag2   ?? '🟠');
+  /** Rôles d'intervenant d'un dossier (cahier v2 #7) : distincts des libellés de pôle (sites). */
+  readonly intervenantLabel1 = computed(() => this._config()?.intervenantLabel1 || 'Collaborateur Réunion');
+  readonly intervenantLabel2 = computed(() => this._config()?.intervenantLabel2 || 'Collaborateur Madagascar');
   readonly isConfigured  = computed(() => this._configured());
   readonly configLoaded  = computed(() => this._config() !== null);
   readonly slug          = computed(() => this._slug());

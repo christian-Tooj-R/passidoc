@@ -1,6 +1,7 @@
-import { IsString, IsNumber, IsOptional, IsArray, IsObject, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsArray, IsObject, ValidateNested, IsEmail, IsIn, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { APPROCHES_CLIENT } from '../relation-client';
 
 class ActionnairesDto {
   @IsOptional() @IsString() nom?: string;
@@ -28,6 +29,13 @@ class SalarieDto {
   @IsOptional() @IsString() anciennete?: string;
 }
 
+class ContactOperationnelDto {
+  @IsOptional() @IsString() nom?: string;
+  @IsOptional() @IsString() poste?: string;
+  @IsOptional() @IsString() telephone?: string;
+  @ValidateIf((o) => !!o.email) @IsEmail({}, { message: 'E-mail du contact opérationnel invalide' }) email?: string;
+}
+
 class ReseauSocialDto {
   @IsOptional() @IsString() plateforme?: string;
   @IsOptional() @IsString() url?: string;
@@ -43,6 +51,18 @@ export class UpdateFicheIdentiteDto {
   @ApiPropertyOptional() @IsOptional() @IsString() activite?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() emailContact?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() telephoneContact?: string;
+
+  // ── Évolutions v2 #2 / #3 ──
+  @ApiPropertyOptional() @IsOptional() @IsString() contactLegalNom?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() contactLegalFonction?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @ValidateNested() @Type(() => ContactOperationnelDto)
+  contactOperationnel?: ContactOperationnelDto;
+
+  @ApiPropertyOptional({ enum: APPROCHES_CLIENT })
+  @IsOptional() @IsIn(APPROCHES_CLIENT as unknown as string[], { message: 'Approche client inconnue' })
+  approcheClient?: string;
 
   @ApiPropertyOptional()
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => GerantDto)

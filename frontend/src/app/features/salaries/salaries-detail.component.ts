@@ -237,6 +237,29 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
             <div class="field"><span class="f-label">Banque</span><span class="f-val">{{ collab()!.banque || '—' }}</span></div>
             <div class="field"><span class="f-label">IBAN / RIB</span><span class="f-val mono">{{ maskIban(collab()!.iban) }}</span></div>
           </div>
+
+          <div class="section-title mt"><mat-icon>euro</mat-icon> Facturation des temps</div>
+          <div class="pv-row">
+            <div class="field">
+              <span class="f-label">Prix de vente horaire (PV Col)</span>
+              @if (peutModifierPrixVente()) {
+                <span class="pv-edit">
+                  <input type="number" min="0" step="0.01" class="pv-input" [(ngModel)]="prixVente" placeholder="—" />
+                  <span>€ / h</span>
+                  <button class="pv-btn" (click)="enregistrerPrixVente()" [disabled]="savingPv()">
+                    {{ savingPv() ? '…' : 'Enregistrer' }}
+                  </button>
+                  @if (pvMessage()) { <span class="pv-msg">{{ pvMessage() }}</span> }
+                </span>
+              } @else {
+                <span class="f-val">{{ collab()!.prixVenteHoraire ? ((+collab()!.prixVenteHoraire!) | number:'1.2-2') + ' € / h' : '—' }}</span>
+              }
+            </div>
+          </div>
+          <p class="pv-hint">
+            Valorise les temps passés dans le rapport « Détail des temps » (temps × prix de vente). Le taux est figé
+            sur chaque saisie : un changement de tarif ne revalorise pas les temps déjà saisis.
+          </p>
         </div>
         }
 
@@ -682,6 +705,13 @@ type ProfilTab = 'identite' | 'pro' | 'admin' | 'paie';
       mat-icon { font-size: 16px; width: 16px; height: 16px; color: #4a6fa5; }
     }
     .section-title.mt { margin-top: 28px; }
+    .pv-row { display:flex; gap:16px; }
+    .pv-edit { display:flex; align-items:center; gap:8px; font-size:13px; color:#475569; }
+    .pv-input { width:110px; height:34px; border:1px solid #e2e8f0; border-radius:7px; padding:0 10px; font-size:14px; font-weight:700; }
+    .pv-btn { height:34px; border:none; border-radius:7px; padding:0 14px; background:#059669; color:#fff; font-weight:600; cursor:pointer; }
+    .pv-btn:disabled { opacity:.6; }
+    .pv-msg { font-size:12px; color:#15803d; }
+    .pv-hint { font-size:12px; color:#64748b; margin:8px 0 0; line-height:1.45; }
     .section-title.sensitive-header { color: #b91c1c; mat-icon { color: #b91c1c; } }
 
     /* Grille de champs */
@@ -744,6 +774,9 @@ export class SalariesDetailComponent implements OnInit {
   editVisible  = signal(false);
   saving       = signal(false);
   section      = signal<Section>('profil');
+  prixVente: number | null = null;
+  savingPv     = signal(false);
+  pvMessage    = signal('');
   soldes       = signal<SoldeConge[]>([]);
   anneeConges  = signal(new Date().getFullYear());
 
@@ -799,6 +832,7 @@ export class SalariesDetailComponent implements OnInit {
   /** Infos sensibles (salaire, congés) — réservées à l'ADMIN ou au salarié lui-même. */
   private isSelfView = computed(() => this.collab()?.id === this.auth.currentUser()?.id);
   canSeePaie      = computed(() => this.auth.isAdmin() || this.isSelfView());
+  peutModifierPrixVente = computed(() => this.auth.isAdmin());
   canSeeConges    = computed(() => this.auth.isAdmin() || this.isSelfView());
   /** Contrat de travail : ADMIN, EXPERT_COMPTABLE (gestion des contrats) ou le salarié lui-même. */
   canSeeContratPaie = computed(() => this.auth.isAdmin() || this.auth.isExpert() || this.isSelfView());
@@ -808,6 +842,7 @@ export class SalariesDetailComponent implements OnInit {
     this.svc.getOne(id).subscribe({
       next: c => {
         this.collab.set(c); this.loading.set(false); this.loadConges();
+        this.prixVente = c?.prixVenteHoraire != null ? Number(c.prixVenteHoraire) : null;
         if (!this.canSeeConges() && this.section() === 'conges') this.section.set('profil');
         if (!this.canSeeContratPaie() && this.section() === 'contratPaie') this.section.set('profil');
         if (!this.canSeePaie() && this.profilTab() === 'paie') this.profilTab.set('identite');
@@ -861,6 +896,23 @@ export class SalariesDetailComponent implements OnInit {
   sexeLabel(v: string|null) { return v === 'M' ? 'Masculin' : v === 'F' ? 'Féminin' : v || '—'; }
   statutLabel(v: string|null) { return STATUTS_PRO.find(s => s.v === v)?.l ?? v ?? '—'; }
   tempsTravailLabel(v: string|null) { return v === 'PLEIN' ? 'Temps plein' : v === 'PARTIEL' ? 'Temps partiel' : '—'; }
+  enregistrerPrixVente() {
+    const c = this.collab();
+    if (!c) return;
+    const v = this.prixVente === null || (this.prixVente as any) === '' ? null : Number(this.prixVente);
+    if (v !== null && !(v >= 0)) { this.pvMessage.set('Montant invalide'); return; }
+    this.savingPv.set(true);
+    this.pvMessage.set('');
+    this.svc.updatePrixVente(c.id, v).subscribe({
+      next: u => {
+        this.collab.set({ ...c, prixVenteHoraire: u.prixVenteHoraire ?? null });
+        this.savingPv.set(false);
+        this.pvMessage.set('Enregistré');
+      },
+      error: e => { this.savingPv.set(false); this.pvMessage.set(e?.error?.message || 'Erreur'); },
+    });
+  }
+
   maskIban(v: string|null) { if (!v) return '—'; return v.slice(0,4) + ' **** **** ' + v.slice(-4); }
   roleBg(r: string) { return { ADMIN:'#fde8e8', EXPERT_COMPTABLE:'#dbeafe', COLLABORATEUR:'#d1fae5' }[r]??'#f1f5f9'; }
   roleColor(r: string) { return { ADMIN:'#991b1b', EXPERT_COMPTABLE:'#1e40af', COLLABORATEUR:'#065f46' }[r]??'#475569'; }

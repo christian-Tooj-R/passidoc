@@ -95,6 +95,11 @@ export interface FicheIdentite {
   activite?: string;
   emailContact?: string;
   telephoneContact?: string;
+  // Évolutions v2 #2 / #3
+  contactLegalNom?: string | null;
+  contactLegalFonction?: string | null;
+  contactOperationnel?: ContactOperationnel | null;
+  approcheClient?: ApprocheClient;
   gerants?: Gerant[];
   salaries?: Salarie[];
   actionnaires?: Actionnaire[];
@@ -132,6 +137,28 @@ export interface FicheIdentite {
     gestionPaie?: string;
   };
   pointsVigilance?: string;
+}
+
+/** Interlocuteur du quotidien (collecte des pièces, questions pratiques) — cahier v2 #2. */
+export interface ContactOperationnel {
+  nom?: string;
+  poste?: string;
+  telephone?: string;
+  email?: string;
+}
+
+/** Registre de communication à adopter avec le client — cahier v2 #3. */
+export type ApprocheClient = 'FORMEL' | 'PROFESSIONNEL' | 'AMICAL' | 'INFORMEL';
+
+export const APPROCHES_CLIENT: { value: ApprocheClient; libelle: string; description: string; icon: string }[] = [
+  { value: 'FORMEL',        libelle: 'Formel',        description: 'Communications officielles, vouvoiement systématique', icon: 'account_balance' },
+  { value: 'PROFESSIONNEL', libelle: 'Professionnel', description: 'Ton neutre et courtois, orienté résultats',            icon: 'work' },
+  { value: 'AMICAL',        libelle: 'Amical',        description: 'Relation de confiance établie, ton chaleureux',        icon: 'favorite' },
+  { value: 'INFORMEL',      libelle: 'Informel',      description: 'Échanges décontractés, tutoiement possible',           icon: 'forum' },
+];
+
+export function approcheClient(a?: string | null) {
+  return APPROCHES_CLIENT.find(x => x.value === a) ?? APPROCHES_CLIENT[1];
 }
 
 export interface Gerant {

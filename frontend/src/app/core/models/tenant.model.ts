@@ -9,6 +9,12 @@ export interface TenantConfig {
   poleLabel2: string;
   poleFlag1?: string;
   poleFlag2?: string;
+  /** Intitulés des rôles d'intervenant (cahier v2 #7) — `responsable` / `collaborateurOuest`. */
+  intervenantLabel1?: string;
+  intervenantLabel2?: string;
+  /** Relances des pièces manquantes (cahier v2 #1). */
+  relanceDelaiJours?: number;
+  relanceAutoActive?: boolean;
   couleurPrimaire?: string;
   isConfigured: boolean;
 

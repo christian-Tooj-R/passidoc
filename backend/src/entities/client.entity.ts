@@ -36,7 +36,7 @@ export enum SecteurActivite {
   SCI = 'SCI',
 }
 
-const FLUX_PERIODICITE: Record<string, 'monthly' | 'quarterly' | 'annual'> = {
+export const FLUX_PERIODICITE: Record<string, 'monthly' | 'quarterly' | 'annual'> = {
   RELEVE_BANCAIRE:   'monthly',
   TVA_MENSUELLE:     'monthly',
   TVA_TRIMESTRIELLE: 'quarterly',

@@ -100,8 +100,8 @@ import { Client } from '../../core/models/client.model';
           <th class="th-nom">Dossier</th>
           <th class="th-pole">Pôle</th>
           <th class="th-directeur">Directeur</th>
-          <th class="th-collab">Collaborateur {{ tenantSvc.poleLabel1() }}</th>
-          <th class="th-collab">Collaborateur {{ tenantSvc.poleLabel2() }}</th>
+          <th class="th-collab">{{ tenantSvc.intervenantLabel1() }}</th>
+          <th class="th-collab">{{ tenantSvc.intervenantLabel2() }}</th>
           <th class="th-action"></th>
         </tr>
       </thead>
@@ -142,7 +142,7 @@ import { Client } from '../../core/models/client.model';
               </div>
             </td>
 
-            <!-- Collaborateur pôle EST -->
+            <!-- Collaborateur Réunion (responsable) -->
             <td class="td-collab">
               <div class="assign-cell" [class.assign-cell--empty]="!c.responsable">
                 <mat-icon class="assign-icon">person</mat-icon>
@@ -158,7 +158,7 @@ import { Client } from '../../core/models/client.model';
               </div>
             </td>
 
-            <!-- Collaborateur pôle OUEST -->
+            <!-- Collaborateur Madagascar (collaborateurOuest) -->
             <td class="td-collab">
               <div class="assign-cell" [class.assign-cell--empty]="!c.collaborateurOuest">
                 <mat-icon class="assign-icon">person</mat-icon>

@@ -44,9 +44,6 @@ export class ClientsService {
   }
 
 
-  exportPdf(id: number) {
-    return this.http.get(`${this.api}/${id}/export/pdf`, { responseType: 'blob' });
-  }
 
   uploadLogo(clientId: number, file: File) {
     const formData = new FormData();

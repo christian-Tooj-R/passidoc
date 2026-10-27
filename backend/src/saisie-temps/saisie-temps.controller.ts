@@ -8,6 +8,15 @@ import { SaisieTempsService } from './saisie-temps.service';
 import { SaisieTempsScheduler } from './saisie-temps.scheduler';
 import { CreateSaisieTempsDto } from './dto/create-saisie-temps.dto';
 import { UpdateSaisieTempsDto } from './dto/update-saisie-temps.dto';
+import { BudgetDossierDto } from './dto/budget-dossier.dto';
+import { AffairesService } from './affaires.service';
+import { RentabiliteService } from './rentabilite.service';
+
+/** "1,2,3" → [1, 2, 3] (valeurs non numériques ignorées). */
+function listeIds(v?: string): number[] | undefined {
+  const ids = (v ?? '').split(',').map(Number).filter(n => Number.isInteger(n) && n > 0);
+  return ids.length ? ids : undefined;
+}
 
 @ApiTags('Saisie des temps')
 @ApiBearerAuth()
@@ -17,6 +26,8 @@ export class SaisieTempsController {
   constructor(
     private service: SaisieTempsService,
     private scheduler: SaisieTempsScheduler,
+    private affaires: AffairesService,
+    private rentabilite: RentabiliteService,
   ) {}
 
   @Post()
@@ -153,6 +164,74 @@ export class SaisieTempsController {
       req.user.tenantId, dateDebut, dateFin,
       this.scopedCollaborateurId(req, collaborateurId),
     );
+  }
+
+  @Get('rapport/detail')
+  @ApiOperation({ summary: 'Détail des temps passés façon Tempolia (saisies + absences, valorisées au PV collaborateur) — soi-même, tout le monde réservé à ADMIN' })
+  getRapportDetail(
+    @Req() req: any,
+    @Query('dateDebut') dateDebut?: string,
+    @Query('dateFin') dateFin?: string,
+    @Query('collaborateurIds') collaborateurIds?: string,
+    @Query('clientIds') clientIds?: string,
+    @Query('absences') absences?: string,
+  ) {
+    const collaborateurs = req.user.role === UserRole.ADMIN ? listeIds(collaborateurIds) : [req.user.id];
+    return this.service.getRapportDetail(req.user.tenantId, {
+      dateDebut, dateFin,
+      collaborateurIds: collaborateurs,
+      clientIds: listeIds(clientIds),
+      inclureAbsences: absences !== 'false',
+    });
+  }
+
+  @Get('affaires')
+  @ApiOperation({ summary: "Affaires (exercices) proposées pour un dossier — sélecteur de la saisie" })
+  getAffaires(@Req() req: any, @Query('clientId', ParseIntPipe) clientId: number) {
+    return this.affaires.lister(clientId, req.user.tenantId);
+  }
+
+  @Get('rentabilite')
+  @ApiOperation({ summary: "Tableau de bord rentabilité / boni-mali par dossier pour les affaires clôturant l'année — ADMIN : tous les dossiers, sinon ses dossiers" })
+  getRentabilite(
+    @Req() req: any,
+    @Query('annee') annee?: string,
+    @Query('collaborateurId') collaborateurId?: string,
+  ) {
+    return this.rentabilite.tableauDeBord(req.user, {
+      annee: annee ? +annee : undefined,
+      collaborateurId: collaborateurId ? +collaborateurId : undefined,
+    });
+  }
+
+  @Get('rentabilite/dossier/:clientId')
+  @ApiOperation({ summary: "Rentabilité d'un dossier : historique par affaire et détail de l'affaire choisie" })
+  getRentabiliteDossier(
+    @Req() req: any,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Query('affaire') affaire?: string,
+  ) {
+    return this.rentabilite.dossier(clientId, req.user, affaire);
+  }
+
+  @Post('rentabilite/dossier/:clientId/budget')
+  @ApiOperation({ summary: "Créer/modifier le budget temps d'une affaire du dossier (ADMIN, expert-comptable ou intervenant du dossier)" })
+  enregistrerBudgetDossier(
+    @Req() req: any,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Body() dto: BudgetDossierDto,
+  ) {
+    return this.rentabilite.enregistrerBudget(clientId, req.user, dto);
+  }
+
+  @Delete('rentabilite/dossier/:clientId/budget/:affaire')
+  @ApiOperation({ summary: "Supprimer le budget temps d'une affaire du dossier" })
+  supprimerBudgetDossier(
+    @Req() req: any,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Param('affaire') affaire: string,
+  ) {
+    return this.rentabilite.supprimerBudget(clientId, affaire, req.user);
   }
 
   @Get('incoherences')

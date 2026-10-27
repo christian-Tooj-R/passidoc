@@ -2,7 +2,7 @@ import { test } from '@playwright/test';
 import { request as pwRequest } from '@playwright/test';
 
 const API_URL = 'http://localhost:3000/api';
-const APP_URL = 'http://localhost:4202';
+const APP_URL = 'http://localhost:4200'; // même port que playwright.config.ts
 const TENANT  = 'afym';
 
 test('diag network - catch all 401', async ({ page }) => {

@@ -11,10 +11,10 @@ import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { FicheIdentiteModule } from './fiche-identite/fiche-identite.module';
 import { FluxMensuelModule } from './flux-mensuel/flux-mensuel.module';
+import { SuiviPiecesModule } from './suivi-pieces/suivi-pieces.module';
 import { FournisseursModule } from './fournisseurs/fournisseurs.module';
 import { SyntheseCloureModule } from './synthese-cloture/synthese-cloture.module';
 import { DocumentsModule } from './documents/documents.module';
-import { ExportModule } from './export/export.module';
 import { AnalyseStrategiqueModule } from './analyse-strategique/analyse-strategique.module';
 import { MissionsModule } from './missions/missions.module';
 import { ObjectifsModule } from './objectifs/objectifs.module';
@@ -96,10 +96,10 @@ import { TenantConfig } from './entities/tenant-config.entity';
     ClientsModule,
     FicheIdentiteModule,
     FluxMensuelModule,
+    SuiviPiecesModule,
     FournisseursModule,
     SyntheseCloureModule,
     DocumentsModule,
-    ExportModule,
     AnalyseStrategiqueModule,
     MissionsModule,
     ObjectifsModule,

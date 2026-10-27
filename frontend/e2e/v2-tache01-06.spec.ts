@@ -7,7 +7,7 @@ import { test, expect, request as pwRequest } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 
 const API_URL   = 'http://localhost:3000/api';
-const APP_URL   = 'http://localhost:4202';
+const APP_URL   = process.env['BASE_URL'] ?? 'http://localhost:4200'; // même port que playwright.config.ts
 const TENANT    = 'afym';
 const EMAIL     = 'admin@admin.com';
 const PASS      = 'Admin2024!';
@@ -37,7 +37,7 @@ async function loginAfym(page: Page): Promise<{ token: string; api: APIRequestCo
     data: { latitude: null, longitude: null, action: 'ENTREE' },
   }).catch(() => {});
 
-  await page.goto(`${APP_URL}/login?tenant=${TENANT}`);
+  await page.goto(`${APP_URL}/auth/login?tenant=${TENANT}`);
   await page.waitForLoadState('domcontentloaded');
   await page.evaluate(({ token, user, tenant }) => {
     localStorage.setItem('token', token);

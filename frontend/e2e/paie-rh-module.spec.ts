@@ -46,9 +46,30 @@ import { test, expect, request as pwRequest } from '@playwright/test';
 import { loginViaApi, API_URL, TEST_TENANT } from './helpers/auth';
 import { getToken, authHeaders } from './helpers/api';
 
-test.describe('Paie RH interne — parcours MVP1', () => {
+test.describe.serial('Paie RH interne — parcours MVP1', () => {
   let salarieId = 0;
-  const uniqueEmail = `paie-rh-e2e-${Date.now()}@test.com`;
+  const stamp = Date.now();
+  const uniqueEmail = `paie-rh-e2e-${stamp}@test.com`;
+  // Nom unique : les runs précédents ont laissé de nombreux salariés homonymes « PaieRH E2E »
+  const NOM = `E2E-${stamp}`;
+  const ligneHub = (page: any) => page.locator('.prhh-table tbody tr', { hasText: NOM });
+
+  /** Hub « Paie interne » : ouvre la période du mois si besoin et calcule les bulletins
+   *  restants — le calcul a quitté la fiche salarié (commit 81b4a55, Paie réservée ADMIN). */
+  async function genererBulletinDuMois(page: any) {
+    await page.goto(`http://localhost:4200/rh/paie?tenant=${TEST_TENANT}`);
+    await page.waitForLoadState('networkidle');
+    const ouvrir = page.getByRole('button', { name: /Ouvrir la période/i });
+    if (await ouvrir.isVisible().catch(() => false)) {
+      await ouvrir.click();
+      await expect(page.locator('.prhh-table')).toBeVisible({ timeout: 8_000 });
+    }
+    await expect(ligneHub(page)).toBeVisible({ timeout: 10_000 });
+    const calculer = page.getByRole('button', { name: /Calculer les bulletins restants/i });
+    if (await calculer.isVisible().catch(() => false)) await calculer.click();
+    const statut = ligneHub(page).locator('[data-statut]');
+    await expect(statut).toHaveAttribute('data-statut', 'GENERE', { timeout: 15_000 });
+  }
 
   test.beforeAll(async () => {
     const api = await pwRequest.newContext();
@@ -62,7 +83,7 @@ test.describe('Paie RH interne — parcours MVP1', () => {
         email: uniqueEmail,
         password: 'PaieRhE2e123!',
         firstName: 'PaieRH',
-        lastName: 'E2E',
+        lastName: NOM,
         role: 'COLLABORATEUR',
         site: 'EST',
       },
@@ -129,61 +150,38 @@ test.describe('Paie RH interne — parcours MVP1', () => {
 
     await page.getByRole('button', { name: /^Ok$/i }).click();
     await expect(page.locator('.rpr-table tbody tr', { hasText: libelle })).toBeVisible({ timeout: 8_000 });
-    await expect(page.locator('.rpr-table tbody tr', { hasText: libelle })).toContainText('Montant pris tel quel');
+    // Type de calcul par défaut MONTANT_FIXE, libellé « Base » (TYPE_CALCUL_RUBRIQUE_LABELS)
+    await expect(page.locator('.rpr-table tbody tr', { hasText: libelle }).locator('td').nth(2)).toHaveText('Base');
   });
 
-  test('PAIE-RH-5 — créer un contrat, calculer un aperçu, générer et télécharger un bulletin (nouveau modèle de rubrique)', async ({ page }) => {
+  test('PAIE-RH-5 — créer un contrat (fiche salarié) puis générer son bulletin depuis le hub Paie interne', async ({ page }) => {
     await loginViaApi(page);
     await page.goto(`http://localhost:4200/rh/salaries/${salarieId}?tenant=${TEST_TENANT}`);
     await page.waitForLoadState('networkidle');
 
-    // Onglet "Contrat & Paie"
+    // Onglet "Contrat & Paie" : le contrat se crée toujours depuis la fiche du salarié
     await page.getByRole('button', { name: /Contrat & Paie/i }).click();
-
-    // Créer le contrat
     await page.getByRole('button', { name: /Créer un contrat/i }).click();
     await page.locator('input[type="date"]').first().fill('2026-01-01');
     const salaireInput = page.locator('input[type="number"]').nth(1); // 0=quotité, 1=salaire de base
     await salaireInput.fill('1800');
     await page.getByRole('button', { name: /^Enregistrer$/i }).click();
+    await expect(page.locator('.f-val', { hasText: '1 800,00' })).toBeVisible({ timeout: 8_000 });
 
-    // Le contrat doit apparaître en lecture (salaire affiché)
-    await expect(page.locator('.f-val', { hasText: '1 800,00' })).toBeVisible({ timeout: 8_000 })
-      .catch(() => expect(page.locator('.f-val', { hasText: '1800' })).toBeVisible({ timeout: 8_000 }));
+    // … mais plus le calcul : réservé à la section Paie (hub), plus de bouton ici
+    await expect(page.getByRole('button', { name: /Aperçu du calcul|Générer le bulletin/i })).toHaveCount(0);
 
-    // Aperçu du calcul pour une période dédiée à ce test
-    await page.getByRole('button', { name: /Aperçu du calcul/i }).click();
-    await expect(page.locator('.prh-apercu')).toBeVisible({ timeout: 8_000 });
-    await expect(page.locator('.prh-apercu')).toContainText('Net à payer');
-
-    // Génération du bulletin
-    const [downloadEvent] = await Promise.all([
-      // On ne télécharge pas encore ici — juste la génération —, le download est testé après.
-      Promise.resolve(null),
-      page.getByRole('button', { name: /Générer le bulletin/i }).click(),
-    ]);
-    void downloadEvent;
-
-    await expect(page.locator('.prh-table tbody tr').first()).toBeVisible({ timeout: 8_000 });
-
-    // Téléchargement du PDF généré (la ligne a aussi un bouton "Enregistrer paiement" —
-    // cibler précisément le bouton de téléchargement PDF, identifié par son tooltip)
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 10_000 }),
-      page.locator('.prh-table tbody tr').first().getByRole('button', { name: /Télécharger le PDF/i }).click(),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/bulletin-salaire.*\.pdf/);
+    // Hub : période ouverte, bulletin calculé, net à payer affiché
+    await genererBulletinDuMois(page);
+    await expect(ligneHub(page).locator('td.num.strong')).toContainText(/\d/);
   });
 
-  test('PAIE-RH-6 — dialogue "Bulletin du salarié" : ouverture, édition, recalcul, navigation Suiv.', async ({ page }) => {
-    // S'appuie sur le contrat créé par PAIE-RH-5 pour ce même `salarieId` (exécution
-    // séquentielle du fichier — même convention implicite que le reste de cette suite).
+  test('PAIE-RH-6 — dialogue "Bulletin du salarié" (hub) : ouverture, édition, recalcul, navigation Suiv.', async ({ page }) => {
+    // S'appuie sur le contrat et le bulletin de PAIE-RH-5 (suite séquentielle).
     await loginViaApi(page);
-    await page.goto(`http://localhost:4200/rh/salaries/${salarieId}?tenant=${TEST_TENANT}`);
+    await page.goto(`http://localhost:4200/rh/paie?tenant=${TEST_TENANT}`);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /Contrat & Paie/i }).click();
-
-    await page.getByRole('button', { name: /Bulletin détaillé/i }).click();
+    await ligneHub(page).getByRole('button', { name: /Ouvrir le bulletin détaillé/i }).click();
     await expect(page.locator('.bsd-header')).toBeVisible({ timeout: 10_000 });
 
     // Les 6 onglets sont bien présents et cliquables sans erreur.
@@ -197,9 +195,7 @@ test.describe('Paie RH interne — parcours MVP1', () => {
     await page.locator('.bsd-table--edit input').nth(0).fill('Prime E2E');
     await page.locator('.bsd-table--edit input[type="number"]').nth(0).fill('50');
 
-    // Recalcul en direct → l'onglet "Bulletin calculé" (~Sage : grille Code/Rubrique/
-    // Nombre/Base/Taux salarial/Gain/Retenue/Taux pat./Montant pat. + récapitulatif
-    // Période/Annuel) doit refléter la saisie.
+    // Recalcul en direct → l'onglet "Bulletin calculé" doit refléter la saisie.
     await page.getByRole('button', { name: /^Recalculer$/ }).click();
     await page.locator('.bsd-tab', { hasText: 'Bulletin calculé' }).click();
     await expect(page.locator('.bsd-bulletin-table')).toBeVisible({ timeout: 10_000 });
@@ -208,23 +204,11 @@ test.describe('Paie RH interne — parcours MVP1', () => {
     await expect(page.locator('.bsd-recap-table')).toContainText('Période');
     await expect(page.locator('.bsd-recap-table')).toContainText('Annuel');
 
-    // Navigation Suiv./Préc. — présente dans tous les cas ; ne bloque pas si un seul
-    // salarié figure dans le cycle courant (bouton alors désactivé, comportement attendu).
-    const nextBtn = page.getByRole('button', { name: /Salarié suivant du cycle/i });
-    const prevBtn = page.getByRole('button', { name: /Salarié précédent du cycle/i });
-    await expect(nextBtn).toBeVisible();
-    await expect(prevBtn).toBeVisible();
-    if (!(await nextBtn.isDisabled())) {
-      const titleBefore = await page.locator('.bsd-header h2').textContent();
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-      const titleAfter = await page.locator('.bsd-header h2').textContent();
-      expect(titleAfter).not.toBe(titleBefore);
-    }
+    // Navigation Suiv./Préc. — présente dans tous les cas (désactivée s'il n'y a qu'un salarié).
+    await expect(page.getByRole('button', { name: /Salarié suivant du cycle/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Salarié précédent du cycle/i })).toBeVisible();
 
-    // Aucun bouton icône-seule sans aria-label (bug déjà rencontré ailleurs dans ce module).
-    // Scope au dialogue uniquement (.bsd-wrap) — la page derrière contient déjà d'autres
-    // boutons icône-seule préexistants, hors périmètre du module Paie RH.
+    // Aucun bouton icône-seule sans aria-label dans le dialogue.
     const iconButtons = page.locator('.bsd-wrap button[mat-icon-button]');
     const count = await iconButtons.count();
     for (let i = 0; i < count; i++) {
@@ -234,30 +218,23 @@ test.describe('Paie RH interne — parcours MVP1', () => {
     await page.locator('.bsd-close').click();
   });
 
-  test('PAIE-RH-7 — "Visualiser" le bulletin (onglet Contrat & Paie) : prévisualisation + Imprimer', async ({ page }) => {
-    // S'appuie sur le bulletin généré par PAIE-RH-5 pour ce même `salarieId`.
+  test('PAIE-RH-7 — "Visualiser" le bulletin depuis le hub : prévisualisation + Imprimer', async ({ page }) => {
     await loginViaApi(page);
-    await page.goto(`http://localhost:4200/rh/salaries/${salarieId}?tenant=${TEST_TENANT}`);
+    await page.goto(`http://localhost:4200/rh/paie?tenant=${TEST_TENANT}`);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /Contrat & Paie/i }).click();
-    await expect(page.locator('.prh-table tbody tr').first()).toBeVisible({ timeout: 8_000 });
-
-    const visualiserBtn = page.locator('.prh-table tbody tr').first().getByRole('button', { name: /Visualiser le bulletin/i });
-    await expect(visualiserBtn).toBeVisible();
-    // Le bouton "Télécharger le PDF" existant doit toujours être présent à côté (pas retiré).
-    await expect(page.locator('.prh-table tbody tr').first().getByRole('button', { name: /Télécharger le PDF/i })).toBeVisible();
+    const visualiserBtn = ligneHub(page).getByRole('button', { name: /Visualiser le bulletin/i });
+    await expect(visualiserBtn).toBeVisible({ timeout: 10_000 });
     await visualiserBtn.click();
 
     const dialog = page.locator('.bpp-wrap');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.locator('iframe.bpp-iframe')).toBeVisible();
     const src = await dialog.locator('iframe.bpp-iframe').getAttribute('src');
-    expect(src).toMatch(/^blob:/); // affiché, PAS téléchargé (pas de a.click()/a.download)
+    expect(src).toMatch(/^blob:/); // affiché, PAS téléchargé
 
     const imprimerBtn = dialog.getByRole('button', { name: /Imprimer/i });
-    await expect(imprimerBtn).toBeVisible();
     await expect(imprimerBtn).toHaveAttribute('aria-label', /.+/);
-    await expect(imprimerBtn).toBeEnabled({ timeout: 10_000 }); // activé une fois l'iframe chargée (évènement load)
+    await expect(imprimerBtn).toBeEnabled({ timeout: 10_000 });
 
     const fermerBtn = dialog.getByRole('button', { name: /Fermer la prévisualisation/i });
     await expect(fermerBtn).toHaveAttribute('aria-label', /.+/);

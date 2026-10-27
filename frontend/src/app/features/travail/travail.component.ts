@@ -32,6 +32,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Par semaine',         icon: 'date_range',         route: '/travail/temps/semaine' },
       { label: 'Par mois',            icon: 'calendar_month',     route: '/travail/temps/mois'    },
       { label: 'Détail des temps',    icon: 'manage_search',      route: '/travail/temps/detail'  },
+      { label: 'Rentabilité dossiers', icon: 'savings',           route: '/travail/rentabilite'   },
     ],
   },
 ];

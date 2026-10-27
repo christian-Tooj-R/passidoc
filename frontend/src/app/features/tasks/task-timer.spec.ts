@@ -67,7 +67,7 @@ const mockConfirm     = { confirm: vi.fn().mockReturnValue(of(true)) };
 const mockDialogRef   = { close: vi.fn() };
 const mockTenant      = {
   poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
-  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'), intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
 };
 const mockAuth = { currentUser: vi.fn().mockReturnValue({ id: 1, firstName: 'A', lastName: 'B', role: 'ADMIN' }) };
 

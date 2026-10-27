@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserAntenne, UserRole, UserSite } from '../entities/user.entity';
 import { Task, TaskStatut } from '../entities/task.entity';
+import { SaisieTemps } from '../entities/saisie-temps.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -30,12 +31,16 @@ export class UsersService {
 
   async findAll(currentUser?: User) {
     const tid = currentUser?.tenantId;
+    // Le tarif de vente des collègues n'est visible que de l'ADMIN (chacun voit le sien).
+    const masquer = (u: User) => (!currentUser || currentUser.role === UserRole.ADMIN || u.id === currentUser.id)
+      ? this.sanitize(u)
+      : { ...this.sanitize(u), prixVenteHoraire: null };
     if (currentUser && currentUser.role === UserRole.CHEF_ANTENNE) {
       const users = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, ...(tid ? { tenantId: tid } : {}) }, order: { createdAt: 'DESC' } });
-      return users.map(this.sanitize);
+      return users.map(masquer);
     }
     const users = await this.repo.find({ where: tid ? { tenantId: tid } : {}, order: { createdAt: 'DESC' } });
-    return users.map(this.sanitize);
+    return users.map(masquer);
   }
 
   async findOne(id: number, tenantId?: number) {
@@ -231,6 +236,30 @@ export class UsersService {
     if (dto.dateSortie === null) user.isActive = true;
     const saved = await this.repo.save(user);
     return this.sanitize(saved);
+  }
+
+  /**
+   * Prix de vente horaire (« PV Col ») — ADMIN uniquement. Avant de changer le tarif, les
+   * saisies du collaborateur qui n'ont pas encore de taux figé reçoivent l'ancien tarif
+   * (ou, s'il n'y en avait pas, le nouveau) : un changement de tarif ne revalorise jamais
+   * l'historique, et les saisies antérieures à la fonctionnalité prennent le premier tarif.
+   */
+  async updatePrixVente(id: number, prixVenteHoraire: number | null, tenantId?: number) {
+    const where: any = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const user = await this.repo.findOne({ where });
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+    if (prixVenteHoraire !== null && !(Number.isFinite(prixVenteHoraire) && prixVenteHoraire >= 0)) {
+      throw new BadRequestException('Prix de vente horaire invalide.');
+    }
+    const ancien = user.prixVenteHoraire != null ? Number(user.prixVenteHoraire) : null;
+    const tauxAFiger = ancien ?? prixVenteHoraire;
+    if (tauxAFiger !== null) {
+      await this.repo.manager.getRepository(SaisieTemps)
+        .update({ collaborateurId: id, tauxHoraire: IsNull() }, { tauxHoraire: tauxAFiger });
+    }
+    user.prixVenteHoraire = prixVenteHoraire;
+    return this.sanitize(await this.repo.save(user));
   }
 
   async getTheme(userId: number): Promise<Record<string, any>> {

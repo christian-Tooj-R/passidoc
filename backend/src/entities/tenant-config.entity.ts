@@ -32,6 +32,28 @@ export class TenantConfig {
   @Column({ default: '🔵', nullable: true })
   poleFlag1: string;
 
+  /**
+   * Intitulés des rôles d'intervenant d'un dossier (cahier v2 #7) — distincts des libellés de
+   * pôle ci-dessus, qui restent géographiques (site du dossier, du collaborateur, de l'antenne).
+   * 1 = `Client.responsable`, 2 = `Client.collaborateurOuest` ; « Directeur » est inchangé.
+   */
+  @Column({ default: 'Collaborateur Réunion' })
+  intervenantLabel1: string;
+
+  @Column({ default: 'Collaborateur Madagascar' })
+  intervenantLabel2: string;
+
+  /**
+   * Relances des pièces manquantes (cahier v2 #1) : délai (jours après l'échéance) au-delà
+   * duquel un dossier passe au rouge et peut être relancé ; relance automatique par e-mail
+   * au contact opérationnel du dossier — désactivée par défaut (envoi à de vrais clients).
+   */
+  @Column({ type: 'int', default: 15 })
+  relanceDelaiJours: number;
+
+  @Column({ default: false })
+  relanceAutoActive: boolean;
+
   @Column({ default: '🟠', nullable: true })
   poleFlag2: string;
 

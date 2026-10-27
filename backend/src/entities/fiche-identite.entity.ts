@@ -11,6 +11,13 @@ export interface OrgNode {
   children?: OrgNode[];
 }
 
+export interface ContactOperationnel {
+  nom?: string;
+  poste?: string;
+  telephone?: string;
+  email?: string;
+}
+
 @Entity('fiche_identite')
 export class FicheIdentite {
   @PrimaryGeneratedColumn()
@@ -64,6 +71,20 @@ export class FicheIdentite {
 
   @Column({ nullable: true })
   telephoneContact: string;
+
+  // ── Évolutions v2 #2 : contact légal (e-mail/téléphone = champs ci-dessus) + contact opérationnel ──
+  @Column({ nullable: true })
+  contactLegalNom: string;
+
+  @Column({ nullable: true })
+  contactLegalFonction: string;
+
+  @Column({ type: 'json', nullable: true })
+  contactOperationnel: ContactOperationnel | null;
+
+  // ── Évolutions v2 #3 : approche commerciale (FORMEL | PROFESSIONNEL | AMICAL | INFORMEL) ──
+  @Column({ type: 'varchar', length: 20, default: 'PROFESSIONNEL' })
+  approcheClient: string;
 
   @Column({ nullable: true })
   entrepriseFamiliale: string;

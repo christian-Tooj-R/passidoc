@@ -16,8 +16,8 @@ export class AlertesGlobalesController {
 
   @Get()
   @ApiOperation({ summary: 'Toutes les alertes flux manquants/en retard (tous clients)' })
-  getAll() {
-    return this.service.getAlertesGlobales();
+  getAll(@CurrentUser() user: User) {
+    return this.service.getAlertesGlobales(user.tenantId);
   }
 }
 

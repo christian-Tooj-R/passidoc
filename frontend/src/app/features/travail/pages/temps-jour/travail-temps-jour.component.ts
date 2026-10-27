@@ -446,6 +446,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
       date: r.date, clientId: r.clientId ?? null, missionCode: r.missionCode ?? null,
       dureeHeures: r.dureeHeures, type: r.type, categorie: r.categorie ?? null,
       commentaire: r.commentaire ?? null, heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
+      lieuTravail: r.lieuTravail ?? null,
     });
     this.editing.set(true);
   }
@@ -458,6 +459,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
       date: r.date, clientId: r.clientId ?? null, missionCode: r.missionCode ?? null,
       dureeHeures: r.dureeHeures, type: r.type, categorie: r.categorie ?? null,
       commentaire: r.commentaire ?? null, heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
+      lieuTravail: r.lieuTravail ?? null,
     });
     this.editing.set(true);
   }

@@ -27,10 +27,14 @@ export class AiAssistantService {
     this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
   }
 
-  private async getTenantLabels(tenantId: number | null): Promise<{ pole1: string; pole2: string }> {
-    if (!tenantId) return { pole1: 'Pôle 1', pole2: 'Pôle 2' };
-    const tc = await this.tenantRepo.findOne({ where: { id: tenantId } as any });
-    return { pole1: tc?.poleLabel1 ?? 'Pôle 1', pole2: tc?.poleLabel2 ?? 'Pôle 2' };
+  private async getTenantLabels(tenantId: number | null): Promise<{ pole1: string; pole2: string; intervenant1: string; intervenant2: string }> {
+    const tc = tenantId ? await this.tenantRepo.findOne({ where: { id: tenantId } as any }) : null;
+    return {
+      pole1: tc?.poleLabel1 ?? 'Pôle 1',
+      pole2: tc?.poleLabel2 ?? 'Pôle 2',
+      intervenant1: tc?.intervenantLabel1 ?? 'Collaborateur Réunion',
+      intervenant2: tc?.intervenantLabel2 ?? 'Collaborateur Madagascar',
+    };
   }
 
   async getContextSummary(clientId: number) {
@@ -216,12 +220,12 @@ export class AiAssistantService {
     const lines: string[] = [];
 
     // ── En-tête et règles ──────────────────────────────────────────────────────
-    const { pole1, pole2 } = await this.getTenantLabels(client.tenantId);
+    const { pole1, pole2, intervenant1, intervenant2 } = await this.getTenantLabels(client.tenantId);
     const siteLabel = client.site === 'EST' ? pole1 : pole2;
     lines.push(`Tu es l'assistant dossier du cabinet, dédié UNIQUEMENT au dossier "${client.nom}".`);
     lines.push(`Site : ${siteLabel}. Score de santé de passation : ${client.santePassation}%.`);
-    if (client.responsable)    lines.push(`Responsable ${pole1} : ${client.responsable.firstName} ${client.responsable.lastName}`);
-    if (client.collaborateurOuest) lines.push(`Collaborateur ${pole2} : ${client.collaborateurOuest.firstName} ${client.collaborateurOuest.lastName}`);
+    if (client.responsable)    lines.push(`${intervenant1} : ${client.responsable.firstName} ${client.responsable.lastName}`);
+    if (client.collaborateurOuest) lines.push(`${intervenant2} : ${client.collaborateurOuest.firstName} ${client.collaborateurOuest.lastName}`);
     lines.push(``);
     lines.push(`DONNÉES DISPONIBLES DANS CE DOSSIER :`);
     if (sections.length) {

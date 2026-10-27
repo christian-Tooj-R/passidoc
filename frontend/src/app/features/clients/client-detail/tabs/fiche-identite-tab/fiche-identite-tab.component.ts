@@ -16,7 +16,7 @@ import { FicheIdentiteService } from '../../../../../core/services/fiche-identit
 import { FiscalReferenceService, FiscalRef } from '../../../../../core/services/fiscal-reference.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
 import { PappersService } from '../../../../../core/services/pappers.service';
-import { ClientSite, TypeFlux } from '../../../../../core/models/client.model';
+import { APPROCHES_CLIENT, ApprocheClient, ClientSite, FicheIdentite, TypeFlux, approcheClient } from '../../../../../core/models/client.model';
 import { OnlyNumbersDirective } from '../../../../../shared/directives/only-numbers.directive';
 import { TenantService } from '../../../../../core/services/tenant.service';
 
@@ -98,16 +98,106 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
                 <mat-label>Surface commerciale (m²)</mat-label>
                 <input matInput type="number" formControlName="surfaceCommerciale" />
               </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Email de contact</mat-label>
-                <mat-icon matPrefix>email</mat-icon>
-                <input matInput type="email" formControlName="emailContact" placeholder="contact@entreprise.re" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Téléphone de contact</mat-label>
-                <mat-icon matPrefix>phone</mat-icon>
-                <input matInput formControlName="telephoneContact" placeholder="0262 XX XX XX" />
-              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- ═══════════ Évolutions v2 #2 / #3 : interlocuteurs et approche client ═══════════ -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title><mat-icon>contacts</mat-icon>&nbsp;Contacts &amp; relation client</mat-panel-title>
+              <mat-panel-description>
+                <span class="badge-approche badge-approche--{{ approche().value }}">
+                  <mat-icon class="appr-ico">{{ approche().icon }}</mat-icon>{{ approche().libelle }}
+                </span>
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="contacts">
+              <section class="contact-card contact-card--legal">
+                <header class="contact-card__hd">
+                  <mat-icon>gavel</mat-icon>
+                  <div class="contact-card__ttl">
+                    <strong>Contact légal</strong>
+                    <span>Questions juridiques, engagements, signatures</span>
+                  </div>
+                  <span class="contact-card__actions">
+                    @if (form.value.emailContact) { <a [href]="'mailto:' + form.value.emailContact" matTooltip="Écrire au contact légal"><mat-icon>email</mat-icon></a> }
+                    @if (form.value.telephoneContact) { <a [href]="'tel:' + form.value.telephoneContact" matTooltip="Appeler le contact légal"><mat-icon>call</mat-icon></a> }
+                  </span>
+                </header>
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nom / Prénom</mat-label>
+                    <input matInput formControlName="contactLegalNom" [placeholder]="gerantSuggere() || 'Gérant, président…'" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Qualité / Fonction</mat-label>
+                    <input matInput formControlName="contactLegalFonction" [placeholder]="gerantSuggere() ? 'Gérant' : 'Gérant, président…'" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Email</mat-label>
+                    <mat-icon matPrefix>email</mat-icon>
+                    <input matInput type="email" formControlName="emailContact" placeholder="gerant@entreprise.re" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Téléphone</mat-label>
+                    <mat-icon matPrefix>phone</mat-icon>
+                    <input matInput formControlName="telephoneContact" placeholder="0262 XX XX XX" />
+                  </mat-form-field>
+                </div>
+              </section>
+
+              <section class="contact-card contact-card--oper" formGroupName="contactOperationnel">
+                <header class="contact-card__hd">
+                  <mat-icon>support_agent</mat-icon>
+                  <div class="contact-card__ttl">
+                    <strong>Contact opérationnel</strong>
+                    <span>Échanges du quotidien : collecte des pièces, questions pratiques</span>
+                  </div>
+                  <span class="contact-card__actions">
+                    @if (form.value.contactOperationnel?.email) { <a [href]="'mailto:' + form.value.contactOperationnel?.email" matTooltip="Écrire au contact opérationnel"><mat-icon>email</mat-icon></a> }
+                    @if (form.value.contactOperationnel?.telephone) { <a [href]="'tel:' + form.value.contactOperationnel?.telephone" matTooltip="Appeler le contact opérationnel"><mat-icon>call</mat-icon></a> }
+                  </span>
+                </header>
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nom / Prénom</mat-label>
+                    <input matInput formControlName="nom" placeholder="Secrétaire, assistante, comptable interne…" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Poste / Fonction</mat-label>
+                    <input matInput formControlName="poste" placeholder="Assistante administrative" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Téléphone</mat-label>
+                    <mat-icon matPrefix>phone</mat-icon>
+                    <input matInput formControlName="telephone" placeholder="0262 XX XX XX" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Email</mat-label>
+                    <mat-icon matPrefix>email</mat-icon>
+                    <input matInput type="email" formControlName="email" placeholder="compta@entreprise.re" />
+                    <mat-error>Adresse e-mail invalide</mat-error>
+                  </mat-form-field>
+                </div>
+              </section>
+            </div>
+
+            <div class="approche">
+              <div class="approche__lbl"><mat-icon>record_voice_over</mat-icon> Approche client <span>— registre de communication à adopter</span></div>
+              <div class="approche__choix" role="radiogroup" aria-label="Approche client">
+                @for (a of approches; track a.value) {
+                  <button type="button" role="radio" class="approche__opt approche__opt--{{ a.value }}"
+                          [class.approche__opt--on]="form.value.approcheClient === a.value"
+                          [attr.aria-checked]="form.value.approcheClient === a.value"
+                          [disabled]="!editMode() || readonly"
+                          (click)="form.controls.approcheClient.setValue(a.value)">
+                    <mat-icon>{{ a.icon }}</mat-icon>
+                    <strong>{{ a.libelle }}</strong>
+                    <span>{{ a.description }}</span>
+                  </button>
+                }
+              </div>
             </div>
           </mat-expansion-panel>
 
@@ -706,12 +796,53 @@ const ALL_TYPES: { key: TypeFlux; label: string; icon: string; hint: string }[] 
     .tab-content { padding: 24px; }
 
     /* Read mode — inputs non-interactifs, accordion reste ouvert/fermable */
-    .reading input, .reading textarea { pointer-events: none; cursor: default; }
+    /* Les types de documents mensuels se règlent hors mode édition (enregistrement immédiat) :
+       le champ « Nom du document » d'un type personnalisé doit donc rester saisissable. */
+    .reading input:not(.flux-add-input), .reading textarea { pointer-events: none; cursor: default; }
     .reading select { pointer-events: none; }
     .reading .add-btn, .reading .remove-btn, .reading .pappers-btn { display: none; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 0; }
     .full-col { grid-column: 1 / -1; }
     .tab-content__actions { margin-top: 24px; display: flex; justify-content: flex-end; }
+
+    /* ── Contacts & relation client (cahier v2 #2 / #3) ── */
+    .appr-ico { font-size: 14px; width: 14px; height: 14px; }
+    .contacts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 12px; }
+    @media (max-width: 1100px) { .contacts { grid-template-columns: 1fr; } }
+    .contact-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px 0; border-top-width: 4px; }
+    .contact-card--legal { border-top-color: #1e3a8a; }
+    .contact-card--oper  { border-top-color: #0d9488; }
+    .contact-card .form-grid { padding: 10px 0 4px; gap: 4px 12px; }
+    .contact-card__hd { display: flex; align-items: center; gap: 10px; }
+    .contact-card__hd > mat-icon { width: 34px; height: 34px; font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .contact-card--legal .contact-card__hd > mat-icon { background: #e0e7ff; color: #1e3a8a; }
+    .contact-card--oper  .contact-card__hd > mat-icon { background: #ccfbf1; color: #0f766e; }
+    .contact-card__ttl { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .contact-card__ttl strong { font-size: 14px; color: #111827; }
+    .contact-card__ttl span { font-size: 12px; color: #6b7280; }
+    .contact-card__actions { display: flex; gap: 4px; }
+    .contact-card__actions a { display: flex; color: #475569; padding: 4px; border-radius: 6px; }
+    .contact-card__actions a:hover { background: #f1f5f9; color: #111827; }
+    .contact-card__actions mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .approche { padding: 16px 0 8px; }
+    .approche__lbl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px; }
+    .approche__lbl mat-icon { font-size: 18px; width: 18px; height: 18px; color: #6b7280; }
+    .approche__lbl span { font-weight: 400; color: #6b7280; }
+    .approche__choix { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 1100px) { .approche__choix { grid-template-columns: repeat(2, 1fr); } }
+    .approche__opt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 10px 12px;
+      border: 1.5px solid #e5e7eb; border-radius: 10px; background: #fff; cursor: pointer; font: inherit; color: #374151; }
+    .approche__opt mat-icon { font-size: 18px; width: 18px; height: 18px; color: #9ca3af; }
+    .approche__opt strong { font-size: 13px; }
+    .approche__opt span { font-size: 11.5px; color: #6b7280; line-height: 1.35; }
+    .approche__opt:disabled { cursor: default; }
+    .approche__opt:not(.approche__opt--on):disabled { opacity: .55; }
+    .approche__opt--on { box-shadow: 0 0 0 1px currentColor inset; }
+    .approche__opt--FORMEL.approche__opt--on        { border-color: #1e3a8a; background: #eef2ff; color: #1e3a8a; }
+    .approche__opt--PROFESSIONNEL.approche__opt--on { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+    .approche__opt--AMICAL.approche__opt--on        { border-color: #15803d; background: #f0fdf4; color: #15803d; }
+    .approche__opt--INFORMEL.approche__opt--on      { border-color: #c2410c; background: #fff7ed; color: #c2410c; }
+    .approche__opt--on mat-icon { color: currentColor; }
 
     .site-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
     .badge-pole-est { background: #dbeafe; color: #1d4ed8; }
@@ -975,6 +1106,8 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
   @Input() site: ClientSite = 'EST';
   @Input() readonly = false;
   @Output() typesChanged = new EventEmitter<TypeFlux[]>();
+  /** Fiche enregistrée : le dossier met à jour son en-tête (approche client, contacts). */
+  @Output() ficheChanged = new EventEmitter<FicheIdentite>();
 
   @Input() set typesFluxActifs(val: TypeFlux[] | undefined) {
     this.selectedTypes = val?.length ? [...val] : ALL_TYPES.map(t => t.key);
@@ -1076,6 +1209,11 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
     formeJuridique: [''], adresse: [''], activite: [''],
     surfaceCommerciale: [null as number | null],
     emailContact: [''], telephoneContact: [''],
+    contactLegalNom: [''], contactLegalFonction: [''],
+    contactOperationnel: this.fb.group({
+      nom: [''], poste: [''], telephone: [''], email: ['', Validators.email],
+    }),
+    approcheClient: ['PROFESSIONNEL' as ApprocheClient],
     nbConcurrentsQuartier: this.nbConcurrentsQuartierCtrl,
     nbConcurrentsGeneral:  this.nbConcurrentsGeneralCtrl,
     siteWeb:               this.siteWebCtrl,
@@ -1118,6 +1256,12 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
 
   saving = false;
   editMode = signal(false);
+
+  // ── Contacts & relation client (cahier v2 #2 / #3) ──
+  readonly approches = APPROCHES_CLIENT;
+  /** Premier gérant connu (repris de Pappers) : proposé comme contact légal par défaut. */
+  readonly gerantSuggere = signal('');
+  approche() { return approcheClient(this.form.value.approcheClient); }
   private _snapshot: any = null;
 
   tenantSvc = inject(TenantService);
@@ -1236,8 +1380,11 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
     this.service.get(this.clientId).subscribe((fiche: any) => {
       this.form.patchValue({
         ...fiche,
-        honoraires: fiche.honoraires ?? {}
+        honoraires: fiche.honoraires ?? {},
+        contactOperationnel: fiche.contactOperationnel ?? {},
+        approcheClient: fiche.approcheClient || 'PROFESSIONNEL',
       });
+      this.gerantSuggere.set((fiche.gerants ?? []).find((g: any) => g?.nom?.trim())?.nom?.trim() ?? '');
       // Compatibilité : ancien format = objet unique, nouveau = tableau
       const org = fiche.organigramme;
       if (!org) {
@@ -1376,6 +1523,12 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
   }
 
   save() {
+    const emailOper = this.form.controls.contactOperationnel.controls.email;
+    if (emailOper.invalid) {
+      emailOper.markAsTouched();
+      this.toast.error('E-mail du contact opérationnel invalide');
+      return;
+    }
     this.saving = true;
     const v = this.form.getRawValue() as any;
     const payload = {
@@ -1387,8 +1540,9 @@ export class FicheIdentiteTabComponent implements OnInit, OnDestroy {
     };
     delete payload['reseauxSociaux'];
     this.service.update(this.clientId, payload).subscribe({
-      next: () => {
+      next: (fiche: any) => {
         this.saving = false;
+        if (fiche) this.ficheChanged.emit(fiche);
         this.editingIndices.clear();
         this.actionnaireEditingIndices.clear();
         this.toast.success('Fiche enregistrée');

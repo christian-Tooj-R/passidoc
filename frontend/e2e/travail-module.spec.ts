@@ -3,6 +3,33 @@ import { test, expect } from '@playwright/test';
 // Tests du module Travail
 // Compte e2e@test.com / Test1234! (ADMIN)
 
+/**
+ * Jour des 30 derniers jours (le plus ancien possible) SANS pointage du compte de test : le
+ * contrôle de cohérence plafonne les saisies d'un jour pointé à la durée pointée, et chaque
+ * exécution de la suite pointe « aujourd'hui » — un jour fixe (J-30) finit donc par tomber sur
+ * un jour où la suite a tourné. On lit l'historique de pointage pour l'éviter.
+ */
+async function dateSansPointage(page: any): Promise<string> {
+  const login = await page.request.post('http://localhost:3000/api/auth/login', {
+    data: { email: 'e2e@test.com', password: 'Test1234!' },
+  });
+  const { access_token } = await login.json();
+  const iso = (d: Date) => d.toISOString().split('T')[0];
+  const debut = new Date();
+  debut.setDate(debut.getDate() - 30);
+  const r = await page.request.get(
+    `http://localhost:3000/api/pointage/historique?dateDebut=${iso(debut)}&dateFin=${iso(new Date())}`,
+    { headers: { Authorization: `Bearer ${access_token}` } },
+  );
+  const pointes = new Set(((await r.json()) ?? []).map((p: any) => String(p.date).slice(0, 10)));
+  for (let i = 30; i >= 1; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    if (!pointes.has(iso(d))) return iso(d);
+  }
+  throw new Error('Aucun jour sans pointage sur les 30 derniers jours pour le compte de test');
+}
+
 async function loginAndGoto(page: any, path: string) {
   const resp = await page.request.post('http://localhost:3000/api/auth/login', {
     data: { email: 'e2e@test.com', password: 'Test1234!' },
@@ -61,7 +88,7 @@ test.describe('Navigation & sidebar', () => {
 
     const labels = [
       'Toutes les tâches', 'Vue Kanban', 'Tâches récurrentes',
-      'Agenda réalisé', 'Par semaine', 'Par mois', 'Détail des temps',
+      'Agenda réalisé', 'Par semaine', 'Par mois', 'Détail des temps', 'Rentabilité dossiers',
     ];
     for (const label of labels) {
       await expect(page.locator('.tw-nav__item', { hasText: label }).first())
@@ -70,21 +97,25 @@ test.describe('Navigation & sidebar', () => {
   });
 
   test('Minuteur dans la sidebar — bouton présent et fonctionnel', async ({ page }) => {
+    // Le minuteur est persisté en localStorage : partir d'un minuteur à l'arrêt
+    await page.addInitScript(() => {
+      for (const k of ['st_timer', 'st_timer_task_ctx', 'st_timer_paused_tasks']) localStorage.removeItem(k);
+    });
     await loginAndGoto(page, '/travail/taches');
     await expect(page.locator('.tw-timer')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('.tw-timer__time')).toBeVisible();
-    await expect(page.locator('.tw-timer__btn')).toBeVisible();
+    await expect(page.locator('.tw-timer__btn--start')).toBeVisible();
 
     // Démarrer le minuteur
-    await page.locator('.tw-timer__btn').click();
+    await page.locator('.tw-timer__btn--start').click();
     await page.waitForTimeout(1200);
     await expect(page.locator('.tw-timer--running')).toBeVisible({ timeout: 3_000 });
 
-    // Arrêter
-    await page.locator('.tw-timer__btn').click();
-    await page.waitForTimeout(500);
-    const running = await page.locator('.tw-timer--running').isVisible();
-    expect(running).toBeFalsy();
+    // Arrêter : le minuteur s'arrête et propose d'enregistrer le temps (abandonné ici)
+    await page.locator('.tw-timer__btn--stop').click();
+    await expect(page.locator('.tw-timer--running')).toHaveCount(0);
+    await expect(page.locator('.tw-tsave')).toBeVisible({ timeout: 3_000 });
+    await page.locator('.tw-tsave__close').click();
   });
 
 });
@@ -267,11 +298,18 @@ test.describe('Temps passés', () => {
     expect(ok).toBeTruthy();
   });
 
-  test('Détail des temps — bouton Export CSV présent', async ({ page }) => {
+  // Page refaite au format Tempolia (oct. 2026) : exports Excel + PDF au lieu du CSV.
+  test('Détail des temps — boutons d’export Excel et PDF présents', async ({ page }) => {
     await loginAndGoto(page, '/travail/temps/detail');
     await expect(page.locator('.tw-sidebar')).toBeVisible({ timeout: 8_000 });
-    const btn = page.locator('button', { hasText: /[Ee]xport|CSV/ }).first();
-    await expect(btn).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('button.btn-export', { hasText: 'Excel' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('button.btn-export', { hasText: 'PDF' })).toBeVisible();
+  });
+
+  test('Rentabilité dossiers — page chargée', async ({ page }) => {
+    await loginAndGoto(page, '/travail/rentabilite');
+    await expect(page.locator('.tw-sidebar')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole('heading', { name: 'Rentabilité des dossiers' })).toBeVisible({ timeout: 8_000 });
   });
 
   test('Tâches récurrentes — tableau ou état vide', async ({ page }) => {
@@ -309,17 +347,12 @@ test.describe('Saisie rapide', () => {
     await loginAndGoto(page, '/travail/saisie');
     const commentaire = `Test e2e saisie ligne ${Date.now()}`;
 
-    // Date lointaine (30 jours en arrière) : aucun pointage n'est jamais créé sur une date
-    // aussi ancienne par les tests (qui pointent toujours "aujourd'hui"), donc le contrôle de
-    // cohérence pointage/saisie ne s'applique pas ici — ce n'est pas ce qu'on veut tester.
-    // ("hier" n'est pas assez sûr : sur une session longue qui chevauche un changement de
-    // jour, "hier" peut être un jour où les tests ont déjà pointé/saisi abondamment.)
-    const dateLointaine = new Date();
-    dateLointaine.setDate(dateLointaine.getDate() - 30);
-    const dateAncienne = dateLointaine.toISOString().split('T')[0];
+    // Jour sans pointage : le contrôle de cohérence pointage/saisie ne s'applique pas ici —
+    // ce n'est pas ce qu'on veut tester (cf. dateSansPointage).
+    const dateAncienne = await dateSansPointage(page);
 
     await page.locator('.line-form input[type="date"]').fill(dateAncienne);
-    await page.locator('.line-form input[name="duree"]').fill('1h30');
+    await page.locator('.line-form input[name="duree"]').fill('01:30'); // <input type="time"> : format HH:MM
     await page.locator('.line-form input[name="commentaire"]').fill(commentaire);
     await page.locator('.lf-submit').click();
 
@@ -349,16 +382,13 @@ test.describe('Par jour — outillage tableau', () => {
 test.describe('Par jour — modifier / dupliquer / supprimer une ligne', () => {
 
   test('Cycle complet : créer, modifier, dupliquer puis supprimer', async ({ page }) => {
-    // Créer une ligne dédiée via Saisie rapide, date lointaine (hors contrôle pointage —
-    // "hier" n'est pas assez sûr sur une session longue, voir le test "Saisie rapide" plus haut)
+    // Créer une ligne dédiée via Saisie rapide, un jour sans pointage (hors contrôle pointage)
     await loginAndGoto(page, '/travail/saisie');
     const commentaire = `E2E par-jour actions ${Date.now()}`;
-    const dateLointaine = new Date();
-    dateLointaine.setDate(dateLointaine.getDate() - 30);
-    const dateAncienne = dateLointaine.toISOString().split('T')[0];
+    const dateAncienne = await dateSansPointage(page);
 
     await page.locator('.line-form input[type="date"]').fill(dateAncienne);
-    await page.locator('.line-form input[name="duree"]').fill('1h00');
+    await page.locator('.line-form input[name="duree"]').fill('01:00'); // <input type="time"> : format HH:MM
     await page.locator('.line-form input[name="commentaire"]').fill(commentaire);
     await page.locator('.lf-submit').click();
     await expect(page.locator('.data-table', { hasText: commentaire })).toBeVisible({ timeout: 10_000 });
@@ -427,19 +457,20 @@ test.describe('Détail des temps — actions par ligne', () => {
   test('Icônes modifier / dupliquer / supprimer visibles pour une saisie propre non verrouillée', async ({ page }) => {
     await loginAndGoto(page, '/travail/saisie');
     const commentaire = `E2E detail actions ${Date.now()}`;
-    const dateLointaine = new Date();
-    dateLointaine.setDate(dateLointaine.getDate() - 30);
-    const dateAncienne = dateLointaine.toISOString().split('T')[0];
+    const dateAncienne = await dateSansPointage(page);
 
     await page.locator('.line-form input[type="date"]').fill(dateAncienne);
-    await page.locator('.line-form input[name="duree"]').fill('0h45');
+    await page.locator('.line-form input[name="duree"]').fill('00:45'); // <input type="time"> : format HH:MM
     await page.locator('.line-form input[name="commentaire"]').fill(commentaire);
     await page.locator('.lf-submit').click();
     await expect(page.locator('.data-table', { hasText: commentaire })).toBeVisible({ timeout: 10_000 });
 
     await page.goto('/travail/temps/detail');
     await page.waitForTimeout(2500);
-    await page.locator('.filter-bar input[placeholder*="commentaire" i]').fill(commentaire);
+    // Période « 30 derniers jours » : la saisie date d'il y a 30 jours, même en janvier
+    await page.locator('.params select').first().selectOption('30j');
+    await page.waitForTimeout(1500);
+    await page.locator('.params input[placeholder*="Libellé" i]').fill(commentaire);
     await page.waitForTimeout(400);
     const row = page.locator('tr.data-row', { hasText: commentaire });
     await expect(row).toBeVisible({ timeout: 8_000 });
@@ -451,10 +482,10 @@ test.describe('Détail des temps — actions par ligne', () => {
     await page.waitForTimeout(800);
   });
 
-  test('Bouton Export CSV et champ de recherche libre présents', async ({ page }) => {
+  test('Boutons d’export et champ de recherche libre présents', async ({ page }) => {
     await loginAndGoto(page, '/travail/temps/detail');
-    await expect(page.locator('button', { hasText: /[Ee]xport|CSV/ }).first()).toBeVisible({ timeout: 8_000 });
-    await expect(page.locator('.filter-bar input[placeholder*="commentaire" i]')).toBeVisible();
+    await expect(page.locator('button.btn-export', { hasText: 'Excel' })).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('.params input[placeholder*="Libellé" i]')).toBeVisible();
   });
 
 });

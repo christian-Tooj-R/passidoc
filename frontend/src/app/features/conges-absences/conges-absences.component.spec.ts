@@ -10,6 +10,7 @@ import { CongesAbsencesComponent } from './conges-absences.component';
 import { CongesAbsencesService } from '../../core/services/conges-absences.service';
 import { SalariesService } from '../salaries/salaries.service';
 import { TenantService } from '../../core/services/tenant.service';
+import { AuthService } from '../../core/services/auth.service';
 
 const mockConges  = {
   findAll: vi.fn().mockReturnValue(of([])),
@@ -18,14 +19,24 @@ const mockConges  = {
   approuver: vi.fn().mockReturnValue(of({})),
   refuser: vi.fn().mockReturnValue(of({})),
   getSoldes: vi.fn().mockReturnValue(of([])),
+  mesSoldes: vi.fn().mockReturnValue(of([])),
+  annuler: vi.fn().mockReturnValue(of({})),
 };
 const mockSalaries = { list: vi.fn().mockReturnValue(of([])) };
 const mockTenant  = {
   poleFlag1: vi.fn().mockReturnValue('🔵'), poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
-  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  poleFlag2: vi.fn().mockReturnValue('🟠'), poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'), intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'), intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
   poleFlag: vi.fn(), poleLabel: vi.fn(),
 };
 const mockSnack   = { open: vi.fn() };
+// Le composant est derrière authGuard : un utilisateur connecté existe toujours.
+const COLLAB = { id: 7, firstName: 'Sophie', lastName: 'Martin', role: 'COLLABORATEUR' };
+const ADMIN  = { id: 1, firstName: 'Alvin', lastName: 'Paquiry', role: 'ADMIN' };
+let connecte: any = COLLAB;
+const mockAuth = {
+  currentUser: vi.fn(() => connecte),
+  isAdmin: vi.fn(() => connecte?.role === 'ADMIN'),
+};
 
 async function createComponent() {
   await TestBed.configureTestingModule({
@@ -39,6 +50,7 @@ async function createComponent() {
       { provide: SalariesService,       useValue: mockSalaries },
       { provide: TenantService,         useValue: mockTenant },
       { provide: MatSnackBar,           useValue: mockSnack },
+      { provide: AuthService,           useValue: mockAuth },
     ],
   }).compileComponents();
 
@@ -51,9 +63,33 @@ async function createComponent() {
 describe('CongesAbsencesComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    connecte = COLLAB;
     mockConges.findAll.mockReturnValue(of([]));
     mockConges.getStats.mockReturnValue(of({}));
+    mockConges.mesSoldes.mockReturnValue(of([]));
+    mockConges.getSoldes.mockReturnValue(of([]));
     mockSalaries.list.mockReturnValue(of([]));
+  });
+
+  describe('visibilité des soldes (ADMIN = tout le monde, sinon soi-même)', () => {
+    it('un collaborateur ne charge que ses propres soldes', async () => {
+      mockConges.mesSoldes.mockReturnValue(of([{ typeConge: 'CONGES_PAYES', joursAcquis: 25, solde: 12 }]));
+      const { comp } = await createComponent();
+      expect(mockConges.mesSoldes).toHaveBeenCalled();
+      expect(mockSalaries.list).not.toHaveBeenCalled();
+      expect(comp.allSoldes()).toEqual([
+        { userId: 7, name: 'Sophie Martin', initials: 'SM', soldes: { CONGES_PAYES: 12 } },
+      ]);
+    });
+
+    it("l'ADMIN charge les soldes de toute l'équipe", async () => {
+      connecte = ADMIN;
+      mockSalaries.list.mockReturnValue(of([{ id: 3, firstName: 'Jean', lastName: 'Dupont' }, { id: 4, firstName: 'Lova', lastName: 'R' }]));
+      const { comp } = await createComponent();
+      expect(mockConges.mesSoldes).not.toHaveBeenCalled();
+      expect(mockConges.getSoldes).toHaveBeenCalledTimes(2);
+      expect(comp.allSoldes().map(r => r.userId).sort()).toEqual([3, 4]);
+    });
   });
 
   it('se crée sans erreur', async () => {

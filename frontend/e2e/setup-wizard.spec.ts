@@ -145,7 +145,9 @@ test.describe('Setup — assistant de configuration', () => {
     const ligne = page.locator('.recap__row', { hasText: 'Pôles' });
     await expect(ligne).toContainText(POLE_LABEL_1);
     await expect(ligne).toContainText(POLE_LABEL_2);
-    await expect(page.locator('.recap__row', { hasText: 'Cabinet' })).toContainText('Cabinet Récap');
+    // Filtrer sur le libellé exact : « Cabinet » apparaît aussi dans l'e-mail de l'admin
+    await expect(page.locator('.recap__row').filter({ has: page.locator('.rr-label', { hasText: /^Cabinet$/ }) }))
+      .toContainText('Cabinet Récap');
   });
 
   test('la soumission envoie les pôles fixes et affiche l\'écran de succès', async ({ page }) => {

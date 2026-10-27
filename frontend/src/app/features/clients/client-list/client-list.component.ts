@@ -19,7 +19,10 @@ import { TenantService } from '../../../core/services/tenant.service';
 import { Client } from '../../../core/models/client.model';
 import { CreateClientWizardComponent } from './create-client-wizard.component';
 
-type SortKey = 'nom' | 'score' | 'site' | 'date';
+type SortKey = 'nom' | 'score' | 'site' | 'date' | 'honoraires';
+/** Tranches d'honoraires comptables annuels (cahier v2 #4) — bornes paramétrables. */
+type TrancheHonoraires = '' | 'bas' | 'moyen' | 'haut' | 'nr';
+const LS_TRANCHES = 'clients_tranches_honoraires';
 interface CollabOption { id: number; label: string; }
 type ViewMode = 'grid' | 'list';
 
@@ -67,6 +70,7 @@ type ViewMode = 'grid' | 'list';
           <button class="sort-btn" [class.active]="sortKey()==='nom'"    (click)="setSort('nom')">Nom    @if(sortKey()==='nom'){<mat-icon>{{ sortDir()==='asc'?'arrow_upward':'arrow_downward' }}</mat-icon>}</button>
           <button class="sort-btn" [class.active]="sortKey()==='score'"  (click)="setSort('score')">Score  @if(sortKey()==='score'){<mat-icon>{{ sortDir()==='asc'?'arrow_upward':'arrow_downward' }}</mat-icon>}</button>
           <button class="sort-btn" [class.active]="sortKey()==='site'"   (click)="setSort('site')">Site   @if(sortKey()==='site'){<mat-icon>{{ sortDir()==='asc'?'arrow_upward':'arrow_downward' }}</mat-icon>}</button>
+          <button class="sort-btn" [class.active]="sortKey()==='honoraires'" (click)="setSort('honoraires')" matTooltip="Honoraires comptables annuels (fiche identité)">Honoraires @if(sortKey()==='honoraires'){<mat-icon>{{ sortDir()==='asc'?'arrow_upward':'arrow_downward' }}</mat-icon>}</button>
         </div>
 
         <!-- View toggle -->
@@ -122,6 +126,12 @@ type ViewMode = 'grid' | 'list';
               <span class="fas-chip">
                 <mat-icon>person</mat-icon>{{ collabFilterLabel() }}
                 <button (click)="setCollabFilter(null)"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            @if (honorairesFilter()) {
+              <span class="fas-chip">
+                <mat-icon>euro</mat-icon>{{ libelleTranche(honorairesFilter()) }}
+                <button (click)="honorairesFilter.set('')"><mat-icon>close</mat-icon></button>
               </span>
             }
             @if (siteFilter()) {
@@ -187,6 +197,25 @@ type ViewMode = 'grid' | 'list';
               <button class="fchip" [class.fchip--active]="siteFilter()==='OUEST'" (click)="siteFilter.set('OUEST')">
                 {{ tenantSvc.poleFlag2() }} {{ tenantSvc.poleLabel2() }}
               </button>
+            </div>
+          </div>
+
+          <!-- Honoraires comptables annuels (cahier v2 #4) -->
+          <div class="fp-group">
+            <label class="fp-label">Honoraires comptables annuels</label>
+            <div class="fp-site-chips">
+              <button class="fchip" [class.fchip--active]="honorairesFilter()===''" (click)="honorairesFilter.set('')">Tous</button>
+              @for (t of tranches; track t) {
+                <button class="fchip" [class.fchip--active]="honorairesFilter()===t" (click)="honorairesFilter.set(t)">
+                  {{ libelleTranche(t) }} <span class="fchip-count">{{ countByTranche(t) }}</span>
+                </button>
+              }
+            </div>
+            <div class="fp-seuils">
+              Tranches :
+              <input type="number" min="0" step="100" [ngModel]="seuilBas()" (ngModelChange)="setSeuils($event, seuilHaut())" /> €
+              et
+              <input type="number" min="0" step="100" [ngModel]="seuilHaut()" (ngModelChange)="setSeuils(seuilBas(), $event)" /> €
             </div>
           </div>
 
@@ -264,6 +293,10 @@ type ViewMode = 'grid' | 'list';
                     <span class="folder-site" [class]="c.site==='EST' ? 'sub--re' : 'sub--mg'">
                       {{ c.site === 'EST' ? (tenantSvc.poleFlag1() + ' ' + tenantSvc.poleLabel1()) : (tenantSvc.poleFlag2() + ' ' + tenantSvc.poleLabel2()) }}
                     </span>
+                    @if (honoraires(c) !== null) {
+                      <span class="folder-sec-sep">·</span>
+                      <span class="hon-badge" matTooltip="Honoraires comptables annuels">{{ honoraires(c) | number:'1.0-0' }} €</span>
+                    }
                     @if (c.secteurActivite) {
                       <span class="folder-sec-sep">·</span>
                       <span class="folder-sec-label" [style.color]="getSectorConfig(c.secteurActivite).accent">
@@ -293,12 +326,12 @@ type ViewMode = 'grid' | 'list';
                       </span>
                     }
                     @if (c.responsable) {
-                      <span class="fi-av fi-av--est" [title]="tenantSvc.poleLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                      <span class="fi-av fi-av--est" [title]="tenantSvc.intervenantLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
                         {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
                       </span>
                     }
                     @if (c.collaborateurOuest) {
-                      <span class="fi-av fi-av--ouest" [title]="tenantSvc.poleLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
+                      <span class="fi-av fi-av--ouest" [title]="tenantSvc.intervenantLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
                         {{ c.collaborateurOuest.firstName[0] }}{{ c.collaborateurOuest.lastName[0] }}
                       </span>
                     }
@@ -347,6 +380,9 @@ type ViewMode = 'grid' | 'list';
                   </mat-icon>
                 </div>
                 <span class="lr-label">{{ c.nom }}</span>
+                @if (honoraires(c) !== null) {
+                  <span class="hon-badge" matTooltip="Honoraires comptables annuels">{{ honoraires(c) | number:'1.0-0' }} €</span>
+                }
                 @if (!canEdit(c)) {
                   <mat-icon class="lr-lock" matTooltip="Lecture seule — vous n'êtes pas assigné à ce dossier">lock_outline</mat-icon>
                 }
@@ -365,12 +401,12 @@ type ViewMode = 'grid' | 'list';
                   </span>
                 }
                 @if (c.responsable) {
-                  <span class="fi-av fi-av--est" [title]="tenantSvc.poleLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
+                  <span class="fi-av fi-av--est" [title]="tenantSvc.intervenantLabel1() + ' : ' + c.responsable.firstName + ' ' + c.responsable.lastName">
                     {{ c.responsable.firstName[0] }}{{ c.responsable.lastName[0] }}
                   </span>
                 }
                 @if (c.collaborateurOuest) {
-                  <span class="fi-av fi-av--ouest" [title]="tenantSvc.poleLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
+                  <span class="fi-av fi-av--ouest" [title]="tenantSvc.intervenantLabel2() + ' : ' + c.collaborateurOuest.firstName + ' ' + c.collaborateurOuest.lastName">
                     {{ c.collaborateurOuest.firstName[0] }}{{ c.collaborateurOuest.lastName[0] }}
                   </span>
                 }
@@ -592,6 +628,9 @@ type ViewMode = 'grid' | 'list';
       to   { opacity: 1; transform: translateY(0); }
     }
     .fp-group { display: flex; flex-direction: column; gap: 7px; }
+    .fp-seuils { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+    .fp-seuils input { width: 80px; height: 28px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0 6px; font-size: 12px; }
+    .hon-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; color: #047857; background: #ecfdf5; border-radius: 10px; padding: 1px 7px; white-space: nowrap; }
     .fp-label {
       font-size: 10px; font-weight: 700; color: #6366f1;
       text-transform: uppercase; letter-spacing: .7px;
@@ -918,12 +957,62 @@ export class ClientListComponent implements OnInit, OnDestroy {
   showFilterPanel = signal(false);
   collabSearch    = '';
 
+  honorairesFilter = signal<TrancheHonoraires>('');
+  seuilBas         = signal(1000);
+  seuilHaut        = signal(5000);
+  readonly tranches: Exclude<TrancheHonoraires, ''>[] = ['bas', 'moyen', 'haut', 'nr'];
+
   activeFilterCount = computed(() => {
     let count = 0;
     if (this.collabFilter()) count++;
     if (this.siteFilter()) count++;
+    if (this.honorairesFilter()) count++;
     return count;
   });
+
+  /** Honoraires comptables annuels de la fiche identité, ou null s'ils ne sont pas renseignés. */
+  honoraires(c: Client): number | null {
+    const v = Number(c.ficheIdentite?.honoraires?.comptables);
+    return v > 0 ? v : null;
+  }
+
+  private dansTranche(c: Client, t: TrancheHonoraires): boolean {
+    const h = this.honoraires(c);
+    switch (t) {
+      case '':      return true;
+      case 'nr':    return h === null;
+      case 'bas':   return h !== null && h < this.seuilBas();
+      case 'moyen': return h !== null && h >= this.seuilBas() && h <= this.seuilHaut();
+      case 'haut':  return h !== null && h > this.seuilHaut();
+    }
+  }
+
+  countByTranche(t: TrancheHonoraires) { return this.clients().filter(c => this.dansTranche(c, t)).length; }
+
+  libelleTranche(t: TrancheHonoraires): string {
+    const fmt = (n: number) => n.toLocaleString('fr-FR');
+    return {
+      '': 'Tous', nr: 'Non renseignés',
+      bas: `< ${fmt(this.seuilBas())} €`,
+      moyen: `${fmt(this.seuilBas())} – ${fmt(this.seuilHaut())} €`,
+      haut: `> ${fmt(this.seuilHaut())} €`,
+    }[t];
+  }
+
+  setSeuils(bas: number, haut: number) {
+    const b = Math.max(0, Number(bas) || 0);
+    const h = Math.max(b, Number(haut) || 0);
+    this.seuilBas.set(b);
+    this.seuilHaut.set(h);
+    try { localStorage.setItem(LS_TRANCHES, JSON.stringify({ bas: b, haut: h })); } catch {}
+  }
+
+  private restaurerSeuils() {
+    try {
+      const t = JSON.parse(localStorage.getItem(LS_TRANCHES) ?? 'null');
+      if (t && Number.isFinite(t.bas) && Number.isFinite(t.haut)) { this.seuilBas.set(t.bas); this.seuilHaut.set(t.haut); }
+    } catch {}
+  }
 
   searchCtrl = new FormControl('');
 
@@ -1002,11 +1091,14 @@ export class ClientListComponent implements OnInit, OnDestroy {
     const meId   = this.auth.currentUser()?.id;
     const k      = this.sortKey();
     const d      = this.sortDir() === 'asc' ? 1 : -1;
+    const tranche = this.honorairesFilter();
+    this.seuilBas(); this.seuilHaut(); // dépendances du computed (bornes des tranches)
 
     let list = this.clients().filter(c => {
       const score = c.completude || c.santePassation;
       if (s && !c.nom.toLowerCase().includes(s)) return false;
       if (site && c.site !== site) return false;
+      if (tranche && !this.dansTranche(c, tranche)) return false;
       if (h === 'ok'      && score < 80)                    return false;
       if (h === 'partial' && (score < 50 || score >= 80))   return false;
       if (h === 'alert'   && score >= 50)                   return false;
@@ -1028,6 +1120,12 @@ export class ClientListComponent implements OnInit, OnDestroy {
       if (k === 'score') return d * (sa - sb);
       if (k === 'site')  return d * a.site.localeCompare(b.site);
       if (k === 'date')  return d * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      if (k === 'honoraires') {
+        // Dossiers sans honoraires toujours en fin de liste, quel que soit le sens du tri.
+        const ha = this.honoraires(a), hb = this.honoraires(b);
+        if (ha === null || hb === null) return ha === hb ? a.nom.localeCompare(b.nom) : ha === null ? 1 : -1;
+        return d * (ha - hb);
+      }
       return 0;
     });
   });
@@ -1039,6 +1137,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
   constructor(private clientsService: ClientsService, public auth: AuthService) {}
 
   ngOnInit() {
+    this.restaurerSeuils();
     this.load();
     this.searchCtrl.valueChanges.pipe(debounceTime(200)).subscribe(v => this.searchQuery.set(v ?? ''));
     this.sub.add(
@@ -1099,7 +1198,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
   setSort(k: SortKey) {
     if (this.sortKey() === k) this.sortDir.update(d => d === 'asc' ? 'desc' : 'asc');
-    else { this.sortKey.set(k); this.sortDir.set('asc'); }
+    // Honoraires : premier clic = du plus gros au plus petit dossier (cahier v2 #4).
+    else { this.sortKey.set(k); this.sortDir.set(k === 'honoraires' ? 'desc' : 'asc'); }
   }
 
   openCreateDialog() {
@@ -1163,6 +1263,7 @@ export class ClientListComponent implements OnInit, OnDestroy {
     this.fonctionFilter.set('');
     this.siteFilter.set('');
     this.healthFilter.set('');
+    this.honorairesFilter.set('');
     this.mesDossiers.set(false);
   }
 }

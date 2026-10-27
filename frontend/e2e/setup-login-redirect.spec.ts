@@ -1,8 +1,18 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
- * Tests du panneau "Cabinet déjà configuré ?" sur la page /setup
+ * Accès au login depuis la landing page /setup : l'identifiant du cabinet se saisit dans la
+ * fenêtre « Se connecter » (bouton de la barre de navigation) — refonte de la landing.
  */
+const champ  = (page: Page) => page.locator('.lp-modal__input');
+const valider = (page: Page) => page.locator('.lp-modal .lp-btn--primary');
+const erreur = (page: Page) => page.locator('.lp-modal__error');
+
+async function ouvrirConnexion(page: Page) {
+  await page.locator('.lp-btn--outline', { hasText: 'Se connecter' }).click();
+  await expect(champ(page)).toBeVisible();
+}
+
 test.describe('Setup — accès login depuis la landing page', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -35,26 +45,25 @@ test.describe('Setup — accès login depuis la landing page', () => {
 
     // La landing doit s'afficher (pas de redirection vers /auth/login)
     await expect(page).toHaveURL(/\/setup/);
-    await expect(page.locator('.wb-login__input')).toBeVisible();
+    await expect(page.locator('.lp-btn--outline', { hasText: 'Se connecter' })).toBeVisible();
   });
 
-  test('le champ "identifiant" est visible sur la landing page', async ({ page }) => {
-    const input = page.locator('.wb-login__input');
-    await expect(input).toBeVisible();
-    await expect(input).toHaveAttribute('placeholder', 'identifiant de votre cabinet');
+  test('le champ "identifiant" est proposé dans la fenêtre Se connecter', async ({ page }) => {
+    await ouvrirConnexion(page);
+    await expect(champ(page)).toHaveAttribute('placeholder', 'Identifiant de votre cabinet');
   });
 
-  test('cliquer "Accéder" sans slug affiche un message d\'erreur', async ({ page }) => {
-    await page.locator('.wb-login__btn').click();
-    const error = page.locator('.wb-login__error');
-    await expect(error).toBeVisible();
-    await expect(error).toContainText('Entrez l\'identifiant de votre cabinet');
+  test('cliquer "Continuer" sans slug affiche un message d\'erreur', async ({ page }) => {
+    await ouvrirConnexion(page);
+    await valider(page).click();
+    await expect(erreur(page)).toBeVisible();
+    await expect(erreur(page)).toContainText('Entrez l\'identifiant de votre cabinet');
   });
 
   test('taper Entrée sans slug affiche un message d\'erreur', async ({ page }) => {
-    await page.locator('.wb-login__input').press('Enter');
-    const error = page.locator('.wb-login__error');
-    await expect(error).toBeVisible();
+    await ouvrirConnexion(page);
+    await champ(page).press('Enter');
+    await expect(erreur(page)).toBeVisible();
   });
 
   test('entrer un slug valide (afym) navigue vers /auth/login', async ({ page }) => {
@@ -67,8 +76,9 @@ test.describe('Setup — accès login depuis la landing page', () => {
       });
     });
 
-    await page.locator('.wb-login__input').fill('afym');
-    await page.locator('.wb-login__btn').click();
+    await ouvrirConnexion(page);
+    await champ(page).fill('afym');
+    await valider(page).click();
 
     // Vérifier que l'URL change vers /auth/login
     await expect(page).toHaveURL(/\/auth\/login/, { timeout: 5000 });
@@ -83,13 +93,14 @@ test.describe('Setup — accès login depuis la landing page', () => {
       });
     });
 
-    await page.locator('.wb-login__input').fill('cabinet-inconnu');
-    await page.locator('.wb-login__btn').click();
+    await ouvrirConnexion(page);
+    await champ(page).fill('cabinet-inconnu');
+    await valider(page).click();
 
     // Doit rester sur /setup
     await expect(page).toHaveURL(/\/setup/);
     // Doit afficher un message mentionnant le slug
-    const error = page.locator('.wb-login__error');
+    const error = erreur(page);
     await expect(error).toBeVisible({ timeout: 5000 });
     await expect(error).toContainText('cabinet-inconnu');
     await expect(error).toContainText('pas encore inscrit');
@@ -100,10 +111,11 @@ test.describe('Setup — accès login depuis la landing page', () => {
       await route.abort('failed');
     });
 
-    await page.locator('.wb-login__input').fill('afym');
-    await page.locator('.wb-login__btn').click();
+    await ouvrirConnexion(page);
+    await champ(page).fill('afym');
+    await valider(page).click();
 
-    const error = page.locator('.wb-login__error');
+    const error = erreur(page);
     await expect(error).toBeVisible({ timeout: 5000 });
     await expect(error).toContainText('Impossible de joindre');
   });
@@ -118,8 +130,9 @@ test.describe('Setup — accès login depuis la landing page', () => {
     });
 
     await page.evaluate(() => localStorage.removeItem('tenant_slug'));
-    await page.locator('.wb-login__input').fill('afym');
-    await page.locator('.wb-login__btn').click();
+    await ouvrirConnexion(page);
+    await champ(page).fill('afym');
+    await valider(page).click();
 
     // localStorage ne doit pas être écrit avant le login
     const storedSlug = await page.evaluate(() => localStorage.getItem('tenant_slug'));

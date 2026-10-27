@@ -18,6 +18,10 @@ export const MISSION_CODES: { code: MissionCode; label: string; color: string; b
   { code: 'ADM',  label: 'Administration cabinet',  color: '#475569', bg: '#f1f5f9' },
 ];
 
+export { LIEUX_TRAVAIL, lieuTravail } from '../models/lieu-travail';
+export type { LieuTravail } from '../models/lieu-travail';
+import type { LieuTravail } from '../models/lieu-travail';
+
 export interface SaisieTemps {
   id: number;
   date: string;
@@ -36,6 +40,13 @@ export interface SaisieTemps {
   lockedBy?: string;
   heureDebut?: string;
   heureFin?: string;
+  /** Affaire = exercice du dossier (« C2026-09 »), attribuée automatiquement côté serveur. */
+  affaire?: string | null;
+  /** Prix de vente horaire du collaborateur figé au moment de la saisie. */
+  tauxHoraire?: number | null;
+  /** Pôle de travail (cahier v2 #5) — défaut serveur : site du collaborateur. */
+  lieuTravail?: LieuTravail | null;
+  collaborateur?: { id: number; firstName: string; lastName: string; site?: string };
 }
 
 export interface CreateSaisieTempsDto {
@@ -49,6 +60,10 @@ export interface CreateSaisieTempsDto {
   clientId?: number;
   heureDebut?: string;
   heureFin?: string;
+  /** Absente = conservée/automatique ; null = recalcul automatique. */
+  affaire?: string | null;
+  /** Absent = site du collaborateur (création) ou inchangé (modification). */
+  lieuTravail?: LieuTravail | null;
 }
 
 export interface RatioSemaine {
@@ -67,6 +82,104 @@ export interface BudgetMission {
   missionCode: string;
   annee: number;
   heuresBudget: number;
+}
+
+/** Ligne du rapport « Détail des temps passés » (format Tempolia). */
+export interface LigneRapportDetail {
+  id: number;
+  source: 'SAISIE' | 'ABSENCE';
+  date: string;
+  collaborateurId: number;
+  collaborateur: string;
+  presence: 'FACTURABLE' | 'NON_FACTURABLE' | 'ABSENCE';
+  clientId: number | null;
+  client: string | null;
+  /** « Client / TNF » : le client, sinon la catégorie de temps non facturable / d'absence. */
+  clientTnf: string;
+  affaire: string | null;
+  affaireEtat: 'O' | 'C' | null;
+  missionCode: string | null;
+  categorie: string | null;
+  libelle: string | null;
+  dureeHeures: number;
+  tauxHoraire: number | null;
+  tauxFige: boolean;
+  pv: number;
+  heureDebut: string | null;
+  heureFin: string | null;
+  isLocked: boolean;
+  /** Pôle de travail ; null pour une absence. */
+  lieuTravail?: LieuTravail | null;
+}
+
+export interface AffaireInfo {
+  code: string;
+  dateOuverture: string;
+  dateCloture: string;
+  etat: 'O' | 'C';
+  source: 'EXERCICE' | 'CALCUL';
+}
+
+export type StatutBudget = 'NON_BUDGETE' | 'OK' | 'ATTENTION' | 'DEPASSE';
+
+export interface IndicateursRentabilite {
+  clientId: number;
+  client: string;
+  site: string | null;
+  intervenants: { directeur: string | null; responsable: string | null; collaborateurOuest: string | null };
+  affaire: string;
+  etat: 'O' | 'C';
+  dateOuverture: string;
+  dateCloture: string;
+  budgetId: number | null;
+  honoraires: number | null;
+  honorairesSource: 'BUDGET' | 'FICHE' | null;
+  heuresBudget: number | null;
+  prixVenteHoraire: number | null;
+  prixVenteCalcule: boolean;
+  heuresConsommees: number;
+  heuresRestantes: number | null;
+  tauxConsommation: number | null;
+  statut: StatutBudget;
+  montantRealise: number | null;
+  boniMali: number | null;
+  boniMaliPct: number | null;
+  valorisation: number | null;
+  margeValorisation: number | null;
+}
+
+export interface TableauRentabilite {
+  annee: number;
+  voirValorisation: boolean;
+  lignes: IndicateursRentabilite[];
+  totaux: {
+    honoraires: number; heuresBudget: number; heuresConsommees: number; montantRealise: number;
+    boniMali: number; valorisation: number | null; margeValorisation: number | null;
+    dossiersDepasses: number; dossiersAttention: number;
+  };
+}
+
+export interface RentabiliteDossier {
+  client: { id: number; nom: string };
+  affaire: string;
+  affaires: AffaireInfo[];
+  indicateurs: IndicateursRentabilite;
+  historique: IndicateursRentabilite[];
+  heuresHorsBudget: number;
+  parMission: { missionCode: string; heures: number }[];
+  parMois: { mois: string; heures: number }[];
+  parCollaborateur: { collaborateurId: number; collaborateur: string; heures: number; valorisation: number }[] | null;
+  peutModifierBudget: boolean;
+  voirValorisation: boolean;
+  missionsHorsBudget: string[];
+  seuilAttention: number;
+}
+
+export interface BudgetDossierInput {
+  affaire: string;
+  heuresBudget: number;
+  honoraires?: number | null;
+  prixVenteHoraire?: number | null;
 }
 
 export interface PlanningRow {
@@ -362,6 +475,41 @@ export class SaisieTempsService {
     if (params.dateFin)         p['dateFin']         = params.dateFin;
     if (params.collaborateurId) p['collaborateurId'] = String(params.collaborateurId);
     return this.http.get<any[]>(`${this.api}/rapport/mois`, { params: p });
+  }
+
+  /** Détail des temps façon Tempolia — saisies + absences, valorisées au PV collaborateur. */
+  getRapportDetail(params: { dateDebut?: string; dateFin?: string; collaborateurIds?: number[]; clientIds?: number[]; absences?: boolean }): Observable<{ lignes: LigneRapportDetail[] }> {
+    const p: Record<string, string> = {};
+    if (params.dateDebut)                p['dateDebut']        = params.dateDebut;
+    if (params.dateFin)                  p['dateFin']          = params.dateFin;
+    if (params.collaborateurIds?.length) p['collaborateurIds'] = params.collaborateurIds.join(',');
+    if (params.clientIds?.length)        p['clientIds']        = params.clientIds.join(',');
+    if (params.absences === false)       p['absences']         = 'false';
+    return this.http.get<{ lignes: LigneRapportDetail[] }>(`${this.api}/rapport/detail`, { params: p });
+  }
+
+  getAffaires(clientId: number): Observable<AffaireInfo[]> {
+    return this.http.get<AffaireInfo[]>(`${this.api}/affaires`, { params: { clientId } });
+  }
+
+  getRentabilite(params: { annee?: number; collaborateurId?: number }): Observable<TableauRentabilite> {
+    const p: Record<string, string> = {};
+    if (params.annee)           p['annee']           = String(params.annee);
+    if (params.collaborateurId) p['collaborateurId'] = String(params.collaborateurId);
+    return this.http.get<TableauRentabilite>(`${this.api}/rentabilite`, { params: p });
+  }
+
+  getRentabiliteDossier(clientId: number, affaire?: string): Observable<RentabiliteDossier> {
+    const p: Record<string, string> = affaire ? { affaire } : {};
+    return this.http.get<RentabiliteDossier>(`${this.api}/rentabilite/dossier/${clientId}`, { params: p });
+  }
+
+  saveBudgetDossier(clientId: number, data: BudgetDossierInput): Observable<unknown> {
+    return this.http.post(`${this.api}/rentabilite/dossier/${clientId}/budget`, data);
+  }
+
+  deleteBudgetDossier(clientId: number, affaire: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/rentabilite/dossier/${clientId}/budget/${affaire}`);
   }
 
   getTenant(params: { dateDebut?: string; dateFin?: string; collaborateurId?: number; clientId?: number }): Observable<SaisieTemps[]> {

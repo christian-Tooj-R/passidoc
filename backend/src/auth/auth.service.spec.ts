@@ -10,7 +10,7 @@ import { TenantConfig } from '../entities/tenant-config.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { MailService } from '../mail/mail.service';
 
-const mockUser: User = {
+const mockUser = {
   id: 1,
   email: 'test@afym.re',
   password: '',
@@ -23,7 +23,7 @@ const mockUser: User = {
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
-};
+} as unknown as User;
 
 const mockRepo = {
   findOne: jest.fn(),
@@ -89,8 +89,8 @@ describe('AuthService', () => {
       const result = await service.login({ email: 'test@afym.re', password: 'password123' });
 
       expect(result.access_token).toBe('mock-token');
-      expect(result.user.email).toBe('test@afym.re');
-      expect(result.user.password).toBeUndefined();
+      expect(result.user!.email).toBe('test@afym.re');
+      expect((result.user as any).password).toBeUndefined();
     });
 
     it('doit lever UnauthorizedException si l\'utilisateur est inconnu', async () => {

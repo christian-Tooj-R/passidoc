@@ -25,17 +25,16 @@ export function parseDuree(input: string): number | null {
 /** Formate une durée décimale en "Xh00". */
 export function formatHeures(h: number): string {
   if (!h || h <= 0) return '0h00';
-  const hrs = Math.floor(h);
-  const min = Math.round((h - hrs) * 60);
-  return `${hrs}h${String(min).padStart(2, '0')}`;
+  // Arrondi sur le total de minutes : 1,999 h donne « 2h00 » et non « 1h60 ».
+  const total = Math.round(h * 60);
+  return `${Math.floor(total / 60)}h${String(total % 60).padStart(2, '0')}`;
 }
 
 /** Convertit une durée décimale en "HH:MM", pour la valeur d'un `<input type="time">`. */
 export function toHHMM(h: number): string {
   if (!h || h <= 0) return '';
-  const hrs = Math.floor(h);
-  const min = Math.round((h - hrs) * 60);
-  return `${String(hrs).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  const total = Math.round(h * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /** Convertit la valeur "HH:MM" d'un `<input type="time">` en heures décimales, ou null si vide/invalide. */

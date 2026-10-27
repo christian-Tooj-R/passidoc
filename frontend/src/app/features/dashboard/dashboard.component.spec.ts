@@ -28,6 +28,8 @@ const mockTenant         = {
   poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
   poleFlag2:  vi.fn().mockReturnValue('🟠'),
   poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'),
+  intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
 };
 
 async function createComponent() {

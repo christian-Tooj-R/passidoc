@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
 describe('Passidoc API (e2e)', () => {
@@ -12,7 +12,8 @@ describe('Passidoc API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    // Même configuration que main.ts
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true, transformOptions: { enableImplicitConversion: true } }));
     app.setGlobalPrefix('api');
     await app.init();
   });
@@ -60,6 +61,19 @@ describe('Passidoc API (e2e)', () => {
         .expect(401);
     });
 
+    it.each([
+      '/api/saisies-temps/rapport/detail',
+      '/api/saisies-temps/rentabilite',
+      '/api/saisies-temps/rentabilite/dossier/1',
+      '/api/saisies-temps/affaires?clientId=1',
+    ])('GET %s doit renvoyer 401 sans token', (url) => {
+      return request(app.getHttpServer()).get(url).expect(401);
+    });
+
+    it('PATCH /api/users/1/prix-vente doit renvoyer 401 sans token', () => {
+      return request(app.getHttpServer()).patch('/api/users/1/prix-vente').send({ prixVenteHoraire: 50 }).expect(401);
+    });
+
     it('GET /api/auth/me doit renvoyer 401 sans token', () => {
       return request(app.getHttpServer())
         .get('/api/auth/me')
@@ -70,10 +84,20 @@ describe('Passidoc API (e2e)', () => {
   // ── Validation DTOs ───────────────────────────────────────────────────────
 
   describe('Validation des DTOs', () => {
-    it('doit rejeter un login avec mot de passe trop court (400)', () => {
+    // La longueur minimale ne s'applique qu'à la création du mot de passe (CreateUserDto) :
+    // à la connexion, un mot de passe court est simplement refusé comme incorrect
+    // (MinLength retiré du LoginDto volontairement — commit ef36ef8).
+    it('refuse un login avec mot de passe trop court comme un identifiant incorrect (401)', () => {
       return request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email: 'test@test.com', password: 'ab' })
+        .expect(401);
+    });
+
+    it('rejette un champ inconnu dans le corps de la requête (400)', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'test@test.com', password: 'motdepasse', role: 'ADMIN' })
         .expect(400);
     });
   });

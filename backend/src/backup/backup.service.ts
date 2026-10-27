@@ -9,7 +9,7 @@ import type { Response } from 'express';
  * Vérifié par introspection du schéma (information_schema.columns) le 2026-10-07.
  */
 const DIRECT_TENANT_TABLES = [
-  'audit_logs', 'balance_mensuelle', 'budgets_missions', 'clients',
+  'audit_logs', 'balance_mensuelle', 'budgets_dossiers', 'budgets_missions', 'clients',
   'conges_absences', 'dossier_messages', 'espaces', 'exercices_rh',
   'incoherences_pointage', 'paie_bulletins', 'paie_employes_clients',
   'paie_parametres', 'paie_rh_acomptes', 'paie_rh_activite_jour',
@@ -67,7 +67,7 @@ const EXPORT_ORDER = [
   'questionnaires_adn_sectoriel', 'salaries_dossier', 'syntheses_cloture',
   'taches_recurrentes', 'saisies_temps', 'conges_absences', 'dossier_messages',
   'exercices_rh', 'incoherences_pointage', 'secteurs', 'soldes_conges',
-  'audit_logs', 'balance_mensuelle', 'budgets_missions', 'notes',
+  'audit_logs', 'balance_mensuelle', 'budgets_missions', 'budgets_dossiers', 'notes',
   'notifications', 'password_reset_token', 'paie_bulletins', 'paie_parametres',
   'paie_rh_acomptes', 'paie_rh_activite_jour', 'paie_rh_bulletins',
   'paie_rh_constantes', 'paie_rh_contrats', 'paie_rh_cycles',

@@ -71,7 +71,7 @@ export class ClientsController {
 
   @Patch(':id/assign')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Assigner un responsable (pôle EST) à un dossier (ADMIN uniquement)' })
+  @ApiOperation({ summary: 'Assigner le collaborateur Réunion (responsable) à un dossier (ADMIN uniquement)' })
   assign(@Param('id', ParseIntPipe) id: number, @Body('responsableId') responsableId: number | null, @Req() req: any) {
     return this.clientsService.assign(id, responsableId, req.user.id);
   }
@@ -87,7 +87,7 @@ export class ClientsController {
   }
 
   @Patch(':id/assign-ouest')
-  @ApiOperation({ summary: 'Sous-assigner un collaborateur du pôle OUEST (admin ou collaborateur de l\'autre pôle)' })
+  @ApiOperation({ summary: 'Sous-assigner le collaborateur Madagascar (admin ou collaborateur de l\'autre pôle)' })
   assignOuest(
     @Param('id', ParseIntPipe) id: number,
     @Body('collaborateurOuestId') collaborateurOuestId: number | null,

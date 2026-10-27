@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, Renderer2, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
+import { forkJoin, of, catchError, finalize } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +15,12 @@ import { UsersService } from '../../../core/services/users.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { TabSaveService } from '../../../core/services/tab-save.service';
-import { Client, Exercice } from '../../../core/models/client.model';
+import { Client, Exercice, FicheIdentite, SECTEURS_LABELS, approcheClient } from '../../../core/models/client.model';
+import { QuestionnaireAdnService } from '../../../core/services/questionnaire-adn.service';
+import { SecteurService } from '../../../core/services/secteur.service';
+import { Secteur } from '../../../core/models/secteur.model';
+import { itemsAdnDynamique, itemsAdnSectoriel } from '../adn-lecture.util';
+import { exporterNotePassation } from '../note-passation.export';
 import { User } from '../../../core/models/user.model';
 import { FicheIdentiteTabComponent } from './tabs/fiche-identite-tab/fiche-identite-tab.component';
 import { FluxMensuelTabComponent } from './tabs/flux-mensuel-tab/flux-mensuel-tab.component';
@@ -33,13 +39,14 @@ import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
 import GalerieTabComponent from './tabs/galerie-tab/galerie-tab.component';
+import { RentabiliteTabComponent } from './tabs/rentabilite-tab/rentabilite-tab.component';
 import { GlobalTimerIndicatorComponent } from '../../../shared/global-timer-indicator/global-timer-indicator.component';
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
   | 'strategie' | 'missions' | 'controle' | 'objectifs'
   | 'documents' | 'historique' | 'dossier-travail' | 'canvas'
-  | 'taches-recurrentes' | 'galerie';
+  | 'taches-recurrentes' | 'galerie' | 'rentabilite';
 
 interface TabGroup {
   label: string;
@@ -74,7 +81,7 @@ interface TabGroup {
     HistoriqueTabComponent,
     AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
     DossierChatComponent, TachesRecurrentesTabComponent,
-    GalerieTabComponent, GlobalTimerIndicatorComponent,
+    GalerieTabComponent, GlobalTimerIndicatorComponent, RentabiliteTabComponent,
   ],
   template: `
     @if (loading()) {
@@ -142,7 +149,7 @@ interface TabGroup {
               <mat-icon class="score-chip__icon">{{ getScoreChipClass(client.santePassation) === 'ok' ? 'check_circle' : getScoreChipClass(client.santePassation) === 'partial' ? 'warning' : 'error' }}</mat-icon>
               {{ client.santePassation }}% — {{ getScoreStatus(client.santePassation) }}
             </span>
-            <button class="btn-pdf" (click)="exportPdf()">
+            <button class="btn-pdf" (click)="exportPdf()" [disabled]="generationNote()" matTooltip="Fiche d'identité, contacts et ADN entreprise — PDF A4">
               <mat-icon>picture_as_pdf</mat-icon>
               Note de passation
             </button>
@@ -361,8 +368,15 @@ interface TabGroup {
 
               <!-- Card 3 : infos clés -->
               <div class="hero-card hc-info">
-                <div class="hc-info__site" [class.site--est]="client.site === 'EST'" [class.site--ouest]="client.site !== 'EST'">
-                  {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
+                <div class="hc-info__badges">
+                  <div class="hc-info__site" [class.site--est]="client.site === 'EST'" [class.site--ouest]="client.site !== 'EST'">
+                    {{ tenantSvc.poleFlag(client.site) }} {{ tenantSvc.poleLabel(client.site) }}
+                  </div>
+                  <!-- Approche client (cahier v2 #3) : registre de communication visible dès l'ouverture -->
+                  <span class="badge-approche badge-approche--{{ approche().value }} hc-info__approche"
+                        [matTooltip]="'Approche ' + approche().libelle.toLowerCase() + ' : ' + approche().description">
+                    <mat-icon>{{ approche().icon }}</mat-icon>{{ approche().libelle }}
+                  </span>
                 </div>
 
                 <!-- ── Intervenants ───────────────────── -->
@@ -400,13 +414,13 @@ interface TabGroup {
                       </span>
                     </div>
                     <div class="hc-interv__row">
-                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel1() }}</span>
+                      <span class="hc-interv__fonc">{{ tenantSvc.intervenantLabel1() }}</span>
                       <span class="hc-interv__val">
                         {{ client.responsable ? client.responsable.firstName + ' ' + client.responsable.lastName : '— Non assigné —' }}
                       </span>
                     </div>
                     <div class="hc-interv__row">
-                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
+                      <span class="hc-interv__fonc">{{ tenantSvc.intervenantLabel2() }}</span>
                       <span class="hc-interv__val">
                         {{ client.collaborateurOuest ? client.collaborateurOuest.firstName + ' ' + client.collaborateurOuest.lastName : '— Non assigné —' }}
                       </span>
@@ -427,7 +441,7 @@ interface TabGroup {
                     </div>
 
                     <div class="hc-interv__row hc-interv__row--inline">
-                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel1() }}</span>
+                      <span class="hc-interv__fonc">{{ tenantSvc.intervenantLabel1() }}</span>
                       <input class="hc-interv__select" [(ngModel)]="responsableSearch" name="responsableSearch"
                              [matAutocomplete]="responsableAuto" placeholder="— Non assigné —"
                              (blur)="onResponsableBlur()" autocomplete="off" />
@@ -440,7 +454,7 @@ interface TabGroup {
                     </div>
 
                     <div class="hc-interv__row hc-interv__row--inline">
-                      <span class="hc-interv__fonc">{{ tenantSvc.poleLabel2() }}</span>
+                      <span class="hc-interv__fonc">{{ tenantSvc.intervenantLabel2() }}</span>
                       <input class="hc-interv__select" [(ngModel)]="collaborateurOuestSearch" name="collaborateurOuestSearch"
                              [matAutocomplete]="ouestAuto" placeholder="— Non assigné —"
                              (blur)="onOuestBlur()" autocomplete="off" />
@@ -462,6 +476,19 @@ interface TabGroup {
                     <span class="hc-info__val">{{ client.createdAt | date:'dd/MM/yyyy' }}</span>
                   </div>
                 </div>
+                @if (contactOperationnel(); as co) {
+                  <div class="hc-info__row" matTooltip="Contact opérationnel : échanges du quotidien">
+                    <div class="hc-info__ico-wrap hc-info__ico-wrap--grey">
+                      <mat-icon>support_agent</mat-icon>
+                    </div>
+                    <div class="hc-info__text">
+                      <span class="hc-info__lbl">Contact opérationnel</span>
+                      <span class="hc-info__val">
+                        {{ co.nom || co.email || co.telephone }}@if (co.poste) { <span class="hc-info__sub"> · {{ co.poste }}</span> }
+                      </span>
+                    </div>
+                  </div>
+                }
                 @if (client.ficheIdentite?.siren) {
                   <div class="hc-info__row">
                     <div class="hc-info__ico-wrap hc-info__ico-wrap--grey">
@@ -519,9 +546,9 @@ interface TabGroup {
               <div [class.content__body--readonly]="!canEdit()"
                    [class.content__body--cloture]="exerciceCourant()?.statut === 'CLOTURE'">
                 @switch (activeTab()) {
-                  @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" /> }
+                  @case ('fiche')        { <app-fiche-identite-tab [clientId]="client.id" [site]="client.site" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (typesChanged)="onTypesChanged($event)" (customFluxTypesChanged)="onCustomFluxTypesChanged($event)" (ficheChanged)="onFicheChanged($event)" /> }
                   @case ('adn')          { <app-adn-tab [clientId]="client.id" [secteurInitial]="client.secteurActivite" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (fluxChanged)="onFluxChanged($event)" /> }
+                  @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [approche]="client.ficheIdentite?.approcheClient" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (fluxChanged)="onFluxChanged($event)" /> }
                   @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
@@ -533,6 +560,7 @@ interface TabGroup {
                   @case ('taches-recurrentes') { <app-taches-recurrentes-tab [clientId]="client.id" /> }
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
+                  @case ('rentabilite')  { <app-rentabilite-tab         [clientId]="client.id" [readonly]="!canEdit()" /> }
                   @case ('galerie')      { <app-galerie-tab             [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (photosChanged)="onGalleryPhotosChanged($event)" /> }
                 }
               </div>
@@ -670,6 +698,10 @@ interface TabGroup {
     }
     .profile__site.site--est { background: #E8F0FE; color: #1565C0; }
     .profile__site.site--ouest { background: #D7F5EC; color: #006B57; }
+    .hc-info__badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .hc-info__approche { cursor: default; }
+    .hc-info__approche mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hc-info__sub { color: #94a3b8; font-weight: 500; }
 
     .profile__score-label {
       width: 100%; display: flex; justify-content: space-between; align-items: center;
@@ -1237,6 +1269,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
         { id: 'pilotage',     icon: 'bar_chart',       label: 'Pilotage' },
         { id: 'fournisseurs', icon: 'local_shipping',  label: 'Fournisseurs' },
         { id: 'synthese',     icon: 'analytics',       label: 'Synthèse' },
+        { id: 'rentabilite',  icon: 'savings',         label: 'Rentabilité' },
       ],
     },
     {
@@ -1265,6 +1298,9 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
 
   auth             = inject(AuthService);
   tenantSvc        = inject(TenantService);
+  private adnSvc     = inject(QuestionnaireAdnService);
+  private secteurSvc = inject(SecteurService);
+  readonly generationNote = signal(false);
   tabSave          = inject(TabSaveService);
   private users    = inject(UsersService);
 
@@ -1472,6 +1508,19 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
 
   /** Reflète immédiatement les photos ajoutées/supprimées dans l'onglet Galerie sur le
    *  sélecteur de photo de carte (`client.ficheIdentite.photos`), sans recharger la page. */
+  /** Fiche identité enregistrée : approche client et contact opérationnel à jour dans l'en-tête. */
+  onFicheChanged(fiche: FicheIdentite) {
+    if (!this.client) return;
+    this.client = { ...this.client, ficheIdentite: { ...(this.client.ficheIdentite ?? {}), ...fiche } as FicheIdentite };
+  }
+
+  approche() { return approcheClient(this.client?.ficheIdentite?.approcheClient); }
+
+  contactOperationnel() {
+    const c = this.client?.ficheIdentite?.contactOperationnel;
+    return c && (c.nom?.trim() || c.email?.trim() || c.telephone?.trim()) ? c : null;
+  }
+
   onGalleryPhotosChanged(photos: string[]) {
     if (!this.client) return;
     this.client = {
@@ -1516,17 +1565,36 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  /** Note de passation (cahier v2 #8) : fiche d'identité + ADN entreprise, générée dans le navigateur
+   *  (les libellés lisibles des réponses ADN n'existent que côté front). */
   exportPdf() {
-    if (!this.client) return;
-    this.clientsService.exportPdf(this.client.id).subscribe(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `note-passation-${this.client!.nom}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+    const client = this.client;
+    if (!client || this.generationNote()) return;
+    this.generationNote.set(true);
+    forkJoin({
+      global:    this.adnSvc.getGlobal(client.id).pipe(catchError(() => of(null))),
+      sectoriel: this.adnSvc.getSectoriel(client.id).pipe(catchError(() => of(null))),
+      secteurs:  this.secteurSvc.getAll(true).pipe(catchError(() => of([] as Secteur[]))),
+    }).pipe(finalize(() => this.generationNote.set(false))).subscribe({
+      next: ({ global, sectoriel, secteurs }) => {
+        const code = sectoriel?.secteur ?? client.secteurActivite ?? null;
+        const secteur = secteurs.find(s => s.code === code);
+        let items = itemsAdnSectoriel(code, sectoriel?.reponses ?? {});
+        if (!items.length && secteur?.questions?.length) items = itemsAdnDynamique(secteur.questions, sectoriel?.reponses ?? {});
+        exporterNotePassation({
+          cabinet: this.tenantSvc.nomSociete(),
+          client,
+          siteLibelle: this.tenantSvc.poleLabel(client.site),
+          intervenants: [this.tenantSvc.intervenantLabel1(), this.tenantSvc.intervenantLabel2()],
+          adnGlobal: global,
+          secteurLibelle: code ? (secteur?.label ?? SECTEURS_LABELS[code] ?? code) : null,
+          itemsSectoriels: items,
+        });
+      },
+      error: () => alert('La note de passation n\'a pas pu être générée.'),
     });
   }
+
 
   triggerLogoUpload() {
     this.logoInput?.nativeElement.click();

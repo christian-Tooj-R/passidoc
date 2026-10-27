@@ -1,13 +1,66 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { SaisieTemps, TypeTemps } from '../entities/saisie-temps.entity';
 import { BudgetMission } from '../entities/budget-mission.entity';
 import { Pointage } from '../entities/pointage.entity';
 import { IncoherencePointage } from '../entities/incoherence-pointage.entity';
+import { CongeAbsence, StatutConge } from '../entities/conge-absence.entity';
 import { User } from '../entities/user.entity';
 import { CreateSaisieTempsDto } from './dto/create-saisie-temps.dto';
 import { UpdateSaisieTempsDto } from './dto/update-saisie-temps.dto';
+import { AffairesService, aujourdhuiIso } from './affaires.service';
+import { RentabiliteService } from './rentabilite.service';
+import { ajouterJours, estCodeAffaire, etatAffaire } from './affaire.util';
+import { estLieuTravail, lieuParDefaut } from './lieu-travail';
+
+const LIBELLES_TNF: Record<string, string> = {
+  APPEL_CLIENT: 'Appel client',
+  REUNION_INTERNE: 'Réunion interne',
+  FORMATION: 'Formation',
+  ADMINISTRATIF: 'Administratif',
+  AUTRE: 'Autre',
+};
+
+const LIBELLES_ABSENCE: Record<string, string> = {
+  CONGES_PAYES: 'Congés payés',
+  MALADIE: 'Maladie',
+  MATERNITE: 'Maternité',
+  PATERNITE: 'Paternité',
+  SANS_SOLDE: 'Sans solde',
+  EVENEMENT_FAMILIAL: 'Événement familial',
+  RECUPERATION: 'Récupération',
+  AUTRE: 'Autre absence',
+};
+
+/** Ligne du rapport « Détail des temps passés » (format Tempolia). */
+export interface LigneRapportDetail {
+  id: number;
+  source: 'SAISIE' | 'ABSENCE';
+  date: string;
+  collaborateurId: number;
+  collaborateur: string;
+  presence: 'FACTURABLE' | 'NON_FACTURABLE' | 'ABSENCE';
+  clientId: number | null;
+  client: string | null;
+  /** Colonne « Client / TNF » : le client, sinon la catégorie de temps non facturable / d'absence. */
+  clientTnf: string;
+  affaire: string | null;
+  affaireEtat: 'O' | 'C' | null;
+  missionCode: string | null;
+  categorie: string | null;
+  libelle: string | null;
+  dureeHeures: number;
+  tauxHoraire: number | null;
+  /** Taux figé à la saisie (false = repli sur le tarif actuel du collaborateur). */
+  tauxFige: boolean;
+  pv: number;
+  heureDebut: string | null;
+  heureFin: string | null;
+  isLocked: boolean;
+  /** Pôle de travail (cahier v2 #5) ; null pour une absence. */
+  lieuTravail: string | null;
+}
 
 @Injectable()
 export class SaisieTempsService {
@@ -16,16 +69,32 @@ export class SaisieTempsService {
     @InjectRepository(Pointage) private pointageRepo: Repository<Pointage>,
     @InjectRepository(BudgetMission) private budgetRepo: Repository<BudgetMission>,
     @InjectRepository(IncoherencePointage) private incoherenceRepo: Repository<IncoherencePointage>,
+    @InjectRepository(CongeAbsence) private congeRepo: Repository<CongeAbsence>,
+    private affaires: AffairesService,
+    private rentabilite: RentabiliteService,
   ) {}
+
+  /** Taux de vente horaire actuel du collaborateur, figé sur la saisie (« PV Col »). */
+  private tauxActuel(user: User): number | null {
+    return user.prixVenteHoraire != null ? Number(user.prixVenteHoraire) : null;
+  }
 
   async create(dto: CreateSaisieTempsDto, user: User): Promise<SaisieTemps> {
     await this.verifierCoherencePointage(dto, user);
+    const affaire = dto.clientId
+      ? (estCodeAffaire(dto.affaire) ? dto.affaire : await this.affaires.resoudre(dto.clientId, dto.date, dto.missionCode))
+      : null;
     const saisie = this.repo.create({
       ...dto,
+      affaire,
+      lieuTravail: estLieuTravail(dto.lieuTravail) ? dto.lieuTravail : lieuParDefaut(user),
+      tauxHoraire: this.tauxActuel(user),
       collaborateurId: user.id,
       tenantId: user.tenantId,
     });
-    return this.repo.save(saisie);
+    const saved = await this.repo.save(saisie);
+    await this.rentabilite.verifierAlertes(user.tenantId, saved.clientId, saved.affaire);
+    return saved;
   }
 
   /**
@@ -48,8 +117,27 @@ export class SaisieTempsService {
     const dureeApres = dto.dureeHeures ?? saisie.dureeHeures;
     await this.verifierCoherencePointage({ date: dateApres, dureeHeures: dureeApres }, user, saisie);
 
-    Object.assign(saisie, dto);
-    return this.repo.save(saisie);
+    const avant = { clientId: saisie.clientId, affaire: saisie.affaire };
+    const clientApres  = 'clientId' in dto ? dto.clientId ?? null : saisie.clientId;
+    const missionApres = 'missionCode' in dto ? dto.missionCode ?? null : saisie.missionCode;
+    // Affaire : explicite si fournie ; recalculée si demandée (null) ou si la date, le client
+    // ou la mission changent ; conservée sinon (pas de déplacement rétroactif).
+    let affaire = saisie.affaire;
+    if (!clientApres) affaire = null;
+    else if (estCodeAffaire(dto.affaire)) affaire = dto.affaire;
+    else if (dto.affaire === null || dateApres !== saisie.date || clientApres !== saisie.clientId || missionApres !== saisie.missionCode || !affaire) {
+      affaire = await this.affaires.resoudre(clientApres, dateApres, missionApres);
+    }
+
+    const lieuTravail = estLieuTravail(dto.lieuTravail) ? dto.lieuTravail
+      : dto.lieuTravail === null || !saisie.lieuTravail ? lieuParDefaut(user) : saisie.lieuTravail;
+    Object.assign(saisie, dto, { affaire, lieuTravail });
+    const saved = await this.repo.save(saisie);
+    await this.rentabilite.verifierAlertes(user.tenantId, saved.clientId, saved.affaire);
+    if (avant.clientId !== saved.clientId || avant.affaire !== saved.affaire) {
+      await this.rentabilite.verifierAlertes(user.tenantId, avant.clientId, avant.affaire);
+    }
+    return saved;
   }
 
   async findByUser(userId: number, dateDebut?: string, dateFin?: string): Promise<SaisieTemps[]> {
@@ -69,7 +157,16 @@ export class SaisieTempsService {
     const targetId = collaborateurId ?? requesterId;
     const where: any = { tenantId, collaborateurId: targetId };
     if (dateDebut && dateFin) where.date = Between(dateDebut, dateFin);
-    return this.repo.find({ where, relations: ['client', 'collaborateur'], order: { date: 'DESC' } });
+    const saisies = await this.repo.find({ where, relations: ['client', 'collaborateur'], order: { date: 'DESC' } });
+    // Le calendrier d'un collègue n'a besoin que de son identité : jamais l'entité User complète
+    // (hash du mot de passe, secret 2FA, IBAN, salaire…) ni la fiche complète du client.
+    return saisies.map(s => ({
+      ...s,
+      client: s.client ? ({ id: s.client.id, nom: s.client.nom, site: s.client.site } as any) : null,
+      collaborateur: s.collaborateur
+        ? ({ id: s.collaborateur.id, firstName: s.collaborateur.firstName, lastName: s.collaborateur.lastName, site: s.collaborateur.site } as any)
+        : undefined,
+    })) as Partial<SaisieTemps>[];
   }
 
   async totalJour(userId: number, date: string): Promise<number> {
@@ -96,7 +193,8 @@ export class SaisieTempsService {
     if (saisie?.isLocked) {
       throw new ForbiddenException('Cette saisie est verrouillée et ne peut pas être supprimée.');
     }
-    await this.repo.delete({ id, collaborateurId: userId });
+    const res = await this.repo.delete({ id, collaborateurId: userId });
+    if (saisie && res.affected) await this.rentabilite.verifierAlertes(saisie.tenantId, saisie.clientId, saisie.affaire);
   }
 
   /** Verrouiller toutes les saisies d'une période pour un collaborateur */
@@ -201,10 +299,137 @@ export class SaisieTempsService {
       type: s.type,
       categorie: s.categorie ?? null,
       missionCode: s.missionCode,
+      affaire: s.affaire ?? null,
+      lieuTravail: s.lieuTravail ?? lieuParDefaut(s.collaborateur),
       heureDebut: s.heureDebut,
       heureFin: s.heureFin,
       isLocked: s.isLocked,
     }));
+  }
+
+  /**
+   * Rapport « Détail des temps passés » au format Tempolia : une ligne par saisie (temps
+   * facturable / non facturable) et par absence approuvée, valorisée au « PV Col » (durée ×
+   * prix de vente horaire figé sur la saisie, à défaut le tarif actuel du collaborateur).
+   * Regroupements, sous-totaux et filtres fins (affaire, tâche, présence) se font côté écran.
+   */
+  async getRapportDetail(
+    tenantId: number,
+    f: { dateDebut?: string; dateFin?: string; collaborateurIds?: number[]; clientIds?: number[]; inclureAbsences?: boolean },
+  ): Promise<{ lignes: LigneRapportDetail[] }> {
+    const where: any = { tenantId };
+    if (f.dateDebut && f.dateFin) where.date = Between(f.dateDebut, f.dateFin);
+    if (f.collaborateurIds?.length) where.collaborateurId = In(f.collaborateurIds);
+    if (f.clientIds?.length) where.clientId = In(f.clientIds);
+    const saisies = await this.repo.find({ where, relations: ['client', 'collaborateur'], order: { date: 'DESC' } });
+
+    const ctx = await this.affaires.contextes(saisies.map(s => s.clientId));
+    const aujourdhui = aujourdhuiIso();
+    const etats = new Map<string, 'O' | 'C'>();
+    const etatDe = (clientId: number, affaire: string) => {
+      const k = `${clientId}|${affaire}`;
+      if (!etats.has(k)) etats.set(k, etatAffaire(affaire, ctx.get(clientId) ?? {}, aujourdhui));
+      return etats.get(k)!;
+    };
+    const nom = (u?: User | null, id?: number) => (u ? `${u.firstName} ${u.lastName}`.trim() : `#${id}`);
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+
+    const lignes: LigneRapportDetail[] = saisies.map(s => {
+      const taux = s.tauxHoraire ?? (s.collaborateur?.prixVenteHoraire != null ? Number(s.collaborateur.prixVenteHoraire) : null);
+      const facturable = s.type === TypeTemps.FACTURABLE;
+      return {
+        id: s.id,
+        source: 'SAISIE',
+        date: s.date,
+        collaborateurId: s.collaborateurId,
+        collaborateur: nom(s.collaborateur, s.collaborateurId),
+        presence: facturable ? 'FACTURABLE' : 'NON_FACTURABLE',
+        clientId: s.clientId ?? null,
+        client: s.client?.nom ?? null,
+        clientTnf: s.client?.nom ?? (facturable ? 'Sans client' : LIBELLES_TNF[s.categorie ?? 'AUTRE'] ?? 'Autre'),
+        affaire: s.affaire ?? null,
+        affaireEtat: s.clientId && s.affaire ? etatDe(s.clientId, s.affaire) : null,
+        missionCode: s.missionCode ?? null,
+        categorie: s.categorie ?? null,
+        libelle: s.commentaire ?? null,
+        dureeHeures: s.dureeHeures,
+        tauxHoraire: taux,
+        tauxFige: s.tauxHoraire != null,
+        pv: taux ? r2(s.dureeHeures * taux) : 0,
+        heureDebut: s.heureDebut ?? null,
+        heureFin: s.heureFin ?? null,
+        isLocked: s.isLocked,
+        lieuTravail: s.lieuTravail ?? lieuParDefaut(s.collaborateur),
+      };
+    });
+
+    if (f.inclureAbsences && !f.clientIds?.length) {
+      lignes.push(...await this.lignesAbsences(tenantId, f));
+      lignes.sort((a, b) => b.date.localeCompare(a.date));
+    }
+    return { lignes };
+  }
+
+  /** Absences approuvées converties en heures : jours ouvrés (lun–ven) de l'absence compris
+   *  dans la période × (heures hebdo du contrat ÷ 5, 7 h par défaut), au prorata du nombre de
+   *  jours posés (demi-journées). Une ligne par absence, datée de son premier jour dans la période. */
+  private async lignesAbsences(
+    tenantId: number,
+    f: { dateDebut?: string; dateFin?: string; collaborateurIds?: number[] },
+  ): Promise<LigneRapportDetail[]> {
+    const where: any = { tenantId, statut: StatutConge.APPROUVEE };
+    if (f.collaborateurIds?.length) where.userId = In(f.collaborateurIds);
+    if (f.dateDebut && f.dateFin) {
+      where.dateDebut = LessThanOrEqual(f.dateFin);
+      where.dateFin = MoreThanOrEqual(f.dateDebut);
+    }
+    const absences = await this.congeRepo.find({ where, relations: ['user'] });
+    const fmt = (d: string) => d.split('-').reverse().join('/');
+    const lignes: LigneRapportDetail[] = [];
+    for (const a of absences) {
+      const jours = this.joursOuvres(a.dateDebut, a.dateFin);
+      if (!jours.length) continue;
+      const dansPeriode = jours.filter(j => (!f.dateDebut || j >= f.dateDebut) && (!f.dateFin || j <= f.dateFin));
+      if (!dansPeriode.length) continue;
+      const heuresJour = (Number(a.user?.heuresHebdo) || 35) / 5;
+      const prorata = Math.min(1, (Number(a.nombreJours) || jours.length) / jours.length);
+      const heures = Math.round(dansPeriode.length * heuresJour * prorata * 100) / 100;
+      const type = LIBELLES_ABSENCE[a.typeConge] ?? 'Absence';
+      lignes.push({
+        id: a.id,
+        source: 'ABSENCE',
+        date: dansPeriode[0],
+        collaborateurId: a.userId,
+        collaborateur: a.user ? `${a.user.firstName} ${a.user.lastName}`.trim() : `#${a.userId}`,
+        presence: 'ABSENCE',
+        clientId: null,
+        client: null,
+        clientTnf: type,
+        affaire: null,
+        affaireEtat: null,
+        missionCode: null,
+        categorie: a.typeConge,
+        libelle: `${type} du ${fmt(a.dateDebut)} au ${fmt(a.dateFin)}${a.motif ? ` — ${a.motif}` : ''}`,
+        dureeHeures: heures,
+        tauxHoraire: null,
+        tauxFige: false,
+        pv: 0,
+        heureDebut: null,
+        heureFin: null,
+        isLocked: true,
+        lieuTravail: null,
+      });
+    }
+    return lignes;
+  }
+
+  private joursOuvres(debut: string, fin: string): string[] {
+    const jours: string[] = [];
+    for (let j = debut; j <= fin && jours.length < 400; j = ajouterJours(j, 1)) {
+      const jour = new Date(`${j}T12:00:00Z`).getUTCDay();
+      if (jour !== 0 && jour !== 6) jours.push(j);
+    }
+    return jours;
   }
 
   /** Rapport agrégé par semaine ISO × collaborateur — chaque groupe embarque aussi le

@@ -485,7 +485,7 @@ export class SidebarComponent implements OnInit {
 
   private syncFromRoute(url: string) {
     if      (url.startsWith('/dashboard'))                                        this.activeModule.set('apercu');
-    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles') || url.startsWith('/secteurs'))      this.activeModule.set('dossiers');
+    else if (url.startsWith('/clients') || url.startsWith('/portefeuilles') || url.startsWith('/secteurs') || url.startsWith('/pieces-manquantes')) this.activeModule.set('dossiers');
     else if (url.startsWith('/tasks') || url.startsWith('/travail'))  this.activeModule.set('travail');
     else if (url.startsWith('/documents'))                                        this.activeModule.set('documents');
     else if (url.startsWith('/notes'))                                            this.activeModule.set('notes');
@@ -516,6 +516,7 @@ export class SidebarComponent implements OnInit {
         color: '#1A73E8', activeBg: '#E8F0FE',
         groups: [{ label: '', items: [
           ...(this.canSeeMenu('clients')       ? [{ label: 'Tous les dossiers', route: '/clients',       icon: 'folder_open'   }] : []),
+          ...(this.canSeeMenu('clients')       ? [{ label: 'Pièces manquantes', route: '/pieces-manquantes', icon: 'assignment_late' }] : []),
           ...(this.canSeeMenu('portefeuilles') && canPortef ? [{ label: 'Portefeuilles', route: '/portefeuilles', icon: 'account_tree' }] : []),
           ...(this.canSeeMenu('clients')       ? [{ label: "Secteurs d'activité", route: '/secteurs',    icon: 'category'      }] : []),
         ]}],

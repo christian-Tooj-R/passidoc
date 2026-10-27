@@ -11,7 +11,8 @@ test.describe('Mot de passe oublié', () => {
     await page.route('**/api/setup/status', route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configured: true }) }),
     );
-    await page.evaluate(() => localStorage.setItem('tenant_slug', 'afym-audit-expertise'));
+    // localStorage n'est accessible qu'une fois sur l'origine de l'appli : injecté avant chaque chargement
+    await page.addInitScript(() => localStorage.setItem('tenant_slug', 'afym'));
     await page.goto('http://localhost:4200/auth/login');
     await page.waitForLoadState('networkidle');
   });

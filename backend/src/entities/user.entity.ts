@@ -195,6 +195,13 @@ export class User {
   @Column({ type: 'varchar', nullable: true, default: 'EUR' })
   devise: string | null;
 
+  /* ── Facturation ───────────────────────────────── */
+
+  /** Prix de vente horaire (€/h) — valorise les temps passés du collaborateur (« PV Col »
+   *  du rapport des temps). Modifiable par l'ADMIN uniquement, masqué aux autres profils. */
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  prixVenteHoraire: number | null;
+
   /* ─────────────────────────────────────────────── */
 
   @CreateDateColumn()

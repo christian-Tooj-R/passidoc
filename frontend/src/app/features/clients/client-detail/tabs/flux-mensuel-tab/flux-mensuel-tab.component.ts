@@ -11,7 +11,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FluxMensuelService } from '../../../../../core/services/flux-mensuel.service';
 import { ClientsService } from '../../../../../core/services/clients.service';
-import { FluxMensuel } from '../../../../../core/models/client.model';
+import { FluxMensuel, approcheClient } from '../../../../../core/models/client.model';
+import { RelanceClientComponent } from '../../../../suivi-pieces/relance-client.component';
 import { BalanceService, MoisBalance } from '../../../../../core/services/balance.service';
 
 type Periodicite = 'monthly' | 'quarterly' | 'annual';
@@ -45,7 +46,7 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
   imports: [
     CommonModule, FormsModule, MatIconModule, MatButtonModule,
     MatMenuModule, MatDividerModule, MatTooltipModule,
-    MatInputModule, MatFormFieldModule,
+    MatInputModule, MatFormFieldModule, RelanceClientComponent,
   ],
   template: `
     <div class="pilotage">
@@ -75,6 +76,11 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
             <mat-icon>chevron_right</mat-icon>
           </button>
         </div>
+        <!-- Cahier v2 #1 : relance des pièces manquantes au contact opérationnel -->
+        <button class="btn-relancer" (click)="relanceOuverte.set(true)" [disabled]="readonly"
+                [matTooltip]="'Relancer le client pour ses pièces manquantes — approche ' + approcheInfo().libelle.toLowerCase()">
+          <mat-icon>forward_to_inbox</mat-icon> Relancer le client
+        </button>
         <mat-menu #yearMenu="matMenu">
           @for (y of yearOptions; track y) {
             <button mat-menu-item (click)="jumpToYear(y)" [class.year-active]="y === annee()">
@@ -365,6 +371,9 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
         <div class="menu-header">
           <strong>{{ typeName(type) }}</strong>
           <span class="menu-period">{{ moisFullLabel(mois) }} {{ annee() }}</span>
+          <span class="menu-approche badge-approche badge-approche--{{ approcheInfo().value }}" [title]="approcheInfo().description">
+            Approche {{ approcheInfo().libelle.toLowerCase() }} — {{ approcheInfo().description }}
+          </span>
           @if (flux?.dateRelance) {
             <span class="menu-relance">
               <mat-icon>notification_important</mat-icon>
@@ -413,8 +422,17 @@ type Statut = 'DEPOSE' | 'EN_RETARD' | 'MANQUANT';
         }
       </ng-template>
     </mat-menu>
+    @if (relanceOuverte()) {
+      <app-relance-client [clientId]="clientId" [annee]="annee()" (fermer)="relanceOuverte.set(false)" (envoyee)="load()" />
+    }
   `,
   styles: [`
+    .btn-relancer { display:flex; align-items:center; gap:6px; height:34px; padding:0 14px; border-radius:8px; border:1px solid #c7d2fe;
+      background:#eef2ff; color:#3730a3; font-weight:700; font-size:12.5px; cursor:pointer; margin-left:8px; }
+    .btn-relancer mat-icon { font-size:17px; width:17px; height:17px; }
+    .btn-relancer:disabled { opacity:.5; cursor:not-allowed; }
+    .menu-approche { display:block; margin-top:6px; font-size:10.5px; white-space:normal; line-height:1.35; }
+
     .pilotage { padding: 24px; }
 
     /* ── En-tête ─────────────────────────────────────── */
@@ -768,7 +786,11 @@ export class FluxMensuelTabComponent implements OnInit {
 
   @Input() clientId!: number;
   @Input() readonly = false;
+  /** Approche client (cahier v2 #3) : rappelée dans le menu de relance. */
+  @Input() approche?: string | null;
   @Output() fluxChanged = new EventEmitter<number>();
+  readonly relanceOuverte = signal(false);
+  approcheInfo() { return approcheClient(this.approche); }
 
   private _typesFluxActifsRaw?: string[];
   private _customFluxTypesRaw: { key: string; label: string }[] = [];

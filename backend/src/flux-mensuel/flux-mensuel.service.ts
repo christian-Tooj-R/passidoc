@@ -74,11 +74,12 @@ export class FluxMensuelService {
     return { created: toCreate.length };
   }
 
-  async getAlertesGlobales() {
+  /** Alertes du cabinet de l'utilisateur uniquement (jamais celles des autres cabinets). */
+  async getAlertesGlobales(tenantId: number) {
     return this.repo.find({
       where: [
-        { statut: StatutDepot.MANQUANT },
-        { statut: StatutDepot.EN_RETARD },
+        { statut: StatutDepot.MANQUANT, client: { tenantId } },
+        { statut: StatutDepot.EN_RETARD, client: { tenantId } },
       ],
       relations: ['client'],
       order: { annee: 'DESC', mois: 'DESC' },

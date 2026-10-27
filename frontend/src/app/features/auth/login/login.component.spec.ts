@@ -19,7 +19,15 @@ const mockTenant = {
   poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
   poleFlag2:  vi.fn().mockReturnValue('🟠'),
   poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'),
+  intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
   slug:       vi.fn().mockReturnValue('afym'),
+};
+
+/** Formulaire d'inscription complet et valide (mot de passe confirmé). */
+const INSCRIPTION = {
+  firstName: 'Sophie', lastName: 'Martin', email: 'sophie@afym.re',
+  password: '12345678', confirmPassword: '12345678', site: 'EST',
 };
 
 async function createComponent() {
@@ -45,7 +53,7 @@ describe('LoginComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.login.mockReturnValue(of({ access_token: 'tok', user: { id: 1 }, requires2FA: false }));
-    mockAuth.register.mockReturnValue(of({}));
+    mockAuth.register.mockReturnValue(of({ email: 'sophie@afym.re', emailSent: true }));
   });
 
   describe('rendu initial', () => {
@@ -98,11 +106,11 @@ describe('LoginComponent', () => {
       expect(comp.loginError).toBe('');
     });
 
-    it('réinitialise registerSuccess à false', async () => {
+    it('efface registerError au changement de mode', async () => {
       const { comp } = await createComponent();
-      comp.registerSuccess.set(true);
+      comp.registerError = 'Une erreur';
       comp.switchMode('login');
-      expect(comp.registerSuccess()).toBe(false);
+      expect(comp.registerError).toBe('');
     });
   });
 
@@ -161,13 +169,26 @@ describe('LoginComponent', () => {
   describe('formulaire registerForm', () => {
     it('est invalide si firstName vide', async () => {
       const { comp } = await createComponent();
-      comp.registerForm.patchValue({ firstName: '', lastName: 'M', email: 'a@b.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue({ ...INSCRIPTION, firstName: '' });
+      expect(comp.registerForm.invalid).toBe(true);
+    });
+
+    it('est invalide si les deux mots de passe diffèrent', async () => {
+      const { comp } = await createComponent();
+      comp.registerForm.patchValue({ ...INSCRIPTION, confirmPassword: 'autre-chose' });
+      expect(comp.registerForm.hasError('passwordMismatch')).toBe(true);
+      expect(comp.registerForm.invalid).toBe(true);
+    });
+
+    it('est invalide si le mot de passe fait moins de 8 caractères', async () => {
+      const { comp } = await createComponent();
+      comp.registerForm.patchValue({ ...INSCRIPTION, password: '1234', confirmPassword: '1234' });
       expect(comp.registerForm.invalid).toBe(true);
     });
 
     it('est valide avec tous les champs requis', async () => {
       const { comp } = await createComponent();
-      comp.registerForm.patchValue({ firstName: 'Sophie', lastName: 'Martin', email: 'sophie@afym.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue(INSCRIPTION);
       expect(comp.registerForm.valid).toBe(true);
     });
   });
@@ -176,7 +197,7 @@ describe('LoginComponent', () => {
     it('ne soumet pas si formulaire invalide', async () => {
       const { comp } = await createComponent();
       comp.switchMode('register');
-      comp.registerForm.patchValue({ firstName: '', lastName: '', email: '', password: '', site: 'EST' });
+      comp.registerForm.patchValue({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', site: 'EST' });
       comp.submitRegister();
       expect(mockAuth.register).not.toHaveBeenCalled();
     });
@@ -184,33 +205,46 @@ describe('LoginComponent', () => {
     it('appelle AuthService.register avec les bonnes données', async () => {
       const { comp } = await createComponent();
       comp.switchMode('register');
-      comp.registerForm.patchValue({ firstName: 'Sophie', lastName: 'Martin', email: 'sophie@afym.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue(INSCRIPTION);
       comp.submitRegister();
       expect(mockAuth.register).toHaveBeenCalledWith(
-        expect.objectContaining({ firstName: 'Sophie', email: 'sophie@afym.re' }),
+        expect.objectContaining({ firstName: 'Sophie', email: 'sophie@afym.re', site: 'EST' }),
       );
     });
 
-    it('passe registerSuccess à true après inscription réussie', async () => {
+    it("passe en vérification d'email après inscription réussie", async () => {
       const { comp } = await createComponent();
-      comp.registerForm.patchValue({ firstName: 'Sophie', lastName: 'Martin', email: 'sophie@afym.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue(INSCRIPTION);
       comp.submitRegister();
-      expect(comp.registerSuccess()).toBe(true);
+      expect(comp.mode()).toBe('verify-email');
+      expect(comp.pendingEmail()).toBe('sophie@afym.re');
+      expect(comp.registerLoading).toBe(false);
     });
 
     it('prérempli le champ email du loginForm après inscription', async () => {
       const { comp } = await createComponent();
-      comp.registerForm.patchValue({ firstName: 'Sophie', lastName: 'Martin', email: 'sophie@afym.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue(INSCRIPTION);
       comp.submitRegister();
       expect(comp.loginForm.value.email).toBe('sophie@afym.re');
     });
 
-    it('affiche registerError en cas d\'erreur serveur', async () => {
+    it("reste sur l'inscription avec un message si l'email de code n'a pas pu partir", async () => {
+      const { comp } = await createComponent();
+      mockAuth.register.mockReturnValue(of({ email: 'sophie@afym.re', emailSent: false }));
+      comp.switchMode('register');
+      comp.registerForm.patchValue(INSCRIPTION);
+      comp.submitRegister();
+      expect(comp.mode()).toBe('register');
+      expect(comp.registerError).toContain("l'envoi du code a échoué");
+    });
+
+    it("affiche registerError en cas d'erreur serveur", async () => {
       const { comp } = await createComponent();
       mockAuth.register.mockReturnValue(throwError(() => ({ error: { message: 'Email déjà utilisé' } })));
-      comp.registerForm.patchValue({ firstName: 'S', lastName: 'M', email: 'a@b.re', password: '12345678', site: 'EST' });
+      comp.registerForm.patchValue(INSCRIPTION);
       comp.submitRegister();
       expect(comp.registerError).toBe('Email déjà utilisé');
+      expect(comp.registerLoading).toBe(false);
     });
   });
 

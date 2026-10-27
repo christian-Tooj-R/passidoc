@@ -107,7 +107,7 @@ const MODULES: Module[] = [
     title: 'Équipes', route: '/equipes',
     desc: 'Organigramme, attribution des dossiers, gestion des permissions par rôle.',
     tags: ['équipe', 'rôles', 'permissions', 'organigramme'],
-    tips: ['Assignez un responsable pôle principal et un collaborateur pôle secondaire à chaque dossier.'],
+    tips: ['Assignez à chaque dossier un directeur, un collaborateur Réunion et, si besoin, un collaborateur Madagascar.'],
   },
   {
     icon: 'schedule', color: '#0F766E', bg: '#F0FDFA',

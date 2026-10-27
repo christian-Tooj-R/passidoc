@@ -326,6 +326,98 @@ export class MailService {
     await this._send({ from, to: opts.to, subject, html });
   }
 
+  /** Alerte de consommation du budget temps d'un dossier (cahier v2 #6 — seuils 80 % et 100 %). */
+  async sendBudgetDossierAlerte(opts: {
+    to:            string;
+    destinataire:  string;
+    dossier:       string;
+    affaire:       string;
+    seuil:         80 | 100;
+    heures:        string;
+    heuresBudget:  string;
+    pourcentage:   number;
+    appUrl:        string;
+    clientId:      number;
+  }): Promise<void> {
+    const from = this.config.get<string>('MAIL_FROM') ?? 'passidoc@afym.re';
+    const depasse = opts.seuil === 100;
+    const couleur = depasse ? '#dc2626' : '#d97706';
+    const subject = depasse
+      ? `🔴 Budget temps dépassé — ${opts.dossier} (${opts.affaire})`
+      : `🟠 Budget temps consommé à ${opts.pourcentage} % — ${opts.dossier} (${opts.affaire})`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:${couleur};padding:28px 32px;">
+            <p style="margin:0;color:#fff;font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.8;">AFYM Audit Expertise — Passidoc</p>
+            <h1 style="margin:8px 0 0;color:#fff;font-size:22px;font-weight:700;">
+              ${depasse ? 'Budget temps dépassé' : `Budget temps consommé à ${opts.pourcentage} %`}
+            </h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px;color:#374151;font-size:15px;">Bonjour <strong>${opts.destinataire}</strong>,</p>
+            <p style="margin:0 0 24px;color:#374151;font-size:15px;">
+              Sur le dossier <strong>${opts.dossier}</strong> (affaire ${opts.affaire}), <strong>${opts.heures}</strong>
+              ont été consommées pour un budget de <strong>${opts.heuresBudget}</strong> (${opts.pourcentage} %).
+            </p>
+            <a href="${opts.appUrl}/clients/${opts.clientId}"
+               style="display:inline-block;background:#1565C0;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
+              Voir la rentabilité du dossier
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;">Passidoc — AFYM Audit Expertise</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    await this._send({ from, to: opts.to, subject, html });
+  }
+
+  /**
+   * Relance d'un client pour ses pièces manquantes (cahier v2 #1). Le texte, déjà rédigé selon
+   * l'approche du client (cahier v2 #3) et relu par le collaborateur, est envoyé tel quel.
+   */
+  async sendRelancePiecesClient(opts: { to: string; objet: string; texte: string; cabinet: string }): Promise<void> {
+    const from = this.config.get<string>('MAIL_FROM') ?? 'passidoc@afym.re';
+    const echapper = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const paragraphes = opts.texte.split(/\n{2,}/).map(p =>
+      `<p style="margin:0 0 14px;color:#1f2937;font-size:15px;line-height:1.55;">${echapper(p).replace(/\n/g, '<br>')}</p>`).join('');
+    const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td style="background:#1e3a8a;padding:18px 32px;">
+          <p style="margin:0;color:#fff;font-size:13px;font-weight:700;letter-spacing:.5px;">${echapper(opts.cabinet)}</p>
+        </td></tr>
+        <tr><td style="padding:28px 32px 18px;">${paragraphes}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+    await this._send({ from, to: opts.to, subject: opts.objet, html });
+  }
+
   private async _send(opts: { from: string; to: string; replyTo?: string; subject: string; html: string }) {
     await this.sendViaGmailApi({ to: opts.to, subject: opts.subject, html: opts.html });
   }

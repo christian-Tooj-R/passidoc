@@ -8,7 +8,7 @@ import { User } from '../entities/user.entity';
 
 const JSON_COLUMNS: (keyof FicheIdentite)[] = [
   'actionnaires', 'honoraires', 'reseauxSociaux',
-  'reseauxSociauxStructures', 'gerants', 'salaries', 'reglementations',
+  'reseauxSociauxStructures', 'gerants', 'salaries', 'reglementations', 'contactOperationnel',
 ];
 
 function parseJsonColumns(fiche: FicheIdentite): FicheIdentite {

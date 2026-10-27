@@ -2,12 +2,30 @@
  * Test E2E — Organigramme fiche d'identité
  * Vérifie : ajout de racines, ajout d'enfants, édition, persistance après save+reload
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, request } from '@playwright/test';
 import { loginViaApi, API_URL, TEST_TENANT, CLIENT_ID } from './helpers/auth';
 
+/** Chaque test part d'un organigramme vide (les runs précédents en laissaient en base). */
+async function viderOrganigramme(token: string) {
+  const api = await request.newContext();
+  const r = await api.patch(`${API_URL}/clients/${CLIENT_ID}/fiche-identite`, {
+    headers: { Authorization: `Bearer ${token}`, 'x-tenant-slug': TEST_TENANT },
+    data: { organigramme: null },
+  });
+  expect(r.ok(), `remise à zéro de l'organigramme : HTTP ${r.status()}`).toBe(true);
+  await api.dispose();
+}
+
 test.describe('Organigramme fiche d\'identité', () => {
+  let token = '';
+
+  test.afterAll(async () => {
+    if (token) await viderOrganigramme(token);
+  });
+
   test.beforeEach(async ({ page }) => {
-    await loginViaApi(page);
+    token = await loginViaApi(page);
+    await viderOrganigramme(token);
     // Naviguer sur la fiche d'identité du client de test
     await page.goto(`http://localhost:4200/clients/${CLIENT_ID}?tenant=${TEST_TENANT}`);
     await page.waitForLoadState('networkidle');

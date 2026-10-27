@@ -14,7 +14,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const API_URL   = 'http://localhost:3000/api';
-const APP_URL   = 'http://localhost:4202';
+const APP_URL   = process.env['BASE_URL'] ?? 'http://localhost:4200'; // même port que playwright.config.ts
 const TENANT    = 'afym';
 const EMAIL     = 'admin@admin.com';
 const PASS      = 'Admin2024!';
@@ -46,7 +46,7 @@ async function loginAfym(page: Page): Promise<{ token: string; api: APIRequestCo
   }).catch(() => {});
 
   // 1. Aller sur la page login (où l'app redirige /?tenant=afym)
-  await page.goto(`${APP_URL}/login?tenant=${TENANT}`);
+  await page.goto(`${APP_URL}/auth/login?tenant=${TENANT}`);
   await page.waitForLoadState('domcontentloaded');
 
   // 2. Injecter le token dans localStorage (même origine = persiste)
@@ -234,9 +234,12 @@ test.describe('TACHE-05 — Contrôle Interne : Risques & Recommandations', () =
     await niveauSelect.selectOption('ELEVE');
     await page.waitForTimeout(200);
 
-    // Sauvegarder via le bouton mat-flat-button dans le CI (pas type="submit", c'est un (click)="save()")
-    await page.locator('button[mat-flat-button][color="primary"]').click();
-    await waitForToast(page);
+    // Sauvegarder via « Enregistrer » de l'en-tête du dossier, et attendre la réponse de l'API
+    // avant de recharger (un toast quelconque ne garantit pas que l'enregistrement est fini)
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/controle-interne') && r.request().method() !== 'GET'),
+      page.locator('.ch-save-btn').click(),
+    ]);
 
     // Recharger et vérifier
     await goToClientTab(page, 'Contrôle Interne');
@@ -407,132 +410,67 @@ test.describe('TACHE-07 — Tâches inter-services', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TACHE-08 — Saisie des temps
 // ═══════════════════════════════════════════════════════════════════════════════
-test.describe('TACHE-08 — Saisie des temps', () => {
+// L'ancienne page /saisie-temps n'est plus routée : saisie et consultation des temps se font
+// dans le module Travail (Saisie rapide, Agenda réalisé, Par semaine, Détail des temps).
+test.describe.serial('TACHE-08 — Saisie des temps (module Travail)', () => {
+  const LIBELLE = `E2E-V2 — Test saisie facturable ${Date.now()}`;
+
   test.beforeEach(async ({ page }) => {
     await loginAfym(page);
   });
 
-  test('ST-01 : la page saisie-temps s\'affiche avec la navigation semaine et les filtres', async ({ page }) => {
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-
-    // Page wrapper Tempolia-style
-    await expect(page.locator('.st-page')).toBeVisible({ timeout: 10_000 });
-
-    // Barre de navigation semaine + bouton Nouvelle entrée
-    await expect(page.locator('.st-topbar')).toBeVisible();
-    await expect(page.locator('.st-week-nav')).toBeVisible();
-    await expect(page.locator('button.st-add-btn').first()).toBeVisible();
-
-    // Filtres Tous / Facturables / Non facturables
-    await expect(page.locator('.st-filter-btn', { hasText: /tous/i })).toBeVisible();
-    await expect(page.locator('.st-filter-btn').first()).toBeVisible();
+  test('ST-01 : l’agenda réalisé s’affiche avec la navigation semaine et la légende', async ({ page }) => {
+    await page.goto(`${APP_URL}/travail/agenda?tenant=${TENANT}`);
+    await expect(page.locator('.ag-title')).toHaveText('Agenda réalisé', { timeout: 10_000 });
+    await expect(page.locator('.week-txt')).toBeVisible();
+    await expect(page.locator('.btn-new')).toBeVisible();
+    await expect(page.locator('.ag-legend')).toContainText('Facturable');
+    await expect(page.locator('.ag-legend')).toContainText('Non facturable');
   });
 
-  test('ST-02 : ouvrir le dialog et sélectionner "Non facturable" affiche les catégories', async ({ page }) => {
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-
-    // Ouvrir le dialog Nouvelle entrée (bouton Tempolia-style)
-    await page.locator('button.st-add-btn').first().click();
-    await page.waitForTimeout(400);
-
-    // Dialog doit être ouvert
-    await expect(page.locator('.std-wrap')).toBeVisible({ timeout: 6_000 });
-
-    // Cliquer sur le bouton "Non facturable"
-    const nfBtn = page.locator('.std-type-btn', { hasText: /non facturable/i });
-    await nfBtn.click();
-    await page.waitForTimeout(300);
-
-    // Les boutons de catégorie doivent apparaître
-    await expect(page.locator('.std-code-btn').first()).toBeVisible({ timeout: 5_000 });
+  test('ST-02 : « Non fact. » dans la saisie rapide affiche les catégories', async ({ page }) => {
+    await page.goto(`${APP_URL}/travail/saisie?tenant=${TENANT}`);
+    const form = page.locator('.line-form').first();
+    await expect(form).toBeVisible({ timeout: 10_000 });
+    await form.locator('.lf-type__btn', { hasText: 'Non fact.' }).click();
+    const categories = form.locator('select[name="categorie"] option');
+    await expect(categories.first()).toBeAttached({ timeout: 5_000 });
+    expect(await categories.allTextContents()).toEqual(expect.arrayContaining(['Appel client', 'Réunion interne', 'Formation']));
   });
 
-  test('ST-03 : enregistrer une saisie via le dialog et la voir dans la vue semaine', async ({ page }) => {
-    await loginAfym(page);
-
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-
-    // Ouvrir le dialog Nouvelle entrée
-    await page.locator('button.st-add-btn').first().click();
-    await page.waitForTimeout(400);
-    await expect(page.locator('.std-wrap')).toBeVisible({ timeout: 6_000 });
-
-    // Changer la date vers une date passée (sans contrainte de pointage)
-    const dateInput = page.locator('.std-input[type="date"]');
-    await dateInput.fill('2026-08-01');
-    await page.waitForTimeout(200);
-
-    // Remplir le libellé
-    await page.locator('.std-textarea').fill('E2E-V2 — Test saisie facturable');
-
-    // Saisir le temps (1h30)
-    const tempsInput = page.locator('.std-temps-input');
-    await tempsInput.fill('1h30');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    // Soumettre (bouton enabled car tempsRaw signal est maintenant réactif)
-    await page.locator('button.std-btn-create').click();
-    await page.waitForTimeout(2000);
-
-    // Le composant navigue vers la semaine du 2026-08-01 après création
-    // Vérifier le snackbar de confirmation OU la présence de la saisie dans la table
-    const snack = page.locator('mat-snack-bar-container');
-    const inList = page.locator('td.st-td-label').filter({ hasText: /E2E-V2/ });
-
-    const success = await Promise.race([
-      snack.waitFor({ timeout: 8_000 }).then(() => true),
-      inList.first().waitFor({ timeout: 8_000 }).then(() => true),
-    ]).catch(() => false);
-    expect(success).toBe(true);
+  test('ST-03 : enregistrer une saisie et la retrouver dans la liste', async ({ page }) => {
+    await page.goto(`${APP_URL}/travail/saisie?tenant=${TENANT}`);
+    const form = page.locator('.line-form').first();
+    await expect(form).toBeVisible({ timeout: 10_000 });
+    await form.locator('input[type="date"]').fill('2026-08-01'); // date sans pointage
+    await form.locator('input[name="duree"]').fill('01:30');
+    await form.locator('input[name="commentaire"]').fill(LIBELLE);
+    await form.locator('.lf-submit').click();
+    await expect(page.locator('.data-table', { hasText: LIBELLE })).toBeVisible({ timeout: 10_000 });
   });
 
-  test('ST-04 : supprimer une saisie depuis la liste', async ({ page }) => {
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(800);
-
-    const rows = page.locator('.st-table tbody tr');
-    const count = await rows.count();
-    if (count === 0) {
-      test.skip();
-      return;
-    }
-
-    const firstRow = rows.first();
-    const deleteBtn = firstRow.locator('button.st-del-btn');
-    await deleteBtn.click();
-    await page.waitForTimeout(1000);
-
-    // La liste doit avoir une entrée de moins
-    const newCount = await page.locator('.st-table tbody tr').count();
-    expect(newCount).toBeLessThan(count);
+  test('ST-04 : supprimer cette saisie depuis le détail des temps', async ({ page }) => {
+    await page.goto(`${APP_URL}/travail/temps/detail?tenant=${TENANT}`);
+    await expect(page.locator('.params')).toBeVisible({ timeout: 10_000 });
+    await page.locator('.params select').first().selectOption('');
+    await page.locator('.params input[type="date"]').nth(0).fill('2026-08-01');
+    await page.locator('.params input[type="date"]').nth(1).fill('2026-08-01');
+    await page.getByRole('button', { name: /Appliquer/ }).click();
+    await page.locator('.params input[placeholder*="Libellé" i]').fill(LIBELLE);
+    const ligne = page.locator('tr.data-row', { hasText: LIBELLE });
+    await expect(ligne).toHaveCount(1, { timeout: 10_000 });
+    page.once('dialog', d => d.accept());
+    await ligne.locator('.td-act--del').click();
+    await expect(ligne).toHaveCount(0, { timeout: 8_000 });
   });
 
-  test('ST-05 : la vue semaine affiche les statistiques récapitulatives', async ({ page }) => {
-    await page.goto(`${APP_URL}/saisie-temps?tenant=${TENANT}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(800);
-
-    // La page Tempolia-style doit être visible
-    await expect(page.locator('.st-page')).toBeVisible();
-    await expect(page.locator('.st-topbar')).toBeVisible();
-
-    // Le résumé semaine (si des saisies existent pour cette semaine)
-    const summary = page.locator('.st-week-summary');
-    if (await summary.isVisible()) {
-      await expect(summary.locator('.st-ws-lbl', { hasText: /total semaine/i })).toBeVisible();
-      await expect(summary.locator('.st-ws-lbl', { hasText: /facturables/i })).toBeVisible();
-    }
-
-    // Les filtres de type sont toujours visibles (Tous / Facturables / Non facturables)
-    await expect(page.locator('.st-filter-btn', { hasText: /tous/i })).toBeVisible();
-    await expect(page.locator('.st-filter-btn', { hasText: /nf|non fact/i })).toBeVisible();
+  test('ST-05 : la vue par semaine affiche les totaux récapitulatifs', async ({ page }) => {
+    await page.goto(`${APP_URL}/travail/temps/semaine?tenant=${TENANT}`);
+    await expect(page.locator('.pg-title')).toHaveText('Temps passés par semaine', { timeout: 10_000 });
+    // Attendre la fin du chargement : totaux (s'il y a des saisies) ou état vide explicite
+    const totaux = page.locator('.totaux-bar');
+    await expect(totaux.or(page.getByText('Aucune saisie pour cette période'))).toBeVisible({ timeout: 10_000 });
+    if (await totaux.isVisible()) await expect(totaux).toContainText(/facturable/i);
   });
 });
 

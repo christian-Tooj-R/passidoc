@@ -119,7 +119,7 @@ describe('FluxMensuelService', () => {
 
     it('renseigne dateDepot quand le statut passe à DEPOSE', async () => {
       mockRepo.findOne
-        .mockResolvedValueOnce(makeFlux({ dateDepot: null })) // premier appel : flux sans dateDepot
+        .mockResolvedValueOnce(makeFlux({ dateDepot: undefined })) // premier appel : flux sans dateDepot
         .mockResolvedValueOnce(makeFlux({ statut: StatutDepot.DEPOSE, dateDepot: new Date() })); // second appel : après update
 
       await service.update(1, 42, { statut: StatutDepot.DEPOSE }, mockUser);

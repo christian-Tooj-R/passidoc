@@ -574,6 +574,13 @@ body.theme-dark .cdk-overlay-container {
 .badge-pole-est    { @extend .badge; @extend .badge-blue; }
 .badge-pole-ouest { @extend .badge; @extend .badge-teal; }
 
+/* Approche client (cahier v2 #3) — registre de communication */
+.badge-approche { @extend .badge; }
+.badge-approche--FORMEL        { @extend .badge-navy; }
+.badge-approche--PROFESSIONNEL { @extend .badge-blue; }
+.badge-approche--AMICAL        { @extend .badge-green; }
+.badge-approche--INFORMEL      { @extend .badge-orange; }
+
 .score-pill { @extend .badge; font-weight: 700; }
 .score-pill.high   { @extend .badge-green; }
 .score-pill.medium { @extend .badge-orange; }
@@ -616,7 +623,9 @@ body.theme-dark .cdk-overlay-container {
   color: #1565C0 !important;
 }
 .mat-mdc-text-field-wrapper { background: var(--surface) !important; }
-.mat-mdc-form-field-subscript-wrapper { display: none; }
+/* Champs compacts : pas de zone d'aide sous le champ… sauf en erreur, sinon les messages de
+   validation (<mat-error> : « Email invalide », etc.) ne s'affichaient jamais. */
+.mat-mdc-form-field:not(.mat-form-field-invalid) .mat-mdc-form-field-subscript-wrapper { display: none; }
 .mat-mdc-form-field .mat-mdc-floating-label { font-size: 13.5px !important; }
 .mat-mdc-form-field input, .mat-mdc-form-field textarea {
   font-size: 13.5px !important;

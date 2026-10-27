@@ -1,11 +1,14 @@
-import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import {
-  TypeTemps, CategorieNonFacturable, MissionCode, MISSION_CODES,
+  TypeTemps, CategorieNonFacturable, MissionCode, MISSION_CODES, SaisieTempsService, AffaireInfo,
 } from '../../../core/services/saisie-temps.service';
+import { LIEUX_TRAVAIL, LieuTravail } from '../../../core/models/lieu-travail';
+import { AuthService } from '../../../core/services/auth.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { Client } from '../../../core/models/client.model';
 import { parseHHMM, toHHMM } from '../../../core/services/duree.util';
 import { toLocalIso } from '../../../core/services/date.util';
@@ -29,6 +32,10 @@ export interface SaisieEditSeed {
   commentaire?: string | null;
   heureDebut?: string | null;
   heureFin?: string | null;
+  /** Fourni (même null) = le formulaire gère l'affaire ; absent = laissée au serveur. */
+  affaire?: string | null;
+  /** Pôle de travail (cahier v2 #5) ; absent = site du collaborateur connecté. */
+  lieuTravail?: LieuTravail | null;
 }
 
 /** Résultat émis vers le parent — champs prêts à passer à create()/update(). */
@@ -42,6 +49,10 @@ export interface SaisieEditResult {
   commentaire?: string;
   heureDebut?: string;
   heureFin?: string;
+  /** null = attribution automatique selon la date ; absent = inchangée. */
+  affaire?: string | null;
+  /** Absent = inchangé (modification d'une saisie dont le pôle n'était pas connu du formulaire). */
+  lieuTravail?: LieuTravail;
 }
 
 /**
@@ -67,7 +78,7 @@ export interface SaisieEditResult {
     <div class="lf-row">
       <div class="lf-field lf-field--date">
         <label class="lf-label">Date</label>
-        <input type="date" class="lf-input" [(ngModel)]="date" name="sefDate" required />
+        <input type="date" class="lf-input" [(ngModel)]="date" (ngModelChange)="onContexteChange()" name="sefDate" required />
       </div>
       <div class="lf-field lf-field--grow">
         <label class="lf-label">Client</label>
@@ -83,13 +94,25 @@ export interface SaisieEditResult {
       </div>
       <div class="lf-field lf-field--grow">
         <label class="lf-label">Mission</label>
-        <select class="lf-input" [(ngModel)]="missionCode" name="sefMissionCode">
+        <select class="lf-input" [(ngModel)]="missionCode" (ngModelChange)="onContexteChange()" name="sefMissionCode">
           <option [ngValue]="null">— Mission (optionnel) —</option>
           @for (m of missionCodes; track m.code) {
             <option [ngValue]="m.code">{{ m.label }}</option>
           }
         </select>
       </div>
+      @if (clientId) {
+        <div class="lf-field lf-field--affaire">
+          <label class="lf-label">Affaire</label>
+          <select class="lf-input" [ngModel]="affaire" (ngModelChange)="onAffaireChange($event)" name="sefAffaire"
+                  title="Exercice du dossier auquel ce temps est rattaché">
+            <option [ngValue]="null">Automatique (selon la date)</option>
+            @for (a of affairesOptions; track a.code) {
+              <option [ngValue]="a.code">{{ a.code }} — {{ a.etat === 'O' ? 'ouverte' : 'clôturée' }}</option>
+            }
+          </select>
+        </div>
+      }
       <div class="lf-field lf-field--duree">
         <label class="lf-label">Durée</label>
         <input type="time" class="lf-input" [(ngModel)]="dureeInput" name="sefDuree" required />
@@ -112,6 +135,16 @@ export interface SaisieEditResult {
                   (click)="type = 'FACTURABLE'">Facturable</button>
           <button type="button" class="lf-type__btn" [class.lf-type__btn--on]="type === 'NON_FACTURABLE'"
                   (click)="type = 'NON_FACTURABLE'">Non fact.</button>
+        </div>
+      </div>
+      <div class="lf-field">
+        <label class="lf-label">Pôle de travail</label>
+        <div class="lf-type lf-lieu" role="radiogroup" aria-label="Pôle de travail">
+          @for (l of lieux; track l.code) {
+            <button type="button" role="radio" class="lf-type__btn lf-lieu__btn lf-lieu__btn--{{ l.code }}"
+                    [class.lf-type__btn--on]="lieuTravail === l.code" [attr.aria-checked]="lieuTravail === l.code"
+                    [style.--lieu]="l.couleur" (click)="choisirLieu(l.code)">{{ libelleLieu(l.code) }}</button>
+          }
         </div>
       </div>
       @if (type === 'NON_FACTURABLE') {
@@ -158,6 +191,7 @@ export interface SaisieEditResult {
     .lf-field--grow2 { flex:2; min-width:220px; }
     .lf-field--date  { min-width:150px; }
     .lf-field--duree { min-width:110px; }
+    .lf-field--affaire { min-width:190px; }
     .lf-label { font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; }
     .lf-input { height:36px; border:1px solid #e2e8f0; border-radius:7px; padding:0 10px; font-size:13px; background:#fff; color:#374151; outline:none; font-family:inherit; width:100%; box-sizing:border-box; }
     .lf-input:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.12); }
@@ -165,6 +199,9 @@ export interface SaisieEditResult {
     .lf-type { display:flex; gap:4px; background:#f1f5f9; border-radius:7px; padding:3px; }
     .lf-type__btn { height:30px; border:none; background:transparent; border-radius:5px; padding:0 12px; font-size:12.5px; font-weight:600; color:#64748b; cursor:pointer; transition:all .15s; }
     .lf-type__btn--on { background:#6366f1; color:#fff; }
+    .lf-lieu__btn { border-left:3px solid var(--lieu); }
+    .lf-lieu__btn.lf-type__btn--on { background:var(--lieu); color:#fff; }
+    .lf-lieu__btn--OUEST.lf-type__btn--on { color:#422006; }
 
     .lf-submit { height:36px; background:#059669; color:#fff; border:none; border-radius:7px; padding:0 18px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; transition:background .15s; }
     .lf-submit:hover:not(:disabled) { background:#047857; }
@@ -183,8 +220,21 @@ export class SaisieEditFormComponent implements OnChanges {
   @Output() save   = new EventEmitter<SaisieEditResult>();
   @Output() cancel = new EventEmitter<void>();
 
-  readonly missionCodes = MISSION_CODES;
+  // Lus à l'affichage (getters) et non à la construction : dans le bundle des tests unitaires,
+  // le composant peut être instancié avant l'initialisation de ces constantes importées.
+  get missionCodes() { return MISSION_CODES; }
   readonly categoriesNF = CATEGORIES_NF;
+  get lieux() { return LIEUX_TRAVAIL; }
+  private svc = inject(SaisieTempsService);
+  private auth = inject(AuthService);
+  private tenant = inject(TenantService);
+
+  affaire: string | null = null;
+  affairesOptions: AffaireInfo[] = [];
+  /** Vrai si l'affaire doit être envoyée (seed qui la porte, ou choix explicite). */
+  private affaireGeree = false;
+  /** Vrai si l'utilisateur a choisi l'affaire lui-même depuis l'ouverture du formulaire. */
+  private affaireChoisie = false;
 
   date        = toLocalIso(new Date());
   clientId: number | null = null;
@@ -196,7 +246,24 @@ export class SaisieEditFormComponent implements OnChanges {
   commentaire = '';
   heureDebut  = '';
   heureFin    = '';
+  lieuTravail: LieuTravail = this.lieuParDefaut();
+  /** Vrai si le pôle doit être envoyé : création, seed qui le porte, ou choix explicite. */
+  private lieuGere = true;
   localError  = '';
+
+  /** Site de rattachement du collaborateur connecté (pôle par défaut d'une nouvelle saisie). */
+  private lieuParDefaut(): LieuTravail {
+    return this.auth.currentUser()?.site === 'OUEST' ? 'OUEST' : 'EST';
+  }
+
+  choisirLieu(code: LieuTravail) {
+    this.lieuTravail = code;
+    this.lieuGere = true;
+  }
+
+  libelleLieu(code: LieuTravail): string {
+    return code === 'HORS_BUREAU' ? 'Hors bureau' : this.tenant.poleLabel(code);
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['seed'] && this.seed) {
@@ -210,11 +277,38 @@ export class SaisieEditFormComponent implements OnChanges {
       this.commentaire = s.commentaire ?? '';
       this.heureDebut  = s.heureDebut ?? '';
       this.heureFin    = s.heureFin ?? '';
+      this.lieuTravail = s.lieuTravail ?? this.lieuParDefaut();
+      this.lieuGere    = this.mode !== 'edit' || !!s.lieuTravail;
       this.localError  = '';
+      this.affaire        = s.affaire ?? null;
+      this.affaireGeree   = 'affaire' in s;
+      this.affaireChoisie = false;
+      this.chargerAffaires();
     }
     if (changes['seed'] || changes['clients']) {
       this.syncClientSearchFromId();
     }
+  }
+
+  private chargerAffaires() {
+    this.affairesOptions = [];
+    if (!this.clientId) return;
+    const clientId = this.clientId;
+    this.svc.getAffaires(clientId).subscribe({
+      next: list => { if (this.clientId === clientId) this.affairesOptions = list; },
+      error: () => {},
+    });
+  }
+
+  onAffaireChange(code: string | null) {
+    this.affaire = code;
+    this.affaireGeree = true;
+    this.affaireChoisie = true;
+  }
+
+  /** Date, client ou mission modifiés sans choix explicite d'affaire → retour à l'automatique. */
+  onContexteChange() {
+    if (this.affaireGeree && !this.affaireChoisie) this.affaire = null;
   }
 
   get filteredClients(): Client[] {
@@ -225,8 +319,15 @@ export class SaisieEditFormComponent implements OnChanges {
   }
 
   onClientSelected(event: MatAutocompleteSelectedEvent) {
+    const avant = this.clientId;
     this.clientId = event.option.value as number | null;
     this.syncClientSearchFromId();
+    if (this.clientId !== avant) {
+      // Une affaire appartient à un dossier : on repart en automatique pour le nouveau client.
+      this.affaire = null;
+      this.affaireChoisie = false;
+      this.chargerAffaires();
+    }
   }
 
   onClientBlur() {
@@ -258,6 +359,8 @@ export class SaisieEditFormComponent implements OnChanges {
       commentaire: this.commentaire || undefined,
       heureDebut:  this.heureDebut || undefined,
       heureFin:    this.heureFin || undefined,
+      ...(this.lieuGere ? { lieuTravail: this.lieuTravail } : {}),
+      ...(this.affaireGeree ? { affaire: this.clientId ? this.affaire : null } : {}),
     });
   }
 }

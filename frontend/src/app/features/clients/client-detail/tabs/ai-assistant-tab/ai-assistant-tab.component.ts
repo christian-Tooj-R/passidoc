@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AiAssistantService, ChatMessage, AiContextSummary } from '../../../../../core/services/ai-assistant.service';
+import { TenantService } from '../../../../../core/services/tenant.service';
 
 interface ContextCategory {
   icon: string;
@@ -382,6 +383,7 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
   @ViewChild('inputArea') inputAreaEl!: ElementRef;
 
   private service = inject(AiAssistantService);
+  private tenantSvc = inject(TenantService);
 
   messages: ChatMessage[] = [];
   inputText = '';
@@ -480,7 +482,8 @@ export class AiAssistantTabComponent implements OnInit, AfterViewChecked {
       {
         icon: 'manage_accounts',
         label: 'Responsable cabinet',
-        detail: this.ctx.responsable ?? (this.ctx.collaborateurOuest ? `MG : ${this.ctx.collaborateurOuest}` : 'Non assigné'),
+        detail: this.ctx.responsable
+          ?? (this.ctx.collaborateurOuest ? `${this.tenantSvc.intervenantLabel2()} : ${this.ctx.collaborateurOuest}` : 'Non assigné'),
         available: !!(this.ctx.responsable || this.ctx.collaborateurOuest),
       },
     ];

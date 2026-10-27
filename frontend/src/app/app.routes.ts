@@ -76,6 +76,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/travail/pages/temps-detail/travail-temps-detail.component').then(m => m.TravailTempsDetailComponent),
       },
       {
+        path: 'rentabilite',
+        loadComponent: () => import('./features/travail/pages/rentabilite/travail-rentabilite.component').then(m => m.TravailRentabiliteComponent),
+      },
+      {
         path: 'recurrentes',
         loadComponent: () => import('./features/travail/pages/recurrentes/travail-recurrentes.component').then(m => m.TravailRecurrentesComponent),
       },
@@ -149,6 +153,11 @@ export const routes: Routes = [
       {
         path: 'clients',
         loadComponent: () => import('./features/clients/client-list/client-list.component').then((m) => m.ClientListComponent),
+      },
+      {
+        // Cahier v2 #1 : suivi des pièces manquantes et relances clients
+        path: 'pieces-manquantes',
+        loadComponent: () => import('./features/suivi-pieces/suivi-pieces.component').then((m) => m.SuiviPiecesComponent),
       },
       {
         path: 'secteurs',

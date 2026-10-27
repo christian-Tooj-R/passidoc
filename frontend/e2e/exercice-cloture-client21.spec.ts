@@ -120,6 +120,30 @@ async function clickTab(page: Page, label: string): Promise<void> {
   await page.waitForTimeout(800);
 }
 
+/** Onglets en mode « Modifier / Enregistrer » : passer en édition via l'en-tête du dossier. */
+async function modifierViaEntete(page: Page): Promise<void> {
+  const btn = page.locator('.ch-edit-btn');
+  await expect(btn).toBeVisible({ timeout: 8_000 });
+  await btn.click();
+  await page.waitForTimeout(400);
+}
+
+/** Enregistrer via l'en-tête du dossier (TabSaveService) et attendre la réponse de l'API. */
+async function enregistrerViaEntete(page: Page): Promise<void> {
+  const btn = page.locator('.ch-save-btn');
+  await expect(btn).toBeVisible({ timeout: 8_000 });
+  await Promise.all([
+    page.waitForResponse(r => ['PATCH', 'PUT', 'POST'].includes(r.request().method()) && r.url().includes('/api/'), { timeout: 10_000 }).catch(() => null),
+    btn.click(),
+  ]);
+  await page.waitForTimeout(800);
+}
+
+/** Texte affiché (mode lecture) d'une case du Canvas, repérée par son libellé. */
+function caseCanvas(page: Page, libelle: string) {
+  return page.locator('app-canvas-tab .cv-box').filter({ hasText: libelle }).locator('.cv-box__read');
+}
+
 async function switchToExercice(page: Page, annee: number): Promise<void> {
   await expect(page.locator('.exercice-banner')).toBeVisible({ timeout: 15_000 });
   const current = await page.locator('.eb-period').textContent().catch(() => '');
@@ -209,16 +233,17 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     const tab = page.locator('app-canvas-tab');
     await expect(tab).toBeVisible({ timeout: 8_000 });
 
-    // Placeholders générés en minuscule : "saisir partenaires clés..."
+    // Placeholders générés en minuscule : "saisir partenaires clés..." (mode édition)
+    await modifierViaEntete(page);
     await tab.locator('textarea[placeholder*="partenaires"]').fill(D.canvas_partenaires);
     await tab.locator('textarea[placeholder*="proposition"]').fill(D.canvas_proposition);
 
-    await tab.locator('button').filter({ hasText: /enregistrer/i }).click();
-    await page.waitForTimeout(1_000);
+    await enregistrerViaEntete(page);
 
-    // Persistance : recharger et revérifier
+    // Persistance : recharger et revérifier (en mode édition, pour relire les champs)
     await goToClient(page);
     await clickTab(page, 'Canvas');
+    await modifierViaEntete(page);
     await expect(page.locator('app-canvas-tab textarea[placeholder*="partenaires"]')).toHaveValue(D.canvas_partenaires);
     await expect(page.locator('app-canvas-tab textarea[placeholder*="proposition"]')).toHaveValue(D.canvas_proposition);
   });
@@ -239,8 +264,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await tas.nth(1).fill(D.obj_3a5);
     await tas.nth(3).fill(D.obj_attentes);
 
-    await tab.locator('button').filter({ hasText: /enregistrer/i }).click();
-    await page.waitForTimeout(1_000);
+    await enregistrerViaEntete(page);
 
     // Persistance
     await goToClient(page);
@@ -257,6 +281,9 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
 
     const tab = page.locator('app-analyse-strategique-tab');
     await expect(tab).toBeVisible({ timeout: 8_000 });
+
+    // SWOT et Porter ne sont saisissables qu'en mode édition
+    await modifierViaEntete(page);
 
     // SWOT — utiliser evaluate pour contourner le one-way [value] Angular
     // (Control+a + pressSequentially échoue car Angular re-render efface les caractères)
@@ -288,12 +315,12 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
       el.dispatchEvent(new InputEvent('input', { bubbles: true }));
     }, D.strat_porter);
 
-    await tab.locator('button').filter({ hasText: /enregistrer/i }).click();
-    await page.waitForTimeout(1_000);
+    await enregistrerViaEntete(page);
 
-    // Persistance
+    // Persistance (relue en mode édition)
     await goToClient(page);
     await clickTab(page, 'Stratégie');
+    await modifierViaEntete(page);
     await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="force"]')).toHaveValue(D.strat_forces);
     await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="faiblesse"]')).toHaveValue(D.strat_faiblesses);
     await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="opportunit"]')).toHaveValue(D.strat_opportunites);
@@ -311,8 +338,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     // Note générale — placeholder "Observations générales..."
     await tab.locator('textarea[placeholder*="Observations"]').fill(D.ci_note);
 
-    await tab.locator('button').filter({ hasText: /enregistrer/i }).click();
-    await page.waitForTimeout(1_000);
+    await enregistrerViaEntete(page);
 
     // Persistance
     await goToClient(page);
@@ -499,10 +525,12 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     const tab = page.locator('app-analyse-strategique-tab');
     await expect(tab).toBeVisible({ timeout: 8_000 });
 
-    await expect(tab.locator('textarea[placeholder*="force"]')).toHaveValue(D.strat_forces);
-    await expect(tab.locator('textarea[placeholder*="faiblesse"]')).toHaveValue(D.strat_faiblesses);
-    await expect(tab.locator('textarea[placeholder*="opportunit"]')).toHaveValue(D.strat_opportunites);
-    await expect(tab.locator('textarea[placeholder*="menace"]')).toHaveValue(D.strat_menaces);
+    // Exercice clôturé : affichage en lecture seule (pas de mode édition)
+    await expect(tab.locator('.swot-forces .swot-read-text')).toHaveText(D.strat_forces);
+    await expect(tab.locator('.swot-faiblesses .swot-read-text')).toHaveText(D.strat_faiblesses);
+    await expect(tab.locator('.swot-opportunites .swot-read-text')).toHaveText(D.strat_opportunites);
+    await expect(tab.locator('.swot-menaces .swot-read-text')).toHaveText(D.strat_menaces);
+    await expect(page.locator('.ch-edit-btn')).toHaveCount(0);
   });
 
   test('EC-VERIFOLD-4 — 2027 : contrôle interne préservé', async ({ page }) => {
@@ -551,8 +579,8 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE);
 
     await clickTab(page, 'Canvas');
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="partenaires"]')).toHaveValue(D.canvas_partenaires);
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="proposition"]')).toHaveValue(D.canvas_proposition);
+    await expect(caseCanvas(page, 'Partenaires clés')).toHaveText(D.canvas_partenaires);
+    await expect(caseCanvas(page, 'Proposition de valeur')).toHaveText(D.canvas_proposition);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -588,7 +616,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     const tab = page.locator('app-analyse-strategique-tab');
     await expect(tab).toBeVisible({ timeout: 8_000 });
 
-    const forces = await tab.locator('textarea[placeholder*="force"]').inputValue();
+    const forces = (await tab.locator('.swot-forces .swot-read-text').textContent()) ?? '';
     expect(forces.includes(TAG), 'Stratégie 2028 doit être vierge').toBe(false);
   });
 
@@ -644,8 +672,8 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE + 1);
 
     await clickTab(page, 'Canvas');
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="partenaires"]')).toHaveValue(D.canvas_partenaires);
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="proposition"]')).toHaveValue(D.canvas_proposition);
+    await expect(caseCanvas(page, 'Partenaires clés')).toHaveText(D.canvas_partenaires);
+    await expect(caseCanvas(page, 'Proposition de valeur')).toHaveText(D.canvas_proposition);
   });
 
   test('EC-VERIFNEW-7 — select exercices : 2027 clôturé et 2028 ouvert présents', async ({ page }) => {

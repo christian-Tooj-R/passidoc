@@ -14,11 +14,11 @@ import { getToken, authHeaders } from './helpers/api';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function createTask(request: any, token: string, titre: string): Promise<number> {
+async function createTask(request: any, token: string, titre: string, assigneeId?: number): Promise<number> {
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
   const res = await request.post(`${API_URL}/clients/${CLIENT_ID}/tasks`, {
     headers: authHeaders(token),
-    data: { titre, statut: 'A_FAIRE', priorite: 'NORMALE', type: 'AUTRE', dateEcheance: tomorrow },
+    data: { titre, statut: 'A_FAIRE', priorite: 'NORMALE', type: 'AUTRE', dateEcheance: tomorrow, ...(assigneeId ? { assigneeId } : {}) },
   });
   const body = await res.json();
   if (!body.id) throw new Error(`Création tâche échouée: ${JSON.stringify(body)}`);
@@ -231,8 +231,11 @@ test.describe('Chrono des tâches (TT)', () => {
 
   // ──────────────────────────────────────────────────────────────────────────
   test('TT-5 : une seule tâche EN_COURS à la fois (auto-pause)', async ({ page, request }) => {
-    const idA = await createTask(request, token, 'TT5 - Tâche A');
-    const idB = await createTask(request, token, 'TT5 - Tâche B');
+    // L'auto-pause ne concerne que les tâches DU MÊME ASSIGNÉ (tasks.service.ts) :
+    // les deux tâches sont donc assignées à l'utilisateur de test.
+    const moi = await (await request.get(`${API_URL}/auth/me`, { headers: authHeaders(token) })).json();
+    const idA = await createTask(request, token, 'TT5 - Tâche A', moi.id);
+    const idB = await createTask(request, token, 'TT5 - Tâche B', moi.id);
     createdIds.push(idA, idB);
 
     await goToTasks(page);

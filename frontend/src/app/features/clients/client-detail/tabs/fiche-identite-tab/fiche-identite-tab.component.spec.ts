@@ -25,6 +25,8 @@ const mockTenantService = {
   poleLabel1: vi.fn().mockReturnValue('Pôle EST'),
   poleFlag2:  vi.fn().mockReturnValue('🟠'),
   poleLabel2: vi.fn().mockReturnValue('Pôle OUEST'),
+  intervenantLabel1: vi.fn().mockReturnValue('Collaborateur Réunion'),
+  intervenantLabel2: vi.fn().mockReturnValue('Collaborateur Madagascar'),
 };
 const mockToastService = { success: vi.fn(), error: vi.fn() };
 
