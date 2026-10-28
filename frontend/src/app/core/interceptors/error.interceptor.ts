@@ -15,7 +15,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         router.navigate(['/auth/login']);
       }
       const message = err.error?.message || 'Une erreur est survenue';
-      return throwError(() => new Error(message));
+      // `status` et `error` restent lisibles : les écrans affichent `err.error.message` (message
+      // du serveur, ex. « Cet email est déjà utilisé ») ou testent `err.status`.
+      return throwError(() => Object.assign(new Error(message), { status: err.status, error: err.error }));
     }),
   );
 };
