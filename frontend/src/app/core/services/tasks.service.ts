@@ -1,6 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
+import { ToastService } from './toast.service';
+import { TimerService } from './saisie-temps.service';
+import { formatHeures } from './duree.util';
+import { toLocalIso } from './date.util';
 
 export type TaskStatut = 'A_FAIRE' | 'EN_COURS' | 'EN_PAUSE' | 'TERMINEE' | 'NON_FAIT' | 'EN_ATTENTE';
 export type TaskPriorite = 'BASSE' | 'NORMALE' | 'HAUTE';
@@ -38,7 +44,14 @@ export interface Task {
   enAttenteService?: boolean;
   estRecurrente?: boolean;
   estFacturable?: boolean;
+  /** Présent uniquement dans la réponse d'une mise à jour qui termine la tâche. */
+  saisieAuto?: SaisieAuto | null;
 }
+
+/** Saisie de temps faite automatiquement par le serveur quand la tâche passe à « Terminée ». */
+export type SaisieAuto =
+  | { creee: true; saisieId: number; dureeHeures: number; date: string; collaborateurId: number; collaborateur: string }
+  | { creee: false; motif: 'AUCUN_TEMPS' | 'DEJA_SAISI' | 'REFUSEE'; message: string };
 
 export interface TaskComment {
   id: number;
@@ -72,6 +85,10 @@ export interface GrilleResult {
 
 @Injectable({ providedIn: 'root' })
 export class TasksService {
+  private auth = inject(AuthService);
+  private toast = inject(ToastService);
+  private timer = inject(TimerService);
+
   constructor(private http: HttpClient) {}
 
   private api(clientId: number) {
@@ -133,12 +150,43 @@ export class TasksService {
     return this.http.post<Task>(`${environment.apiUrl}/tasks`, data);
   }
 
-  update(clientId: number, id: number, data: Partial<{
+  /** Mise à jour d'une tâche ; une tâche sans dossier passe par la route globale. Quand la
+   *  tâche se termine, le serveur saisit le temps chronométré (cf. signalerSaisieAuto). */
+  update(clientId: number | null | undefined, id: number, data: Partial<{
     titre: string; description: string; statut: TaskStatut; priorite: TaskPriorite;
     type: TaskType; dateEcheance: string; assigneeId: number; tempsExecution: number; heuresSup: number;
     serviceDestinataire: 'COMPTA' | 'SOCIAL' | 'JURIDIQUE' | 'ADMIN';
   }>) {
-    return this.http.patch<Task>(`${this.api(clientId)}/${id}`, data);
+    const url = clientId ? `${this.api(clientId)}/${id}` : `${environment.apiUrl}/tasks/${id}`;
+    const now = new Date();
+    // Heure locale du navigateur : date la saisie automatique dans le fuseau de l'utilisateur.
+    const fin = data.statut === 'TERMINEE'
+      ? { dateFinLocale: toLocalIso(now), heureFinLocale: now.toTimeString().slice(0, 5) }
+      : {};
+    return this.http.patch<Task>(url, { ...data, ...fin }).pipe(
+      tap(t => this.signalerSaisieAuto(id, t?.saisieAuto)),
+    );
+  }
+
+  private signalerSaisieAuto(taskId: number, s: SaisieAuto | null | undefined) {
+    if (!s) return;
+    // Le temps du minuteur de la tâche est désormais saisi : on l'abandonne, sinon l'arrêter
+    // proposerait de l'enregistrer une seconde fois.
+    if (s.creee || s.motif === 'DEJA_SAISI') this.timer.oublierTache(taskId);
+    // Différé : chaque écran affiche son propre toast (« Tâche mise à jour ») à la réception ;
+    // celui-ci, plus informatif, doit passer après.
+    setTimeout(() => {
+      if (s.creee) {
+        const ou = s.collaborateurId === this.auth.currentUser()?.id
+          ? 'votre saisie des temps'
+          : `la saisie des temps de ${s.collaborateur}`;
+        this.toast.success(`Tâche terminée : ${formatHeures(s.dureeHeures)} ajoutée à ${ou}`);
+      } else if (s.motif === 'REFUSEE') {
+        this.toast.error(`Tâche terminée, mais temps non saisi : ${s.message}`);
+      } else {
+        this.toast.info(s.message);
+      }
+    });
   }
 
   prendreTache(id: number) {

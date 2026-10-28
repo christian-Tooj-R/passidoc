@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsPositive, IsString, Matches } from 'class-validator';
+import { IsDateString, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsPositive, IsString, Matches } from 'class-validator';
 import { LIEUX_TRAVAIL } from '../lieu-travail';
 import { TypeTemps, CategorieNonFacturable } from '../../entities/saisie-temps.entity';
 
@@ -50,4 +50,9 @@ export class CreateSaisieTempsDto {
   @IsIn(LIEUX_TRAVAIL as unknown as string[], { message: 'Pôle de travail invalide (EST, OUEST ou HORS_BUREAU).' })
   @IsOptional()
   lieuTravail?: string | null;
+
+  /** Tâche chronométrée dont provient ce temps (formulaire d'arrêt du minuteur). */
+  @IsInt()
+  @IsOptional()
+  taskId?: number | null;
 }

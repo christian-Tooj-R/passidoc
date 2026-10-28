@@ -8,15 +8,17 @@
  *  4. EC-VERIFNEW-*: vérification des données sur le nouvel exercice 2028
  *
  * Onglets liés à l'exercice  → changent selon 2027 / 2028 :
- *   Objectifs, Stratégie (SWOT + Porter), Contrôle Interne, Dossier de travail
+ *   Objectifs, Stratégie (SWOT + Porter), Contrôle Interne, Missions › Par cycle
  *
  * Onglets permanents (données client, indépendants de l'exercice) :
  *   Canvas, Missions, Fiche Identité, Fournisseurs, ADN, Synthèse
  *
  * Ce qui bascule vers 2028 : Objectifs (copiés intégralement)
- * Ce qui reste sur 2027    : Stratégie, Contrôle Interne, Dossier de travail (lecture seule)
- * Ce qui est vierge 2028   : Stratégie, Contrôle Interne, Dossier de travail (11 cycles à 0%)
- * Permanent inchangé       : Canvas, Missions (visible sur tous les exercices)
+ * Ce qui reste sur 2027    : Stratégie, Contrôle Interne, Missions › Par cycle (lecture seule)
+ * Ce qui est vierge 2028   : Stratégie, Contrôle Interne, Missions › Par cycle (10 cycles sans recommandation)
+ * Permanent inchangé       : Canvas, Missions › Pipeline (visible sur tous les exercices)
+ *
+ * (L'ancien « Dossier de travail » est fusionné dans Missions › Par cycle — CDC module Missions.)
  */
 
 import { test, expect, request as pwRequest } from '@playwright/test';
@@ -55,13 +57,10 @@ const D = {
   // Contrôle Interne (exercice → reste sur 2027, vierge sur 2028)
   ci_note: `${TAG} — Note CI : processus de clôture caisse formalisé et contrôlé`,
 
-  // Dossier de travail (exercice → reste sur 2027, vierge sur 2028)
-  dt_note      : `${TAG} — Note de synthèse dossier 2027`,
-  dt_diligences: `${TAG} — Diligences cycle A : revue des régularités formelles`,
-  dt_conclusion: `${TAG} — Conclusion cycle A : conformité satisfaisante`,
-  dt_pct       : 75,
+  // Missions › Par cycle (exercice → reste sur 2027, vierge sur 2028) — unique par exécution
+  reco_cli: `${TAG} — Recommandation 2027 : diversifier le portefeuille clients (${Date.now()})`,
 
-  // Missions (permanent)
+  // Missions › Pipeline (permanent)
   mission_titre: `${TAG} — Mission test : mise en place tableau de bord`,
 
   // Fournisseurs (permanent)
@@ -139,6 +138,20 @@ async function enregistrerViaEntete(page: Page): Promise<void> {
   await page.waitForTimeout(800);
 }
 
+/** Missions › Par cycle : déplier un cycle de révision (accordéon). */
+async function ouvrirCycle(page: Page, nom: string): Promise<void> {
+  const h = page.locator('app-missions-tab .cy-h').filter({ hasText: nom }).first();
+  await expect(h).toBeVisible({ timeout: 8_000 });
+  if ((await h.getAttribute('aria-expanded')) !== 'true') await h.click();
+  await page.waitForTimeout(300);
+}
+
+/** Supprime les missions et recommandations créées par ce scénario (tag E2E-FULL). */
+const MENAGE_MISSIONS = [
+  `DELETE FROM missions WHERE "clientId" = ${CLIENT_ID} AND titre LIKE '${TAG}%';`,
+  `DELETE FROM recommandations_cycles WHERE "clientId" = ${CLIENT_ID} AND texte LIKE '${TAG}%';`,
+];
+
 /** Texte affiché (mode lecture) d'une case du Canvas, repérée par son libellé. */
 function caseCanvas(page: Page, libelle: string) {
   return page.locator('app-canvas-tab .cv-box').filter({ hasText: libelle }).locator('.cv-box__read');
@@ -193,6 +206,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
         input: [
           `DELETE FROM exercices WHERE "clientId" = ${CLIENT_ID} AND annee = ${EXERCICE_OUVERT_ANNEE + 1};`,
           `UPDATE exercices SET statut='OUVERT', "clotureLeAt"=NULL, "clotureParId"=NULL WHERE id = ${EXERCICE_OUVERT_ID};`,
+          ...MENAGE_MISSIONS,
           '\\q',
         ].join('\n'),
         encoding: 'utf-8',
@@ -216,6 +230,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
       input: [
         `DELETE FROM exercices WHERE "clientId" = ${CLIENT_ID} AND annee = ${EXERCICE_OUVERT_ANNEE + 1};`,
         `UPDATE exercices SET statut='OUVERT', "clotureLeAt"=NULL, "clotureParId"=NULL WHERE id = ${EXERCICE_OUVERT_ID};`,
+        ...MENAGE_MISSIONS,
       ].join('\n'),
       encoding: 'utf-8',
     });
@@ -346,82 +361,61 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await expect(page.locator('app-controle-interne-tab textarea[placeholder*="Observations"]')).toHaveValue(D.ci_note);
   });
 
-  test('EC-FILL-5 — Dossier de travail : remplir note de synthèse + cycle A à 75%', async ({ page }) => {
-    await loginAfym(page);
-    await goToClient(page);
-    await clickTab(page, 'Dossier de travail');
-
-    const tab = page.locator('app-dossier-travail-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
-
-    // Note de synthèse (premier textarea du composant)
-    await tab.locator('textarea').first().fill(D.dt_note);
-    // Bouton save de la note (le premier .dt-save-btn dans app-dossier-travail-tab, avant la sidebar)
-    await tab.locator('.dt-save-btn').first().click();
-    await page.waitForTimeout(800);
-
-    // Clic sur Cycle A dans la sidebar
-    const cycleA = page.locator('.dt-nav-item').first();
-    await expect(cycleA).toBeVisible({ timeout: 6_000 });
-    await cycleA.click();
-    await page.waitForTimeout(400);
-
-    // Slider taux de couverture → 75%
-    const slider = page.locator('.dt-coverage__slider');
-    await expect(slider).toBeVisible({ timeout: 4_000 });
-    await slider.fill(String(D.dt_pct));
-    // Déclencher l'événement pour Angular
-    await slider.dispatchEvent('input');
-    await slider.dispatchEvent('change');
-
-    // Diligences (textarea nth(1)) et Conclusion (textarea nth(2)) dans .dt-cycle-content
-    await page.locator('.dt-cycle-content textarea').nth(1).fill(D.dt_diligences);
-    await page.locator('.dt-cycle-content textarea').nth(2).fill(D.dt_conclusion);
-
-    // Bouton save du cycle (le dernier .dt-save-btn, dans .dt-cycle-content)
-    await page.locator('.dt-cycle-content .dt-save-btn').click();
-    await page.waitForTimeout(800);
-
-    // Persistance : recharger et vérifier
-    await goToClient(page);
-    await clickTab(page, 'Dossier de travail');
-    await expect(page.locator('app-dossier-travail-tab textarea').first()).toHaveValue(D.dt_note);
-
-    const cycleAReload = page.locator('.dt-nav-item').first();
-    await expect(cycleAReload.locator('.dt-nav-pct')).toContainText(`${D.dt_pct}%`);
-
-    await cycleAReload.click();
-    await page.waitForTimeout(400);
-    await expect(page.locator('.dt-cycle-content textarea').nth(1)).toHaveValue(D.dt_diligences);
-    await expect(page.locator('.dt-cycle-content textarea').nth(2)).toHaveValue(D.dt_conclusion);
-  });
-
-  test('EC-FILL-6 — Missions : ajouter une mission', async ({ page }) => {
+  test('EC-FILL-5 — Missions › Par cycle : recommandation sur le cycle Clients', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await clickTab(page, 'Missions');
 
     const tab = page.locator('app-missions-tab');
     await expect(tab).toBeVisible({ timeout: 8_000 });
+    await expect(tab.locator('.cy')).toHaveCount(10);
+    await ouvrirCycle(page, 'Clients');
 
-    // Ouvrir le formulaire d'ajout
-    await tab.locator('button').filter({ hasText: /Ajouter une mission/i }).first().click();
-    await page.waitForTimeout(400);
+    const ta = tab.locator('.cy--open textarea');
+    await ta.fill(D.reco_cli);
+    // Enregistré à la sortie du champ ou via « Enregistrer » (le blur n'est pas fiable en headless).
+    await Promise.all([
+      page.waitForResponse(r => r.request().method() === 'PATCH' && r.url().includes('/cycles/CLI/recommandation'), { timeout: 10_000 }),
+      tab.locator('.cy--open .b-mini').filter({ hasText: 'Enregistrer' }).click(),
+    ]);
+    await expect(tab.locator('.cy--open .ok')).toContainText('Enregistré');
 
-    const form = tab.locator('form');
-    await expect(form).toBeVisible({ timeout: 6_000 });
+    // Persistance : recharger et revérifier
+    await goToClient(page);
+    await clickTab(page, 'Missions');
+    await ouvrirCycle(page, 'Clients');
+    await expect(page.locator('app-missions-tab .cy--open textarea')).toHaveValue(D.reco_cli);
+    await expect(page.locator('app-missions-tab .cy-h').filter({ hasText: 'Clients' })).toContainText('1 recommandation');
+  });
 
-    // Titre (placeholder "Ex : Mise en place d'une holding...")
-    await form.locator('input[placeholder*="holding"]').fill(D.mission_titre);
-    // Année (2ème input number dans le form : honoraires=1er, annee=2ème)
-    const numInputs = form.locator('input[type="number"]');
-    await numInputs.nth(1).fill(String(EXERCICE_OUVERT_ANNEE));
+  test('EC-FILL-6 — Missions : proposer une mission depuis un cycle, visible dans le pipeline', async ({ page }) => {
+    await loginAfym(page);
+    await goToClient(page);
+    await clickTab(page, 'Missions');
 
-    await form.locator('button[type="submit"]').click();
-    await page.waitForTimeout(1_000);
+    const tab = page.locator('app-missions-tab');
+    await expect(tab).toBeVisible({ timeout: 8_000 });
+    await ouvrirCycle(page, 'Clients');
+    await tab.locator('.cy--open .b-add').click();
 
-    // Vérifier qu'au moins une mission avec ce titre est listée (first() évite le strict mode si elle existe déjà)
-    await expect(tab.getByText(D.mission_titre, { exact: false }).first()).toBeVisible({ timeout: 6_000 });
+    const dlg = page.locator('app-mission-form-dialog');
+    await expect(dlg).toBeVisible({ timeout: 6_000 });
+    await expect(dlg).toContainText('CLI');
+    await dlg.locator('input[name="titre"]').fill(D.mission_titre);
+    await dlg.locator('input[name="honoraires"]').fill('2500');
+    await Promise.all([
+      page.waitForResponse(r => r.request().method() === 'POST' && /\/clients\/\d+\/missions$/.test(new URL(r.url()).pathname), { timeout: 10_000 }),
+      dlg.locator('button').filter({ hasText: 'Créer la mission' }).click(),
+    ]);
+    await expect(dlg).toBeHidden({ timeout: 6_000 });
+
+    await expect(tab.locator('.cy--open .ml').filter({ hasText: D.mission_titre }).first()).toBeVisible({ timeout: 6_000 });
+    // R1 : la mission apparaît automatiquement dans le pipeline, avec son cycle d'origine.
+    await tab.locator('.mt-tab').filter({ hasText: 'Pipeline' }).click();
+    const ligne = tab.locator('tbody tr').filter({ hasText: D.mission_titre }).first();
+    await expect(ligne).toBeVisible({ timeout: 6_000 });
+    await expect(ligne).toContainText('Clients');
+    await expect(ligne).toContainText('Proposée');
   });
 
   test('EC-FILL-7 — Fournisseurs : ajouter un fournisseur', async ({ page }) => {
@@ -545,21 +539,26 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await expect(tab.locator('textarea[placeholder*="Observations"]')).toHaveValue(D.ci_note);
   });
 
-  test('EC-VERIFOLD-5 — 2027 : dossier de travail préservé (note + cycle A à 75%)', async ({ page }) => {
+  test('EC-VERIFOLD-5 — 2027 : recommandations et missions du cycle préservées, en lecture seule', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE);
     await expect(page.locator('.exercice-banner--cloture')).toBeVisible({ timeout: 15_000 });
 
-    await clickTab(page, 'Dossier de travail');
-    await expect(page.locator('app-dossier-travail-tab textarea').first()).toHaveValue(D.dt_note);
-
-    const cycleA = page.locator('.dt-nav-item').first();
-    await expect(cycleA.locator('.dt-nav-pct')).toContainText(`${D.dt_pct}%`);
-    await cycleA.click();
-    await page.waitForTimeout(400);
-    await expect(page.locator('.dt-cycle-content textarea').nth(1)).toHaveValue(D.dt_diligences);
-    await expect(page.locator('.dt-cycle-content textarea').nth(2)).toHaveValue(D.dt_conclusion);
+    await clickTab(page, 'Missions');
+    const tab = page.locator('app-missions-tab');
+    await expect(tab.locator('app-missions-cycles .ro')).toContainText('Exercice clôturé');
+    await ouvrirCycle(page, 'Clients');
+    const ta = tab.locator('.cy--open textarea');
+    await expect(ta).toHaveValue(D.reco_cli);
+    await expect(ta).toBeDisabled();
+    await expect(tab.locator('.cy--open .b-add')).toHaveCount(0);
+    await expect(tab.locator('.cy--open .ml').filter({ hasText: D.mission_titre }).first()).toBeVisible();
+    // Pipeline consultable (filtres, détail) mais pas modifiable depuis l'exercice clôturé.
+    await tab.locator('.mt-tab').filter({ hasText: 'Pipeline' }).click();
+    await expect(tab.locator('tbody tr').filter({ hasText: D.mission_titre }).first()).toBeVisible();
+    await expect(tab.locator('.btn-new')).toHaveCount(0);
+    await expect(tab.locator('tbody select')).toHaveCount(0);
   });
 
   test('EC-VERIFOLD-6 — 2027 : grayscale actif (body.exercice-cloture)', async ({ page }) => {
@@ -567,7 +566,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE);
     await expect(page.locator('.exercice-banner--cloture')).toBeVisible({ timeout: 15_000 });
-    await clickTab(page, 'Dossier de travail');
+    await clickTab(page, 'Missions');
     await page.waitForTimeout(500);
     const hasClass = await page.evaluate(() => document.body.classList.contains('exercice-cloture'));
     expect(hasClass, 'body doit avoir exercice-cloture').toBe(true);
@@ -633,22 +632,28 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     expect(note.includes(TAG), 'Contrôle interne 2028 doit être vierge').toBe(false);
   });
 
-  test('EC-VERIFNEW-4 — 2028 : dossier vierge (note vide, 11 cycles à 0%)', async ({ page }) => {
+  test('EC-VERIFNEW-4 — 2028 : cycles vierges et modifiables, mission toujours au pipeline', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE + 1);
 
-    await clickTab(page, 'Dossier de travail');
-    const tab = page.locator('app-dossier-travail-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
+    await clickTab(page, 'Missions');
+    const tab = page.locator('app-missions-tab');
+    await expect(tab.locator('.cy')).toHaveCount(10, { timeout: 8_000 });
+    const recos = await tab.locator('.cy-h .pill').filter({ hasText: 'recommandation' }).allTextContents();
+    expect(recos).toHaveLength(10);
+    for (const r of recos) expect(r.trim(), 'Cycle 2028 sans recommandation').toMatch(/^\D*0 recommandation/);
 
-    const note = await tab.locator('textarea').first().inputValue();
-    expect(note.includes(TAG), 'Note dossier 2028 doit être vierge').toBe(false);
-
-    await page.waitForSelector('.dt-nav-item', { timeout: 6_000 });
-    expect(await page.locator('.dt-nav-item').count()).toBe(11);
-    const pcts = await page.locator('.dt-nav-item .dt-nav-pct').allTextContents();
-    for (const pct of pcts) expect(pct.trim(), 'Cycle 2028 doit être à 0%').toBe('0%');
+    await ouvrirCycle(page, 'Clients');
+    const ta = tab.locator('.cy--open textarea');
+    expect((await ta.inputValue()).includes(TAG), 'Recommandations 2028 vierges').toBe(false);
+    await expect(ta).toBeEnabled();
+    await expect(tab.locator('.cy--open .b-add')).toBeVisible();
+    // La mission 2027 n'est pas une mission du cycle 2028…
+    await expect(tab.locator('.cy--open .ml').filter({ hasText: D.mission_titre })).toHaveCount(0);
+    // … mais le pipeline est permanent.
+    await tab.locator('.mt-tab').filter({ hasText: 'Pipeline' }).click();
+    await expect(tab.locator('tbody tr').filter({ hasText: D.mission_titre }).first()).toBeVisible({ timeout: 6_000 });
   });
 
   test('EC-VERIFNEW-5 — 2028 : interface éditable, pas de grayscale, bouton clôturer présent', async ({ page }) => {
@@ -657,7 +662,7 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE + 1);
     await expect(page.locator('.eb-label')).toContainText(/exercice en cours/i);
 
-    await clickTab(page, 'Dossier de travail');
+    await clickTab(page, 'Missions');
     await page.waitForTimeout(500);
 
     const hasClass = await page.evaluate(() => document.body.classList.contains('exercice-cloture'));

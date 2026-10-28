@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SaisieTempsService } from './saisie-temps.service';
 import { SaisieTemps, TypeTemps } from '../entities/saisie-temps.entity';
 import { BudgetMission } from '../entities/budget-mission.entity';
@@ -205,6 +205,41 @@ describe('SaisieTempsService', () => {
     it("n'ajoute pas les absences quand le rapport est restreint à des clients", async () => {
       await service.getRapportDetail(1, { dateDebut: '2026-10-01', dateFin: '2026-10-31', clientIds: [3], inclureAbsences: true });
       expect(congeRepo.find).not.toHaveBeenCalled();
+    });
+  });
+  describe('saisirDepuisTache — tâche terminée', () => {
+    const tache = { id: 55, taskId: 'T-2026-055', titre: 'Révision stock', type: 'DR', clientId: 3, estFacturable: true };
+    const fin = { date: '2026-10-27', heure: '16:00' };
+
+    it('saisit le temps chronométré au nom du collaborateur, lié à la tâche', async () => {
+      repo.find.mockResolvedValueOnce([]);          // aucune saisie liée à la tâche
+      const r = await service.saisirDepuisTache(tache, 5400, user, fin);
+      expect(r).toEqual({ creee: true, saisieId: 100, dureeHeures: 1.5, date: '2026-10-27', collaborateurId: 7, collaborateur: 'Julie R' });
+      expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({
+        taskId: 55, collaborateurId: 7, clientId: 3, type: TypeTemps.FACTURABLE, missionCode: 'REV',
+        dureeHeures: 1.5, heureDebut: '14:30', heureFin: '16:00', commentaire: 'Révision stock (tâche T-2026-055)',
+      }));
+    });
+
+    it('ne saisit que le temps pas encore enregistré depuis le minuteur', async () => {
+      repo.find.mockResolvedValueOnce([{ dureeHeures: 1 }]);
+      const r = await service.saisirDepuisTache(tache, 5400, user, fin);
+      expect(r).toMatchObject({ creee: true, dureeHeures: 0.5 });
+    });
+
+    it('rien à saisir : aucun temps chronométré, ou déjà tout saisi', async () => {
+      repo.find.mockResolvedValueOnce([]);
+      expect(await service.saisirDepuisTache(tache, 0, user, fin)).toMatchObject({ creee: false, motif: 'AUCUN_TEMPS' });
+      repo.find.mockResolvedValueOnce([{ dureeHeures: 1.5 }]);
+      expect(await service.saisirDepuisTache(tache, 5400, user, fin)).toMatchObject({ creee: false, motif: 'DEJA_SAISI' });
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it("renvoie le refus du contrôle de pointage au lieu d'échouer", async () => {
+      repo.find.mockResolvedValueOnce([]);
+      jest.spyOn(service, 'create').mockRejectedValueOnce(new BadRequestException('Vous ne pouvez pas saisir plus de 2.00h'));
+      expect(await service.saisirDepuisTache(tache, 5400, user, fin))
+        .toEqual({ creee: false, motif: 'REFUSEE', message: 'Vous ne pouvez pas saisir plus de 2.00h' });
     });
   });
 });

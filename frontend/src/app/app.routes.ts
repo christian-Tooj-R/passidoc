@@ -160,6 +160,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/suivi-pieces/suivi-pieces.component').then((m) => m.SuiviPiecesComponent),
       },
       {
+        // CDC Missions §5 : tableau de bord cabinet des missions (le gérant de pôle n'y a pas accès)
+        path: 'missions',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'EXPERT_COMPTABLE', 'CHEF_ANTENNE', 'CHEF_MISSION', 'COLLABORATEUR'] },
+        loadComponent: () => import('./features/missions/missions-cabinet.component').then((m) => m.MissionsCabinetComponent),
+      },
+      {
         path: 'secteurs',
         loadComponent: () => import('./features/admin/secteurs-admin.component').then((m) => m.SecteursAdminComponent),
       },

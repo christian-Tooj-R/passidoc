@@ -453,6 +453,7 @@ export class TravailComponent implements OnInit, OnDestroy {
   timerStoppedH     = 0;
   timerStoppedStart = '';
   timerStoppedEnd   = '';
+  timerStoppedTaskId: number | null = null;
   timerFormClientId: number | null = null;
   timerFormClientSearch = '';
   timerFormMission  = '';
@@ -492,6 +493,7 @@ export class TravailComponent implements OnInit, OnDestroy {
       this.timerStoppedH = Math.round((elapsedSec / 3600) * 100) / 100;
     }
 
+    this.timerStoppedTaskId = ctx?.taskId ?? null;
     this.timerFormClientId = ctx?.clientId ?? null;
     this.syncTimerClientSearch();
     this.timerFormComment  = ctx?.taskTitre ?? '';
@@ -556,6 +558,7 @@ export class TravailComponent implements OnInit, OnDestroy {
       commentaire: this.timerFormComment  || undefined,
       heureDebut:  this.timerStoppedStart || undefined,
       heureFin:    this.timerStoppedEnd   || undefined,
+      taskId:      this.timerStoppedTaskId ?? undefined,
     };
     this.timerSaving.set(true);
     this.saisiesSvc.create(dto).subscribe({

@@ -13,6 +13,10 @@ import { AffairesService, aujourdhuiIso } from './affaires.service';
 import { RentabiliteService } from './rentabilite.service';
 import { ajouterJours, estCodeAffaire, etatAffaire } from './affaire.util';
 import { estLieuTravail, lieuParDefaut } from './lieu-travail';
+import {
+  SaisieAuto, TacheATerminer, MESSAGES_SANS_SAISIE,
+  champsSaisieTache, heureDebutAvant, heuresDeMinutes, minutesRestantes,
+} from './saisie-tache.util';
 
 const LIBELLES_TNF: Record<string, string> = {
   APPEL_CLIENT: 'Appel client',
@@ -186,6 +190,46 @@ export class SaisieTempsService {
       .filter(s => s.type === TypeTemps.NON_FACTURABLE)
       .reduce((a, s) => a + s.dureeHeures, 0);
     return { facturable, nonFacturable, total: facturable + nonFacturable };
+  }
+
+  /**
+   * Saisie automatique à la fin d'une tâche (cf. saisie-tache.util.ts) : enregistre pour le
+   * collaborateur le temps chronométré sur la tâche qui n'est pas encore saisi. Ne lève jamais
+   * d'erreur — terminer la tâche ne doit pas échouer : un refus (contrôle de cohérence avec le
+   * pointage) est renvoyé à l'appelant pour être affiché.
+   */
+  async saisirDepuisTache(
+    tache: TacheATerminer,
+    totalSecondes: number,
+    collaborateur: User,
+    fin: { date: string; heure: string },
+  ): Promise<SaisieAuto> {
+    const dejaSaisi = await this.repo.find({ where: { taskId: tache.id } });
+    const minutes = minutesRestantes(totalSecondes, dejaSaisi.reduce((a, s) => a + (s.dureeHeures || 0), 0));
+    if (minutes < 1) {
+      const motif = dejaSaisi.length ? 'DEJA_SAISI' : 'AUCUN_TEMPS';
+      return { creee: false, motif, message: MESSAGES_SANS_SAISIE[motif] };
+    }
+    const heureDebut = heureDebutAvant(fin.heure, minutes);
+    try {
+      const saisie = await this.create({
+        ...champsSaisieTache(tache),
+        date: fin.date,
+        dureeHeures: heuresDeMinutes(minutes),
+        ...(heureDebut ? { heureDebut, heureFin: fin.heure } : {}),
+        taskId: tache.id,
+      }, collaborateur);
+      return {
+        creee: true, saisieId: saisie.id, dureeHeures: saisie.dureeHeures, date: saisie.date,
+        collaborateurId: collaborateur.id,
+        collaborateur: `${collaborateur.firstName ?? ''} ${collaborateur.lastName ?? ''}`.trim(),
+      };
+    } catch (e: any) {
+      const message = e instanceof BadRequestException
+        ? e.message
+        : 'La saisie automatique du temps a échoué : saisissez-le depuis le module Travail.';
+      return { creee: false, motif: 'REFUSEE', message };
+    }
   }
 
   async remove(id: number, userId: number): Promise<void> {

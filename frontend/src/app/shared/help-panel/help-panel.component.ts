@@ -67,9 +67,9 @@ const MODULES: Module[] = [
   },
   {
     icon: 'task_alt', color: '#16A34A', bg: '#F0FDF4',
-    title: 'Missions', desc: 'Missions du cabinet : réalisées, refusées, détectées ou suggérées par l\'IA.',
-    tags: ['missions', 'honoraires', 'refus', 'détectée'],
-    tips: ['Les missions DÉTECTÉES sont des opportunités à proposer au client.', 'L\'IA peut suggérer automatiquement des missions (type IA).'],
+    title: 'Missions', desc: 'Par cycle de révision : recommandations au client et missions détectées ; pipeline de suivi (proposée, en discussion, acceptée, refusée, sans suite).',
+    tags: ['missions', 'honoraires', 'refus', 'cycle', 'pipeline', 'relance', 'révision'],
+    tips: ['Une mission créée dans un cycle apparaît automatiquement dans le pipeline.', 'Renseignez une date de relance : le responsable est prévenu 3 jours avant, puis le jour même.', '« Refusée » = le client a dit non ; « Sans suite » = jamais présentée au client.'],
   },
   {
     icon: 'flag', color: '#9333EA', bg: '#FAF5FF',

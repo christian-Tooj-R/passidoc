@@ -581,6 +581,15 @@ body.theme-dark .cdk-overlay-container {
 .badge-approche--AMICAL        { @extend .badge-green; }
 .badge-approche--INFORMEL      { @extend .badge-orange; }
 
+/* Statuts de suivi des missions (CDC module Missions §3.4) */
+.badge-mission { @extend .badge; white-space: nowrap; }
+.badge-mission--PROPOSEE      { @extend .badge-blue; }
+.badge-mission--EN_DISCUSSION { background: #FEFCE8; color: #A16207; border: 1px solid #FDE68A; }
+.badge-mission--ACCEPTEE      { @extend .badge-green; }
+.badge-mission--REFUSEE       { @extend .badge-red; }
+.badge-mission--SANS_SUITE    { @extend .badge-gray; }
+.badge-relance { @extend .badge; background: #DC2626; color: #fff; border: 1px solid #DC2626; white-space: nowrap; }
+
 .score-pill { @extend .badge; font-weight: 700; }
 .score-pill.high   { @extend .badge-green; }
 .score-pill.medium { @extend .badge-orange; }

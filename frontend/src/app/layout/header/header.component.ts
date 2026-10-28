@@ -538,7 +538,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     } else if (n.type === 'HEURES_HEBDO_INSUFFISANTES' || n.type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') {
       this.router.navigate(['/travail/temps/semaine']);
     } else if (n.clientId) {
-      const queryParams = n.type === 'TASK_ASSIGNED' ? { tab: 'tasks' } : {};
+      const queryParams = n.type === 'TASK_ASSIGNED' ? { tab: 'tasks' }
+        : n.type === 'MISSION_RELANCE' ? { tab: 'missions' } : {};
       this.router.navigate(['/clients', n.clientId], { queryParams });
     }
   }
@@ -551,6 +552,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   typeIcon(type: string): string {
     if (type === 'TEAM_ASSIGNED')   return 'people';
     if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
+    if (type === 'MISSION_RELANCE') return 'work_history';
     if (type === 'HEURES_HEBDO_INSUFFISANTES' || type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') return 'schedule';
     return 'task_alt';
   }

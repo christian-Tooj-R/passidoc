@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsDateString, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsDateString, IsBoolean, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatut, TaskPriorite, TaskType } from '../../entities/task.entity';
 
@@ -19,4 +19,10 @@ export class UpdateTaskDto {
   @ApiPropertyOptional() @IsOptional() @IsBoolean() enAttenteService?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() estRecurrente?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() estFacturable?: boolean;
+
+  /** Date et heure locales du navigateur au moment où la tâche est terminée : datent la
+   *  saisie de temps automatique (non stockées sur la tâche). */
+  @ApiPropertyOptional() @IsOptional() @IsDateString() dateFinLocale?: string;
+  @ApiPropertyOptional() @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'Heure invalide (HH:MM).' })
+  heureFinLocale?: string;
 }

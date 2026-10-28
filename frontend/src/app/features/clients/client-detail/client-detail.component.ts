@@ -34,7 +34,6 @@ import { ControleInterneTabComponent } from './tabs/controle-interne-tab/control
 
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
-import { DossierTravailTabComponent } from './tabs/dossier-travail-tab/dossier-travail-tab.component';
 import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
@@ -79,7 +78,7 @@ interface TabGroup {
     AnalyseStrategiqueTabComponent, MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
-    AdnTabComponent, DossierTravailTabComponent, CanvasTabComponent,
+    AdnTabComponent, CanvasTabComponent,
     DossierChatComponent, TachesRecurrentesTabComponent,
     GalerieTabComponent, GlobalTimerIndicatorComponent, RentabiliteTabComponent,
   ],
@@ -552,10 +551,9 @@ interface TabGroup {
                   @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('missions')     { <app-missions-tab            [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" [exerciceAnnee]="exerciceCourant()?.annee ?? 0" [prefill]="missionCIPrefill()" (prefillUsed)="missionCIPrefill.set(null)" /> }
+                  @case ('missions')     { <app-missions-tab            [clientId]="client.id" [exercice]="exerciceCourant()" [canEdit]="canEdit()" [utilisateurs]="allUsers()" [prefill]="missionCIPrefill()" (prefillUsed)="missionCIPrefill.set(null)" /> }
                   @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (navigateTo)="activeTab.set($any($event))" (exporterReco)="recommandationsCIImportees.set($event)" (creerMissionCI)="missionCIPrefill.set($event)" /> }
                   @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" [recommandationsCIImportees]="recommandationsCIImportees()" (recommandationsIntegrees)="recommandationsCIImportees.set([])" /> }
-                  @case ('dossier-travail') { <app-dossier-travail-tab   [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('taches-recurrentes') { <app-taches-recurrentes-tab [clientId]="client.id" /> }
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
@@ -1236,6 +1234,25 @@ interface TabGroup {
       pointer-events: auto !important;
       user-select: auto;
     }
+    /* Missions : onglets, cycles dépliables, détail d'une mission et filtres restent consultables
+       (exercice clôturé, ou dossier ouvert par un non-intervenant — gérant de pôle compris) */
+    ::ng-deep .content__body--cloture app-missions-tab .mt-tabs,
+    ::ng-deep .content__body--cloture app-missions-tab .mt-tabs *,
+    ::ng-deep .content__body--cloture app-missions-tab .cy-h,
+    ::ng-deep .content__body--cloture app-missions-tab .cy-h *,
+    ::ng-deep .content__body--cloture app-missions-tab .lnk,
+    ::ng-deep .content__body--cloture app-missions-tab .bar,
+    ::ng-deep .content__body--cloture app-missions-tab .bar *,
+    ::ng-deep .content__body--readonly app-missions-tab .mt-tabs,
+    ::ng-deep .content__body--readonly app-missions-tab .mt-tabs *,
+    ::ng-deep .content__body--readonly app-missions-tab .cy-h,
+    ::ng-deep .content__body--readonly app-missions-tab .cy-h *,
+    ::ng-deep .content__body--readonly app-missions-tab .lnk,
+    ::ng-deep .content__body--readonly app-missions-tab .bar,
+    ::ng-deep .content__body--readonly app-missions-tab .bar * {
+      pointer-events: auto !important;
+      user-select: auto;
+    }
   `],
 })
 export class ClientDetailComponent implements OnInit, OnDestroy {
@@ -1280,7 +1297,6 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
         { id: 'missions',         icon: 'assignment',   label: 'Missions' },
         { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
         { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
-        { id: 'dossier-travail',      icon: 'work_history', label: 'Dossier de travail' },
         { id: 'canvas',               icon: 'grid_view',    label: 'Modèle Canvas' },
         { id: 'taches-recurrentes',   icon: 'repeat',       label: 'Tâches récurrentes' },
       ],
@@ -1345,7 +1361,8 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     const tab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
-    if (tab) this.activeTab.set(tab);
+    // L'ancien « Dossier de travail » (révision par cycle) est fusionné dans Missions › Par cycle.
+    if (tab) this.activeTab.set(tab === 'dossier-travail' ? 'missions' : tab);
     const start = Date.now();
     this.clientsService.getOne(id).subscribe(c => {
       this.client = c;

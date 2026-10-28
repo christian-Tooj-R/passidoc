@@ -64,6 +64,9 @@ export interface CreateSaisieTempsDto {
   affaire?: string | null;
   /** Absent = site du collaborateur (création) ou inchangé (modification). */
   lieuTravail?: LieuTravail | null;
+  /** Tâche chronométrée dont provient ce temps : évite de le saisir à nouveau quand la tâche
+   *  se termine (saisie automatique côté serveur). */
+  taskId?: number | null;
 }
 
 export interface RatioSemaine {
@@ -288,6 +291,21 @@ export class TimerService {
   resume() {
     if (this.status() !== 'paused') return;
     this._resumeFrom(this.elapsedSec());
+  }
+
+  /**
+   * Abandonne le minuteur d'une tâche dont le temps vient d'être saisi automatiquement (tâche
+   * terminée) : arrêt s'il est actif sur cette tâche, oubli de son temps s'il était en pause.
+   */
+  oublierTache(taskId: number) {
+    if (this.activeTaskCtx()?.taskId === taskId) {
+      this.stop();
+      return;
+    }
+    if (this.pausedTasks()[taskId]) {
+      this.pausedTasks.update(m => { const n = { ...m }; delete n[taskId]; return n; });
+      this._persistPaused();
+    }
   }
 
   /** Arrête définitivement et renvoie la durée en heures — comportement historique inchangé. */

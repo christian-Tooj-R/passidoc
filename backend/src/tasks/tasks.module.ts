@@ -9,9 +9,10 @@ import { Task } from '../entities/task.entity';
 import { TaskComment } from '../entities/task-comment.entity';
 import { User } from '../entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SaisieTempsModule } from '../saisie-temps/saisie-temps.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, TaskComment, User]), NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Task, TaskComment, User]), NotificationsModule, SaisieTempsModule],
   controllers: [TasksController, AllTasksController],
   providers: [TasksService, TaskCommentsService, TasksScheduler],
 })

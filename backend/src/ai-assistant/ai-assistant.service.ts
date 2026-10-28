@@ -8,6 +8,7 @@ import { Client } from '../entities/client.entity';
 import { ConversationIA, MessageRole } from '../entities/conversation-ia.entity';
 import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel, TypeFlux, StatutDepot } from '../entities/flux-mensuel.entity';
+import { LIBELLES_STATUT, StatutMission, nomCycle } from '../missions/missions.util';
 import { TenantConfig } from '../entities/tenant-config.entity';
 
 @Injectable()
@@ -415,8 +416,12 @@ export class AiAssistantService {
     // ── Missions ──────────────────────────────────────────────────────────────
     if (missions.length) {
       lines.push(`\n=== MISSIONS (${missions.length}) ===`);
-      missions.forEach((m: any) => lines.push(
-        `  [${m.type}] ${m.titre}${m.honoraires ? ` — ${m.honoraires.toLocaleString('fr-FR')} €` : ''}${m.raisonRefus ? ` (Refus : ${m.raisonRefus})` : ''}`,
+      missions.filter((m: any) => !m.archivee).forEach((m: any) => lines.push(
+        `  [${LIBELLES_STATUT[m.statut as StatutMission] ?? m.type}] ${m.titre}`
+        + ` — ${m.cycle ? `cycle ${nomCycle(m.cycle)}` : 'hors cycle'}`
+        + `${m.honoraires ? ` — ${m.honoraires.toLocaleString('fr-FR')} € HT estimés` : ''}`
+        + `${m.dateRelance ? ` — relance le ${m.dateRelance}` : ''}`
+        + `${m.raisonRefus ? ` (Refus : ${m.raisonRefus})` : ''}`,
       ));
     }
 

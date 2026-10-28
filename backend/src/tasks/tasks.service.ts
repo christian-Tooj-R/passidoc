@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Task, TaskStatut } from '../entities/task.entity';
 import { User, UserRole, PoleService } from '../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SaisieTempsService } from '../saisie-temps/saisie-temps.service';
+import { SaisieAuto, horodatageLocal } from '../saisie-temps/saisie-tache.util';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -13,6 +15,7 @@ export class TasksService {
     @InjectRepository(Task) private repo: Repository<Task>,
     @InjectRepository(User) private userRepo: Repository<User>,
     private notifications: NotificationsService,
+    private saisies: SaisieTempsService,
   ) {}
 
   private async notifyPole(
@@ -214,8 +217,10 @@ export class TasksService {
       if (!allowed) throw new ForbiddenException('Vous ne pouvez pas assigner cette tâche à cet utilisateur');
     }
 
-    const updates: Partial<Task> = { ...dto } as any;
+    const { dateFinLocale, heureFinLocale, ...champs } = dto;
+    const updates: Partial<Task> = { ...champs } as any;
     const now = new Date();
+    const termine = dto.statut === TaskStatut.TERMINEE && task.statut !== TaskStatut.TERMINEE;
 
     // Chrono : sortie d'EN_COURS → accumuler le temps écoulé
     if (task.statut === TaskStatut.EN_COURS && dto.statut && dto.statut !== TaskStatut.EN_COURS && task.debutEnCours) {
@@ -248,7 +253,7 @@ export class TasksService {
     }
 
     // Compatibilité : passage à TERMINEE → enregistrer heure fin
-    if (dto.statut === 'TERMINEE' && task.statut !== 'TERMINEE') {
+    if (termine) {
       updates.heureFin = now;
       if (task.heureDebut && !updates.tempsExecution) {
         updates.tempsExecution = (now.getTime() - new Date(task.heureDebut).getTime()) / 60000;
@@ -276,7 +281,46 @@ export class TasksService {
     }
 
     await this.repo.update(id, updates);
-    return this.repo.findOne({ where: { id }, relations: ['assignee', 'createdBy', 'client'] });
+    const saisieAuto = termine
+      ? await this.saisirTemps(task, updates, now, currentUser, { date: dateFinLocale, heure: heureFinLocale })
+      : null;
+    const maj = await this.repo.findOne({ where: { id }, relations: ['assignee', 'createdBy', 'client'] });
+    return saisieAuto ? { ...maj, saisieAuto } : maj;
+  }
+
+  /**
+   * Tâche terminée → saisie automatique du temps chronométré dans la saisie des temps du
+   * collaborateur assigné (à défaut : de celui qui la termine). Fin = heure locale envoyée par
+   * le navigateur, sinon fuseau du collaborateur.
+   */
+  private async saisirTemps(
+    task: Task,
+    updates: Partial<Task>,
+    now: Date,
+    currentUser: User | undefined,
+    finLocale: { date?: string; heure?: string },
+  ): Promise<SaisieAuto | null> {
+    const assigneeId = updates.assigneeId ?? task.assigneeId;
+    const collaborateur = assigneeId && assigneeId !== currentUser?.id
+      ? await this.userRepo.findOne({ where: { id: assigneeId } })
+      : currentUser ?? null;
+    if (!collaborateur) return null;
+    const fin = finLocale.date && finLocale.heure
+      ? { date: finLocale.date, heure: finLocale.heure }
+      : horodatageLocal(now, collaborateur.timezone);
+    return this.saisies.saisirDepuisTache(
+      {
+        id: task.id,
+        taskId: task.taskId,
+        titre: updates.titre ?? task.titre,
+        type: updates.type ?? task.type,
+        clientId: task.clientId,
+        estFacturable: updates.estFacturable ?? task.estFacturable,
+      },
+      updates.tempsTotalSecondes ?? task.tempsTotalSecondes ?? 0,
+      collaborateur,
+      fin,
+    );
   }
 
   async remove(id: number) {

@@ -74,6 +74,12 @@ export class SaisieTemps {
   @Column({ type: 'varchar', length: 12, nullable: true })
   lieuTravail: string | null;
 
+  /** Tâche dont provient ce temps (minuteur de la tâche ou saisie automatique à sa fin) — sert
+   *  à ne pas saisir deux fois le même temps chronométré. Sans contrainte : la saisie survit à
+   *  la suppression de la tâche. */
+  @Column({ type: 'int', nullable: true })
+  taskId: number | null;
+
   @Column({ default: false })
   isLocked: boolean;
 

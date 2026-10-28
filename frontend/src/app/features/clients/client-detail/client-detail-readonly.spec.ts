@@ -269,12 +269,17 @@ async function createMissionsTab(readonly: boolean) {
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideAnimations(),
       { provide: ToastService,    useValue: mockToast },
       { provide: ConfirmService,  useValue: mockConfirm },
-      { provide: MissionsService, useValue: { ...mockMissions, getAll: vi.fn().mockReturnValue(of([])) } },
+      { provide: AuthService,     useValue: { isGerantOuest: () => false, isCollaborateur: () => false, currentUser: () => makeUser(1, 'ADMIN') } },
+      { provide: MissionsService, useValue: {
+        ...mockMissions, getAll: vi.fn().mockReturnValue(of([])),
+        synthese: vi.fn().mockReturnValue(of(null)), cycles: vi.fn().mockReturnValue(of({ cycles: [], recommandations: {}, dejaRefusees: [] })),
+      } },
     ],
   }).compileComponents();
   const fix = TestBed.createComponent(MissionsTabComponent);
-  fix.componentInstance.clientId = 1;
-  fix.componentInstance.readonly = readonly;
+  fix.componentRef.setInput('clientId', 1);
+  fix.componentRef.setInput('exercice', { id: 5, annee: 2026, statut: 'OUVERT' } as any);
+  fix.componentRef.setInput('canEdit', !readonly);
   fix.detectChanges();
   return fix;
 }
@@ -409,25 +414,27 @@ describe('SyntheseTabComponent — readonly', () => {
 
 describe('MissionsTabComponent — readonly', () => {
   beforeEach(() => vi.clearAllMocks());
+  const boutons = (fix: any) => [...fix.nativeElement.querySelectorAll('button')].map((b: Element) => b.textContent ?? '');
+  const ouvrirCycle = (fix: any) => { (fix.nativeElement.querySelector('.cy-h') as HTMLButtonElement).click(); fix.detectChanges(); };
 
-  it('pas de bouton "Ajouter une mission" quand readonly=true', async () => {
+  it('pas de bouton "Ajouter une mission" ni de saisie quand readonly=true', async () => {
     const fix = await createMissionsTab(true);
-    const libelles = [...fix.nativeElement.querySelectorAll('button')].map((b: Element) => b.textContent ?? '');
-    expect(libelles.some(t => t.includes('Ajouter une mission'))).toBe(false);
-  });
-
-  it('bouton "Ajouter une mission" actif quand readonly=false', async () => {
-    const fix = await createMissionsTab(false);
-    const btn = fix.nativeElement.querySelector('button[color="primary"]') as HTMLButtonElement | null;
-    expect(btn?.disabled).toBe(false);
-  });
-
-  it('bouton submit désactivé quand readonly=true', async () => {
-    const fix = await createMissionsTab(true);
-    fix.componentInstance.showForm = true;
+    ouvrirCycle(fix);
+    await fix.whenStable();   // ngModel applique [disabled] de façon asynchrone
+    expect(boutons(fix).some(t => t.includes('Ajouter une mission'))).toBe(false);
+    expect((fix.nativeElement.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(true);
+    fix.componentInstance.vue.set('pipeline');
     fix.detectChanges();
-    const submit = fix.nativeElement.querySelector('.btn-submit') as HTMLButtonElement | null;
-    expect(submit?.disabled).toBe(true);
+    expect(boutons(fix).some(t => t.includes('Nouvelle mission'))).toBe(false);
+  });
+
+  it('boutons "Ajouter une mission" et "Nouvelle mission" présents quand readonly=false', async () => {
+    const fix = await createMissionsTab(false);
+    ouvrirCycle(fix);
+    expect(boutons(fix).some(t => t.includes('Ajouter une mission'))).toBe(true);
+    fix.componentInstance.vue.set('pipeline');
+    fix.detectChanges();
+    expect(boutons(fix).some(t => t.includes('Nouvelle mission'))).toBe(true);
   });
 });
 

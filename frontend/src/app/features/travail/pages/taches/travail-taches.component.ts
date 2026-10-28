@@ -615,8 +615,7 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
     this.applyStatutRemote(task.id, task.clientId, 'EN_PAUSE');
   }
 
-  private applyStatutRemote(taskId: number, clientId: number | undefined, statut: string) {
-    if (!clientId) return;
+  private applyStatutRemote(taskId: number, clientId: number | null | undefined, statut: string) {
     this.tasksService.update(clientId, taskId, { statut: statut as any }).pipe(takeUntil(this._destroy$)).subscribe({
       next: () => {
         const t = this.allTasks().find(x => x.id === taskId);
