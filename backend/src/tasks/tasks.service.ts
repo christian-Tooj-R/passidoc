@@ -156,7 +156,8 @@ export class TasksService {
       enAttente,
       tauxCompletion,
       tempsMoyen: Math.round(tempsMoyen * 10) / 10,
-      parCollaborateur: Object.values(byCollab),
+      // Minutes entières : la valeur est reprise telle quelle dans les exports Excel/PDF.
+      parCollaborateur: Object.values(byCollab).map(c => ({ ...c, tempsTotal: Math.round(c.tempsTotal) })),
       parType: Object.entries(byType).map(([type, count]) => ({ type, count })),
     };
   }

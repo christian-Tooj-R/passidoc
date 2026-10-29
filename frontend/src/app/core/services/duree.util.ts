@@ -45,3 +45,13 @@ export function parseHHMM(input: string): number | null {
   const duree = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
   return duree > 0 ? duree : null;
 }
+
+/** Durée en MINUTES (ex. `Task.tempsExecution`) → texte court de carte : 4 → « 4min »,
+ *  65 → « 1h05 », 120 → « 2h » (arrondi sur le total : 119,6 donne « 2h », pas « 1h60 »). */
+export function formatMinutes(minutes: number): string {
+  const total = Math.round(minutes);
+  if (total < 1) return '< 1min';
+  if (total < 60) return `${total}min`;
+  const h = Math.floor(total / 60), m = total % 60;
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}

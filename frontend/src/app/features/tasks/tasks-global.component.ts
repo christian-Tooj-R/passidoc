@@ -33,7 +33,7 @@ import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { TimerService, SaisieTempsService, SaisieTemps, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
-import { parseHHMM, toHHMM } from '../../core/services/duree.util';
+import { formatMinutes, parseHHMM, toHHMM } from '../../core/services/duree.util';
 
 interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolean; tasks: Task[]; }
 
@@ -272,7 +272,7 @@ export class SyntheseDialogComponent implements OnInit {
           t.heureDebut ?? '', t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '',
           t.client?.nom ?? '', t.titre, t.type ?? '',
           t.createdBy ? `${t.createdBy.firstName} ${t.createdBy.lastName}` : '',
-          this.statutLabelFr(t.statut), t.heureFin ?? '', t.tempsExecution ?? '', t.semaine ?? this.semaine]);
+          this.statutLabelFr(t.statut), t.heureFin ?? '', t.tempsExecution ? Math.round(t.tempsExecution) : '', t.semaine ?? this.semaine]);
       }
       rows.push([]); rows.push(['Indicateurs hebdomadaires']);
       rows.push(['Total des tâches', this.dashboard!.total]); rows.push(['Tâches terminées', this.dashboard!.terminees]);
@@ -323,7 +323,7 @@ export class SyntheseDialogComponent implements OnInit {
           t.type ?? '—',
           t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : '—',
           this.statutLabelFr(t.statut),
-          t.tempsExecution ? String(t.tempsExecution) : '—',
+          t.tempsExecution ? String(Math.round(t.tempsExecution)) : '—',
         ]),
         headStyles: { fillColor: [99, 102, 241], fontSize: 8, fontStyle: 'bold' },
         bodyStyles: { fontSize: 7.5 },
@@ -356,10 +356,7 @@ export class SyntheseDialogComponent implements OnInit {
     return m[s] ?? s;
   }
   formatTime(minutes: number): string {
-    if (!minutes || minutes <= 0) return '—';
-    if (minutes < 60) return `${Math.round(minutes)}min`;
-    const h = Math.floor(minutes / 60); const m = Math.round(minutes % 60);
-    return m > 0 ? `${h}h${m}` : `${h}h`;
+    return !minutes || minutes <= 0 ? '—' : formatMinutes(minutes);
   }
 }
 
@@ -1747,10 +1744,7 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   formatTime(minutes: number): string {
-    if (!minutes || minutes <= 0) return '—';
-    if (minutes < 60) return `${Math.round(minutes)}min`;
-    const h = Math.floor(minutes / 60); const m = Math.round(minutes % 60);
-    return m > 0 ? `${h}h${m}` : `${h}h`;
+    return !minutes || minutes <= 0 ? '—' : formatMinutes(minutes);
   }
 
   formatSeconds(seconds: number): string {
@@ -3364,9 +3358,6 @@ export class TasksGlobalComponent implements OnInit, OnDestroy {
   }
 
   formatTime(minutes: number): string {
-    if (!minutes || minutes <= 0) return '—';
-    if (minutes < 60) return `${Math.round(minutes)}min`;
-    const h = Math.floor(minutes / 60); const m = Math.round(minutes % 60);
-    return m > 0 ? `${h}h${m}` : `${h}h`;
+    return !minutes || minutes <= 0 ? '—' : formatMinutes(minutes);
   }
 }

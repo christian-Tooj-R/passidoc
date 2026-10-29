@@ -17,6 +17,7 @@ import { Client } from '../../../../core/models/client.model';
 import { User } from '../../../../core/models/user.model';
 import { LocalDatePipe } from '../../../../core/pipes/local-date.pipe';
 import { TimerService } from '../../../../core/services/saisie-temps.service';
+import { formatHeures } from '../../../../core/services/duree.util';
 
 @Component({
   selector: 'app-travail-taches',
@@ -58,7 +59,7 @@ import { TimerService } from '../../../../core/services/saisie-temps.service';
       <div class="kpi-lbl">Non faites</div>
     </div>
     <div class="kpi-card kpi-purple">
-      <div class="kpi-num">{{ totalHeures() }}h</div>
+      <div class="kpi-num">{{ tempsTotal() }}</div>
       <div class="kpi-lbl">Temps total</div>
     </div>
   </div>
@@ -534,7 +535,11 @@ export class TravailTachesComponent implements OnInit, OnDestroy {
 
   countByStatut(statut: string) { return this.allTasks().filter(t => t.statut === statut).length; }
 
-  totalHeures() { return this.allTasks().reduce((acc, t) => acc + (t.tempsExecution ?? 0), 0); }
+  /** Même temps par tâche que la carte Kanban : chronométré, sinon `tempsExecution` (minutes). */
+  tempsTotal() {
+    const minutes = this.allTasks().reduce((acc, t) => acc + (t.tempsTotalSecondes ? t.tempsTotalSecondes / 60 : (t.tempsExecution ?? 0)), 0);
+    return formatHeures(minutes / 60);
+  }
 
   isOverdue(task: Task): boolean {
     if (!task.dateEcheance) return false;

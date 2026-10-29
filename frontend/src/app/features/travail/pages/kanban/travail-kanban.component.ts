@@ -14,6 +14,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { Client } from '../../../../core/models/client.model';
 import { User } from '../../../../core/models/user.model';
 import { TimerService } from '../../../../core/services/saisie-temps.service';
+import { formatMinutes } from '../../../../core/services/duree.util';
 
 interface KanbanColumn {
   id: string;
@@ -162,10 +163,10 @@ const COLUMNS: KanbanColumn[] = [
                       {{ formatDate(task.dateEcheance) }}
                     </span>
                   }
-                  @if (task.tempsExecution) {
-                    <span class="card-time">
+                  @if (dureeCarte(task); as d) {
+                    <span class="card-time" [matTooltip]="d.aide">
                       <mat-icon>schedule</mat-icon>
-                      {{ task.tempsExecution }}h
+                      {{ d.texte }}
                     </span>
                   }
                 </div>
@@ -591,6 +592,14 @@ export class TravailKanbanComponent implements OnInit, OnDestroy {
     if (!d) return '—';
     const [y, m, day] = d.split('T')[0].split('-');
     return `${day}/${m}`;
+  }
+
+  /** Temps de la carte : le temps chronométré (comme la vue liste des tâches), sinon
+   *  `tempsExecution` — en minutes, le délai entre la création et la fin de la tâche. */
+  dureeCarte(task: Task): { texte: string; aide: string } | null {
+    if (task.tempsTotalSecondes) return { texte: formatMinutes(task.tempsTotalSecondes / 60), aide: 'Temps chronométré' };
+    if (task.tempsExecution) return { texte: formatMinutes(task.tempsExecution), aide: 'Délai entre la création et la fin de la tâche' };
+    return null;
   }
 
   /** Démarre le minuteur sur cette tâche (ou reprend son temps s'il était en pause). Si une
