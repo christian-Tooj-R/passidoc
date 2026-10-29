@@ -32,10 +32,7 @@ export class UsersService {
 
   async findAll(currentUser?: User) {
     const tid = currentUser?.tenantId;
-    // Le tarif de vente des collègues n'est visible que de l'ADMIN (chacun voit le sien).
-    const masquer = (u: User) => (!currentUser || currentUser.role === UserRole.ADMIN || u.id === currentUser.id)
-      ? this.sanitize(u)
-      : { ...this.sanitize(u), prixVenteHoraire: null };
+    const masquer = (u: User) => this.pourLecteur(u, currentUser);
     if (currentUser && currentUser.role === UserRole.CHEF_ANTENNE) {
       const users = await this.repo.find({ where: { antenne: currentUser.antenne as UserAntenne, ...(tid ? { tenantId: tid } : {}) }, order: { createdAt: 'DESC' } });
       return users.map(masquer);
@@ -86,13 +83,13 @@ export class UsersService {
       const team = await this.repo.find({ where: { ...base, antenne: currentUser.antenne as UserAntenne, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const all = self ? [self, ...team.filter(u => u.id !== currentUser.id)] : team;
-      return all.map(u => this.sanitize(u));
+      return all.map(u => this.pourLecteur(u, currentUser));
     }
     if (currentUser.role === UserRole.CHEF_MISSION) {
       const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const all = self ? [self, ...team] : team;
-      return all.map(u => this.sanitize(u));
+      return all.map(u => this.pourLecteur(u, currentUser));
     }
     // Symétrique depuis le passage à EST/OUEST : un collaborateur voit l'équipe de
     // l'autre pôle, quel que soit le sien (avant, réservé au pôle 1).
@@ -101,10 +98,10 @@ export class UsersService {
       const autreTeam = await this.repo.find({ where: { ...base, site: autrePole, isActive: true } });
       const self = await this.repo.findOne({ where: { id: currentUser.id } });
       const result = self ? [self, ...autreTeam] : autreTeam;
-      return result.map(u => this.sanitize(u));
+      return result.map(u => this.pourLecteur(u, currentUser));
     }
     const self = await this.repo.findOne({ where: { id: currentUser.id } });
-    return self ? [this.sanitize(self)] : [];
+    return self ? [this.pourLecteur(self, currentUser)] : [];
   }
 
   async getMyTeam(currentUser: User) {
@@ -112,15 +109,15 @@ export class UsersService {
     const base = tid ? { tenantId: tid } : {};
     if ([UserRole.ADMIN, UserRole.EXPERT_COMPTABLE].includes(currentUser.role)) {
       const team = await this.repo.find({ where: { ...base, isActive: true }, order: { lastName: 'ASC', firstName: 'ASC' } });
-      return { referent: null, team: team.map(u => this.sanitize(u)) };
+      return { referent: null, team: team.map(u => this.pourLecteur(u, currentUser)) };
     }
     if (currentUser.role === UserRole.CHEF_ANTENNE || currentUser.role === UserRole.GERANT_OUEST) {
       const team = await this.repo.find({ where: { ...base, antenne: currentUser.antenne as UserAntenne, isActive: true } });
-      return { referent: null, team: team.map(u => this.sanitize(u)) };
+      return { referent: null, team: team.map(u => this.pourLecteur(u, currentUser)) };
     }
     if (currentUser.role === UserRole.CHEF_MISSION) {
       const team = await this.repo.find({ where: { ...base, referentId: currentUser.id, isActive: true } });
-      return { referent: null, team: team.map(u => this.sanitize(u)) };
+      return { referent: null, team: team.map(u => this.pourLecteur(u, currentUser)) };
     }
     // Symétrique depuis le passage à EST/OUEST : plus de branche réservée au pôle 1.
     // Tout collaborateur voit à la fois son référent et ses propres supervisés.
@@ -128,7 +125,7 @@ export class UsersService {
     const referent = currentUser.referentId
       ? await this.repo.findOne({ where: { id: currentUser.referentId } })
       : null;
-    return { referent: referent ? this.sanitize(referent) : null, team: team.map(u => this.sanitize(u)) };
+    return { referent: referent ? this.pourLecteur(referent, currentUser) : null, team: team.map(u => this.pourLecteur(u, currentUser)) };
   }
 
   async setReferent(userId: number, referentId: number | null, actorId: number) {
@@ -177,12 +174,12 @@ export class UsersService {
   }
 
   /** Organigramme : tous les users actifs du tenant (tous rôles) */
-  async getOrgChart(tenantId: number) {
+  async getOrgChart(currentUser: User) {
     const users = await this.repo.find({
-      where: { tenantId, isActive: true },
+      where: { tenantId: currentUser.tenantId, isActive: true },
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
-    return users.map(this.sanitize);
+    return users.map(u => this.pourLecteur(u, currentUser));
   }
 
   /** Vue salariés : tous les users actifs + anciens, triés par nom */
@@ -292,5 +289,13 @@ export class UsersService {
   private sanitize(user: User) {
     const { password, twoFactorSecret, ...safe } = user;
     return safe;
+  }
+
+  /** Fiche vue par `lecteur` (politique RH) : salaire, banque, IBAN et tarif de vente ne sont
+   *  visibles que de l'ADMIN et de l'intéressé — annuaire, organigramme, équipe, assignables. */
+  pourLecteur(u: User, lecteur?: Pick<User, 'id' | 'role'>) {
+    const safe = this.sanitize(u);
+    if (!lecteur || lecteur.role === UserRole.ADMIN || lecteur.id === u.id) return safe;
+    return { ...safe, salaireBase: null, modePaiement: null, banque: null, iban: null, prixVenteHoraire: null };
   }
 }

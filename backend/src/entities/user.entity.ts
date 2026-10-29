@@ -213,4 +213,21 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  /** Un utilisateur imbriqué dans une réponse (assignee d'une tâche, collaborateur d'une saisie,
+   *  auteur, salarie…) ne sort qu'avec son identité professionnelle : jamais le hash du mot de
+   *  passe, le secret 2FA, la paie ni l'état civil. Les routes /users renvoient des objets
+   *  simples (`sanitize`, `pourLecteur`), non concernés : ce sont elles qui appliquent la
+   *  politique RH (ADMIN ou soi-même). */
+  toJSON() {
+    const {
+      password, twoFactorSecret,
+      salaireBase, modePaiement, banque, iban, prixVenteHoraire,
+      numeroSS, numeroCIN, numeroFiscal,
+      dateNaissance, lieuNaissance, sexe, nationalite, situationMatrimoniale, nbEnfantsCharge,
+      adresse, codePostal, ville,
+      ...pro
+    } = this;
+    return pro;
+  }
 }

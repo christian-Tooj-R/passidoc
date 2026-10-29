@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
+import { DossierCabinetInterceptor } from './clients/dossier-cabinet.interceptor';
 import { FicheIdentiteModule } from './fiche-identite/fiche-identite.module';
 import { FluxMensuelModule } from './flux-mensuel/flux-mensuel.module';
 import { SuiviPiecesModule } from './suivi-pieces/suivi-pieces.module';
@@ -138,6 +139,8 @@ import { TenantConfig } from './entities/tenant-config.entity';
   controllers: [AppController],
   providers: [
     AppService,
+    // Avant l'audit : une requête refusée n'est pas journalisée comme une modification.
+    { provide: APP_INTERCEPTOR, useClass: DossierCabinetInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     TenantMiddleware,
   ],

@@ -65,9 +65,7 @@ export class UsersController {
    *  ou le collaborateur consultant sa propre fiche — évite l'exposition des salaires de
    *  toute l'équipe à un simple collaborateur consultant l'annuaire RH. */
   private scopePaieFields(u: any, requester: any) {
-    const canSeePaie = requester?.role === UserRole.ADMIN || requester?.id === u.id;
-    if (canSeePaie) return u;
-    return { ...u, salaireBase: null, modePaiement: null, banque: null, iban: null, prixVenteHoraire: null };
+    return this.usersService.pourLecteur(u, requester);
   }
 
   @Patch(':id/rh')
@@ -105,7 +103,7 @@ export class UsersController {
   @Get('org-chart')
   @ApiOperation({ summary: 'Organigramme complet en lecture seule (tous rôles authentifiés)' })
   getOrgChart(@Req() req: any) {
-    return this.usersService.getOrgChart(req.user.tenantId);
+    return this.usersService.getOrgChart(req.user);
   }
 
   @Patch(':id/referent')
