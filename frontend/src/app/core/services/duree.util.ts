@@ -55,3 +55,11 @@ export function formatMinutes(minutes: number): string {
   const h = Math.floor(total / 60), m = total % 60;
   return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
 }
+
+/** Temps d'une carte de tâche : le temps chronométré, sinon `tempsExecution` (en minutes,
+ *  le délai entre la création et la fin de la tâche), avec l'infobulle qui dit lequel. */
+export function dureeCarteTache(t: { tempsTotalSecondes?: number | null; tempsExecution?: number | null }): { texte: string; aide: string } | null {
+  if (t.tempsTotalSecondes) return { texte: formatMinutes(t.tempsTotalSecondes / 60), aide: 'Temps chronométré' };
+  if (t.tempsExecution) return { texte: formatMinutes(t.tempsExecution), aide: 'Délai entre la création et la fin de la tâche' };
+  return null;
+}

@@ -88,6 +88,18 @@ describe('ClientDetailComponent', () => {
     expect(comp.activeTab()).toBe('rentabilite');
   });
 
+  it('un onglet inconnu (ancien lien ?tab=tasks) laisse l’onglet par défaut au lieu d’une page vide', async () => {
+    ongletDemande = 'tasks';
+    const { comp } = await createComponent();
+    expect(comp.activeTab()).toBe('fiche');
+  });
+
+  it('l’ancien lien ?tab=dossier-travail ouvre Missions', async () => {
+    ongletDemande = 'dossier-travail';
+    const { comp } = await createComponent();
+    expect(comp.activeTab()).toBe('missions');
+  });
+
   it('propose l’onglet Rentabilité dans le groupe Comptabilité', async () => {
     const { comp } = await createComponent();
     const compta = comp.TAB_GROUPS.find(g => g.label === 'Comptabilité')!;

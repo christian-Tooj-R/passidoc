@@ -369,7 +369,7 @@ export class MailService {
               Sur le dossier <strong>${opts.dossier}</strong> (affaire ${opts.affaire}), <strong>${opts.heures}</strong>
               ont été consommées pour un budget de <strong>${opts.heuresBudget}</strong> (${opts.pourcentage} %).
             </p>
-            <a href="${opts.appUrl}/clients/${opts.clientId}"
+            <a href="${opts.appUrl}/clients/${opts.clientId}?tab=rentabilite"
                style="display:inline-block;background:#1565C0;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
               Voir la rentabilité du dossier
             </a>

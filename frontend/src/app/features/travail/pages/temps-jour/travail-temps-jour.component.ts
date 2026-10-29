@@ -154,7 +154,7 @@ const PAGE_SIZES = [25, 50, 100];
             <tr class="data-row">
               <td class="td-date">{{ formatDate(r.date) }}</td>
               <td class="td-collab">{{ r.collaborateur ?? '—' }}</td>
-              <td class="td-client">{{ r.client ?? '—' }}</td>
+              <td class="td-client">{{ r.client ?? '—' }}@if (r.affaire) { <span class="td-affaire">{{ r.affaire }}</span> }</td>
               <td>{{ r.missionCode ?? '—' }}</td>
               <td class="td-heures">{{ formatH(r.dureeHeures) }}</td>
               <td>
@@ -266,6 +266,7 @@ const PAGE_SIZES = [25, 50, 100];
     .td-date   { white-space:nowrap; font-variant-numeric:tabular-nums; }
     .td-collab { color:#475569; white-space:nowrap; }
     .td-client { color:#475569; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .td-affaire { display:block; font-family:monospace; font-size:11px; color:#94a3b8; }
     .td-heures { font-family:monospace; font-weight:700; color:#7c3aed; text-align:right; font-size:13px; }
     .td-comment { color:#64748b; font-size:11.5px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .td-actions { text-align:right; white-space:nowrap; }
@@ -377,6 +378,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
     if (!q) return this.rows();
     return this.rows().filter(r =>
       (r.client ?? '').toLowerCase().includes(q) ||
+      (r.affaire ?? '').toLowerCase().includes(q) ||
       (r.collaborateur ?? '').toLowerCase().includes(q) ||
       (r.missionCode ?? '').toLowerCase().includes(q) ||
       (r.commentaire ?? '').toLowerCase().includes(q),
@@ -438,16 +440,21 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
   }
 
   // ── Édition ──
+  /** L'affaire enregistrée est transmise : sans elle, le formulaire affichait « Automatique ». */
+  private seedDe(r: any): SaisieEditSeed {
+    return {
+      date: r.date, clientId: r.clientId ?? null, missionCode: r.missionCode ?? null,
+      dureeHeures: r.dureeHeures, type: r.type, categorie: r.categorie ?? null,
+      commentaire: r.commentaire ?? null, heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
+      affaire: r.affaire ?? null, lieuTravail: r.lieuTravail ?? null,
+    };
+  }
+
   startEdit(r: any) {
     this.editMode.set('edit');
     this.editingId.set(r.id);
     this.editError.set('');
-    this.editSeed.set({
-      date: r.date, clientId: r.clientId ?? null, missionCode: r.missionCode ?? null,
-      dureeHeures: r.dureeHeures, type: r.type, categorie: r.categorie ?? null,
-      commentaire: r.commentaire ?? null, heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
-      lieuTravail: r.lieuTravail ?? null,
-    });
+    this.editSeed.set(this.seedDe(r));
     this.editing.set(true);
   }
 
@@ -455,12 +462,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
     this.editMode.set('duplicate');
     this.editingId.set(null);
     this.editError.set('');
-    this.editSeed.set({
-      date: r.date, clientId: r.clientId ?? null, missionCode: r.missionCode ?? null,
-      dureeHeures: r.dureeHeures, type: r.type, categorie: r.categorie ?? null,
-      commentaire: r.commentaire ?? null, heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
-      lieuTravail: r.lieuTravail ?? null,
-    });
+    this.editSeed.set(this.seedDe(r));
     this.editing.set(true);
   }
 
@@ -498,6 +500,7 @@ export class TravailTempsJourComponent implements OnInit, OnDestroy {
       { header: 'Date',          value: r => this.formatDate(r.date) },
       { header: 'Collaborateur', value: r => r.collaborateur ?? '' },
       { header: 'Client',        value: r => r.client ?? '' },
+      { header: 'Affaire',       value: r => r.affaire ?? '' },
       { header: 'Mission',       value: r => r.missionCode ?? '' },
       { header: 'Durée (h)',     value: r => r.dureeHeures?.toFixed(2) ?? '0' },
       { header: 'Type',          value: r => r.type },

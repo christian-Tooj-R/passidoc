@@ -239,6 +239,15 @@ describe('Évolutions v2 — contacts, approche, pôle de travail, pièces manqu
       expect(msg[0].contenu).toContain('compta@zztest.local');
     });
 
+    it('Gmail en échec : 503 avec un message clair, et rien n’est noté sur le dossier', async () => {
+      const messages = async () => (await ds.query(`SELECT COUNT(*)::int AS n FROM dossier_messages WHERE "clientId" = $1`, [c1.id]))[0].n;
+      const avant = await messages();
+      mail.sendRelancePiecesClient.mockRejectedValueOnce(new Error('invalid_grant'));
+      const r = await post('resp', `/api/clients/${c1.id}/suivi-pieces/relance?annee=${ANNEE}`, {}).expect(503);
+      expect(r.body.message).toContain('L\'envoi de l\'email a échoué');
+      expect(await messages()).toBe(avant);
+    });
+
     it('refus : dossier sans adresse e-mail, ou dossier d’un autre cabinet', async () => {
       await ds.getRepository(Client).update(c2.id, { typesFluxActifs: ['PAIE'] as any });
       const r = await post('ouest', `/api/clients/${c2.id}/suivi-pieces/relance?annee=${ANNEE}`, {}).expect(400);

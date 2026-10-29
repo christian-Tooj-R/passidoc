@@ -1362,7 +1362,9 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     const tab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
     // L'ancien « Dossier de travail » (révision par cycle) est fusionné dans Missions › Par cycle.
-    if (tab) this.activeTab.set(tab === 'dossier-travail' ? 'missions' : tab);
+    // Un onglet inconnu (ancien lien) laisserait la page vide : on garde l'onglet par défaut.
+    const cible = tab === 'dossier-travail' ? 'missions' : tab;
+    if (cible && this.TAB_GROUPS.some(g => g.tabs.some(t => t.id === cible))) this.activeTab.set(cible);
     const start = Date.now();
     this.clientsService.getOne(id).subscribe(c => {
       this.client = c;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron } from '@nestjs/schedule';
 import { In, Repository } from 'typeorm';
@@ -105,7 +105,13 @@ export class SuiviPiecesService {
     const config = await this.tenantRepo.findOne({ where: { id: user.tenantId } });
     const objet = dto.objet?.trim() || apercu.objet;
     const texte = dto.texte?.trim() || apercu.texte;
-    await this.mail.sendRelancePiecesClient({ to: apercu.destinataire.email, objet, texte, cabinet: config?.nomSociete ?? 'Passidoc' });
+    try {
+      await this.mail.sendRelancePiecesClient({ to: apercu.destinataire.email, objet, texte, cabinet: config?.nomSociete ?? 'Passidoc' });
+    } catch (e: any) {
+      // Sans ce filtre, l'écran affichait « Internal server error » (Gmail en panne, jeton expiré…).
+      this.logger.error(`Relance du dossier ${clientId} non envoyée à ${apercu.destinataire.email} : ${e?.message ?? e}`);
+      throw new ServiceUnavailableException("L'envoi de l'email a échoué : la relance n'est pas partie. Réessayez plus tard ou contactez votre administrateur.");
+    }
     const date = await this.tracerRelance(clientId, user.tenantId, user.id, apercu.destinataire, apercu.manquantes, false);
     return { envoyeA: apercu.destinataire.email, destinataire: apercu.destinataire, nbPieces: apercu.manquantes.length, dateRelance: date };
   }

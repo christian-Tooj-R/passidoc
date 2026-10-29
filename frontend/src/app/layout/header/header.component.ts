@@ -537,9 +537,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.router.navigate(['/equipes']);
     } else if (n.type === 'HEURES_HEBDO_INSUFFISANTES' || n.type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') {
       this.router.navigate(['/travail/temps/semaine']);
+    } else if (n.type.startsWith('TASK_')) {
+      // Plus d'onglet Tâches dans le dossier : les tâches se suivent dans le module Travail.
+      this.router.navigate(['/travail/taches']);
     } else if (n.clientId) {
-      const queryParams = n.type === 'TASK_ASSIGNED' ? { tab: 'tasks' }
-        : n.type === 'MISSION_RELANCE' ? { tab: 'missions' } : {};
+      const queryParams = n.type === 'MISSION_RELANCE' ? { tab: 'missions' }
+        : n.type.startsWith('BUDGET_DOSSIER') ? { tab: 'rentabilite' } : {};
       this.router.navigate(['/clients', n.clientId], { queryParams });
     }
   }
@@ -553,6 +556,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (type === 'TEAM_ASSIGNED')   return 'people';
     if (type === 'CLIENT_ASSIGNED') return 'folder_shared';
     if (type === 'MISSION_RELANCE') return 'work_history';
+    if (type.startsWith('BUDGET_DOSSIER')) return 'savings';
     if (type === 'HEURES_HEBDO_INSUFFISANTES' || type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') return 'schedule';
     return 'task_alt';
   }

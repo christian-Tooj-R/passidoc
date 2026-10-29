@@ -33,7 +33,7 @@ import { User } from '../../core/models/user.model';
 import { LocalDatePipe } from '../../core/pipes/local-date.pipe';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 import { TimerService, SaisieTempsService, SaisieTemps, MISSION_CODES, CreateSaisieTempsDto } from '../../core/services/saisie-temps.service';
-import { formatMinutes, parseHHMM, toHHMM } from '../../core/services/duree.util';
+import { dureeCarteTache, formatMinutes, parseHHMM, toHHMM } from '../../core/services/duree.util';
 
 interface CalDay { date: Date; dayLabel: string; dayNum: number; isToday: boolean; tasks: Task[]; }
 
@@ -2203,8 +2203,8 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
                             <mat-icon>event</mat-icon>{{ t.dateEcheance | localDate:'dd MMM' }}
                           </span>
                         }
-                        @if (t.tempsExecution && t.tempsExecution > 0) {
-                          <span class="card-time"><mat-icon>schedule</mat-icon>{{ formatTime(t.tempsExecution) }}</span>
+                        @if (dureeCarte(t); as d) {
+                          <span class="card-time" [matTooltip]="d.aide"><mat-icon>schedule</mat-icon>{{ d.texte }}</span>
                         }
                         @if (t.heuresSup && t.heuresSup > 0) {
                           <span class="card-sup">+{{ formatTime(t.heuresSup * 60) }}</span>
@@ -2987,6 +2987,8 @@ export class TaskDetailDialogComponent implements OnInit, OnDestroy {
   `],
 })
 export class TasksGlobalComponent implements OnInit, OnDestroy {
+  /** Temps des cartes Kanban : le chronométré, sinon le délai (même règle que Travail › Vue Kanban). */
+  readonly dureeCarte = dureeCarteTache;
   private tasksService = inject(TasksService);
   private clientsService = inject(ClientsService);
   private usersService = inject(UsersService);
