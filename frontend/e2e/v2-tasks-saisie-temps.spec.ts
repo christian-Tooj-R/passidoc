@@ -320,7 +320,10 @@ test.describe('TACHE-08b — Module Travail — vues et filtres des temps', () =
     await page.locator('.seg__btn--ABSENCE').click();
     await expect(page.locator('.seg__btn--FACTURABLE')).not.toHaveClass(/seg__btn--on/);
     await expect(page.locator('.seg__btn--NON_FACTURABLE')).toHaveClass(/seg__btn--on/);
-    const presences = await page.locator('tr.data-row .pres').allTextContents();
-    expect(presences.every(p => p.includes('non facturable'))).toBe(true);
+    // Le rapport se recalcule après le clic : `allTextContents()` n'attend pas, d'où un poll.
+    await expect.poll(async () => {
+      const presences = await page.locator('tr.data-row .pres').allTextContents();
+      return presences.every(p => p.includes('non facturable'));
+    }, { timeout: 10_000 }).toBe(true);
   });
 });
