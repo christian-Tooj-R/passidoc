@@ -1,9 +1,10 @@
 import { IsEmail, IsEnum, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { UserAntenne, UserRole, UserSite, PoleService } from '../../entities/user.entity';
 
 export class CreateUserDto {
-  @ApiProperty() @IsEmail() email: string;
+  @ApiProperty() @IsEmail() @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value) email: string;
   @ApiProperty() @IsString() firstName: string;
   @ApiProperty() @IsString() lastName: string;
   @ApiProperty() @IsString() @MinLength(8) password: string;

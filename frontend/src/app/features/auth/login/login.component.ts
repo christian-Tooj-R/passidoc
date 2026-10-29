@@ -475,13 +475,14 @@ export class LoginComponent {
     }).subscribe({
       next: (res) => {
         this.registerLoading = false;
-        if (res.emailSent === false) {
-          this.registerError = 'Compte créé mais l\'envoi du code a échoué. Contactez votre administrateur pour activer votre compte.';
-          return;
-        }
         this.pendingEmail.set(res.email);
         this.verifyCode  = '';
-        this.verifyError = '';
+        // Le compte est créé même si l'email du code est parti en échec : on passe quand même à
+        // l'étape du code, qui propose « Renvoyer ». Rester sur le formulaire rempli invitait à
+        // recliquer sur « Créer », qui répondait alors « email déjà utilisé ».
+        this.verifyError = res.emailSent === false
+          ? 'Compte créé, mais l\'email du code n\'a pas pu être envoyé. Cliquez sur « Renvoyer » ou contactez votre administrateur.'
+          : '';
         this.mode.set('verify-email');
         this.loginForm.patchValue({ email: res.email });
       },
@@ -512,7 +513,7 @@ export class LoginComponent {
     this.resendLoading = true;
     this.auth.resendVerification(this.pendingEmail()).subscribe({
       next:  () => { this.resendLoading = false; this.verifyError = ''; },
-      error: () => { this.resendLoading = false; },
+      error: (err) => { this.resendLoading = false; this.verifyError = err?.error?.message ?? 'Le code n\'a pas pu être renvoyé. Réessayez.'; },
     });
   }
 }

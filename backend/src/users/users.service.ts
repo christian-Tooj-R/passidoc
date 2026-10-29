@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserAntenne, UserRole, UserSite } from '../entities/user.entity';
 import { Task, TaskStatut } from '../entities/task.entity';
@@ -8,6 +8,7 @@ import { SaisieTemps } from '../entities/saisie-temps.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { memeEmail } from '../auth/email.util';
 
 @Injectable()
 export class UsersService {
@@ -18,10 +19,10 @@ export class UsersService {
   ) {}
 
   async create(dto: CreateUserDto, tenantId?: number) {
-    const where: any = { email: dto.email };
-    if (tenantId) where.tenantId = tenantId;
-    const exists = await this.repo.findOne({ where });
-    if (exists) throw new ConflictException('Email déjà utilisé dans ce cabinet');
+    // Email unique sur toute la base (pas par cabinet) : vérifié avant l'enregistrement, qui
+    // échouerait sinon en erreur 500.
+    const exists = await this.repo.findOne({ where: { email: memeEmail(dto.email) } });
+    if (exists) throw new ConflictException(!tenantId || exists.tenantId === tenantId ? 'Email déjà utilisé dans ce cabinet' : 'Email déjà utilisé');
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = this.repo.create({ ...dto, password: hashed, ...(tenantId ? { tenantId, isActive: true } : {}) });
@@ -56,6 +57,10 @@ export class UsersService {
     if (tenantId) where.tenantId = tenantId;
     const user = await this.repo.findOne({ where });
     if (!user) throw new NotFoundException('Utilisateur introuvable');
+    if (dto.email && dto.email !== user.email
+        && await this.repo.findOne({ where: { email: memeEmail(dto.email), id: Not(id) } })) {
+      throw new ConflictException('Email déjà utilisé');
+    }
 
     if (dto.password) dto.password = await bcrypt.hash(dto.password, 10);
     await this.repo.update(id, dto);

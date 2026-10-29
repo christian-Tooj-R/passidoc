@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { User, UserRole, UserSite } from '../entities/user.entity';
@@ -180,6 +180,26 @@ describe('AuthService', () => {
 
       expect(capturedToken.expiresAt.getTime()).toBeGreaterThan(before.getTime());
       expect(capturedToken.expiresAt.getTime()).toBeLessThan(after.getTime());
+    });
+
+    it('envoi Gmail en échec (invalid_grant) : 503 avec un message clair, pas une erreur 500', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, tenantId: 1 });
+      mockMailService.sendPasswordResetCode.mockRejectedValueOnce(new Error('invalid_grant'));
+
+      const err = await service.forgotPassword('test@afym.re', 1).catch(e => e);
+
+      expect(err).toBeInstanceOf(ServiceUnavailableException);
+      expect(err.message).toContain('L\'envoi de l\'email a échoué');
+    });
+
+    it('le code est rattaché à l\'email en minuscules (compte enregistré « Test@Afym.re »)', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, email: 'Test@Afym.re', tenantId: 1 });
+      let capturedToken: any;
+      mockResetTokenRepo.save.mockImplementation((t: any) => { capturedToken = t; });
+
+      await service.forgotPassword('TEST@afym.re', 1);
+
+      expect(capturedToken.email).toBe('test@afym.re');
     });
   });
 

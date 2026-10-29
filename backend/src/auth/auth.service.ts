@@ -1,5 +1,5 @@
 import {
-  Injectable, UnauthorizedException, BadRequestException, NotFoundException,
+  Injectable, UnauthorizedException, BadRequestException, NotFoundException, ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +13,7 @@ import { TenantConfig } from '../entities/tenant-config.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { MailService } from '../mail/mail.service';
 import { LoginDto } from './dto/login.dto';
+import { memeEmail, normaliserEmail } from './email.util';
 
 @Injectable()
 export class AuthService {
@@ -26,7 +27,7 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto, tenantId?: number) {
-    const where: any = { email: dto.email };
+    const where: any = { email: memeEmail(dto.email) };
     if (tenantId) where.tenantId = tenantId;
     const user = await this.userRepo.findOne({ where });
     if (!user || !user.isActive) throw new UnauthorizedException('Identifiants invalides');
@@ -95,28 +96,28 @@ export class AuthService {
   }
 
   async sendEmailVerification(email: string, tenantId: number, firstName: string): Promise<void> {
-    await this.resetTokenRepo.delete({ email: email.toLowerCase(), tenantId });
+    await this.resetTokenRepo.delete({ email: normaliserEmail(email), tenantId });
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await this.resetTokenRepo.save(
-      this.resetTokenRepo.create({ email: email.toLowerCase(), code, tenantId, expiresAt }),
+      this.resetTokenRepo.create({ email: normaliserEmail(email), code, tenantId, expiresAt }),
     );
     await this.mailService.sendEmailVerificationCode({ to: email, firstName, code });
   }
 
   async resendEmailVerification(email: string, tenantId?: number): Promise<{ message: string }> {
-    const where: any = { email: email.toLowerCase(), isActive: false };
+    const where: any = { email: memeEmail(email), isActive: false };
     if (tenantId) where.tenantId = tenantId;
     const user = await this.userRepo.findOne({ where });
     if (user) {
-      await this.sendEmailVerification(user.email, user.tenantId!, user.firstName);
+      await this.envoyerOu503(() => this.sendEmailVerification(user.email, user.tenantId!, user.firstName));
     }
     return { message: 'Si ce compte existe et n\'est pas encore activé, un nouveau code a été envoyé.' };
   }
 
   async verifyEmail(email: string, code: string, tenantId?: number): Promise<{ message: string }> {
     const token = await this.resetTokenRepo.findOne({
-      where: { email: email.toLowerCase(), code, used: false },
+      where: { email: normaliserEmail(email), code, used: false },
     });
     if (!token || token.expiresAt < new Date()) {
       throw new BadRequestException('Code invalide ou expiré');
@@ -124,40 +125,51 @@ export class AuthService {
     if (tenantId && token.tenantId !== tenantId) {
       throw new BadRequestException('Code invalide ou expiré');
     }
-    await this.userRepo.update({ email: token.email, tenantId: token.tenantId }, { isActive: true });
+    const user = await this.userRepo.findOne({ where: { email: memeEmail(token.email), tenantId: token.tenantId } });
+    if (!user) throw new BadRequestException('Code invalide ou expiré');
+    await this.userRepo.update(user.id, { isActive: true });
     await this.resetTokenRepo.update(token.id, { used: true });
     return { message: 'Compte activé. Vous pouvez maintenant vous connecter.' };
   }
 
   async forgotPassword(email: string, tenantId?: number): Promise<{ message: string }> {
-    const where: any = { email: email.toLowerCase() };
+    const where: any = { email: memeEmail(email) };
     if (tenantId) where.tenantId = tenantId;
     const user = await this.userRepo.findOne({ where });
 
     // Réponse identique que l'user existe ou non (sécurité)
     if (user) {
-      await this.resetTokenRepo.delete({ email: user.email, tenantId: user.tenantId });
+      await this.resetTokenRepo.delete({ email: normaliserEmail(user.email), tenantId: user.tenantId });
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
       await this.resetTokenRepo.save(
-        this.resetTokenRepo.create({ email: user.email, code, tenantId: user.tenantId, expiresAt }),
+        this.resetTokenRepo.create({ email: normaliserEmail(user.email), code, tenantId: user.tenantId, expiresAt }),
       );
 
-      await this.mailService.sendPasswordResetCode({
+      await this.envoyerOu503(() => this.mailService.sendPasswordResetCode({
         to: user.email,
         firstName: user.firstName,
         code,
-      });
+      }));
     }
 
     return { message: 'Si cet email existe, un code vous a été envoyé.' };
   }
 
+  /** Échec Gmail (jeton expiré, quota…) : message clair au lieu d'une erreur 500 anonyme. */
+  private async envoyerOu503(envoi: () => Promise<void>): Promise<void> {
+    try {
+      await envoi();
+    } catch {
+      throw new ServiceUnavailableException('L\'envoi de l\'email a échoué. Réessayez plus tard ou contactez votre administrateur.');
+    }
+  }
+
   async resetPassword(email: string, code: string, newPassword: string, tenantId?: number): Promise<{ message: string }> {
     const token = await this.resetTokenRepo.findOne({
-      where: { email: email.toLowerCase(), code, used: false },
+      where: { email: normaliserEmail(email), code, used: false },
     });
 
     if (!token || token.expiresAt < new Date()) {
@@ -167,8 +179,10 @@ export class AuthService {
       throw new BadRequestException('Code invalide ou expiré');
     }
 
+    const user = await this.userRepo.findOne({ where: { email: memeEmail(token.email), tenantId: token.tenantId } });
+    if (!user) throw new BadRequestException('Code invalide ou expiré');
     const hashed = await bcrypt.hash(newPassword, 10);
-    await this.userRepo.update({ email: token.email, tenantId: token.tenantId }, { password: hashed });
+    await this.userRepo.update(user.id, { password: hashed });
     await this.resetTokenRepo.update(token.id, { used: true });
 
     return { message: 'Mot de passe réinitialisé avec succès.' };

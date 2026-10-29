@@ -12,6 +12,7 @@ import { TenantService } from '../../../core/services/tenant.service';
 const mockAuth = {
   login:    vi.fn(),
   register: vi.fn(),
+  resendVerification: vi.fn(),
 };
 
 const mockTenant = {
@@ -228,14 +229,24 @@ describe('LoginComponent', () => {
       expect(comp.loginForm.value.email).toBe('sophie@afym.re');
     });
 
-    it("reste sur l'inscription avec un message si l'email de code n'a pas pu partir", async () => {
+    it("email de code non parti : étape du code quand même (« Renvoyer »), pas de retour au formulaire à recliquer", async () => {
       const { comp } = await createComponent();
       mockAuth.register.mockReturnValue(of({ email: 'sophie@afym.re', emailSent: false }));
       comp.switchMode('register');
       comp.registerForm.patchValue(INSCRIPTION);
       comp.submitRegister();
-      expect(comp.mode()).toBe('register');
-      expect(comp.registerError).toContain("l'envoi du code a échoué");
+      expect(comp.mode()).toBe('verify-email');
+      expect(comp.pendingEmail()).toBe('sophie@afym.re');
+      expect(comp.verifyError).toContain("n'a pas pu être envoyé");
+      expect(comp.registerError).toBe('');
+    });
+
+    it("« Renvoyer » en échec : le motif du serveur s'affiche (avant : rien)", async () => {
+      const { comp } = await createComponent();
+      mockAuth.resendVerification.mockReturnValue(throwError(() => ({ error: { message: "L'envoi de l'email a échoué." } })));
+      comp.resendVerificationCode();
+      expect(comp.verifyError).toBe("L'envoi de l'email a échoué.");
+      expect(comp.resendLoading).toBe(false);
     });
 
     it("affiche registerError en cas d'erreur serveur", async () => {

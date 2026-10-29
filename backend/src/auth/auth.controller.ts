@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { memeEmail, normaliserEmail } from './email.util';
 import { LoginDto } from './dto/login.dto';
 import { Verify2faDto } from './dto/verify-2fa.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -28,8 +29,11 @@ export class AuthController {
     @Body() dto: { firstName: string; lastName: string; email: string; password: string; site: string; telephone?: string; poste?: string },
   ) {
     if (!req.tenant?.id) throw new ForbiddenException('Inscription impossible sans contexte tenant');
-    const exists = await this.userRepo.findOne({ where: { email: dto.email, tenantId: req.tenant.id } });
-    if (exists) throw new ConflictException('Cet email est déjà utilisé dans ce cabinet');
+    dto.email = normaliserEmail(dto.email);
+    // L'email est unique sur toute la base (pas par cabinet) : un compte d'un autre cabinet
+    // ferait échouer l'enregistrement en erreur 500.
+    const exists = await this.userRepo.findOne({ where: { email: memeEmail(dto.email) } });
+    if (exists) throw new ConflictException(exists.tenantId === req.tenant.id ? 'Cet email est déjà utilisé dans ce cabinet' : 'Cet email est déjà utilisé');
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = this.userRepo.create({
       firstName: dto.firstName, lastName: dto.lastName,

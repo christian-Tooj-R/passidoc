@@ -285,9 +285,10 @@ export class ForgotPasswordComponent {
         this.loading.set(false);
         this.step.set('code');
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        this.error.set('Impossible de contacter le serveur. Réessayez.');
+        // Ex. 503 « L'envoi de l'email a échoué… » quand Gmail refuse l'envoi.
+        this.error.set(err?.error?.message ?? 'Impossible de contacter le serveur. Réessayez.');
       },
     });
   }

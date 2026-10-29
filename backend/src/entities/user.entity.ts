@@ -1,7 +1,7 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn,
+  ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate,
 } from 'typeorm';
 import { TenantConfig } from './tenant-config.entity';
 
@@ -45,6 +45,10 @@ export class User {
 
   @Column({ unique: true })
   email: string;
+
+  /** Stocké en minuscules (cf. auth/email.util.ts) — `save()` uniquement, `update()` ne passe pas ici. */
+  @BeforeInsert() @BeforeUpdate()
+  normaliserEmail() { if (this.email) this.email = this.email.trim().toLowerCase(); }
 
   @Column()
   password: string;
