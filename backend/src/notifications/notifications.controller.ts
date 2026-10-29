@@ -45,6 +45,14 @@ export class NotificationsController {
     return this.service.markAllRead(req.user.id);
   }
 
+  /** Notification ouverte depuis la cloche : lue (l'ouverture de la cloche ne fait que vider le badge). */
+  @Patch(':id/read')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  markRead(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.service.markRead(id, req.user.id);
+  }
+
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

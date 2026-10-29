@@ -59,6 +59,10 @@ export class NotificationsService {
     await this.repo.update({ userId, read: false }, { read: true });
   }
 
+  async markRead(id: number, userId: number) {
+    await this.repo.update({ id, userId }, { read: true });
+  }
+
   async dismiss(id: number, userId: number) {
     await this.repo.delete({ id, userId });
   }

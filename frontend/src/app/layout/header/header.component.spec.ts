@@ -7,10 +7,12 @@ import { TaskNotification } from '../../core/services/notification-stream.servic
 
 function entete() {
   const router = { navigate: vi.fn() };
+  const notifStream = { nonVuesCount: () => 0, markRead: vi.fn(), marquerVues: vi.fn() };
+  const alertes = { nonVuesCount: () => 0, marquerVues: vi.fn() };
   const comp = new HeaderComponent(
-    {} as any, { count: () => 0 } as any, { unreadCount: () => 0 } as any, {} as any, router as any, {} as any,
+    {} as any, alertes as any, notifStream as any, {} as any, router as any, {} as any,
   );
-  return { comp, router };
+  return { comp, router, notifStream, alertes };
 }
 
 const notif = (type: string, clientId: number | null = 12): TaskNotification =>
@@ -34,6 +36,22 @@ describe('HeaderComponent — clic sur une notification', () => {
       comp.navigateTo(notif(type, null));
       expect(router.navigate).toHaveBeenCalledWith(['/travail/taches']);
     });
+
+  it('la notification ouverte est marquée lue (sur le serveur)', () => {
+    const { comp, notifStream } = entete();
+    comp.navigateTo(notif('CLIENT_ASSIGNED'));
+    expect(notifStream.markRead).toHaveBeenCalledWith(1);
+  });
+
+  it('ouvrir la cloche vide le badge sans tout marquer comme lu ; la refermer ne fait rien', () => {
+    const { comp, notifStream, alertes } = entete();
+    const clic = { stopPropagation: vi.fn() } as any;
+    comp.toggleBell(clic);
+    expect(notifStream.marquerVues).toHaveBeenCalledTimes(1);
+    expect(alertes.marquerVues).toHaveBeenCalledTimes(1);
+    comp.toggleBell(clic);
+    expect(notifStream.marquerVues).toHaveBeenCalledTimes(1);
+  });
 
   it('icône « savings » pour les alertes de budget', () => {
     const { comp } = entete();

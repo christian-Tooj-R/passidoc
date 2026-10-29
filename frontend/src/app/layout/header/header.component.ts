@@ -87,7 +87,7 @@ import { GlobalTimerIndicatorComponent } from '../../shared/global-timer-indicat
               <div class="bell-panel__head">
                 <span class="bell-panel__title">Notifications</span>
                 @if (notifStream.unreadCount() > 0) {
-                  <button class="mark-all-btn" (click)="notifStream.markAllRead()">Tout marquer lu</button>
+                  <button class="mark-all-btn" (click)="notifStream.markAllRead()">Tout marquer comme lu</button>
                 }
               </div>
 
@@ -462,7 +462,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private elRef: ElementRef,
   ) {}
 
-  totalCount = computed(() => this.alertes.count() + this.notifStream.unreadCount());
+  /** Badge : ce qui est arrivé depuis la dernière ouverture de la cloche (notifications et alertes). */
+  totalCount = computed(() => this.alertes.nonVuesCount() + this.notifStream.nonVuesCount());
 
   ngOnInit() {
     this.alertes.startPolling();
@@ -527,12 +528,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
   toggleBell(event: MouseEvent) {
     event.stopPropagation();
     this.bellOpen = !this.bellOpen;
-    if (this.bellOpen) this.notifStream.markAllRead();
+    // Ouvrir la cloche vide le badge sans marquer comme lu (« Tout marquer comme lu » le fait).
+    if (this.bellOpen) { this.notifStream.marquerVues(); this.alertes.marquerVues(); }
   }
 
   navigateTo(n: TaskNotification) {
     this.bellOpen = false;
-    n.read = true;
+    this.notifStream.markRead(n.id);
     if (n.type === 'TEAM_ASSIGNED') {
       this.router.navigate(['/equipes']);
     } else if (n.type === 'HEURES_HEBDO_INSUFFISANTES' || n.type === 'HEURES_HEBDO_INSUFFISANTES_EQUIPE') {

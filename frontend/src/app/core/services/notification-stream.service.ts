@@ -15,6 +15,14 @@ export interface TaskNotification {
   read: boolean;
 }
 
+/** Lecture / écriture tolérantes du navigateur (navigation privée, stockage bloqué…). */
+export function lireVu<T>(cle: string, defaut: T): T {
+  try { const v = localStorage.getItem(cle); return v === null ? defaut : JSON.parse(v); } catch { return defaut; }
+}
+export function ecrireVu(cle: string, valeur: unknown) {
+  try { localStorage.setItem(cle, JSON.stringify(valeur)); } catch { /* badge seulement pour la session */ }
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificationStreamService {
   private auth = inject(AuthService);
@@ -29,6 +37,13 @@ export class NotificationStreamService {
   private _notifications = signal<TaskNotification[]>([]);
   readonly notifications = this._notifications.asReadonly();
   readonly unreadCount = computed(() => this._notifications().filter(n => !n.read).length);
+
+  /** Badge de la cloche : « vue » ≠ « lue ». Ouvrir la cloche vide le badge (dernière
+   *  notification vue mémorisée dans le navigateur) ; une notification reste surlignée jusqu'à
+   *  son ouverture ou « Tout marquer comme lu ». */
+  private _dernierVu = signal(0);
+  readonly nonVuesCount = computed(() =>
+    this._notifications().filter(n => !n.read && n.id > this._dernierVu()).length);
 
   private _newNotif = new Subject<TaskNotification>();
   /** Émet chaque nouvelle notification reçue en temps réel — abonnez-vous pour rafraîchir l'UI */
@@ -82,12 +97,14 @@ export class NotificationStreamService {
     this.eventSource = null;
     this.loaded = false;
     this._notifications.set([]);
+    this._dernierVu.set(0);
   }
 
   private loadFromApi() {
     this.http.get<TaskNotification[]>(this.api).subscribe({
       next: (notifs) => {
         this.loaded = true;
+        this._dernierVu.set(lireVu(this.cleVu(), 0));
         this._notifications.set(notifs.map(n => ({ ...n, createdAt: new Date(n.createdAt) })));
         this.updateTabTitle();
       },
@@ -110,6 +127,23 @@ export class NotificationStreamService {
     this.playSound();
     this.updateTabTitle();
   }
+
+  /** Cloche ouverte : le badge disparaît, jusqu'à la prochaine notification. */
+  marquerVues() {
+    const dernier = Math.max(this._dernierVu(), ...this._notifications().map(n => n.id));
+    this._dernierVu.set(dernier);
+    ecrireVu(this.cleVu(), dernier);
+    this.updateTabTitle();
+  }
+
+  markRead(id: number) {
+    if (!this._notifications().some(n => n.id === id && !n.read)) return;
+    this.http.patch(`${this.api}/${id}/read`, {}).subscribe();
+    this._notifications.update(n => n.map(notif => notif.id === id ? { ...notif, read: true } : notif));
+    this.updateTabTitle();
+  }
+
+  private cleVu() { return `cloche_vue_notifs_${this.auth.currentUser()?.id ?? 0}`; }
 
   markAllRead() {
     this.http.patch(`${this.api}/read-all`, {}).subscribe();
@@ -167,7 +201,7 @@ export class NotificationStreamService {
   }
 
   private updateTabTitle() {
-    const count = this.unreadCount();
+    const count = this.nonVuesCount();
     document.title = count > 0 ? `(${count}) Passidoc` : 'Passidoc';
   }
 }
