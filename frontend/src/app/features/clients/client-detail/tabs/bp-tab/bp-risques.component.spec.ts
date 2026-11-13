@@ -3,8 +3,14 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { of } from 'rxjs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BpRisquesComponent } from './bp-risques.component';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
+
+/** Réponse de la modale de confirmation (true = « Supprimer », false = « Annuler »). */
+let reponseConfirm = true;
+const confirmMock = { confirm: vi.fn(() => of(reponseConfirm)) };
 
 const risque = (o: Record<string, any>) => ({
   id: 'r', nom: 'Risque', description: '', categorie: 'AUTRE', probabilite: 1, gravite: 1,
@@ -24,7 +30,7 @@ const contenuTest = () => ({
 });
 
 async function creer(editable: boolean, contenu: any = contenuTest()) {
-  await TestBed.configureTestingModule({ imports: [BpRisquesComponent], providers: [provideAnimations()] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [BpRisquesComponent], providers: [provideAnimations(), { provide: ConfirmService, useValue: confirmMock }] }).compileComponents();
   const fixture = TestBed.createComponent(BpRisquesComponent);
   fixture.componentRef.setInput('contenu', contenu);
   fixture.componentRef.setInput('editable', editable);
@@ -50,7 +56,11 @@ const choisir = (select: HTMLSelectElement, index: number) => {
 };
 
 describe('BpRisquesComponent', () => {
-  beforeEach(() => TestBed.resetTestingModule());
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    reponseConfirm = true;
+    confirmMock.confirm.mockClear();
+  });
 
   it('dessine la matrice 5 × 5 colorée par zone de criticité, probabilité 5 en haut', async () => {
     const { el } = await creer(false);
@@ -166,6 +176,14 @@ describe('BpRisquesComponent', () => {
 
     ligneDe('c').click();
     fixture.detectChanges();
+    reponseConfirm = false;
+    bouton(el, 'Supprimer').click();
+    fixture.detectChanges();
+    expect(confirmMock.confirm).toHaveBeenCalledWith(expect.stringContaining('Panne informatique'), expect.any(String));
+    expect(contenu.risques).toHaveLength(5);
+    expect(emis.length).toBe(1);
+
+    reponseConfirm = true;
     bouton(el, 'Supprimer').click();
     fixture.detectChanges();
     expect(contenu.risques.map((r: any) => r.id)).toEqual(['a', 'b', 'd', 'e']);

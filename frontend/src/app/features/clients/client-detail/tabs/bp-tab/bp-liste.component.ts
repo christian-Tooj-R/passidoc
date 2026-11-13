@@ -1,9 +1,10 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { ItemBp, nouvelId } from '../../../../../core/models/outils-bp.model';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 /**
  * Liste d'éléments d'un outil BP (quadrant SWOT, colonne PESTEL, bloc BMC…), comme les cartes
@@ -92,9 +93,21 @@ export class BpListeComponent {
     this.changement.emit();
   }
 
+  private readonly confirm = inject(ConfirmService);
+
+  /** Suppression après confirmation dans une modale. */
   supprimer(i: number) {
-    this.items.splice(i, 1);
-    this.changement.emit();
+    const item = this.items[i];
+    if (!item) return;
+    const extrait = item.texte.length > 80 ? `${item.texte.slice(0, 80)}…` : item.texte;
+    this.confirm.confirm('Supprimer cet élément ?', extrait ? `« ${extrait} » sera retiré de l'outil.` : undefined)
+      .subscribe(ok => {
+        if (!ok) return;
+        const j = this.items.indexOf(item);
+        if (j < 0) return;
+        this.items.splice(j, 1);
+        this.changement.emit();
+      });
   }
 
   /** Un élément vidé à la main disparaît en quittant le champ. */

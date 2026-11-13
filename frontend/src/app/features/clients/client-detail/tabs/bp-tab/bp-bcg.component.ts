@@ -1,9 +1,10 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { QUADRANTS_BCG, nouvelId } from '../../../../../core/models/outils-bp.model';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 type QuadrantBcg = 'VEDETTE' | 'DILEMME' | 'VACHE' | 'POIDS_MORT';
 
@@ -283,12 +284,18 @@ export class BpBcgComponent {
     this.contenuChange.emit(this.contenu);
   }
 
+  private readonly confirm = inject(ConfirmService);
+
+  /** Suppression après confirmation dans une modale. */
   supprimer(a: ActiviteBcg) {
     if (!this.editable) return;
-    const i = this.activites.findIndex(x => x.id === a.id);
-    if (i < 0) return;
-    this.contenu.activites.splice(i, 1);
-    if (this.brouillon?.id === a.id) this.brouillon = null;
-    this.contenuChange.emit(this.contenu);
+    this.confirm.confirm(`Supprimer l'activité « ${a.nom} » ?`, 'Elle sera retirée de la matrice BCG.').subscribe(ok => {
+      if (!ok) return;
+      const i = this.activites.findIndex(x => x.id === a.id);
+      if (i < 0) return;
+      this.contenu.activites.splice(i, 1);
+      if (this.brouillon?.id === a.id) this.brouillon = null;
+      this.contenuChange.emit(this.contenu);
+    });
   }
 }

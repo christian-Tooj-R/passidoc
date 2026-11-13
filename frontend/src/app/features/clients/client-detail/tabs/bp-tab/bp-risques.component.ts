@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   CATEGORIES_RISQUE, ECHELLE_GRAVITE, ECHELLE_PROBABILITE, ZONES_CRITICITE, ZoneCriticite, criticite, nouvelId,
 } from '../../../../../core/models/outils-bp.model';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 interface RisqueBp {
   id: string; nom: string; description: string; categorie: string; probabilite: number; gravite: number;
@@ -370,12 +371,20 @@ export class BpRisquesComponent {
     this.contenuChange.emit(this.contenu);
   }
 
+  private readonly confirm = inject(ConfirmService);
+
+  /** Suppression après confirmation dans une modale. */
   supprimer() {
     const b = this.brouillon;
     if (!b) return;
-    const i = this.risques.findIndex(r => r.id === b.id);
-    if (i >= 0) this.contenu.risques.splice(i, 1);
-    this.brouillon = null;
-    this.contenuChange.emit(this.contenu);
+    const nom = (b.nom ?? '').trim();
+    this.confirm.confirm(nom ? `Supprimer le risque « ${nom} » ?` : 'Supprimer ce risque ?', 'Il sera retiré de la matrice de risques.')
+      .subscribe(ok => {
+        if (!ok) return;
+        const i = this.risques.findIndex(r => r.id === b.id);
+        if (i >= 0) this.contenu.risques.splice(i, 1);
+        if (this.brouillon?.id === b.id) this.brouillon = null;
+        this.contenuChange.emit(this.contenu);
+      });
   }
 }

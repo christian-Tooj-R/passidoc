@@ -3,8 +3,14 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { of } from 'rxjs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BpBcgComponent } from './bp-bcg.component';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
+
+/** Réponse de la modale de confirmation (true = « Supprimer », false = « Annuler »). */
+let reponseConfirm = true;
+const confirmMock = { confirm: vi.fn(() => of(reponseConfirm)) };
 
 const contenuTest = () => ({
   activites: [
@@ -16,7 +22,7 @@ const contenuTest = () => ({
 });
 
 async function creer(editable: boolean, contenu: any = contenuTest()) {
-  await TestBed.configureTestingModule({ imports: [BpBcgComponent], providers: [provideAnimations()] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [BpBcgComponent], providers: [provideAnimations(), { provide: ConfirmService, useValue: confirmMock }] }).compileComponents();
   const fixture = TestBed.createComponent(BpBcgComponent);
   fixture.componentRef.setInput('contenu', contenu);
   fixture.componentRef.setInput('editable', editable);
@@ -34,7 +40,11 @@ const bouton = (el: HTMLElement, texte: string) =>
   ([...el.querySelectorAll('button')] as HTMLButtonElement[]).find(b => b.textContent?.includes(texte))!;
 
 describe('BpBcgComponent', () => {
-  beforeEach(() => TestBed.resetTestingModule());
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    reponseConfirm = true;
+    confirmMock.confirm.mockClear();
+  });
 
   it('affiche les 4 quadrants, les axes et l\'état vide', async () => {
     const { el } = await creer(false, { activites: [], ecartees: [] });
@@ -119,8 +129,20 @@ describe('BpBcgComponent', () => {
 
     (ligne().querySelector('.bcg__supprimer') as HTMLButtonElement).click();
     fixture.detectChanges();
+    expect(confirmMock.confirm).toHaveBeenCalledWith(expect.stringContaining('Services'), expect.any(String));
     expect(contenu.activites.map((a: any) => a.id)).toEqual(['a1', 'a3']);
     expect(el.querySelector('.bcg__act[data-id="a2"]')).toBeNull();
     expect(emis.length).toBe(2);
+  });
+
+  it('ne supprime rien si la suppression est annulée dans la modale', async () => {
+    reponseConfirm = false;
+    const { fixture, el, contenu, emis } = await creer(true);
+    (el.querySelector('.bcg__table tr[data-id="a2"] .bcg__supprimer') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(confirmMock.confirm).toHaveBeenCalledTimes(1);
+    expect(contenu.activites.map((a: any) => a.id)).toEqual(['a1', 'a2', 'a3']);
+    expect(el.querySelector('.bcg__act[data-id="a2"]')).toBeTruthy();
+    expect(emis.length).toBe(0);
   });
 });
