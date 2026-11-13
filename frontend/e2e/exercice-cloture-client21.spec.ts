@@ -8,21 +8,23 @@
  *  4. EC-VERIFNEW-*: vérification des données sur le nouvel exercice 2028
  *
  * Onglets liés à l'exercice  → changent selon 2027 / 2028 :
- *   Objectifs, Stratégie (SWOT + Porter), Contrôle Interne, Missions › Par cycle
+ *   Objectifs, Tableau de bord BP (SWOT, Porter, BMC…), Contrôle Interne, Missions › Par cycle
  *
  * Onglets permanents (données client, indépendants de l'exercice) :
- *   Canvas, Missions, Fiche Identité, Fournisseurs, ADN, Synthèse
+ *   Missions, Fiche Identité, Fournisseurs, ADN, Synthèse
  *
  * Ce qui bascule vers 2028 : Objectifs (copiés intégralement)
- * Ce qui reste sur 2027    : Stratégie, Contrôle Interne, Missions › Par cycle (lecture seule)
- * Ce qui est vierge 2028   : Stratégie, Contrôle Interne, Missions › Par cycle (10 cycles sans recommandation)
- * Permanent inchangé       : Canvas, Missions › Pipeline (visible sur tous les exercices)
+ * Ce qui reste sur 2027    : Tableau de bord BP, Contrôle Interne, Missions › Par cycle (lecture seule)
+ * Repris en brouillon 2028 : Tableau de bord BP (outils de 2027, à mettre à jour puis enregistrer)
+ * Ce qui est vierge 2028   : Contrôle Interne, Missions › Par cycle (10 cycles sans recommandation)
+ * Permanent inchangé       : Missions › Pipeline (visible sur tous les exercices)
  *
- * (L'ancien « Dossier de travail » est fusionné dans Missions › Par cycle — CDC module Missions.)
+ * (L'ancien « Dossier de travail » est fusionné dans Missions › Par cycle — CDC module Missions ;
+ *  les anciens onglets « Stratégie » et « Modèle Canvas » dans le Tableau de bord BP.)
  */
 
 import { test, expect, request as pwRequest } from '@playwright/test';
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext, Locator, Page } from '@playwright/test';
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
 const API_URL  = 'http://localhost:3000/api';
@@ -38,7 +40,7 @@ const TAG = 'E2E-FULL';
 
 // Données injectées dans chaque onglet — identifiables via TAG
 const D = {
-  // Canvas (permanent)
+  // Tableau de bord BP › Business Model Canvas (exercice → repris en brouillon sur 2028)
   canvas_partenaires : `${TAG} — Partenaires clés : fournisseur X, banque Y`,
   canvas_proposition : `${TAG} — Proposition de valeur : expertise locale et réactivité`,
 
@@ -47,7 +49,7 @@ const D = {
   obj_3a5    : `${TAG} — Objectifs 3-5 ans : ouvrir une deuxième enseigne`,
   obj_attentes: `${TAG} — Attentes : suivi mensuel et tableau de bord trimestriel`,
 
-  // Analyse Stratégique (exercice → reste sur 2027, vierge sur 2028)
+  // Tableau de bord BP › SWOT et Porter (exercice → reste sur 2027, repris en brouillon sur 2028)
   strat_forces      : `${TAG} — Forces : équipe expérimentée, clientèle fidèle`,
   strat_faiblesses  : `${TAG} — Faiblesses : trésorerie tendue, dépendance fournisseur unique`,
   strat_opportunites: `${TAG} — Opportunités : expansion zone nord`,
@@ -115,6 +117,9 @@ async function goToClient(page: Page): Promise<void> {
 }
 
 async function clickTab(page: Page, label: string): Promise<void> {
+  // Le Tableau de bord BP remplace le menu du dossier : en sortir d'abord.
+  const retour = page.locator('.bpnav__retour');
+  if (await retour.isVisible()) { await retour.click(); await page.waitForTimeout(300); }
   await page.locator('.sidenav__item').filter({ hasText: new RegExp(label, 'i') }).first().click();
   await page.waitForTimeout(800);
 }
@@ -150,11 +155,43 @@ async function ouvrirCycle(page: Page, nom: string): Promise<void> {
 const MENAGE_MISSIONS = [
   `DELETE FROM missions WHERE "clientId" = ${CLIENT_ID} AND titre LIKE '${TAG}%';`,
   `DELETE FROM recommandations_cycles WHERE "clientId" = ${CLIENT_ID} AND texte LIKE '${TAG}%';`,
+  `DELETE FROM outils_bp WHERE "clientId" = ${CLIENT_ID} AND contenu::text LIKE '%${TAG}%';`,
 ];
 
-/** Texte affiché (mode lecture) d'une case du Canvas, repérée par son libellé. */
-function caseCanvas(page: Page, libelle: string) {
-  return page.locator('app-canvas-tab .cv-box').filter({ hasText: libelle }).locator('.cv-box__read');
+/** Tableau de bord BP : ouvre un outil depuis son menu (il remplace celui du dossier). */
+async function ouvrirOutilBp(page: Page, outil: string): Promise<void> {
+  if (!(await page.locator('.bpnav').isVisible())) await clickTab(page, 'Tableau de bord BP');
+  const lien = page.locator('.bpnav__outil').filter({ hasText: outil }).first();
+  await expect(lien).toBeVisible({ timeout: 10_000 });
+  await lien.click();
+  await page.waitForTimeout(300);
+}
+
+/** Tableau de bord BP : « Enregistrer » de l'outil, attendre la réponse de l'API. */
+async function enregistrerBp(page: Page): Promise<void> {
+  const btn = page.locator('app-bp-tab .bp__enregistrer');
+  await expect(btn).toBeVisible({ timeout: 8_000 });
+  await Promise.all([
+    page.waitForResponse(r => r.request().method() === 'PATCH' && r.url().includes('/bp/'), { timeout: 10_000 }).catch(() => null),
+    btn.click(),
+  ]);
+  await page.waitForTimeout(800);
+}
+
+/** Ajoute un élément à une liste d'un outil BP (quadrant, bloc, force) par « + Ajouter ». */
+async function ajouterElementBp(zone: Locator, texte: string): Promise<void> {
+  await zone.locator('.bl__ajouter').click();
+  const champ = zone.locator('.bl__input--nouveau');
+  await champ.fill(texte);
+  await champ.press('Enter');
+}
+
+/** Textes d'une liste d'un outil BP, en édition (champs) comme en lecture (attend l'affichage de l'outil). */
+async function textesBp(zone: Locator): Promise<string[]> {
+  await expect(zone).toBeVisible({ timeout: 8_000 });
+  await expect(zone.locator('.bl__item').first()).toBeVisible({ timeout: 8_000 }).catch(() => {});
+  return zone.locator('.bl__item').evaluateAll(items => items.map(li =>
+    (li.querySelector('textarea') as HTMLTextAreaElement | null)?.value ?? li.querySelector('.bl__texte')?.textContent?.trim() ?? ''));
 }
 
 async function switchToExercice(page: Page, annee: number): Promise<void> {
@@ -240,27 +277,23 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
   // REMPLISSAGE — un test par onglet, chacun vérifie la persistance
   // ═══════════════════════════════════════════════════════════════════════════
 
-  test('EC-FILL-1 — Canvas : remplir partenaires + proposition de valeur', async ({ page }) => {
+  test('EC-FILL-1 — Tableau de bord BP › BMC : partenaires + proposition de valeur', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
-    await clickTab(page, 'Canvas');
+    await ouvrirOutilBp(page, 'Business Model Canvas');
 
-    const tab = page.locator('app-canvas-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
+    const bmc = page.locator('app-bp-bmc');
+    await expect(bmc).toBeVisible({ timeout: 8_000 });
+    await ajouterElementBp(bmc.locator('[data-zone="partenaires"]'), D.canvas_partenaires);
+    await ajouterElementBp(bmc.locator('[data-zone="proposition"]'), D.canvas_proposition);
 
-    // Placeholders générés en minuscule : "saisir partenaires clés..." (mode édition)
-    await modifierViaEntete(page);
-    await tab.locator('textarea[placeholder*="partenaires"]').fill(D.canvas_partenaires);
-    await tab.locator('textarea[placeholder*="proposition"]').fill(D.canvas_proposition);
+    await enregistrerBp(page);
 
-    await enregistrerViaEntete(page);
-
-    // Persistance : recharger et revérifier (en mode édition, pour relire les champs)
+    // Persistance : recharger et revérifier
     await goToClient(page);
-    await clickTab(page, 'Canvas');
-    await modifierViaEntete(page);
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="partenaires"]')).toHaveValue(D.canvas_partenaires);
-    await expect(page.locator('app-canvas-tab textarea[placeholder*="proposition"]')).toHaveValue(D.canvas_proposition);
+    await ouvrirOutilBp(page, 'Business Model Canvas');
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="partenaires"]'))).toContain(D.canvas_partenaires);
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="proposition"]'))).toContain(D.canvas_proposition);
   });
 
   test('EC-FILL-2 — Objectifs : remplir objectifs 12 mois, 3-5 ans, attentes', async ({ page }) => {
@@ -289,57 +322,34 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await expect(page.locator('app-objectifs-tab textarea').nth(3)).toHaveValue(D.obj_attentes);
   });
 
-  test('EC-FILL-3 — Stratégie : remplir SWOT et Porter', async ({ page }) => {
+  test('EC-FILL-3 — Tableau de bord BP : remplir SWOT et Porter', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
-    await clickTab(page, 'Stratégie');
+    await ouvrirOutilBp(page, 'SWOT');
 
-    const tab = page.locator('app-analyse-strategique-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
+    const swot = page.locator('app-bp-swot');
+    await expect(swot).toBeVisible({ timeout: 8_000 });
+    await ajouterElementBp(swot.locator('[data-zone="forces"]'), D.strat_forces);
+    await ajouterElementBp(swot.locator('[data-zone="faiblesses"]'), D.strat_faiblesses);
+    await ajouterElementBp(swot.locator('[data-zone="opportunites"]'), D.strat_opportunites);
+    await ajouterElementBp(swot.locator('[data-zone="menaces"]'), D.strat_menaces);
 
-    // SWOT et Porter ne sont saisissables qu'en mode édition
-    await modifierViaEntete(page);
+    // Porter : élément identifié sur l'intensité concurrentielle (enregistré avec le SWOT)
+    await ouvrirOutilBp(page, 'Porter');
+    await ajouterElementBp(page.locator('app-bp-porter [data-force="concurrence"]'), D.strat_porter);
 
-    // SWOT — utiliser evaluate pour contourner le one-way [value] Angular
-    // (Control+a + pressSequentially échoue car Angular re-render efface les caractères)
-    const fillTA = async (sel: string, val: string) => {
-      const ta = tab.locator(sel);
-      await expect(ta).toBeVisible({ timeout: 6_000 });
-      await ta.evaluate((el: HTMLTextAreaElement, v: string) => {
-        el.value = v;
-        el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      }, val);
-    };
-    await fillTA('textarea[placeholder*="force"]', D.strat_forces);
-    await fillTA('textarea[placeholder*="faiblesse"]', D.strat_faiblesses);
-    await fillTA('textarea[placeholder*="opportunit"]', D.strat_opportunites);
-    await fillTA('textarea[placeholder*="menace"]', D.strat_menaces);
+    await enregistrerBp(page);
 
-    // Ouvrir le panneau Porter (2ème mat-expansion-panel, fermé par défaut)
-    const panels = tab.locator('mat-expansion-panel-header');
-    await expect(panels.nth(1)).toBeVisible({ timeout: 6_000 });
-    const porterExpanded = await panels.nth(1).getAttribute('aria-expanded');
-    if (porterExpanded !== 'true') await panels.nth(1).click();
-    await page.waitForTimeout(400);
-
-    // Porter — même approche evaluate
-    const porterTA = tab.locator('mat-expansion-panel').nth(1).locator('textarea').first();
-    await expect(porterTA).toBeVisible({ timeout: 6_000 });
-    await porterTA.evaluate((el: HTMLTextAreaElement, v: string) => {
-      el.value = v;
-      el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    }, D.strat_porter);
-
-    await enregistrerViaEntete(page);
-
-    // Persistance (relue en mode édition)
+    // Persistance
     await goToClient(page);
-    await clickTab(page, 'Stratégie');
-    await modifierViaEntete(page);
-    await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="force"]')).toHaveValue(D.strat_forces);
-    await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="faiblesse"]')).toHaveValue(D.strat_faiblesses);
-    await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="opportunit"]')).toHaveValue(D.strat_opportunites);
-    await expect(page.locator('app-analyse-strategique-tab textarea[placeholder*="menace"]')).toHaveValue(D.strat_menaces);
+    await ouvrirOutilBp(page, 'SWOT');
+    const relu = page.locator('app-bp-swot');
+    expect(await textesBp(relu.locator('[data-zone="forces"]'))).toContain(D.strat_forces);
+    expect(await textesBp(relu.locator('[data-zone="faiblesses"]'))).toContain(D.strat_faiblesses);
+    expect(await textesBp(relu.locator('[data-zone="opportunites"]'))).toContain(D.strat_opportunites);
+    expect(await textesBp(relu.locator('[data-zone="menaces"]'))).toContain(D.strat_menaces);
+    await ouvrirOutilBp(page, 'Porter');
+    expect(await textesBp(page.locator('app-bp-porter [data-force="concurrence"]'))).toContain(D.strat_porter);
   });
 
   test('EC-FILL-4 — Contrôle Interne : remplir note générale', async ({ page }) => {
@@ -509,22 +519,28 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     expect(pointerEvents, 'Objectifs 2027 doit être non-interactif').toBe('none');
   });
 
-  test('EC-VERIFOLD-3 — 2027 : analyse stratégique préservée', async ({ page }) => {
+  test('EC-VERIFOLD-3 — 2027 : Tableau de bord BP préservé, en lecture seule', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE);
     await expect(page.locator('.exercice-banner--cloture')).toBeVisible({ timeout: 15_000 });
 
-    await clickTab(page, 'Stratégie');
-    const tab = page.locator('app-analyse-strategique-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
+    await ouvrirOutilBp(page, 'SWOT');
+    const swot = page.locator('app-bp-swot');
+    await expect(swot).toBeVisible({ timeout: 8_000 });
 
-    // Exercice clôturé : affichage en lecture seule (pas de mode édition)
-    await expect(tab.locator('.swot-forces .swot-read-text')).toHaveText(D.strat_forces);
-    await expect(tab.locator('.swot-faiblesses .swot-read-text')).toHaveText(D.strat_faiblesses);
-    await expect(tab.locator('.swot-opportunites .swot-read-text')).toHaveText(D.strat_opportunites);
-    await expect(tab.locator('.swot-menaces .swot-read-text')).toHaveText(D.strat_menaces);
-    await expect(page.locator('.ch-edit-btn')).toHaveCount(0);
+    // Exercice clôturé : lecture seule (ni champ, ni « + Ajouter », ni Enregistrer)
+    expect(await textesBp(swot.locator('[data-zone="forces"]'))).toContain(D.strat_forces);
+    expect(await textesBp(swot.locator('[data-zone="faiblesses"]'))).toContain(D.strat_faiblesses);
+    expect(await textesBp(swot.locator('[data-zone="opportunites"]'))).toContain(D.strat_opportunites);
+    expect(await textesBp(swot.locator('[data-zone="menaces"]'))).toContain(D.strat_menaces);
+    await expect(swot.locator('textarea')).toHaveCount(0);
+    await expect(swot.locator('.bl__ajouter')).toHaveCount(0);
+    await expect(page.locator('app-bp-tab .bp__enregistrer')).toHaveCount(0);
+    await expect(page.locator('app-bp-tab .bp__info').filter({ hasText: 'Exercice clôturé' })).toBeVisible();
+    // Le menu du BP reste utilisable en consultation
+    await ouvrirOutilBp(page, 'Business Model Canvas');
+    await expect(page.locator('app-bp-bmc')).toBeVisible();
   });
 
   test('EC-VERIFOLD-4 — 2027 : contrôle interne préservé', async ({ page }) => {
@@ -572,14 +588,14 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     expect(hasClass, 'body doit avoir exercice-cloture').toBe(true);
   });
 
-  test('EC-VERIFOLD-7 — 2027 : Canvas permanent inchangé', async ({ page }) => {
+  test('EC-VERIFOLD-7 — 2027 : BMC du Tableau de bord BP préservé', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE);
 
-    await clickTab(page, 'Canvas');
-    await expect(caseCanvas(page, 'Partenaires clés')).toHaveText(D.canvas_partenaires);
-    await expect(caseCanvas(page, 'Proposition de valeur')).toHaveText(D.canvas_proposition);
+    await ouvrirOutilBp(page, 'Business Model Canvas');
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="partenaires"]'))).toContain(D.canvas_partenaires);
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="proposition"]'))).toContain(D.canvas_proposition);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -606,17 +622,17 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     expect(isReadonly, 'Objectifs 2028 doit être éditable').toBe(false);
   });
 
-  test('EC-VERIFNEW-2 — 2028 : stratégie vierge (non copiée)', async ({ page }) => {
+  test('EC-VERIFNEW-2 — 2028 : SWOT repris de 2027 en brouillon, modifiable', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE + 1);
 
-    await clickTab(page, 'Stratégie');
-    const tab = page.locator('app-analyse-strategique-tab');
-    await expect(tab).toBeVisible({ timeout: 8_000 });
-
-    const forces = (await tab.locator('.swot-forces .swot-read-text').textContent()) ?? '';
-    expect(forces.includes(TAG), 'Stratégie 2028 doit être vierge').toBe(false);
+    await ouvrirOutilBp(page, 'SWOT');
+    const swot = page.locator('app-bp-swot');
+    await expect(swot).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('app-bp-tab .bp__info').filter({ hasText: `Repris de l'exercice ${EXERCICE_OUVERT_ANNEE}` })).toBeVisible();
+    expect(await textesBp(swot.locator('[data-zone="forces"]'))).toContain(D.strat_forces);
+    await expect(swot.locator('.bl__ajouter').first()).toBeVisible();
   });
 
   test('EC-VERIFNEW-3 — 2028 : contrôle interne vierge (non copié)', async ({ page }) => {
@@ -671,14 +687,15 @@ test.describe('Remplissage complet UI + clôture exercice client 21', () => {
     await expect(page.locator('.eb-readonly-badge')).not.toBeVisible();
   });
 
-  test('EC-VERIFNEW-6 — 2028 : Canvas permanent inchangé', async ({ page }) => {
+  test('EC-VERIFNEW-6 — 2028 : BMC repris de 2027 en brouillon', async ({ page }) => {
     await loginAfym(page);
     await goToClient(page);
     await switchToExercice(page, EXERCICE_OUVERT_ANNEE + 1);
 
-    await clickTab(page, 'Canvas');
-    await expect(caseCanvas(page, 'Partenaires clés')).toHaveText(D.canvas_partenaires);
-    await expect(caseCanvas(page, 'Proposition de valeur')).toHaveText(D.canvas_proposition);
+    await ouvrirOutilBp(page, 'Business Model Canvas');
+    await expect(page.locator('app-bp-tab .bp__info').filter({ hasText: `Repris de l'exercice ${EXERCICE_OUVERT_ANNEE}` })).toBeVisible();
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="partenaires"]'))).toContain(D.canvas_partenaires);
+    expect(await textesBp(page.locator('app-bp-bmc [data-zone="proposition"]'))).toContain(D.canvas_proposition);
   });
 
   test('EC-VERIFNEW-7 — select exercices : 2027 clôturé et 2028 ouvert présents', async ({ page }) => {

@@ -100,6 +100,51 @@ describe('ClientDetailComponent', () => {
     expect(comp.activeTab()).toBe('missions');
   });
 
+  it.each(['strategie', 'canvas'])('l’ancien lien ?tab=%s ouvre le Tableau de bord BP', async (ancien) => {
+    ongletDemande = ancien;
+    const { comp } = await createComponent();
+    expect(comp.activeTab()).toBe('bp');
+  });
+
+  it('Tableau de bord BP dans le groupe Business Partner, à la place de Stratégie et Modèle Canvas', async () => {
+    const { comp } = await createComponent();
+    expect(comp.TAB_GROUPS.find(g => g.label === 'Business Partner')!.tabs.map(t => t.id)).toEqual(['bp']);
+    const ids = comp.TAB_GROUPS.flatMap(g => g.tabs.map(t => t.id as string));
+    expect(ids).not.toContain('strategie');
+    expect(ids).not.toContain('canvas');
+  });
+
+  describe('Tableau de bord BP en plein écran', () => {
+    it('le menu BP liste les 9 outils par catégorie, dans l’ordre', async () => {
+      const { comp } = await createComponent();
+      const groupes = comp.groupesOutilsBp;
+      expect(groupes.map(g => g.categorie)).toEqual(['Analyse interne', 'Analyse externe', 'Stratégie', 'Business']);
+      expect(groupes.flatMap(g => g.outils.map(o => o.code)))
+        .toEqual(['SWOT', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'PORTER', 'PESTEL', 'RISQUES', 'BCG', 'BMC', 'PERSONA']);
+      expect(groupes.flatMap(g => g.outils.map(o => o.rang))).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    it('« Retour au dossier » rouvre l’onglet quitté pour le BP', async () => {
+      const { fixture, comp } = await createComponent();
+      comp.activeTab.set('objectifs');
+      fixture.detectChanges();
+      comp.activeTab.set('bp');
+      fixture.detectChanges();
+      expect(comp.modeBp()).toBe(true);
+      comp.quitterBp();
+      expect(comp.activeTab()).toBe('objectifs');
+      expect(comp.modeBp()).toBe(false);
+    });
+
+    it('ouvert directement par ?tab=bp : « Retour au dossier » mène à la fiche identité', async () => {
+      ongletDemande = 'bp';
+      const { fixture, comp } = await createComponent();
+      fixture.detectChanges();
+      comp.quitterBp();
+      expect(comp.activeTab()).toBe('fiche');
+    });
+  });
+
   it('propose l’onglet Rentabilité dans le groupe Comptabilité', async () => {
     const { comp } = await createComponent();
     const compta = comp.TAB_GROUPS.find(g => g.label === 'Comptabilité')!;

@@ -18,6 +18,7 @@ import { SyntheseCloureModule } from './synthese-cloture/synthese-cloture.module
 import { DocumentsModule } from './documents/documents.module';
 import { AnalyseStrategiqueModule } from './analyse-strategique/analyse-strategique.module';
 import { MissionsModule } from './missions/missions.module';
+import { BusinessPartnerModule } from './business-partner/business-partner.module';
 import { ObjectifsModule } from './objectifs/objectifs.module';
 import { ControleInterneModule } from './controle-interne/controle-interne.module';
 import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
@@ -103,6 +104,7 @@ import { TenantConfig } from './entities/tenant-config.entity';
     DocumentsModule,
     AnalyseStrategiqueModule,
     MissionsModule,
+    BusinessPartnerModule,
     ObjectifsModule,
     ControleInterneModule,
     AiAssistantModule,

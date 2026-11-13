@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, Renderer2, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, Renderer2, effect, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 import { forkJoin, of, catchError, finalize } from 'rxjs';
@@ -27,14 +27,14 @@ import { FluxMensuelTabComponent } from './tabs/flux-mensuel-tab/flux-mensuel-ta
 import { FournisseursTabComponent } from './tabs/fournisseurs-tab/fournisseurs-tab.component';
 import { SyntheseTabComponent } from './tabs/synthese-tab/synthese-tab.component';
 import { DocumentsTabComponent } from './tabs/documents-tab/documents-tab.component';
-import { AnalyseStrategiqueTabComponent } from './tabs/analyse-strategique-tab/analyse-strategique-tab.component';
 import { MissionsTabComponent } from './tabs/missions-tab/missions-tab.component';
 import { ObjectifsTabComponent } from './tabs/objectifs-tab/objectifs-tab.component';
 import { ControleInterneTabComponent } from './tabs/controle-interne-tab/controle-interne-tab.component';
 
 import { HistoriqueTabComponent } from './tabs/historique-tab/historique-tab.component';
 import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
-import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
+import { BpTabComponent } from './tabs/bp-tab/bp-tab.component';
+import { InfoOutilBp, OutilBpCode, groupesOutilsBp } from '../../../core/models/outils-bp.model';
 import { DossierChatComponent } from './dossier-chat/dossier-chat.component';
 import { TachesRecurrentesTabComponent } from './tabs/taches-recurrentes-tab/taches-recurrentes-tab.component';
 import GalerieTabComponent from './tabs/galerie-tab/galerie-tab.component';
@@ -43,8 +43,8 @@ import { GlobalTimerIndicatorComponent } from '../../../shared/global-timer-indi
 
 type TabId =
   | 'fiche' | 'adn' | 'pilotage' | 'fournisseurs' | 'synthese'
-  | 'strategie' | 'missions' | 'controle' | 'objectifs'
-  | 'documents' | 'historique' | 'dossier-travail' | 'canvas'
+  | 'bp' | 'missions' | 'controle' | 'objectifs'
+  | 'documents' | 'historique' | 'dossier-travail'
   | 'taches-recurrentes' | 'galerie' | 'rentabilite';
 
 interface TabGroup {
@@ -75,10 +75,10 @@ interface TabGroup {
     MatButtonModule, MatIconModule, MatTooltipModule, MatAutocompleteModule,
     FicheIdentiteTabComponent, FluxMensuelTabComponent,
     FournisseursTabComponent, SyntheseTabComponent, DocumentsTabComponent,
-    AnalyseStrategiqueTabComponent, MissionsTabComponent,
+    MissionsTabComponent,
     ObjectifsTabComponent, ControleInterneTabComponent,
     HistoriqueTabComponent,
-    AdnTabComponent, CanvasTabComponent,
+    AdnTabComponent, BpTabComponent,
     DossierChatComponent, TachesRecurrentesTabComponent,
     GalerieTabComponent, GlobalTimerIndicatorComponent, RentabiliteTabComponent,
   ],
@@ -204,7 +204,8 @@ interface TabGroup {
         <div class="layout">
 
           <!-- ── Sidebar ─────────────────────────────── -->
-          <aside class="sidebar">
+          <aside class="sidebar" [class.sidebar--bp]="modeBp()">
+            @if (!modeBp()) {
 
             <!-- Profile -->
             <div class="profile">
@@ -259,12 +260,49 @@ interface TabGroup {
               }
             </nav>
 
+            } @else {
+              <!-- Tableau de bord BP : il devient le menu principal, ses outils en dessous -->
+              <nav class="bpnav" aria-label="Tableau de bord BP">
+                <button type="button" class="bpnav__retour" (click)="quitterBp()">
+                  <mat-icon>arrow_back</mat-icon>Retour au dossier
+                </button>
+                <div class="bpnav__tete">
+                  <span class="bpnav__icone"><mat-icon>space_dashboard</mat-icon></span>
+                  <div>
+                    <div class="bpnav__titre">Tableau de bord BP</div>
+                    <div class="bpnav__progression">{{ bpTab()?.nbValides() ?? 0 }} / 9 outils validés</div>
+                  </div>
+                </div>
+                <div class="bpnav__jauge"><span [style.width.%]="(bpTab()?.nbValides() ?? 0) / 9 * 100"></span></div>
+                <div class="bpnav__outils">
+                  @for (g of groupesOutilsBp; track g.categorie) {
+                    <span class="bpnav__cat">{{ g.categorie }}</span>
+                    @for (o of g.outils; track o.code) {
+                      <button type="button" class="bpnav__outil" [class.bpnav__outil--actif]="bpTab()?.actif() === o.code"
+                              [style.--o]="o.couleur" [style.animation-delay.ms]="90 + o.rang * 30" [attr.aria-current]="bpTab()?.actif() === o.code ? 'page' : null"
+                              [matTooltip]="bpTab()?.libelleEtat(o.code) ?? ''" matTooltipPosition="right" (click)="choisirOutilBp(o.code)">
+                        <mat-icon>{{ o.icon }}</mat-icon>
+                        <span class="bpnav__nom">{{ o.label }}</span>
+                        <span class="bpnav__etat bpnav__etat--{{ bpTab()?.etat(o.code) ?? 'vide' }}"></span>
+                      </button>
+                    }
+                  }
+                </div>
+                <div class="bpnav__legende">
+                  <span><i class="bpnav__etat bpnav__etat--valide"></i>Validé</span>
+                  <span><i class="bpnav__etat bpnav__etat--brouillon"></i>Brouillon</span>
+                  <span><i class="bpnav__etat bpnav__etat--modifie"></i>Modifié</span>
+                  <span><i class="bpnav__etat bpnav__etat--vide"></i>Non enregistré</span>
+                </div>
+              </nav>
+            }
           </aside>
 
           <!-- ── Content ──────────────────────────────── -->
           <div class="content">
 
-            <!-- ── Hero cards ─────────────────────────── -->
+            <!-- ── Hero cards (masquées sur le Tableau de bord BP, qui prend tout l'écran) ── -->
+            @if (!modeBp()) {
             <div class="hero">
 
               <!-- Card 1 : illustration secteur (ou photo choisie depuis la galerie) -->
@@ -502,8 +540,10 @@ interface TabGroup {
               </div>
 
             </div>
+            }
 
-            <!-- Content header -->
+            <!-- Content header (le Tableau de bord BP a son propre en-tête) -->
+            @if (!modeBp()) {
             <div class="content__header">
               <div class="ch-icon" [style.background]="activeGroupStyle().bg">
                 <mat-icon [style.color]="activeGroupStyle().color">{{ activeTabMeta()?.icon }}</mat-icon>
@@ -531,6 +571,7 @@ interface TabGroup {
                 }
               }
             </div>
+            }
 
             <!-- Bannière lecture seule -->
             @if (!canEdit()) {
@@ -541,7 +582,7 @@ interface TabGroup {
             }
 
             <!-- Animated content body -->
-            <div class="content__body" [@tabFade]="activeTab()">
+            <div #corps class="content__body" [class.content__body--bp]="modeBp()" [@tabFade]="activeTab()">
               <div [class.content__body--readonly]="!canEdit()"
                    [class.content__body--cloture]="exerciceCourant()?.statut === 'CLOTURE'">
                 @switch (activeTab()) {
@@ -550,11 +591,10 @@ interface TabGroup {
                   @case ('pilotage')     { <app-flux-mensuel-tab   [clientId]="client.id" [approche]="client.ficheIdentite?.approcheClient" [typesFluxActifs]="client.typesFluxActifs" [customFluxTypes]="client.customFluxTypes" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (fluxChanged)="onFluxChanged($event)" /> }
                   @case ('fournisseurs') { <app-fournisseurs-tab        [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('synthese')     { <app-synthese-tab            [clientId]="client.id" [site]="client.site" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
-                  @case ('strategie')    { <app-analyse-strategique-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
+                  @case ('bp')           { <app-bp-tab [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? null" [clientNom]="client.nom" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('missions')     { <app-missions-tab            [clientId]="client.id" [exercice]="exerciceCourant()" [canEdit]="canEdit()" [utilisateurs]="allUsers()" [prefill]="missionCIPrefill()" (prefillUsed)="missionCIPrefill.set(null)" /> }
                   @case ('controle')     { <app-controle-interne-tab    [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" (navigateTo)="activeTab.set($any($event))" (exporterReco)="recommandationsCIImportees.set($event)" (creerMissionCI)="missionCIPrefill.set($event)" /> }
                   @case ('objectifs')       { <app-objectifs-tab           [clientId]="client.id" [exerciceId]="exerciceCourant()?.id ?? 0" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" [recommandationsCIImportees]="recommandationsCIImportees()" (recommandationsIntegrees)="recommandationsCIImportees.set([])" /> }
-                  @case ('canvas')          { <app-canvas-tab              [clientId]="client.id" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('taches-recurrentes') { <app-taches-recurrentes-tab [clientId]="client.id" /> }
                   @case ('documents')    { <app-documents-tab           [clientId]="client.id" [typesFluxActifs]="client.typesFluxActifs" [readonly]="!canEdit() || exerciceCourant()?.statut === 'CLOTURE'" /> }
                   @case ('historique')   { <app-historique-tab          [clientId]="client.id" /> }
@@ -565,8 +605,10 @@ interface TabGroup {
             </div>
           </div>
 
-          <!-- ── Fil de discussion ── -->
-          <app-dossier-chat [clientId]="client.id" />
+          <!-- ── Fil de discussion (masqué sur le Tableau de bord BP) ── -->
+          @if (!modeBp()) {
+            <app-dossier-chat [clientId]="client.id" />
+          }
 
         </div>
       </div>
@@ -1253,6 +1295,82 @@ interface TabGroup {
       pointer-events: auto !important;
       user-select: auto;
     }
+    /* Tableau de bord BP consultable : comparaison N-1 et export PDF (le choix de l'outil est dans le menu de gauche) */
+    ::ng-deep .content__body--cloture app-bp-tab .bp__actions,
+    ::ng-deep .content__body--cloture app-bp-tab .bp__actions *,
+    ::ng-deep .content__body--readonly app-bp-tab .bp__actions,
+    ::ng-deep .content__body--readonly app-bp-tab .bp__actions * {
+      pointer-events: auto !important;
+      user-select: auto;
+    }
+
+    /* ══ TABLEAU DE BORD BP : plein écran, son menu remplace celui du dossier ══ */
+    .content__body--bp { padding: 18px 24px 32px; }
+    .sidebar--bp { width: 264px; min-width: 264px; }
+    .bpnav {
+      display: flex; flex-direction: column; flex: 1;
+      padding: 12px 10px 18px;
+      animation: bpnav-monte .32s cubic-bezier(.2, .8, .2, 1) both;
+    }
+    .bpnav__retour {
+      align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
+      border: none; background: none; cursor: pointer;
+      color: #1565C0; font: inherit; font-size: 12.5px; font-weight: 500;
+      padding: 6px 10px 6px 6px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .bpnav__retour:hover { background: #E8F0FE; }
+    .bpnav__retour mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    .bpnav__tete {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 16px; background: #FBE9E7;
+    }
+    .bpnav__icone {
+      width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #E65100; color: #fff;
+    }
+    .bpnav__titre { font-size: 14.5px; font-weight: 700; color: #BF360C; }
+    .bpnav__progression { font-size: 11.5px; color: #8D6E63; margin-top: 1px; }
+    .bpnav__jauge { height: 4px; border-radius: 2px; background: #F3E5DF; margin: 8px 12px 4px; overflow: hidden; }
+    .bpnav__jauge span { display: block; height: 100%; border-radius: 2px; background: #10b981; transition: width .3s; }
+    .bpnav__outils {
+      display: flex; flex-direction: column; gap: 1px;
+      margin-left: 12px; padding-left: 6px; border-left: 2px solid #F3E5DF;
+    }
+    .bpnav__cat {
+      font-size: 10px; font-weight: 700; color: #89909A;
+      text-transform: uppercase; letter-spacing: .9px;
+      padding: 12px 10px 4px;
+    }
+    .bpnav__outil {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border: none; border-radius: 12px; background: none;
+      font: inherit; font-size: 13.5px; font-weight: 500; color: #44474F;
+      cursor: pointer; text-align: left;
+      transition: background .15s, color .15s;
+      animation: bpnav-outil .28s ease-out both;
+    }
+    .bpnav__outil:hover { background: #F0F1F5; color: #1A1C1E; }
+    .bpnav__outil mat-icon { font-size: 19px; width: 19px; height: 19px; flex-shrink: 0; color: var(--o); }
+    .bpnav__outil--actif {
+      background: color-mix(in srgb, var(--o) 13%, white); color: #1A1C1E; font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--o);
+    }
+    .bpnav__outil--actif:hover { background: color-mix(in srgb, var(--o) 18%, white); }
+    .bpnav__nom { flex: 1; min-width: 0; line-height: 1.25; }
+    .bpnav__etat { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #CBD5E1; }
+    .bpnav__etat--valide { background: #10b981; }
+    .bpnav__etat--brouillon { background: #f59e0b; }
+    .bpnav__etat--modifie { background: #3b82f6; }
+    .bpnav__legende {
+      display: flex; flex-wrap: wrap; gap: 6px 12px;
+      margin-top: auto; padding: 18px 12px 0;
+      font-size: 11px; color: #89909A;
+    }
+    .bpnav__legende span { display: inline-flex; align-items: center; gap: 5px; }
+    @keyframes bpnav-monte { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+    @keyframes bpnav-outil { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .bpnav, .bpnav__outil { animation: none; } }
   `],
 })
 export class ClientDetailComponent implements OnInit, OnDestroy {
@@ -1268,6 +1386,19 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   exercices       = signal<Exercice[]>([]);
   exerciceCourant = signal<Exercice | null>(null);
   cloturant       = signal(false);
+
+  /** Tableau de bord BP en plein écran : son menu (outils) remplace celui du dossier,
+   *  sans cartes du dossier ni fil de discussion. */
+  readonly modeBp = computed(() => this.activeTab() === 'bp');
+  readonly bpTab  = viewChild(BpTabComponent);
+  private corps   = viewChild<ElementRef<HTMLElement>>('corps');
+  /** Onglet rouvert par « Retour au dossier ». */
+  private ongletAvantBp: TabId = 'fiche';
+  private suiviOngletAvantBp = effect(() => {
+    const onglet = this.activeTab();
+    if (onglet !== 'bp') this.ongletAvantBp = onglet;
+  });
+  private _groupesBp?: { categorie: string; outils: (InfoOutilBp & { rang: number })[] }[];
 
 
   readonly TAB_GROUPS: TabGroup[] = [
@@ -1293,12 +1424,18 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
       label: 'Analyse',
       icon: 'query_stats',
       tabs: [
-        { id: 'strategie',        icon: 'grid_view',    label: 'Stratégie' },
         { id: 'missions',         icon: 'assignment',   label: 'Missions' },
         { id: 'controle',         icon: 'shield',       label: 'Contrôle Interne' },
         { id: 'objectifs',        icon: 'flag',         label: 'Objectifs' },
-        { id: 'canvas',               icon: 'grid_view',    label: 'Modèle Canvas' },
         { id: 'taches-recurrentes',   icon: 'repeat',       label: 'Tâches récurrentes' },
+      ],
+    },
+    {
+      // « Outils stratégiques PASSIDOC x Business Partner » : remplace les onglets Stratégie et Modèle Canvas.
+      label: 'Business Partner',
+      icon: 'insights',
+      tabs: [
+        { id: 'bp', icon: 'space_dashboard', label: 'Tableau de bord BP' },
       ],
     },
     {
@@ -1361,9 +1498,11 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     const tab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
-    // L'ancien « Dossier de travail » (révision par cycle) est fusionné dans Missions › Par cycle.
+    // L'ancien « Dossier de travail » (révision par cycle) est fusionné dans Missions › Par cycle,
+    // les anciens « Stratégie » et « Modèle Canvas » dans le Tableau de bord BP.
     // Un onglet inconnu (ancien lien) laisserait la page vide : on garde l'onglet par défaut.
-    const cible = tab === 'dossier-travail' ? 'missions' : tab;
+    const ancien = tab as string | null;
+    const cible: TabId | null = ancien === 'dossier-travail' ? 'missions' : ancien === 'strategie' || ancien === 'canvas' ? 'bp' : tab;
     if (cible && this.TAB_GROUPS.some(g => g.tabs.some(t => t.id === cible))) this.activeTab.set(cible);
     const start = Date.now();
     this.clientsService.getOne(id).subscribe(c => {
@@ -1576,6 +1715,26 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
   }
 
 
+  /** Outils du menu BP par catégorie ; `rang` décale l'apparition de chaque outil. */
+  get groupesOutilsBp() {
+    if (!this._groupesBp) {
+      let rang = 0;
+      this._groupesBp = groupesOutilsBp().map(g => ({ ...g, outils: g.outils.map(o => ({ ...o, rang: rang++ })) }));
+    }
+    return this._groupesBp;
+  }
+
+  quitterBp() {
+    if (this.bpTab()?.modifies().size && !confirm('Des modifications du Tableau de bord BP ne sont pas enregistrées. Quitter quand même ?')) return;
+    this.activeTab.set(this.ongletAvantBp);
+  }
+
+  choisirOutilBp(code: OutilBpCode) {
+    this.bpTab()?.actif.set(code);
+    const corps = this.corps()?.nativeElement;
+    if (corps) corps.scrollTop = 0;
+  }
+
   activeTabMeta() {
     for (const g of this.TAB_GROUPS) {
       const t = g.tabs.find(t => t.id === this.activeTab());
@@ -1677,6 +1836,7 @@ export class ClientDetailComponent implements OnInit, OnDestroy {
     'Analyse':      { color: '#6A1B9A', bg: '#F3E5F5' },
     'Ressources':   { color: '#00695C', bg: '#E0F2F1' },
     'Intelligence': { color: '#E65100', bg: '#FBE9E7' },
+    'Business Partner': { color: '#E65100', bg: '#FBE9E7' },
   };
 
   groupStyle(label: string) { return this.GROUP_STYLE_MAP[label] ?? { color: '#1565C0', bg: '#E8F0FE' }; }

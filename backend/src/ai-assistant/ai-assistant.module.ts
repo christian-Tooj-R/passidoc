@@ -5,6 +5,7 @@ import { ConversationIA } from '../entities/conversation-ia.entity';
 import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel } from '../entities/flux-mensuel.entity';
 import { TenantConfig } from '../entities/tenant-config.entity';
+import { OutilBp } from '../entities/outil-bp.entity';
 import { AiAssistantService } from './ai-assistant.service';
 import { AiAssistantController } from './ai-assistant.controller';
 import { AiAssistantTravailService } from './ai-assistant-travail.service';
@@ -14,7 +15,7 @@ import { SaisieTempsModule } from '../saisie-temps/saisie-temps.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel, TenantConfig]),
+    TypeOrmModule.forFeature([Client, ConversationIA, DossierTravail, FluxMensuel, TenantConfig, OutilBp]),
     ClientsModule,
     SaisieTempsModule,
   ],

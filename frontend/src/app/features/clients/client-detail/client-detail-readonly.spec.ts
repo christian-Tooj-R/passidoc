@@ -9,7 +9,6 @@
  *    · FluxMensuelTabComponent (pilotage)
  *    · SyntheseTabComponent
  *    · MissionsTabComponent
- *    · CanvasTabComponent
  *    · FournisseursTabComponent
  *    · DocumentsTabComponent
  */
@@ -30,7 +29,6 @@ import { AdnTabComponent } from './tabs/adn-tab/adn-tab.component';
 import { FluxMensuelTabComponent } from './tabs/flux-mensuel-tab/flux-mensuel-tab.component';
 import { SyntheseTabComponent } from './tabs/synthese-tab/synthese-tab.component';
 import { MissionsTabComponent } from './tabs/missions-tab/missions-tab.component';
-import { CanvasTabComponent } from './tabs/canvas-tab/canvas-tab.component';
 import { FournisseursTabComponent } from './tabs/fournisseurs-tab/fournisseurs-tab.component';
 import { DocumentsTabComponent } from './tabs/documents-tab/documents-tab.component';
 
@@ -284,21 +282,6 @@ async function createMissionsTab(readonly: boolean) {
   return fix;
 }
 
-async function createCanvasTab(readonly: boolean) {
-  await TestBed.configureTestingModule({
-    imports: [CanvasTabComponent],
-    providers: [
-      provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideAnimations(),
-      { provide: ToastService, useValue: mockToast },
-    ],
-  }).compileComponents();
-  const fix = TestBed.createComponent(CanvasTabComponent);
-  fix.componentInstance.clientId = 1;
-  fix.componentInstance.readonly = readonly;
-  fix.detectChanges();
-  return fix;
-}
-
 async function createFournisseursTab(readonly: boolean) {
   await TestBed.configureTestingModule({
     imports: [FournisseursTabComponent],
@@ -435,29 +418,6 @@ describe('MissionsTabComponent — readonly', () => {
     fix.componentInstance.vue.set('pipeline');
     fix.detectChanges();
     expect(boutons(fix).some(t => t.includes('Nouvelle mission'))).toBe(true);
-  });
-});
-
-// ── Suite : CanvasTab ─────────────────────────────────────────────────────────
-
-describe('CanvasTabComponent — readonly', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  // L'enregistrement du canvas passe par l'en-tête du dossier (TabSaveService, mode
-  // Modifier/Enregistrer) — en-tête lui-même masqué quand l'utilisateur ne peut pas éditer.
-  it("n'a pas de bouton d'enregistrement interne, en lecture seule comme en édition", async () => {
-    for (const readonly of [true, false]) {
-      TestBed.resetTestingModule();
-      const fix = await createCanvasTab(readonly);
-      expect(fix.nativeElement.querySelector('.cv-save-btn')).toBeNull();
-    }
-  });
-
-  it("délègue Modifier / Enregistrer à l'en-tête du dossier", async () => {
-    const fix = await createCanvasTab(false);
-    const tabSave = TestBed.inject(TabSaveService);
-    expect(tabSave.hasToggle()).toBe(true);
-    expect(fix.componentInstance.editMode()).toBe(false);
   });
 });
 

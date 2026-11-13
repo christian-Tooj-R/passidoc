@@ -10,6 +10,8 @@ import { DossierTravail } from '../entities/dossier-travail.entity';
 import { FluxMensuel, TypeFlux, StatutDepot } from '../entities/flux-mensuel.entity';
 import { LIBELLES_STATUT, StatutMission, nomCycle } from '../missions/missions.util';
 import { TenantConfig } from '../entities/tenant-config.entity';
+import { OutilBp } from '../entities/outil-bp.entity';
+import { texteOutilsBp } from '../business-partner/outils-bp.util';
 
 @Injectable()
 export class AiAssistantService {
@@ -22,6 +24,7 @@ export class AiAssistantService {
     @InjectRepository(DossierTravail) private dossierRepo: Repository<DossierTravail>,
     @InjectRepository(FluxMensuel)  private fluxRepo: Repository<FluxMensuel>,
     @InjectRepository(TenantConfig) private tenantRepo: Repository<TenantConfig>,
+    @InjectRepository(OutilBp)      private outilBpRepo: Repository<OutilBp>,
     private config: ConfigService,
   ) {
     this.groq  = new Groq({ apiKey: config.get<string>('GROQ_API_KEY') });
@@ -100,7 +103,7 @@ export class AiAssistantService {
     user: any,
     res: Response,
   ) {
-    const [client, dossiers, flux] = await Promise.all([
+    const [client, dossiers, flux, outilsBp] = await Promise.all([
       this.clientRepo.findOne({
         where: { id: clientId },
         relations: [
@@ -119,6 +122,7 @@ export class AiAssistantService {
         where: { client: { id: clientId } },
         order: { annee: 'DESC', mois: 'ASC' },
       }),
+      this.outilBpRepo.find({ where: { clientId }, relations: ['exercice'] }),
     ]);
 
     if (!client) { res.status(404).end('Client introuvable'); return; }
@@ -135,7 +139,7 @@ export class AiAssistantService {
     }
 
     const groqMessages = [
-      { role: 'system' as const, content: await this.buildSystemPrompt(client, dossiers, flux) },
+      { role: 'system' as const, content: await this.buildSystemPrompt(client, dossiers, flux, outilsBp) },
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ];
 
@@ -187,7 +191,10 @@ export class AiAssistantService {
     PIECES_COMPTABLES: 'Pièces comptables',
   };
 
-  private async buildSystemPrompt(client: Client, dossiers: DossierTravail[] = [], flux: FluxMensuel[] = []): Promise<string> {
+  private async buildSystemPrompt(client: Client, dossiers: DossierTravail[] = [], flux: FluxMensuel[] = [], outilsBp: OutilBp[] = []): Promise<string> {
+    // Tableau de Bord BP : outils du dernier exercice qui en a.
+    const anneeBp = Math.max(0, ...outilsBp.map(o => o.exercice?.annee ?? 0));
+    const lignesBp = anneeBp ? texteOutilsBp(anneeBp, outilsBp.filter(o => o.exercice?.annee === anneeBp)) : [];
     const fi        = client.ficheIdentite;
     const analyses  = (client.analysesStrategiques || []).sort((a: any, b: any) => b.id - a.id);
     const objectifs = client.objectifsItems?.[0];
@@ -207,6 +214,7 @@ export class AiAssistantService {
     if (adn)             sections.push('ADN Global (mission, vision, valeurs, enjeux RH, canaux acquisition, concurrents, projets investissement, saisonnalité, niveau numérique)');
     if (adnSec)          sections.push('ADN Sectoriel (questionnaire métier sectoriel)');
     if (analyses.length) sections.push(`Analyse${analyses.length > 1 ? 's' : ''} stratégique${analyses.length > 1 ? 's' : ''} (SWOT, BMC)`);
+    if (lignesBp.length) sections.push(`Tableau de bord BP ${anneeBp} (SWOT, Porter, BMC, PESTEL, chaîne de valeur, diagnostic, risques, persona/ICP, BCG)`);
     if (syntheses.length) sections.push(`Performances financières historiques (${syntheses.length} exercice(s) : CA, EBE, résultat net, commentaires)`);
     if (missions.length) sections.push(`Missions cabinet (${missions.length} mission(s))`);
     if (objectifs)       sections.push('Objectifs client (court, moyen, long terme, attentes cabinet)');
@@ -396,6 +404,9 @@ export class AiAssistantService {
         if (analyse.businessModelCanvas)   lines.push(`BMC : ${analyse.businessModelCanvas}`);
       });
     }
+
+    // ── Tableau de Bord BP (remplace les anciens onglets Stratégie et Canvas) ──
+    lines.push(...lignesBp);
 
     // ── Synthèses de clôture (toutes) ─────────────────────────────────────────
     if (syntheses.length) {
