@@ -1305,7 +1305,8 @@ interface TabGroup {
     }
 
     /* ══ TABLEAU DE BORD BP : plein écran, son menu remplace celui du dossier ══ */
-    .content__body--bp { padding: 18px 24px 32px; }
+    /* 96 px en bas : le dernier élément doit pouvoir remonter au-dessus du bouton rond de l'assistant IA */
+    .content__body--bp { padding: 18px 24px 96px; }
     .sidebar--bp { width: 264px; min-width: 264px; }
     .bpnav {
       display: flex; flex-direction: column; flex: 1;
