@@ -1,17 +1,20 @@
 import {
-  Component, Input, OnChanges, OnInit, SimpleChanges, computed, inject, signal,
+  Component, Input, OnChanges, OnInit, SimpleChanges, computed, effect, inject, signal, untracked,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
-  CATEGORIES_RISQUE, LIBELLES_ZONES, OutilBpCode, OutilBpVue, ProfilAutoBp, SuggestionBp, TableauBp,
+  CATEGORIES_RISQUE, LIBELLES_ZONES, OutilBpCode, NB_OUTILS_ANALYSE, QUADRANTS_BCG, OutilBpVue, ProfilAutoBp, SuggestionBp, TableauBp,
   appliquerSuggestion, ecarterSuggestion, evolutionN1, infoOutil, suggestionTraitee,
 } from '../../../../../core/models/outils-bp.model';
 import { OutilsBpService } from '../../../../../core/services/outils-bp.service';
+import { DocumentsService } from '../../../../../core/services/documents.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 import { TenantService } from '../../../../../core/services/tenant.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { BpSwotComponent } from './bp-swot.component';
@@ -23,7 +26,9 @@ import { BpDiagnosticComponent } from './bp-diagnostic.component';
 import { BpRisquesComponent } from './bp-risques.component';
 import { BpPersonaComponent } from './bp-persona.component';
 import { BpBcgComponent } from './bp-bcg.component';
-import { exporterRapportBp } from './bp.export';
+import { BpEntretienComponent } from './bp-entretien.component';
+import { BpSignatureComponent } from './bp-signature.component';
+import { construireRapportBp, exporterQuestionnaireVierge, exporterRapportBp } from './bp.export';
 
 const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
@@ -37,8 +42,8 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
   selector: 'app-bp-tab',
   standalone: true,
   imports: [
-    DatePipe, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
-    BpSwotComponent, BpPorterComponent, BpBmcComponent, BpPestelComponent, BpChaineValeurComponent,
+    DatePipe, FormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
+    BpEntretienComponent, BpSignatureComponent, BpSwotComponent, BpPorterComponent, BpBmcComponent, BpPestelComponent, BpChaineValeurComponent,
     BpDiagnosticComponent, BpRisquesComponent, BpPersonaComponent, BpBcgComponent,
   ],
   template: `
@@ -85,14 +90,21 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
         <mat-menu #menuExport="matMenu">
           <button mat-menu-item type="button" (click)="exporter('outil')"><mat-icon>description</mat-icon>{{ info.label }} (PDF)</button>
           <button mat-menu-item type="button" (click)="exporter('rapport')"><mat-icon>library_books</mat-icon>Rapport BP {{ tb.exercice.annee }} complet (PDF)</button>
+          @if (actif() === 'ENTRETIEN') {
+            <button mat-menu-item type="button" (click)="exporterVierge()"><mat-icon>print</mat-icon>Questionnaire vierge à imprimer (PDF)</button>
+          }
         </mat-menu>
         @if (editable() && tb.droits.valider) {
-          <button mat-stroked-button type="button" class="bp__valider" (click)="valider()" [disabled]="enCours() || (vue.statut === 'VALIDE' && !modifies().has(actif()))"
+          <button mat-stroked-button type="button" class="bp__valider" (click)="ouvrirValidation()" [disabled]="enCours() || validationOuverte() || (vue.statut === 'VALIDE' && !modifies().has(actif()))"
                   matTooltip="Valider et publier cet outil (profils BP+)">
             <mat-icon>verified</mat-icon>Valider
           </button>
         }
         @if (editable()) {
+          <button mat-stroked-button type="button" class="bp__ouvrir-signature" (click)="ouvrirSignature()" [disabled]="signatureOuverte()"
+                  matTooltip="Signer le rapport BP avec le dirigeant et l'archiver dans les Documents du dossier">
+            <mat-icon>draw</mat-icon>Signer le rapport
+          </button>
           <button mat-flat-button color="primary" type="button" class="bp__enregistrer" (click)="enregistrer()" [disabled]="enCours()">
             <mat-icon>save</mat-icon>Enregistrer
           </button>
@@ -100,6 +112,55 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
       </div>
     </header>
 
+    @if (signatureOuverte()) {
+      <section class="bp__signature" aria-label="Co-signature du rapport">
+        <h3><mat-icon>draw</mat-icon>Co-signature du rapport BP {{ tb.exercice.annee }}</h3>
+        <p class="bp__signature-intro">Le rapport complet (outils renseignés, entretien en annexe) est généré avec les deux signatures,
+          téléchargé et archivé dans les Documents du dossier.</p>
+        @if (modifies().size) {
+          <p class="bp__signature-alerte"><mat-icon>warning_amber</mat-icon>Enregistrez d'abord les modifications en cours : le rapport reprend la version enregistrée.</p>
+        }
+        <div class="bp__signature-noms">
+          <label>Business Partner<input class="bp__signataire-bp" maxlength="120" [(ngModel)]="signataireBp"></label>
+          <label>Dirigeant<input class="bp__signataire-dirigeant" maxlength="120" [(ngModel)]="signataireDirigeant" placeholder="Nom du dirigeant"></label>
+        </div>
+        <div class="bp__signature-zones">
+          <app-bp-signature class="bp__sig-bp" libelle="Signature du Business Partner" (signature)="signatureBp = $event" />
+          <app-bp-signature class="bp__sig-dirigeant" libelle="Signature du dirigeant" (signature)="signatureDirigeant = $event" />
+        </div>
+        <div class="bp__validation-actions">
+          <button mat-stroked-button type="button" (click)="signatureOuverte.set(false)">Annuler</button>
+          <button mat-flat-button color="primary" type="button" class="bp__signer" [disabled]="!peutSigner()" (click)="signerEtArchiver()">
+            <mat-icon>verified</mat-icon>Signer et archiver le rapport
+          </button>
+        </div>
+      </section>
+    }
+    @if (dernierRapport(); as r) {
+      <div class="bp__info bp__info--ok"><mat-icon>task</mat-icon>Rapport BP signé le {{ r.date | date:'dd/MM/yyyy à HH:mm' }} et archivé dans les Documents du dossier ({{ r.nom }}).</div>
+    }
+    @if (validationOuverte()) {
+      <section class="bp__validation" aria-label="Valider l'outil">
+        <label class="bp__validation-lib" for="bp-commentaire">Commentaire du BP <small>(facultatif, repris dans le rapport PDF)</small></label>
+        <textarea id="bp-commentaire" class="bp__validation-champ" rows="2" maxlength="1000" [(ngModel)]="commentaireValidation"
+                  placeholder="Points clés, réserves, prochaines étapes…"></textarea>
+        <div class="bp__validation-actions">
+          <button mat-stroked-button type="button" (click)="validationOuverte.set(false)">Annuler</button>
+          <button mat-flat-button color="primary" type="button" class="bp__confirmer-validation" (click)="valider()" [disabled]="enCours()">
+            <mat-icon>verified</mat-icon>Valider {{ info.label }}
+          </button>
+        </div>
+      </section>
+    }
+    @if (vue.statut === 'VALIDE' && vue.commentaire && !modifies().has(actif())) {
+      <div class="bp__commentaire"><mat-icon>chat</mat-icon>
+        <div><strong>Commentaire de validation{{ vue.validePar?.nom ? ' — ' + vue.validePar?.nom : '' }}</strong><p>{{ vue.commentaire }}</p></div>
+      </div>
+    }
+    @if (actif() === 'RISQUES' && !tb.exercice.cloture && joursDepuisMaj(vue) > 90) {
+      <div class="bp__info bp__info--alerte"><mat-icon>update</mat-icon>
+        Matrice mise à jour il y a {{ joursDepuisMaj(vue) }} jours : le document prévoit une mise à jour trimestrielle des risques.</div>
+    }
     @if (vue.origine === 'REPRISE_N1' && !modifies().has(actif())) {
       <div class="bp__info"><mat-icon>history</mat-icon>Repris de l'exercice {{ tb.precedent?.annee }} : mettez-le à jour puis enregistrez.</div>
     }
@@ -128,20 +189,32 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
       </section>
     }
 
-    @if (editable() && suggestionsActives().length) {
+    @if (editable() && (suggestionsActives().length || iaPossible())) {
       <section class="bp__sugg" aria-label="Suggestions PASSIDOC">
-        <button type="button" class="bp__sugg-entete" (click)="suggestionsOuvertes.set(!suggestionsOuvertes())"
-                [attr.aria-expanded]="suggestionsOuvertes()">
-          <mat-icon>auto_awesome</mat-icon>
-          <strong>{{ suggestionsActives().length }} suggestion{{ suggestionsActives().length > 1 ? 's' : '' }} PASSIDOC</strong>
-          <span>tirées des données du dossier : ajoutez-les ou écartez-les</span>
-          <mat-icon class="bp__sugg-chevron">{{ suggestionsOuvertes() ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
+        <div class="bp__sugg-tete">
+          <button type="button" class="bp__sugg-entete" (click)="suggestionsOuvertes.set(!suggestionsOuvertes())"
+                  [attr.aria-expanded]="suggestionsOuvertes()">
+            <mat-icon>auto_awesome</mat-icon>
+            @if (suggestionsActives().length) {
+              <strong>{{ suggestionsActives().length }} suggestion{{ suggestionsActives().length > 1 ? 's' : '' }} PASSIDOC</strong>
+              <span>tirées des données du dossier : ajoutez-les ou écartez-les</span>
+            } @else {
+              <strong>Aucune suggestion PASSIDOC</strong><span>pour cet outil : l'IA peut en proposer à partir du dossier</span>
+            }
+            <mat-icon class="bp__sugg-chevron">{{ suggestionsOuvertes() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+          @if (iaPossible()) {
+            <button mat-stroked-button type="button" class="bp__ia" (click)="proposerIa()" [disabled]="iaEnCours()"
+                    matTooltip="L'IA propose de nouveaux éléments à partir des données du dossier et de ce qui est déjà saisi">
+              <mat-icon>{{ iaEnCours() ? 'hourglass_top' : 'psychology' }}</mat-icon>{{ iaEnCours() ? 'Analyse en cours…' : "Proposer avec l'IA" }}
+            </button>
+          }
+        </div>
         @if (suggestionsOuvertes()) {
           <div class="bp__sugg-grille">
             @for (s of suggestionsActives(); track s.cle) {
               <div class="bp__sugg-item">
-                <span class="bp__sugg-zone">{{ libelleZone(s) }}</span>
+                <span class="bp__sugg-zone">{{ libelleZone(s) }}@if (s.cle.startsWith('ia.')) { <span class="bp__sugg-ia">IA</span> }</span>
                 <p>{{ s.texte }}</p>
                 <div class="bp__sugg-pied">
                   <small>{{ s.source }}</small>
@@ -167,6 +240,7 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
         @case ('RISQUES') { <app-bp-risques [contenu]="c" [editable]="editable()" (contenuChange)="modifie()" /> }
         @case ('PERSONA') { <app-bp-persona [contenu]="c" [editable]="editable()" [profil]="profil()" (contenuChange)="modifie()" /> }
         @case ('BCG') { <app-bp-bcg [contenu]="c" [editable]="editable()" (contenuChange)="modifie()" /> }
+        @case ('ENTRETIEN') { <app-bp-entretien [contenu]="c" [editable]="editable()" (contenuChange)="modifie()" /> }
       }
     </div>
   </main>
@@ -180,6 +254,28 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
     .bp { display: flex; flex-direction: column; gap: 14px; }
     .bp__main { min-width: 0; }
     .bp__valider { color: #047857; }
+    .bp__validation { border: 1px solid #a7f3d0; background: #f0fdf4; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+    .bp__validation-lib { display: block; font-size: 13px; font-weight: 600; color: #065f46; margin-bottom: 6px; }
+    .bp__validation-lib small { font-weight: 400; color: #64748b; }
+    .bp__validation-champ { width: 100%; box-sizing: border-box; font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid #a7f3d0;
+      border-radius: 8px; resize: vertical; background: #fff; }
+    .bp__validation-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .bp__signature { border: 1px solid #c7d2fe; background: #f8faff; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .bp__signature h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 15px; color: #312e81; }
+    .bp__signature-intro { margin: 0 0 10px; font-size: 12.5px; color: #64748b; }
+    .bp__signature-alerte { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #b45309; }
+    .bp__signature-noms, .bp__signature-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 10px; }
+    .bp__signature-noms label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: #334155; }
+    .bp__signature-noms input { font: inherit; font-size: 14px; font-weight: 400; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .bp__info--alerte { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .bp__info--alerte mat-icon { color: #d97706; }
+    .bp__info--ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    .bp__info--ok mat-icon { color: #059669; }
+    @media (max-width: 760px) { .bp__signature-noms, .bp__signature-zones { grid-template-columns: 1fr; } }
+    .bp__commentaire { display: flex; gap: 10px; padding: 10px 14px; margin-bottom: 12px; border-radius: 10px; background: #ecfdf5;
+      border: 1px solid #a7f3d0; font-size: 13px; color: #065f46; }
+    .bp__commentaire mat-icon { font-size: 19px; width: 19px; height: 19px; flex-shrink: 0; }
+    .bp__commentaire p { margin: 2px 0 0; color: #134e4a; white-space: pre-wrap; }
     .bp__entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
     .bp__titre { display: flex; align-items: center; gap: 12px; }
     .bp__titre h2 { margin: 0; font-size: 20px; color: #0f172a; }
@@ -211,6 +307,10 @@ const copie = <T>(v: T): T => JSON.parse(JSON.stringify(v));
     .bp__sugg-entete strong { color: #1d4ed8; }
     .bp__sugg-entete mat-icon { color: #2563eb; font-size: 19px; width: 19px; height: 19px; }
     .bp__sugg-chevron { margin-left: auto; }
+    .bp__sugg-tete { display: flex; align-items: center; gap: 8px; padding-right: 10px; }
+    .bp__sugg-tete .bp__sugg-entete { flex: 1; min-width: 0; }
+    .bp__ia { flex-shrink: 0; color: #6d28d9; }
+    .bp__sugg-ia { margin-left: 6px; padding: 0 5px; border-radius: 6px; background: #ede9fe; color: #6d28d9; font-size: 9.5px; }
     .bp__sugg-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; padding: 0 12px 12px;
       max-height: 300px; overflow: auto; }
     .bp__sugg-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; }
@@ -225,10 +325,14 @@ export class BpTabComponent implements OnInit, OnChanges {
   @Input() exerciceId: number | null | undefined = null;
   @Input() readonly = false;
   @Input() clientNom = '';
+  /** Contact légal de la fiche identité, proposé comme signataire du rapport. */
+  @Input() dirigeantNom = '';
 
   private service = inject(OutilsBpService);
   private toast = inject(ToastService);
   private tenant = inject(TenantService);
+  private documents = inject(DocumentsService);
+  private auth = inject(AuthService);
 
   readonly tableau = signal<TableauBp | null>(null);
   readonly chargement = signal(true);
@@ -251,17 +355,35 @@ export class BpTabComponent implements OnInit, OnChanges {
   });
   readonly vueActive = computed(() => this.vue(this.actif())!);
   readonly infoActive = computed(() => infoOutil(this.actif()));
-  readonly nbValides = computed(() => (this.tableau()?.outils ?? []).filter(o => o.statut === 'VALIDE').length);
+  /** Outils d'analyse validés (le questionnaire d'entretien n'en fait pas partie). */
+  readonly nbValides = computed(() => (this.tableau()?.outils ?? []).filter(o => o.outil !== 'ENTRETIEN' && o.statut === 'VALIDE').length);
+  readonly nbOutilsAnalyse = NB_OUTILS_ANALYSE;
+  readonly validationOuverte = signal(false);
+  commentaireValidation = '';
+  readonly signatureOuverte = signal(false);
+  readonly iaEnCours = signal(false);
+  /** L'entretien est la source des suggestions : l'IA ne propose rien dedans. */
+  readonly iaPossible = computed(() => this.actif() !== 'ENTRETIEN');
+  readonly dernierRapport = signal<{ date: string; nom: string } | null>(null);
+  signataireBp = '';
+  signataireDirigeant = '';
+  signatureBp = '';
+  signatureDirigeant = '';
   readonly suggestionsActives = computed(() => {
     this.rev();
     const c = this.contenuActif();
-    return this.suggestions().filter(s => s.outil === this.actif() && s.outil !== 'BCG' && !suggestionTraitee(c, s));
+    return this.suggestions().filter(s => s.outil === this.actif() && !suggestionTraitee(c, s));
   });
   readonly evolution = computed(() => {
     this.rev();
     const n1 = this.tableau()?.precedent?.outils[this.actif()];
     return evolutionN1(this.actif(), this.contenuActif(), n1?.contenu);
   });
+
+  constructor() {
+    // Le commentaire de validation en cours concerne l'outil affiché : changer d'outil l'abandonne.
+    effect(() => { this.actif(); untracked(() => this.validationOuverte.set(false)); });
+  }
 
   ngOnInit() { this.charger(); }
 
@@ -293,6 +415,7 @@ export class BpTabComponent implements OnInit, OnChanges {
       const cat = CATEGORIES_RISQUE.find(c => c.code === s.risque!.categorie)?.label ?? s.risque.categorie;
       return `Risque ${cat.toLowerCase()} · P${s.risque.probabilite} × G${s.risque.gravite}`;
     }
+    if (s.outil === 'BCG') return `Activité · ${QUADRANTS_BCG.find(q => q.code === s.zone)?.label ?? s.zone}`;
     const cle = s.zone.split(/[:.]/).pop()!;
     const lib = LIBELLES_ZONES[cle] ?? cle;
     return s.score ? `${lib} · note proposée ${s.score}/5` : lib;
@@ -326,6 +449,8 @@ export class BpTabComponent implements OnInit, OnChanges {
           vues.forEach(v => this.remplacer(v));
           this.modifies.set(new Set());
           this.enCours.set(false);
+          // Les réponses de l'entretien deviennent des suggestions dans les autres outils.
+          if (codes.includes('ENTRETIEN')) this.rechargerSuggestions();
           if (apres) apres();
           else this.toast.success(codes.length > 1 ? `${codes.length} outils BP enregistrés` : `${infoOutil(codes[0]).label} enregistré`);
         },
@@ -334,12 +459,22 @@ export class BpTabComponent implements OnInit, OnChanges {
   }
 
   /** Valide l'outil affiché (enregistré d'abord s'il a été modifié). */
+  /** « Valider » ouvre la saisie du commentaire du BP ; la validation se confirme ensuite. */
+  ouvrirValidation() {
+    this.commentaireValidation = '';
+    this.validationOuverte.set(true);
+  }
+
   valider() {
     const code = this.actif();
+    const commentaire = this.commentaireValidation.trim();
     const go = () => {
       this.enCours.set(true);
-      this.service.valider(this.clientId, this.exerciceId!, code).subscribe({
-        next: v => { this.remplacer(v); this.enCours.set(false); this.toast.success(`${infoOutil(code).label} validé`); },
+      this.service.valider(this.clientId, this.exerciceId!, code, commentaire).subscribe({
+        next: v => {
+          this.remplacer(v); this.enCours.set(false); this.validationOuverte.set(false);
+          this.toast.success(`${infoOutil(code).label} validé`);
+        },
         error: e => { this.enCours.set(false); this.toast.error(e?.error?.message ?? 'Validation impossible'); },
       });
     };
@@ -347,6 +482,74 @@ export class BpTabComponent implements OnInit, OnChanges {
       if (!this.modifies().has(code)) this.modifies.update(m => new Set(m).add(code));
       this.enregistrer(go);
     } else go();
+  }
+
+  ouvrirSignature() {
+    const u = this.auth.currentUser();
+    this.signataireBp = u ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() : '';
+    this.signataireDirigeant = this.dirigeantNom ?? '';
+    this.signatureBp = this.signatureDirigeant = '';
+    this.signatureOuverte.set(true);
+  }
+
+  peutSigner(): boolean {
+    return !this.enCours() && !this.modifies().size && !!this.signatureBp && !!this.signatureDirigeant
+      && !!this.signataireBp.trim() && !!this.signataireDirigeant.trim();
+  }
+
+  /** Rapport complet co-signé : téléchargé et archivé dans les Documents du dossier (partie 5 du document). */
+  signerEtArchiver() {
+    const tb = this.tableau();
+    if (!tb || !this.peutSigner()) return;
+    const date = new Date().toISOString();
+    const doc = construireRapportBp({
+      client: this.clientNom || 'Dossier', cabinet: this.tenant.nomSociete(), annee: tb.exercice.annee, profil: this.profil(),
+      outils: tb.outils,
+      signatures: {
+        date, bp: { nom: this.signataireBp.trim(), image: this.signatureBp }, dirigeant: { nom: this.signataireDirigeant.trim(), image: this.signatureDirigeant },
+      },
+    });
+    const client = (this.clientNom || 'dossier').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '-');
+    const nom = `Rapport-BP-${tb.exercice.annee}-signe-${client}.pdf`;
+    const fichier = new File([doc.output('blob')], nom, { type: 'application/pdf' });
+    this.enCours.set(true);
+    this.documents.upload(this.clientId, fichier, { typeDoc: 'AUTRE', periodeAnnee: tb.exercice.annee }).subscribe({
+      next: () => {
+        this.enCours.set(false);
+        this.signatureOuverte.set(false);
+        this.dernierRapport.set({ date, nom });
+        doc.save(nom);
+        this.toast.success('Rapport signé et archivé dans les Documents du dossier');
+      },
+      error: e => { this.enCours.set(false); this.toast.error(e?.error?.message ?? "Archivage du rapport impossible"); },
+    });
+  }
+
+  proposerIa() {
+    const outil = this.actif();
+    this.iaEnCours.set(true);
+    this.service.suggestionsIa(this.clientId, this.exerciceId!, outil).subscribe({
+      next: r => {
+        this.iaEnCours.set(false);
+        const connues = new Set(this.suggestions().map(s => s.cle));
+        const nouvelles = r.suggestions.filter(s => !connues.has(s.cle));
+        this.suggestions.update(l => [...nouvelles, ...l]);
+        this.suggestionsOuvertes.set(true);
+        if (nouvelles.length) this.toast.success(`${nouvelles.length} suggestion${nouvelles.length > 1 ? 's' : ''} de l'IA`);
+        else this.toast.info("L'IA n'a rien de nouveau à proposer pour cet outil");
+      },
+      error: e => { this.iaEnCours.set(false); this.toast.error(e?.error?.message ?? 'Suggestions IA indisponibles'); },
+    });
+  }
+
+  /** Jours depuis le dernier enregistrement de l'outil (repris de N-1 : celui de N-1), -1 s'il n'a jamais été enregistré. */
+  joursDepuisMaj(v: OutilBpVue | undefined): number {
+    if (!v?.modifieLe || v.origine === 'VIDE' || v.origine === 'REPRISE_ANCIENNE') return -1;
+    return Math.floor((Date.now() - new Date(v.modifieLe).getTime()) / 86_400_000);
+  }
+
+  exporterVierge() {
+    exporterQuestionnaireVierge({ client: this.clientNom || 'Dossier', cabinet: this.tenant.nomSociete(), annee: this.tableau()?.exercice.annee });
   }
 
   exporter(mode: 'outil' | 'rapport') {
@@ -360,6 +563,15 @@ export class BpTabComponent implements OnInit, OnChanges {
   }
 
   // ── Interne ──
+
+  private rechargerSuggestions() {
+    if (!this.clientId || !this.exerciceId) return;
+    this.service.suggestions(this.clientId, this.exerciceId).pipe(catchError(() => of(null))).subscribe(s => {
+      if (!s) return;
+      this.suggestions.set(s.suggestions);
+      this.profil.set(s.profil);
+    });
+  }
 
   private vue(code: OutilBpCode): OutilBpVue | undefined {
     return this.tableau()?.outils.find(o => o.outil === code);

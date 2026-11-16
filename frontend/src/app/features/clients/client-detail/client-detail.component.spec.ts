@@ -115,13 +115,13 @@ describe('ClientDetailComponent', () => {
   });
 
   describe('Tableau de bord BP en plein écran', () => {
-    it('le menu BP liste les 9 outils par catégorie, dans l’ordre', async () => {
+    it('le menu BP : l’entretien puis les 9 outils par catégorie, dans l’ordre', async () => {
       const { comp } = await createComponent();
       const groupes = comp.groupesOutilsBp;
-      expect(groupes.map(g => g.categorie)).toEqual(['Analyse interne', 'Analyse externe', 'Stratégie', 'Business']);
+      expect(groupes.map(g => g.categorie)).toEqual(['Préparation', 'Analyse interne', 'Analyse externe', 'Stratégie', 'Business']);
       expect(groupes.flatMap(g => g.outils.map(o => o.code)))
-        .toEqual(['SWOT', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'PORTER', 'PESTEL', 'RISQUES', 'BCG', 'BMC', 'PERSONA']);
-      expect(groupes.flatMap(g => g.outils.map(o => o.rang))).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        .toEqual(['ENTRETIEN', 'SWOT', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'PORTER', 'PESTEL', 'RISQUES', 'BCG', 'BMC', 'PERSONA']);
+      expect(groupes.flatMap(g => g.outils.map(o => o.rang))).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 
     it('« Retour au dossier » rouvre l’onglet quitté pour le BP', async () => {

@@ -48,6 +48,10 @@ export class OutilBp {
   @Column({ type: 'timestamp', nullable: true })
   valideLe: Date | null;
 
+  /** « Validation et commentaires par le BP » (document, SWOT) : commentaire saisi en validant. */
+  @Column({ type: 'text', nullable: true })
+  commentaireValidation: string | null;
+
   @Column({ type: 'int', nullable: true })
   modifieParId: number | null;
 

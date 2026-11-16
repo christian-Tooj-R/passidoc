@@ -1,4 +1,5 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -370,12 +371,20 @@ export class BpRisquesComponent {
     this.contenuChange.emit(this.contenu);
   }
 
+  private confirmation = inject(ConfirmService);
+
+  /** Toute suppression passe par la fenêtre de confirmation de l'appli. */
   supprimer() {
     const b = this.brouillon;
     if (!b) return;
-    const i = this.risques.findIndex(r => r.id === b.id);
-    if (i >= 0) this.contenu.risques.splice(i, 1);
-    this.brouillon = null;
-    this.contenuChange.emit(this.contenu);
+    const nom = this.risques.find(r => r.id === b.id)?.nom || b.nom;
+    this.confirmation.confirm('Supprimer ce risque ?', `« ${nom} » sera retiré du registre. La suppression devient définitive à l'enregistrement de l'outil.`)
+      .subscribe(ok => {
+        if (!ok) return;
+        const i = this.risques.findIndex(r => r.id === b.id);
+        if (i >= 0) this.contenu.risques.splice(i, 1);
+        this.brouillon = null;
+        this.contenuChange.emit(this.contenu);
+      });
   }
 }

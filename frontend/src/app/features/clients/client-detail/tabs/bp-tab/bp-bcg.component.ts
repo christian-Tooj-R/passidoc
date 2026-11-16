@@ -1,4 +1,5 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -283,12 +284,19 @@ export class BpBcgComponent {
     this.contenuChange.emit(this.contenu);
   }
 
+  private confirmation = inject(ConfirmService);
+
+  /** Toute suppression passe par la fenêtre de confirmation de l'appli. */
   supprimer(a: ActiviteBcg) {
     if (!this.editable) return;
-    const i = this.activites.findIndex(x => x.id === a.id);
-    if (i < 0) return;
-    this.contenu.activites.splice(i, 1);
-    if (this.brouillon?.id === a.id) this.brouillon = null;
-    this.contenuChange.emit(this.contenu);
+    this.confirmation.confirm('Supprimer cette activité ?', `« ${a.nom} » sera retirée de la matrice. La suppression devient définitive à l'enregistrement de l'outil.`)
+      .subscribe(ok => {
+        if (!ok) return;
+        const i = this.activites.findIndex(x => x.id === a.id);
+        if (i < 0) return;
+        this.contenu.activites.splice(i, 1);
+        if (this.brouillon?.id === a.id) this.brouillon = null;
+        this.contenuChange.emit(this.contenu);
+      });
   }
 }

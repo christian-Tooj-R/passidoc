@@ -1,9 +1,10 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { ItemBp, nouvelId } from '../../../../../core/models/outils-bp.model';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 /**
  * Liste d'éléments d'un outil BP (quadrant SWOT, colonne PESTEL, bloc BMC…), comme les cartes
@@ -78,6 +79,7 @@ export class BpListeComponent {
   @ViewChild('champ') champ?: ElementRef<HTMLTextAreaElement>;
 
   saisie: string | null = null;
+  private confirmation = inject(ConfirmService);
 
   ouvrir() {
     this.saisie = '';
@@ -92,9 +94,17 @@ export class BpListeComponent {
     this.changement.emit();
   }
 
+  /** Toute suppression passe par la fenêtre de confirmation de l'appli. */
   supprimer(i: number) {
-    this.items.splice(i, 1);
-    this.changement.emit();
+    const item = this.items[i];
+    if (!item) return;
+    const texte = item.texte.length > 80 ? `${item.texte.slice(0, 80)}…` : item.texte;
+    this.confirmation.confirm('Supprimer cet élément ?', `« ${texte} » sera retiré. La suppression devient définitive à l'enregistrement de l'outil.`)
+      .subscribe(ok => {
+        if (!ok) return;
+        const j = this.items.indexOf(item);
+        if (j >= 0) { this.items.splice(j, 1); this.changement.emit(); }
+      });
   }
 
   /** Un élément vidé à la main disparaît en quittant le champ. */

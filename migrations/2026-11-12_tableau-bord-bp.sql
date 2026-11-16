@@ -38,4 +38,7 @@ CREATE TABLE IF NOT EXISTS outils_bp (
   CONSTRAINT "FK_014739edc72fcbf665d1bfdd300" FOREIGN KEY ("exerciceId") REFERENCES exercices(id) ON DELETE CASCADE
 );
 
+-- Commentaire du BP joint à la validation (ajout du 2026-11-13)
+ALTER TABLE outils_bp ADD COLUMN IF NOT EXISTS "commentaireValidation" text;
+
 COMMIT;

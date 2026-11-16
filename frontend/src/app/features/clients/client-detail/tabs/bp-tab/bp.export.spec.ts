@@ -2,7 +2,7 @@
  * Tableau de Bord BP — export PDF par outil ou rapport BP annuel (document client, partie 5).
  */
 import { describe, it, expect } from 'vitest';
-import { construireRapportBp, outilRenseigne } from './bp.export';
+import { construireQuestionnaireVierge, construireRapportBp, outilRenseigne } from './bp.export';
 import { OutilBpVue } from '../../../../../core/models/outils-bp.model';
 
 const vue = (outil: any, contenu: any, o: Partial<OutilBpVue> = {}): OutilBpVue =>
@@ -45,5 +45,28 @@ describe('Export PDF du Tableau de bord BP', () => {
     expect(outilRenseigne(swot)).toBe(true);
     expect(outilRenseigne(vue('DIAGNOSTIC', { axes: { finance: { score: 0, note: '' } }, forces: [], faiblesses: [] }))).toBe(false);
     expect(outilRenseigne(vue('DIAGNOSTIC', { axes: { finance: { score: 3, note: '' } }, forces: [], faiblesses: [] }))).toBe(true);
+  });
+
+  it('entretien en annexe du rapport, commentaire de validation, bloc de signatures', () => {
+    const entretien = vue('ENTRETIEN', { date: '2026-11-13', participants: 'M. Hoarau', reponses: { concurrents: 'Boulangerie Dupont' }, notes: { numerique: 2, satisfaction: 4 }, ecartees: [] });
+    const swotCommente = { ...swot, commentaire: 'À revoir en juin' };
+    const pdf = construireRapportBp({
+      client: 'Boulangerie Hoarau', annee: 2026, outils: [entretien, swotCommente],
+      signatures: { date: '2026-11-13T10:00:00Z', bp: { nom: 'Marie Dubois', image: '' }, dirigeant: { nom: 'M. Hoarau', image: '' } },
+    }).output();
+    for (const t of ['Commentaire du BP', 'À revoir en juin', 'Entretien BP', 'Contexte stratégique', 'Boulangerie Dupont', '4 / 5',
+      'Signatures', 'Marie Dubois']) {
+      expect(pdf, t).toContain(t);
+    }
+    expect(pdf).toMatch(/Le Business Partner . Marie Dubois/);   // tiret cadratin encodé dans le PDF
+    expect(pdf).toMatch(/Le dirigeant . M\. Hoarau/);
+    expect(pdf.indexOf('SWOT')).toBeLessThan(pdf.indexOf('Contexte stratégique'));
+  });
+
+  it('questionnaire vierge : les 5 thèmes et les questions, sans réponse', () => {
+    const pdf = construireQuestionnaireVierge({ client: 'Boulangerie Hoarau', annee: 2026 }).output();
+    expect(pdf).toContain("QUESTIONNAIRE D'ENTRETIEN BUSINESS PARTNER");
+    expect(pdf).toContain('Satisfaction sur les services du cabinet');
+    expect(pdf).toContain('Quelles menaces percevez-vous ?');
   });
 });

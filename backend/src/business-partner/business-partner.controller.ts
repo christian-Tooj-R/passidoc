@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../entities/user.entity';
 import { BusinessPartnerService } from './business-partner.service';
-import { EnregistrerOutilBpDto } from './dto/outil-bp.dto';
+import { EnregistrerOutilBpDto, ValiderOutilBpDto } from './dto/outil-bp.dto';
 
 @ApiTags('Tableau de bord BP')
 @ApiBearerAuth()
@@ -33,6 +33,17 @@ export class BusinessPartnerController {
     return this.service.suggestions(clientId, exerciceId, user);
   }
 
+  @Get('suggestions-ia')
+  @ApiOperation({ summary: "Suggestions de l'IA pour un outil (à ajouter ou écarter comme les autres)" })
+  suggestionsIa(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Query('exerciceId', ParseIntPipe) exerciceId: number,
+    @Query('outil') outil: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.service.suggestionsIa(clientId, exerciceId, outil, user);
+  }
+
   @Patch(':outil')
   @ApiOperation({ summary: 'Enregistrer un outil (repasse en brouillon)' })
   enregistrer(
@@ -51,8 +62,9 @@ export class BusinessPartnerController {
     @Param('clientId', ParseIntPipe) clientId: number,
     @Param('outil') outil: string,
     @Query('exerciceId', ParseIntPipe) exerciceId: number,
+    @Body() dto: ValiderOutilBpDto,
     @CurrentUser() user: User,
   ) {
-    return this.service.valider(clientId, exerciceId, outil, user);
+    return this.service.valider(clientId, exerciceId, outil, user, dto?.commentaire);
   }
 }

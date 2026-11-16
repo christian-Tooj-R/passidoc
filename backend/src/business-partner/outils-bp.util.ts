@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto';
 import { UserRole } from '../entities/user.entity';
 
 export const OUTILS_BP = [
-  'SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG',
+  'SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG', 'ENTRETIEN',
 ] as const;
 export type OutilBpCode = typeof OUTILS_BP[number];
 
@@ -46,6 +46,41 @@ export const LISTES_PERSONA = ['objectifs', 'frustrations', 'motivations', 'comp
 export const CHAMPS_PERSONA = ['age', 'poste', 'lieu', 'bio'] as const;
 export const LISTES_ICP = ['secteurs', 'technologies', 'localisations', 'problemes', 'budget', 'criteres'] as const;
 export const CHAMPS_ICP = ['employes', 'caAnnuel', 'croissance'] as const;
+
+/**
+ * Questionnaire d'entretien BP standard — partie 5 du document (« à construire ») : ses 5 thèmes
+ * (contexte stratégique, environnement externe, organisation interne, ambitions du dirigeant,
+ * satisfaction sur les services du cabinet). Libellés des questions rédigés par PASSIDOC, à valider
+ * par le cabinet. `vers` : zone d'outil que la réponse alimente (une ligne = une suggestion).
+ */
+export const QUESTIONS_ENTRETIEN = [
+  { cle: 'marche', theme: 'contexte', court: 'Marché', vers: ['PESTEL', 'economique'] },
+  { cle: 'clients', theme: 'contexte', court: 'Principaux clients', vers: ['PORTER', 'pouvoirClients'] },
+  { cle: 'concurrents', theme: 'contexte', court: 'Concurrents', vers: ['PORTER', 'concurrence'] },
+  { cle: 'entrants', theme: 'contexte', court: 'Nouveaux entrants', vers: ['PORTER', 'nouveauxEntrants'] },
+  { cle: 'substituts', theme: 'contexte', court: 'Solutions de substitution', vers: ['PORTER', 'substituts'] },
+  { cle: 'fournisseurs', theme: 'contexte', court: 'Fournisseurs clés', vers: ['PORTER', 'pouvoirFournisseurs'] },
+  { cle: 'croissance', theme: 'contexte', court: 'Projets de croissance', vers: ['SWOT', 'opportunites'] },
+  { cle: 'reglementation', theme: 'externe', court: 'Changements réglementaires', vers: ['PESTEL', 'legal'] },
+  { cle: 'politique', theme: 'externe', court: 'Contexte politique', vers: ['PESTEL', 'politique'] },
+  { cle: 'conjoncture', theme: 'externe', court: 'Conjoncture', vers: ['PESTEL', 'economique'] },
+  { cle: 'societe', theme: 'externe', court: 'Évolutions sociales', vers: ['PESTEL', 'socioculturel'] },
+  { cle: 'environnement', theme: 'externe', court: 'Contraintes environnementales', vers: ['PESTEL', 'environnemental'] },
+  { cle: 'opportunites', theme: 'externe', court: 'Opportunités perçues', vers: ['SWOT', 'opportunites'] },
+  { cle: 'menaces', theme: 'externe', court: 'Menaces perçues', vers: ['SWOT', 'menaces'] },
+  { cle: 'processusOk', theme: 'organisation', court: 'Processus maîtrisés', vers: ['DIAGNOSTIC', 'forces'] },
+  { cle: 'processusKo', theme: 'organisation', court: 'Processus à améliorer', vers: ['DIAGNOSTIC', 'faiblesses'] },
+  { cle: 'equipe', theme: 'organisation', court: 'Équipe', vers: ['CHAINE_VALEUR', 'activite:rh'] },
+  { cle: 'outils', theme: 'organisation', court: 'Outils numériques', vers: ['CHAINE_VALEUR', 'activite:technologie'] },
+  { cle: 'horizon', theme: 'ambitions', court: 'Ambition à 1-3 ans', vers: ['PERSONA', 'persona.objectifs'] },
+  { cle: 'investissements', theme: 'ambitions', court: 'Investissements prévus', vers: ['PERSONA', 'persona.objectifs'] },
+  { cle: 'freins', theme: 'ambitions', court: 'Freins', vers: ['PERSONA', 'persona.frustrations'] },
+  { cle: 'appreciation', theme: 'satisfaction', court: 'Points appréciés', vers: null },
+  { cle: 'ameliorations', theme: 'satisfaction', court: 'Améliorations attendues', vers: null },
+  { cle: 'attentes', theme: 'satisfaction', court: 'Nouveaux services attendus', vers: ['PERSONA', 'persona.motivations'] },
+] as const;
+/** Notes de 1 à 5 du questionnaire (0 = non renseignée). */
+export const NOTES_ENTRETIEN = ['numerique', 'satisfaction'] as const;
 
 const MAX_ITEMS = 50;
 const MAX_TEXTE = 500;
@@ -163,6 +198,17 @@ export function normaliserContenu(outil: OutilBpCode, brut: unknown): Record<str
         ...base,
       };
     }
+    case 'ENTRETIEN': {
+      const r = objet(c.reponses);
+      const n = objet(c.notes);
+      return {
+        date: date(c.date),
+        participants: texte(c.participants, 300),
+        reponses: Object.fromEntries(QUESTIONS_ENTRETIEN.map(q => [q.cle, texte(r[q.cle], MAX_LONG)])),
+        notes: Object.fromEntries(NOTES_ENTRETIEN.map(k => [k, entier(n[k], 0, 5)])),
+        ...base,
+      };
+    }
     case 'BCG':
       return {
         activites: (Array.isArray(c.activites) ? c.activites : []).slice(0, 30).flatMap((a: any) => {
@@ -174,6 +220,7 @@ export function normaliserContenu(outil: OutilBpCode, brut: unknown): Record<str
             ca: a?.ca === null || a?.ca === '' || !Number.isFinite(ca) ? null : Math.max(0, ca),
             quadrant: (QUADRANTS_BCG as readonly string[]).includes(a?.quadrant) ? a.quadrant : 'DILEMME',
             couleur: couleur(a?.couleur),
+            ...(cle(a?.cle) ? { cle: cle(a?.cle) } : {}),
           }];
         }),
         ...base,
@@ -268,7 +315,7 @@ export function scoreDiagnostic(contenu: Record<string, any>): number | null {
 export const LIBELLES_OUTILS: Record<OutilBpCode, string> = {
   SWOT: 'SWOT', PORTER: '5 Forces de Porter', BMC: 'Business Model Canvas', PESTEL: 'PESTEL',
   CHAINE_VALEUR: 'Chaîne de valeur', DIAGNOSTIC: 'Diagnostic interne', RISQUES: 'Matrice de risques',
-  PERSONA: 'Fiche Persona / ICP', BCG: 'Matrice BCG',
+  PERSONA: 'Fiche Persona / ICP', BCG: 'Matrice BCG', ENTRETIEN: 'Entretien BP',
 };
 
 export const LIBELLES_ZONES: Record<string, string> = {
@@ -350,6 +397,12 @@ export function texteOutilsBp(annee: number, lignes: { outil: string; statut: st
     }
     if (code === 'BCG') {
       c.activites.forEach((a: any) => corps.push(`  ${a.nom} : ${QUADRANTS[a.quadrant]}${a.ca !== null ? ` (CA ${a.ca})` : ''}`));
+    }
+    if (code === 'ENTRETIEN') {
+      if (c.date) corps.push(`  Date : ${c.date}${c.participants ? ` — ${c.participants}` : ''}`);
+      QUESTIONS_ENTRETIEN.forEach(q => { if (c.reponses[q.cle]) corps.push(`  ${q.court} : ${c.reponses[q.cle].replace(/\s*\n\s*/g, ' | ')}`); });
+      if (c.notes.numerique) corps.push(`  Maîtrise du numérique : ${c.notes.numerique}/5`);
+      if (c.notes.satisfaction) corps.push(`  Satisfaction sur les services du cabinet : ${c.notes.satisfaction}/5`);
     }
     if (corps.length) out.push(`${LIBELLES_OUTILS[code]}${l.statut === 'VALIDE' ? ' [validé]' : ' [brouillon]'} :`, ...corps);
   }

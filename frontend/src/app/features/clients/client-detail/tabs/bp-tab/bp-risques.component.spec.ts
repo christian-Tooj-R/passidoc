@@ -3,8 +3,13 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BpRisquesComponent } from './bp-risques.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
+
+/** Fenêtre de confirmation : réponse choisie par le test. */
+const confirmation = { reponse: true, confirm: vi.fn(() => of(confirmation.reponse)) };
 
 const risque = (o: Record<string, any>) => ({
   id: 'r', nom: 'Risque', description: '', categorie: 'AUTRE', probabilite: 1, gravite: 1,
@@ -24,7 +29,7 @@ const contenuTest = () => ({
 });
 
 async function creer(editable: boolean, contenu: any = contenuTest()) {
-  await TestBed.configureTestingModule({ imports: [BpRisquesComponent], providers: [provideAnimations()] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [BpRisquesComponent], providers: [provideAnimations(), { provide: ConfirmService, useValue: confirmation }] }).compileComponents();
   const fixture = TestBed.createComponent(BpRisquesComponent);
   fixture.componentRef.setInput('contenu', contenu);
   fixture.componentRef.setInput('editable', editable);
@@ -166,6 +171,13 @@ describe('BpRisquesComponent', () => {
 
     ligneDe('c').click();
     fixture.detectChanges();
+    confirmation.reponse = false;            // Annuler dans la fenêtre de confirmation : rien n'est supprimé
+    bouton(el, 'Supprimer').click();
+    fixture.detectChanges();
+    expect(confirmation.confirm).toHaveBeenCalledWith('Supprimer ce risque ?', expect.stringContaining('sera retiré du registre'));
+    expect(contenu.risques).toHaveLength(5);
+    expect(emis.length).toBe(1);
+    confirmation.reponse = true;
     bouton(el, 'Supprimer').click();
     fixture.detectChanges();
     expect(contenu.risques.map((r: any) => r.id)).toEqual(['a', 'b', 'd', 'e']);

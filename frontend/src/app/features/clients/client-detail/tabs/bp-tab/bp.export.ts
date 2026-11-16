@@ -7,8 +7,8 @@ import autoTable, { RowInput } from 'jspdf-autotable';
 import { textePassation } from '../../../note-passation.export';
 import {
   ACTIVITES_PRIMAIRES, ACTIVITES_SOUTIEN, AXES_DIAGNOSTIC, CATEGORIES_RISQUE, FORCES_PORTER, ItemBp, LIBELLES_ZONES,
-  LISTES_ICP, LISTES_PERSONA, NIVEAUX_PORTER, OutilBpVue, ProfilAutoBp, QUADRANTS_BCG, ZONES_BMC, ZONES_CRITICITE,
-  ZONES_PESTEL, criticite, infoOutil, menaceGlobalePorter, scoreDiagnostic,
+  LISTES_ICP, LISTES_PERSONA, NIVEAUX_PORTER, NOTES_ENTRETIEN, OutilBpVue, ProfilAutoBp, QUADRANTS_BCG, QUESTIONS_ENTRETIEN,
+  THEMES_ENTRETIEN, ZONES_BMC, ZONES_CRITICITE, ZONES_PESTEL, criticite, infoOutil, menaceGlobalePorter, scoreDiagnostic,
 } from '../../../../../core/models/outils-bp.model';
 
 export interface DonneesRapportBp {
@@ -17,6 +17,14 @@ export interface DonneesRapportBp {
   annee: number;
   outils: OutilBpVue[];
   profil?: ProfilAutoBp | null;
+  /** Rapport co-signé par le BP et le dirigeant : bloc de signatures en fin de document. */
+  signatures?: SignaturesRapportBp | null;
+}
+
+export interface SignaturesRapportBp {
+  date: string;
+  bp: { nom: string; image: string };
+  dirigeant: { nom: string; image: string };
 }
 
 type Rgb = [number, number, number];
@@ -103,7 +111,8 @@ export function construireRapportBp(d: DonneesRapportBp): jsPDF {
   const zones = (c: any, codes: readonly string[]) => codes.map(z => [t(LIBELLES_ZONES[z]), puces(c[z])]);
   const libellesCol = { 0: { cellWidth: 46, fontStyle: 'bold' as const } };
 
-  const outils = seul ? d.outils : d.outils.filter(outilRenseigne);
+  // Le questionnaire d'entretien est joint en annexe, après les outils.
+  const outils = seul ? d.outils : [...d.outils.filter(o => o.outil !== 'ENTRETIEN'), ...d.outils.filter(o => o.outil === 'ENTRETIEN')].filter(outilRenseigne);
   if (!outils.length) {
     doc.setFontSize(10);
     doc.setTextColor(...GRIS);
@@ -117,6 +126,9 @@ export function construireRapportBp(d: DonneesRapportBp): jsPDF {
       ? `Validé${o.validePar?.nom ? ` par ${o.validePar.nom}` : ''}${o.valideLe ? ` le ${fmtDate(o.valideLe)}` : ''}`
       : 'Brouillon';
     titre(info.label, rgb(info.couleur), statut);
+    if (o.statut === 'VALIDE' && o.commentaire) {
+      tableau(null, [[t('Commentaire du BP'), t(o.commentaire)]], { columnStyles: libellesCol, styles: { fontSize: 8.5, cellPadding: 1.8, fontStyle: 'italic', textColor: ENCRE, lineColor: [226, 232, 240], lineWidth: 0.2 } });
+    }
     switch (o.outil) {
       case 'SWOT':
         tableau(['Forces', 'Faiblesses'], [[puces(c.forces), puces(c.faiblesses)]], { columnStyles: { 0: { cellWidth: (pageW - 2 * marge) / 2 } } });
@@ -195,6 +207,18 @@ export function construireRapportBp(d: DonneesRapportBp): jsPDF {
         ], { columnStyles: libellesCol });
         break;
       }
+      case 'ENTRETIEN': {
+        const entete = [c.date ? `Entretien du ${fmtDate(c.date)}` : '', c.participants ? `Participants : ${c.participants}` : ''].filter(Boolean).join(' — ');
+        if (entete) ligne(entete);
+        for (const th of THEMES_ENTRETIEN) {
+          const corps: RowInput[] = [
+            ...NOTES_ENTRETIEN.filter(n => n.theme === th.code).map(n => [t(n.label), c.notes?.[n.cle] ? `${c.notes[n.cle]} / 5` : '—']),
+            ...QUESTIONS_ENTRETIEN.filter(q => q.theme === th.code).map(q => [t(q.question), t(c.reponses?.[q.cle] || '—')]),
+          ];
+          tableau([th.label, 'Réponse'], corps, { columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' as const } } });
+        }
+        break;
+      }
       case 'BCG':
         tableau(['Activité', 'Quadrant', "Chiffre d'affaires"], c.activites.length
           ? c.activites.map((a: any) => [t(a.nom), t(QUADRANTS_BCG.find(q => q.code === a.quadrant)?.label), nombre(a.ca)])
@@ -202,6 +226,24 @@ export function construireRapportBp(d: DonneesRapportBp): jsPDF {
         break;
     }
     y += 3;
+  }
+
+  if (d.signatures) {
+    const sg = d.signatures;
+    if (y > 225) { doc.addPage(); y = 16; }
+    titre('Signatures', NAVY, `Rapport co-signé le ${fmtDate(sg.date)}`);
+    const largeur = (pageW - 2 * marge - 10) / 2;
+    [[`Le Business Partner — ${sg.bp.nom}`, sg.bp.image], [`Le dirigeant — ${sg.dirigeant.nom}`, sg.dirigeant.image]].forEach(([lib, image], i) => {
+      const x = marge + i * (largeur + 10);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ENCRE);
+      doc.text(t(lib), x, y + 3);
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(x, y + 5, largeur, 32);
+      if (image) doc.addImage(image, 'PNG', x + 2, y + 6, largeur - 4, 30);
+    });
+    y += 42;
   }
 
   const n = doc.getNumberOfPages();
@@ -220,4 +262,74 @@ export function exporterRapportBp(d: DonneesRapportBp): void {
   const nom = (d.client || 'dossier').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w-]+/g, '-');
   const suffixe = d.outils.length === 1 ? d.outils[0].outil.toLowerCase() : 'rapport';
   construireRapportBp(d).save(`bp-${suffixe}-${nom}-${d.annee}.pdf`);
+}
+
+/** Questionnaire d'entretien BP vierge, à imprimer pour l'entretien ou à joindre en annexe du mémoire. */
+export function construireQuestionnaireVierge(d: { client?: string; cabinet?: string; annee?: number }): jsPDF {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const marge = 14;
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, pageW, 2.5, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...NAVY);
+  doc.text("QUESTIONNAIRE D'ENTRETIEN BUSINESS PARTNER", marge, 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...GRIS);
+  if (d.cabinet) doc.text(t(d.cabinet), pageW - marge, 11, { align: 'right' });
+  doc.setFontSize(10);
+  doc.setTextColor(...ENCRE);
+  doc.text(t(`Client : ${d.client || '................................................'}${d.annee ? `      Exercice : ${d.annee}` : ''}`), marge, 20);
+  doc.text(t('Date : ..../..../........      Participants : ........................................................'), marge, 27);
+  let y = 35;
+  const place = (h: number) => { if (y + h > 280) { doc.addPage(); y = 16; } };
+  THEMES_ENTRETIEN.forEach((th, i) => {
+    place(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11.5);
+    doc.setTextColor(...rgb(th.couleur));
+    doc.text(t(`${i + 1}. ${th.label}`), marge, y);
+    doc.setDrawColor(...rgb(th.couleur));
+    doc.setLineWidth(0.4);
+    doc.line(marge, y + 1.6, pageW - marge, y + 1.6);
+    y += 7;
+    for (const n of NOTES_ENTRETIEN.filter(x => x.theme === th.code)) {
+      place(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...ENCRE);
+      doc.text(t(`${n.label} :   1   2   3   4   5   (entourer)`), marge, y);
+      y += 7;
+    }
+    for (const q of QUESTIONS_ENTRETIEN.filter(x => x.theme === th.code)) {
+      const lignes = doc.splitTextToSize(t(q.question), pageW - 2 * marge);
+      place(lignes.length * 4.5 + 22);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...ENCRE);
+      doc.text(lignes, marge, y);
+      y += lignes.length * 4.5;
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      for (let k = 0; k < 3; k++) { y += 6; doc.line(marge, y, pageW - marge, y); }
+      y += 6;
+    }
+    y += 2;
+  });
+  const n = doc.getNumberOfPages();
+  for (let p = 1; p <= n; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Questionnaire d'entretien BP — PASSIDOC", marge, 290);
+    doc.text(`Page ${p} / ${n}`, pageW - marge, 290, { align: 'right' });
+  }
+  return doc;
+}
+
+export function exporterQuestionnaireVierge(d: { client?: string; cabinet?: string; annee?: number }): void {
+  construireQuestionnaireVierge(d).save('questionnaire-entretien-bp.pdf');
 }

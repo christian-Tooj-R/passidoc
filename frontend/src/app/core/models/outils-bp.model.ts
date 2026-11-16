@@ -5,7 +5,7 @@
  * Structure du contenu identique à backend/src/business-partner/outils-bp.util.ts.
  */
 
-export type OutilBpCode = 'SWOT' | 'PORTER' | 'BMC' | 'PESTEL' | 'CHAINE_VALEUR' | 'DIAGNOSTIC' | 'RISQUES' | 'PERSONA' | 'BCG';
+export type OutilBpCode = 'SWOT' | 'PORTER' | 'BMC' | 'PESTEL' | 'CHAINE_VALEUR' | 'DIAGNOSTIC' | 'RISQUES' | 'PERSONA' | 'BCG' | 'ENTRETIEN';
 export type StatutOutilBp = 'BROUILLON' | 'VALIDE';
 export type OrigineOutilBp = 'ENREGISTRE' | 'REPRISE_N1' | 'REPRISE_ANCIENNE' | 'VIDE';
 
@@ -17,6 +17,8 @@ export interface OutilBpVue {
   statut: StatutOutilBp;
   valideLe: string | null;
   validePar: { id: number; nom: string } | null;
+  /** Commentaire du BP joint à la validation. */
+  commentaire?: string | null;
   modifieLe: string | null;
   origine: OrigineOutilBp;
 }
@@ -75,12 +77,17 @@ export const OUTILS_BP: InfoOutilBp[] = [
     description: 'Profil du dirigeant et profil client idéal' },
   { code: 'BCG', label: 'Matrice BCG', court: 'BCG', icon: 'bubble_chart', couleur: '#3b82f6', categorie: 'Stratégie',
     description: 'Vedettes, dilemmes, vaches à lait, poids morts' },
+  { code: 'ENTRETIEN', label: 'Entretien BP', court: 'Entretien', icon: 'record_voice_over', couleur: '#0f766e', categorie: 'Préparation',
+    description: 'Questionnaire de la revue stratégique annuelle avec le dirigeant' },
 ];
+
+/** Les 9 outils d'analyse (le questionnaire d'entretien les alimente, il n'est pas compté comme outil validé). */
+export const NB_OUTILS_ANALYSE = 9;
 
 export const infoOutil = (code: OutilBpCode) => OUTILS_BP.find(o => o.code === code)!;
 
 /** Menu du Tableau de bord BP : outils regroupés par catégorie, dans l'ordre d'affichage. */
-export const groupesOutilsBp = () => ['Analyse interne', 'Analyse externe', 'Stratégie', 'Business']
+export const groupesOutilsBp = () => ['Préparation', 'Analyse interne', 'Analyse externe', 'Stratégie', 'Business']
   .map(categorie => ({ categorie, outils: OUTILS_BP.filter(o => o.categorie === categorie) }));
 
 export const ZONES_SWOT = ['forces', 'faiblesses', 'opportunites', 'menaces'] as const;
@@ -229,6 +236,9 @@ export function appliquerSuggestion(outil: OutilBpCode, contenu: any, s: Suggest
         planAction: '', responsable: '', dateCible: '', cle: s.cle,
       });
       break;
+    case 'BCG':
+      c.activites.push({ id: nouvelId(), nom: s.texte, ca: null, quadrant: s.zone, couleur: QUADRANTS_BCG.find(q => q.code === s.zone)?.couleur ?? '#3b82f6', cle: s.cle });
+      break;
     case 'PERSONA': {
       const bloc = c[zone];
       if (Array.isArray(bloc[sous])) bloc[sous].push(item);
@@ -318,6 +328,80 @@ export function evolutionN1(outil: OutilBpCode, n: any, n1: any): EvolutionBp {
       avant.forEach((a, k) => { if (!apres.has(k)) e.retraits.push(`Activité : ${a.nom}`); });
       break;
     }
+    case 'ENTRETIEN':
+      QUESTIONS_ENTRETIEN.forEach(q => {
+        const avant = (n1.reponses?.[q.cle] ?? '').trim(), apres = (n.reponses?.[q.cle] ?? '').trim();
+        if (avant !== apres) {
+          if (!avant) e.ajouts.push(`Réponse : ${q.question}`);
+          else if (!apres) e.retraits.push(`Réponse : ${q.question}`);
+          else e.changements.push(`Réponse modifiée : ${q.question}`);
+        }
+      });
+      NOTES_ENTRETIEN.forEach(k => changement(e, k.label, `${n1.notes?.[k.cle] || '–'}/5`, `${n.notes?.[k.cle] || '–'}/5`));
+      break;
   }
   return e;
+}
+
+// ── Questionnaire d'entretien BP ─────────────────────────────────────────────
+
+/**
+ * Questionnaire d'entretien BP standard — document client, partie 5 (« à construire ») : ses 5 thèmes.
+ * Libellés des questions rédigés par PASSIDOC, à valider par le cabinet. `vers` : outil et zone que la
+ * réponse alimente sous forme de suggestions (une ligne = une suggestion). Mêmes clés côté serveur.
+ */
+export const THEMES_ENTRETIEN = [
+  { code: 'contexte', label: 'Contexte stratégique', aide: 'Marché, concurrents, projets de croissance', icon: 'explore', couleur: '#2563eb' },
+  { code: 'externe', label: 'Environnement externe', aide: 'Changements réglementaires, opportunités du marché, menaces perçues', icon: 'public', couleur: '#dc2626' },
+  { code: 'organisation', label: 'Organisation interne', aide: 'Processus, ressources, outils numériques utilisés', icon: 'account_tree', couleur: '#0d9488' },
+  { code: 'ambitions', label: 'Ambitions du dirigeant', aide: 'Horizon 1-3 ans, investissements prévus', icon: 'flag', couleur: '#7c3aed' },
+  { code: 'satisfaction', label: 'Satisfaction sur les services du cabinet', aide: 'Ce qui va, ce qui peut mieux faire, nouveaux besoins', icon: 'sentiment_satisfied', couleur: '#ea580c' },
+] as const;
+
+export interface QuestionEntretien { cle: string; theme: string; question: string; vers: [OutilBpCode, string] | null }
+
+export const QUESTIONS_ENTRETIEN: QuestionEntretien[] = [
+  { cle: 'marche', theme: 'contexte', question: 'Comment se porte votre marché (taille, tendance, type de clientèle) ?', vers: ['PESTEL', 'economique'] },
+  { cle: 'clients', theme: 'contexte', question: "Qui sont vos principaux clients ? Quelle part de votre chiffre d'affaires représentent-ils ?", vers: ['PORTER', 'pouvoirClients'] },
+  { cle: 'concurrents', theme: 'contexte', question: "Qui sont vos principaux concurrents ? Qu'est-ce qui vous distingue d'eux ?", vers: ['PORTER', 'concurrence'] },
+  { cle: 'entrants', theme: 'contexte', question: 'Est-il facile pour un nouveau concurrent de s’installer sur votre marché ? Pourquoi ?', vers: ['PORTER', 'nouveauxEntrants'] },
+  { cle: 'substituts', theme: 'contexte', question: 'Vos clients pourraient-ils se tourner vers d’autres produits ou solutions ?', vers: ['PORTER', 'substituts'] },
+  { cle: 'fournisseurs', theme: 'contexte', question: 'Dépendez-vous de quelques fournisseurs clés ? Lesquels ?', vers: ['PORTER', 'pouvoirFournisseurs'] },
+  { cle: 'croissance', theme: 'contexte', question: 'Quels projets de croissance envisagez-vous (produits, marchés, sites) ?', vers: ['SWOT', 'opportunites'] },
+  { cle: 'reglementation', theme: 'externe', question: 'Quels changements réglementaires ou fiscaux vous concernent ou vous inquiètent ?', vers: ['PESTEL', 'legal'] },
+  { cle: 'politique', theme: 'externe', question: 'Le contexte politique ou les politiques publiques pèsent-ils sur votre activité ?', vers: ['PESTEL', 'politique'] },
+  { cle: 'conjoncture', theme: 'externe', question: 'Inflation, taux, change MGA/EUR, pouvoir d’achat : quel effet sur votre activité ?', vers: ['PESTEL', 'economique'] },
+  { cle: 'societe', theme: 'externe', question: 'Quelles évolutions observez-vous dans les habitudes de vos clients ou sur le marché du travail ?', vers: ['PESTEL', 'socioculturel'] },
+  { cle: 'environnement', theme: 'externe', question: 'Des contraintes climatiques ou environnementales (cyclones, ressources, normes) pèsent-elles sur l’activité ?', vers: ['PESTEL', 'environnemental'] },
+  { cle: 'opportunites', theme: 'externe', question: 'Quelles opportunités voyez-vous sur votre marché ?', vers: ['SWOT', 'opportunites'] },
+  { cle: 'menaces', theme: 'externe', question: 'Quelles menaces percevez-vous ?', vers: ['SWOT', 'menaces'] },
+  { cle: 'processusOk', theme: 'organisation', question: 'Quels processus fonctionnent bien dans l’entreprise ?', vers: ['DIAGNOSTIC', 'forces'] },
+  { cle: 'processusKo', theme: 'organisation', question: 'Quels processus posent problème ou font perdre du temps ?', vers: ['DIAGNOSTIC', 'faiblesses'] },
+  { cle: 'equipe', theme: 'organisation', question: 'Votre équipe : effectif, compétences, recrutements, départs ?', vers: ['CHAINE_VALEUR', 'activite:rh'] },
+  { cle: 'outils', theme: 'organisation', question: 'Quels outils numériques utilisez-vous (logiciels, caisse, site, réseaux sociaux) ?', vers: ['CHAINE_VALEUR', 'activite:technologie'] },
+  { cle: 'horizon', theme: 'ambitions', question: 'Où voyez-vous l’entreprise dans 1 à 3 ans ?', vers: ['PERSONA', 'persona.objectifs'] },
+  { cle: 'investissements', theme: 'ambitions', question: 'Quels investissements prévoyez-vous (montant, calendrier, financement) ?', vers: ['PERSONA', 'persona.objectifs'] },
+  { cle: 'freins', theme: 'ambitions', question: 'Qu’est-ce qui pourrait freiner ces ambitions ?', vers: ['PERSONA', 'persona.frustrations'] },
+  { cle: 'appreciation', theme: 'satisfaction', question: 'Qu’appréciez-vous dans les services du cabinet ?', vers: null },
+  { cle: 'ameliorations', theme: 'satisfaction', question: 'Que pourrions-nous améliorer ?', vers: null },
+  { cle: 'attentes', theme: 'satisfaction', question: 'Quels nouveaux services attendez-vous du cabinet (conseil, tableau de bord, financement…) ?', vers: ['PERSONA', 'persona.motivations'] },
+];
+
+/** Notes de 1 à 5 du questionnaire, rattachées à un thème. */
+export const NOTES_ENTRETIEN = [
+  { cle: 'numerique', theme: 'organisation', label: 'Maîtrise du numérique', vers: ['DIAGNOSTIC', 'axe:digital'] as [OutilBpCode, string] },
+  { cle: 'satisfaction', theme: 'satisfaction', label: 'Satisfaction globale sur les services du cabinet', vers: null },
+];
+
+const LIBELLES_SOUS_ZONES: Record<string, string> = {
+  'activite:rh': 'Gestion des ressources humaines', 'activite:technologie': 'Développement technologique',
+  'persona.objectifs': 'Objectifs', 'persona.frustrations': 'Frustrations', 'persona.motivations': 'Motivations',
+  'axe:digital': 'Systèmes d’information & digital',
+};
+
+/** « SWOT › Opportunités » : où va la réponse. */
+export function destinationQuestion(vers: [OutilBpCode, string] | null): string {
+  if (!vers) return '';
+  const [outil, zone] = vers;
+  return `${infoOutil(outil).court} › ${LIBELLES_SOUS_ZONES[zone] ?? LIBELLES_ZONES[zone] ?? zone}`;
 }

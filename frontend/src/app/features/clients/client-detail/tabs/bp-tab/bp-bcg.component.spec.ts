@@ -3,8 +3,13 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BpBcgComponent } from './bp-bcg.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
+
+/** Fenêtre de confirmation : réponse choisie par le test. */
+const confirmation = { reponse: true, confirm: vi.fn(() => of(confirmation.reponse)) };
 
 const contenuTest = () => ({
   activites: [
@@ -16,7 +21,7 @@ const contenuTest = () => ({
 });
 
 async function creer(editable: boolean, contenu: any = contenuTest()) {
-  await TestBed.configureTestingModule({ imports: [BpBcgComponent], providers: [provideAnimations()] }).compileComponents();
+  await TestBed.configureTestingModule({ imports: [BpBcgComponent], providers: [provideAnimations(), { provide: ConfirmService, useValue: confirmation }] }).compileComponents();
   const fixture = TestBed.createComponent(BpBcgComponent);
   fixture.componentRef.setInput('contenu', contenu);
   fixture.componentRef.setInput('editable', editable);
@@ -117,6 +122,12 @@ describe('BpBcgComponent', () => {
     expect(quadrant(el, 'VEDETTE').querySelector('.bcg__act[data-id="a2"]')).toBeTruthy();
     expect(emis.length).toBe(1);
 
+    confirmation.reponse = false;            // Annuler dans la fenêtre de confirmation : rien n'est supprimé
+    (ligne().querySelector('.bcg__supprimer') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(confirmation.confirm).toHaveBeenCalledWith('Supprimer cette activité ?', expect.any(String));
+    expect(contenu.activites).toHaveLength(3);
+    confirmation.reponse = true;
     (ligne().querySelector('.bcg__supprimer') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(contenu.activites.map((a: any) => a.id)).toEqual(['a1', 'a3']);

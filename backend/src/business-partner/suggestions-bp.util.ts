@@ -6,7 +6,7 @@
  * EBE, résultat), les pièces en retard, les clôtures et les missions. Le BP accepte ou écarte
  * chaque suggestion (identifiée par une clé stable, pour ne pas la reproposer).
  */
-import type { OutilBpCode } from './outils-bp.util';
+import { OutilBpCode, QUESTIONS_ENTRETIEN } from './outils-bp.util';
 
 // Libellés des réponses ADN (identiques à frontend/src/app/features/clients/questionnaire-adn.options.ts).
 const VISION: Record<string, string> = {
@@ -60,6 +60,8 @@ export interface DonneesBp {
   /** Moyennes mensuelles de tiers distincts comptés à l'import FEC (null si pas d'import). */
   tiersParMois: { clients: number | null; fournisseurs: number | null };
   missions: { statut: string | null; cycle?: string | null }[];
+  /** Réponses du questionnaire d'entretien BP de l'exercice (contenu de l'outil ENTRETIEN). */
+  entretien?: Record<string, any> | null;
 }
 
 export interface SuggestionBp {
@@ -126,7 +128,7 @@ export function construireSuggestions(d: DonneesBp): SuggestionBp[] {
   const s = syntheseCourante(d);
   const ca = nombre(s?.ca), caPrec = nombre(s?.caPrecedent), ebe = nombre(s?.ebe), rn = nombre(s?.resultatNet);
   const exo = s ? ` (exercice ${s.exercice})` : '';
-  const SYN = 'Synthèse de clôture', ADN = 'ADN entreprise', FICHE = 'Fiche identité', CI = 'Contrôle interne';
+  const SYN = 'Synthèse de clôture', ADN = 'ADN entreprise', FICHE = 'Fiche identité', CI = 'Contrôle interne', ENTRETIEN = 'Entretien BP';
   const concurrents = [nombre(f.nbConcurrentsQuartier), nombre(f.nbConcurrentsCommune), nombre(f.nbConcurrentsGeneral)];
   const reglementations: string[] = (f.reglementations ?? []).filter(Boolean).slice(0, 5);
   const saisonnalite = adn.saisonnalite || f.saisonnalite;
@@ -294,6 +296,19 @@ export function construireSuggestions(d: DonneesBp): SuggestionBp[] {
   if (f.adresse) add({ cle: 'icp.localisation', outil: 'PERSONA', zone: 'icp.localisations', source: FICHE, texte: court(f.adresse, 120) });
   if (CAILLOU[adn.caillouChaussure]) add({ cle: 'icp.probleme', outil: 'PERSONA', zone: 'icp.problemes', source: ADN, texte: CAILLOU[adn.caillouChaussure].replace(/^./, c => c.toUpperCase()) });
   if ((adn.canauxAcquisition ?? []).includes('DIGITAL')) add({ cle: 'icp.digital', outil: 'PERSONA', zone: 'icp.technologies', source: ADN, texte: 'Réseaux sociaux & site internet' });
+
+  // ── Entretien BP : chaque ligne de réponse alimente la zone d'outil prévue par la question ──
+  const rep = d.entretien?.reponses ?? {};
+  QUESTIONS_ENTRETIEN.forEach(q => {
+    if (!q.vers || typeof rep[q.cle] !== 'string') return;
+    const [outil, zone] = q.vers;
+    const prefixe = q.cle === 'investissements' ? 'Investissement prévu : ' : q.cle === 'attentes' ? 'Attendu du cabinet : ' : '';
+    rep[q.cle].split(/\r?\n/).map((l: string) => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean).slice(0, 10)
+      .forEach((l: string, i: number) => add({ cle: `entretien.${q.cle}.${i}`, outil: outil as OutilBpCode, zone, source: ENTRETIEN, texte: prefixe + court(l, 300) }));
+  });
+  const numEntretien = Number(d.entretien?.notes?.numerique) || 0;
+  if (numEntretien) add({ cle: 'entretien.numerique', outil: 'DIAGNOSTIC', zone: 'axe:digital', source: ENTRETIEN, score: numEntretien,
+    texte: `Maîtrise du numérique évaluée en entretien : ${numEntretien}/5` });
 
   // Une même donnée saisie deux fois (ex. deux risques identiques au contrôle interne) n'est proposée qu'une fois.
   const vus = new Set<string>();

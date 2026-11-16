@@ -24,10 +24,11 @@ const VIDES: Record<OutilBpCode, any> = {
   RISQUES: { risques: [] },
   PERSONA: { persona: { age: '', poste: '', lieu: '', bio: '', ...listes(LISTES_PERSONA) }, icp: { employes: '', caAnnuel: '', croissance: '', ...listes(LISTES_ICP) } },
   BCG: { activites: [] },
+  ENTRETIEN: { date: '', participants: '', reponses: {}, notes: { numerique: 0, satisfaction: 0 } },
 };
 const vide = (code: OutilBpCode): any => ({ ...JSON.parse(JSON.stringify(VIDES[code])), ecartees: [] });
 
-const CODES: OutilBpCode[] = ['SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG'];
+const CODES: OutilBpCode[] = ['SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG', 'ENTRETIEN'];
 const vue = (code: OutilBpCode, o: Partial<OutilBpVue> = {}): OutilBpVue =>
   ({ outil: code, contenu: vide(code), statut: 'BROUILLON', valideLe: null, validePar: null, modifieLe: null, origine: 'VIDE', ...o });
 
@@ -151,12 +152,18 @@ describe('BpTabComponent — Tableau de bord BP', () => {
     expect(comp.contenuActif().ecartees).toEqual(['swot.concurrence']);
   });
 
-  it('valider : un outil repris est d’abord enregistré, puis validé', async () => {
-    const { fixture, el } = await afficher();
-    boutons(el, 'Valider')[0].click();
+  it('valider : commentaire du BP saisi, outil repris d’abord enregistré, puis validé', async () => {
+    const { fixture, el, comp } = await afficher();
+    (el.querySelector('.bp__valider') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.bp__validation')).not.toBeNull();
+    expect(service.valider).not.toHaveBeenCalled();
+    comp.commentaireValidation = '  À revoir en juin ';
+    (el.querySelector('.bp__confirmer-validation') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(service.enregistrer).toHaveBeenCalledTimes(1);
-    expect(service.valider).toHaveBeenCalledWith(4, 9, 'SWOT');
+    expect(service.valider).toHaveBeenCalledWith(4, 9, 'SWOT', 'À revoir en juin');
+    expect(el.querySelector('.bp__validation')).toBeNull();
     expect(el.querySelector('.bp__statut--valide')!.textContent).toContain('Validé par Marie Dubois le 12/11/2026');
     expect(toast.success).toHaveBeenCalledWith('SWOT validé');
   });

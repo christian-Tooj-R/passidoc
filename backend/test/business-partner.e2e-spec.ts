@@ -113,9 +113,9 @@ describe('Tableau de Bord BP (e2e)', () => {
     await app?.close();
   });
 
-  it('lecture : 9 outils, reprise des anciens onglets et de N-1, droits du collaborateur du dossier', async () => {
+  it('lecture : 9 outils + entretien, reprise des anciens onglets et de N-1, droits du collaborateur du dossier', async () => {
     const { body } = await get('resp', BP(c1, q(ex2026))).expect(200);
-    expect(body.outils.map((o: any) => o.outil)).toEqual(['SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG']);
+    expect(body.outils.map((o: any) => o.outil)).toEqual(['SWOT', 'PORTER', 'BMC', 'PESTEL', 'CHAINE_VALEUR', 'DIAGNOSTIC', 'RISQUES', 'PERSONA', 'BCG', 'ENTRETIEN']);
     expect(body.exercice).toEqual({ id: ex2026.id, annee: 2026, cloture: false });
     expect(body.precedent).toMatchObject({ annee: 2025, outils: { PESTEL: { statut: 'VALIDE' } } });
     expect(body.droits).toEqual({ modifier: true, valider: false });
@@ -188,5 +188,35 @@ describe('Tableau de Bord BP (e2e)', () => {
     expect(cles).toEqual(expect.arrayContaining(['swot.valeur', 'swot.numerique', 'risque.tva', 'diag.digital']));
     expect(body.suggestions.find((s: any) => s.cle === 'risque.tva')).toMatchObject({ outil: 'RISQUES', risque: { categorie: 'FISCAL' } });
     expect(body.profil).toMatchObject({ maturiteNumerique: 5, nbExercices: 2, disciplinePieces: { enRetard: 1 } });
+  });
+
+  it('entretien BP : réponses nettoyées, chaque ligne devient une suggestion dans l’outil prévu', async () => {
+    const { body: saved } = await patch('resp', BP(c1, `/ENTRETIEN${q(ex2026)}`), {
+      contenu: { date: '2026-11-13', participants: 'M. Hoarau', reponses: { concurrents: 'Boulangerie Dupont\n- Supermarché', inconnue: 'x' }, notes: { numerique: 9 } },
+    }).expect(200);
+    expect(saved.contenu).toMatchObject({ date: '2026-11-13', participants: 'M. Hoarau', reponses: { concurrents: 'Boulangerie Dupont\n- Supermarché' }, notes: { numerique: 5, satisfaction: 0 } });
+    expect(saved.contenu.reponses.inconnue).toBeUndefined();
+    const { body } = await get('resp', BP(c1, `/suggestions${q(ex2026)}`)).expect(200);
+    const entretien = body.suggestions.filter((s: any) => s.source === 'Entretien BP');
+    expect(entretien.map((s: any) => [s.outil, s.zone, s.texte])).toEqual(expect.arrayContaining([
+      ['PORTER', 'concurrence', 'Boulangerie Dupont'], ['PORTER', 'concurrence', 'Supermarché'],
+      ['DIAGNOSTIC', 'axe:digital', 'Maîtrise du numérique évaluée en entretien : 5/5'],
+    ]));
+  });
+
+  it('validation avec commentaire du BP ; une modification l’efface', async () => {
+    await patch('resp', BP(c1, `/PERSONA${q(ex2026)}`), { contenu: { persona: { age: '45 ans' } } }).expect(200);
+    const { body: v } = await as('chefMis')(http().post(BP(c1, `/PERSONA/valider${q(ex2026)}`)).send({ commentaire: '  À revoir en juin  ' })).expect(201);
+    expect(v).toMatchObject({ statut: 'VALIDE', commentaire: 'À revoir en juin' });
+    const { body: m } = await patch('resp', BP(c1, `/PERSONA${q(ex2026)}`), { contenu: { persona: { age: '46 ans' } } }).expect(200);
+    expect(m).toMatchObject({ statut: 'BROUILLON', commentaire: null });
+  });
+
+  it('suggestions IA : refusées pour l’entretien ; une activité BCG acceptée garde sa clé', async () => {
+    await get('resp', BP(c1, `/suggestions-ia${q(ex2026)}&outil=ENTRETIEN`)).expect(400);
+    const { body } = await patch('resp', BP(c1, `/BCG${q(ex2026)}`), {
+      contenu: { activites: [{ nom: 'Pain', ca: null, quadrant: 'VACHE', couleur: '#10b981', cle: 'ia.bcg.0123456789' }] },
+    }).expect(200);
+    expect(body.contenu.activites[0]).toMatchObject({ nom: 'Pain', quadrant: 'VACHE', cle: 'ia.bcg.0123456789' });
   });
 });
