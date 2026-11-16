@@ -299,7 +299,7 @@ interface TabGroup {
           </aside>
 
           <!-- ── Content ──────────────────────────────── -->
-          <div class="content">
+          <div #corps class="content">
 
             <!-- ── Hero cards (masquées sur le Tableau de bord BP, qui prend tout l'écran) ── -->
             @if (!modeBp()) {
@@ -582,7 +582,7 @@ interface TabGroup {
             }
 
             <!-- Animated content body -->
-            <div #corps class="content__body" [class.content__body--bp]="modeBp()" [@tabFade]="activeTab()">
+            <div class="content__body" [class.content__body--bp]="modeBp()" [@tabFade]="activeTab()">
               <div [class.content__body--readonly]="!canEdit()"
                    [class.content__body--cloture]="exerciceCourant()?.statut === 'CLOTURE'">
                 @switch (activeTab()) {
@@ -692,7 +692,7 @@ interface TabGroup {
 
     /* ── Profile area ────────────────────────────────── */
     .profile {
-      position: relative;
+      position: relative; flex-shrink: 0;
       padding: 28px 16px 20px;
       display: flex; flex-direction: column; align-items: center; text-align: center;
       overflow: hidden;
@@ -814,9 +814,11 @@ interface TabGroup {
     .sidenav__item.active .sidenav__indicator { height: 22px; }
 
     /* ══ CONTENT ═════════════════════════════════════════ */
+    /* Toute la zone défile d'un bloc : sur un petit écran, les cartes du dossier remontent avec la
+     * page au lieu d'écraser l'onglet ; l'en-tête de l'onglet (sticky) reste visible. */
     .content {
       flex: 1; display: flex; flex-direction: column;
-      overflow: hidden; min-width: 0; background: #F4F6FB;
+      overflow-x: hidden; overflow-y: auto; min-width: 0; background: #F4F6FB;
     }
 
     .content__header {
@@ -852,7 +854,7 @@ interface TabGroup {
     .ch-text h3 { font-size: 15px; font-weight: 700; color: #1A1C1E; margin: 0; }
 
     .content__body {
-      flex: 1; overflow-y: auto;
+      flex: 1 0 auto;
       padding: 0;
     }
     .content__body > * {
@@ -875,12 +877,15 @@ interface TabGroup {
 
     /* ══ HERO SECTION ═══════════════════════════════════ */
     .hero {
-      display: flex; gap: 14px;
+      display: flex; gap: 14px; flex-wrap: wrap;
       padding: 14px 16px;
       flex-shrink: 0;
       background: #F4F6FB;
       border-bottom: 1px solid #E0E2EC;
     }
+    /* Écran étroit : les cartes passent à la ligne au lieu d'être tronquées */
+    .hero > .hero-card { min-width: 200px; }
+    .hero > .hc-info { min-width: 260px; }
     .hero-card {
       border-radius: 16px;
       overflow: hidden;

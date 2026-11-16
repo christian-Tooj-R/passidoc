@@ -221,7 +221,19 @@ interface AppModule {
     .rail-spacer  { flex: 1; }
 
     /* Rail items */
-    .rail-nav { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; width: 100%; }
+    /* Sur les écrans peu hauts, la liste des modules défile : l'aide, la personnalisation et
+     * l'avatar (menu utilisateur, déconnexion) restent toujours visibles en bas du rail. */
+    .rail-nav {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; width: 100%;
+      flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+    }
+    .rail-nav::-webkit-scrollbar { display: none; }
+    @media (max-height: 720px) {
+      .rail { padding: 10px 0 10px; }
+      .rail-logo { margin-bottom: 6px; }
+      .rail-item { padding: 4px 0 5px; gap: 2px; }
+      .rail-help, .rail-settings { margin-bottom: 2px; }
+    }
 
     .rail-item {
       width: 58px; border: none; background: transparent; cursor: pointer;

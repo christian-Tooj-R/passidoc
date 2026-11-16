@@ -17,7 +17,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 <div class="chat-wrap" [class.chat-wrap--open]="open()">
 
   <!-- ── Barre de titre (toujours visible) ── -->
-  <button class="chat-bar" (click)="togglePanel()">
+  <button class="chat-bar" (click)="togglePanel()" title="Fil de discussion">
     <mat-icon class="chat-bar__icon">forum</mat-icon>
     <span class="chat-bar__label">Fil de discussion</span>
     @if (unread() > 0) {
@@ -95,6 +95,12 @@ import { AuthService } from '../../../../core/services/auth.service';
       padding: 1px 6px; border-radius: 10px;
     }
     .chat-bar__chevron { font-size: 18px; width: 18px; height: 18px; color: #94A3B8; }
+    /* Écrans de portable : replié, le fil ne garde que son icône (et le compteur) pour laisser la place au dossier */
+    @media (max-width: 1440px) {
+      .chat-wrap:not(.chat-wrap--open) .chat-bar__label,
+      .chat-wrap:not(.chat-wrap--open) .chat-bar__chevron { display: none; }
+      .chat-wrap:not(.chat-wrap--open) .chat-bar { padding: 10px 12px; justify-content: center; }
+    }
 
     /* ── Panneau ── */
     .chat-panel {

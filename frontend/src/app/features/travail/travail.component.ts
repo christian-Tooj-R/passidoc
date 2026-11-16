@@ -250,6 +250,8 @@ const NAV_SECTIONS: NavSection[] = [
       overflow-y: auto; overflow-x: hidden;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent;
     }
+    /* Petits écrans (portables 1366 px, affichage à 125 %) : panneau plus étroit pour les tableaux */
+    @media (max-width: 1280px) { .tw-sidebar { width: 220px; } }
 
     .tw-header {
       display: flex; align-items: center; gap: 10px;

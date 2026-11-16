@@ -158,6 +158,8 @@ const NAV: NavSection[] = [
       position: relative;
       box-shadow: 2px 0 12px rgba(109,40,217,.06);
     }
+    /* Petits écrans (portables 1366 px, affichage à 125 %) : panneau plus étroit pour les tableaux */
+    @media (max-width: 1280px) { .rh-sidebar { width: 210px; } }
 
     /* En-tête module */
     .rh-header {
